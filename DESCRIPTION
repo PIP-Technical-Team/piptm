@@ -1,0 +1,32 @@
+Package: piptm
+Type: Package
+Title: Computation Engine for the PIP Table Maker
+Version: 0.1.0
+Authors@R: 
+    person("First", "Last", email = "your@email.org", role = c("aut", "cre"))
+Description: 
+    Provides the computation engine for the PIP Table Maker system. 
+    The package loads survey microdata stored as partitioned Arrow/Parquet datasets 
+    and computes poverty, welfare, and inequality measures such as poverty 
+    headcount, poverty gap, Gini coefficient, and welfare distribution statistics. 
+    The package uses a release manifest system to ensure reproducibility by 
+    restricting computations to surveys included in a specific PIP release.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: false
+Depends:
+    R (>= 4.2)
+Imports:
+    arrow,
+    data.table,
+    dplyr,
+    rlang,
+    collapse,
+    jsonlite
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
