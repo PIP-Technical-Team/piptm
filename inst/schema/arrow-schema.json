@@ -131,7 +131,7 @@
     },
     {
       "name": "gender",
-      "arrow_type": "dictionary(int8, utf8)",
+      "arrow_type": "dictionary(int32, utf8)",
       "r_type": "factor",
       "required": false,
       "nullable": true,
@@ -146,7 +146,7 @@
     },
     {
       "name": "area",
-      "arrow_type": "dictionary(int8, utf8)",
+      "arrow_type": "dictionary(int32, utf8)",
       "r_type": "factor",
       "required": false,
       "nullable": true,
@@ -161,7 +161,7 @@
     },
     {
       "name": "education",
-      "arrow_type": "dictionary(int8, utf8)",
+      "arrow_type": "dictionary(int32, utf8)",
       "r_type": "factor",
       "required": false,
       "nullable": true,
