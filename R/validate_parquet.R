@@ -24,29 +24,17 @@
 #   )
 
 # ---------------------------------------------------------------------------
-# Internal constants  (transcribed from inst/schema/arrow-schema.json)
+# Internal constants — now derived from pip_arrow_schema()
 # ---------------------------------------------------------------------------
 
-# Required columns — must be present in every Parquet file.
-.VP_REQUIRED_COLS <- c(
-  "country_code", "surveyid_year", "welfare_type",
-  "survey_id", "survey_acronym", "welfare", "weight"
-)
-
-# Optional breakdown dimension columns — may be absent.
-.VP_OPTIONAL_COLS <- c("gender", "area", "education", "age")
-
-# All permitted columns (required + optional).
-.VP_ALLOWED_COLS <- c(.VP_REQUIRED_COLS, .VP_OPTIONAL_COLS)
-
-# Partition key columns — must be constant within one file and must match
-# the enclosing directory names.
+.VP_REQUIRED_COLS  <- pip_required_cols()
+.VP_ALLOWED_COLS   <- pip_allowed_cols()
 .VP_PARTITION_KEYS <- c("country_code", "surveyid_year", "welfare_type")
 
-# Allowed factor levels for breakdown dimensions.
-.VP_GENDER_LEVELS <- c("male", "female")
-.VP_AREA_LEVELS   <- c("urban", "rural")
-.VP_EDU_LEVELS    <- c("No education", "Primary", "Secondary", "Tertiary")
+.schema            <- pip_arrow_schema()
+.VP_GENDER_LEVELS  <- .schema$levels$gender
+.VP_AREA_LEVELS    <- .schema$levels$area
+.VP_EDU_LEVELS     <- .schema$levels$education
 
 # ---------------------------------------------------------------------------
 # Internal helpers
