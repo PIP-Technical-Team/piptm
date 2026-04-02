@@ -29,12 +29,11 @@
 
 .VP_REQUIRED_COLS  <- pip_required_cols()
 .VP_ALLOWED_COLS   <- pip_allowed_cols()
-.VP_PARTITION_KEYS <- c("country_code", "surveyid_year", "welfare_type")
+.VP_PARTITION_KEYS <- c("country_code", "surveyid_year", "welfare_type", "version")
 
 .schema            <- pip_arrow_schema()
 .VP_GENDER_LEVELS  <- .schema$levels$gender
 .VP_AREA_LEVELS    <- .schema$levels$area
-.VP_EDU_LEVELS     <- .schema$levels$education
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -58,6 +57,7 @@
     arrow::field("country_code",   arrow::utf8()),
     arrow::field("surveyid_year",  arrow::int32()),
     arrow::field("welfare_type",   arrow::utf8()),
+    arrow::field("version",        arrow::utf8()),
     arrow::field("survey_id",      arrow::utf8()),
     arrow::field("survey_acronym", arrow::utf8()),
     arrow::field("welfare",        arrow::float64()),
@@ -65,7 +65,9 @@
     # --- Optional breakdown dimensions ---
     arrow::field("gender",         dict_type),
     arrow::field("area",           dict_type),
-    arrow::field("education",      dict_type),
+    arrow::field("educat4",        dict_type),
+    arrow::field("educat5",        dict_type),
+    arrow::field("educat7",        dict_type),
     # age: continuous int32 — NOT a dictionary column (per schema rules)
     arrow::field("age",            arrow::int32())
   )
@@ -83,7 +85,8 @@
 #' @param file_path Absolute path to a Parquet file.
 #'
 #' @return A named list with `country_code` (character), `surveyid_year`
-#'   (integer), `welfare_type` (character). Any unparsable component is `NA`.
+#'   (integer), `welfare_type` (character), `version` (character). Any
+#'   unparsable component is `NA`.
 #' @keywords internal
 .vp_parse_partition_path <- function(file_path) {
   parts <- strsplit(
@@ -99,12 +102,14 @@
   country_raw  <- extract("country")
   year_raw     <- extract("year")
   welfare_raw  <- extract("welfare")
+  version_raw  <- extract("version")
 
   list(
     country_code  = if (!is.na(country_raw)) country_raw else NA_character_,
     surveyid_year = if (!is.na(year_raw)) suppressWarnings(as.integer(year_raw))
                     else NA_integer_,
-    welfare_type  = if (!is.na(welfare_raw)) welfare_raw else NA_character_
+    welfare_type  = if (!is.na(welfare_raw)) welfare_raw else NA_character_,
+    version       = if (!is.na(version_raw)) version_raw else NA_character_
   )
 }
 
@@ -397,6 +402,7 @@ validate_parquet_data <- function(file_path) {
   data_cc  <- dt[["country_code"]][[1L]]
   data_yr  <- dt[["surveyid_year"]][[1L]]
   data_wt  <- dt[["welfare_type"]][[1L]]
+  data_ver <- dt[["version"]][[1L]]
 
   if (!is.na(path_keys$country_code) &&
       !identical(data_cc, path_keys$country_code)) {
@@ -431,6 +437,17 @@ validate_parquet_data <- function(file_path) {
       )
     )
   }
+  if (isTRUE(!is.na(path_keys$version)) &&
+      !identical(data_ver, path_keys$version)) {
+    result <- .vp_add_error(
+      result,
+      paste0(
+        "version in data ('", data_ver,
+        "') does not match partition directory ('",
+        path_keys$version, "')."
+      )
+    )
+  }
 
   # --- Check 8: factor level conformance for breakdown dimensions ------------
   if ("gender" %in% names(dt)) {
@@ -461,17 +478,13 @@ validate_parquet_data <- function(file_path) {
       )
     }
   }
-  if ("education" %in% names(dt)) {
-    e <- as.character(dt[["education"]])
-    bad <- unique(e[!is.na(e) & !e %in% .VP_EDU_LEVELS])
-    if (length(bad) > 0L) {
+  # educat4/5/7: only check that they are factors when present — levels are
+  # survey-specific and are NOT validated against a fixed set.
+  for (edu_col in c("educat4", "educat5", "educat7")) {
+    if (edu_col %in% names(dt) && !is.factor(dt[[edu_col]])) {
       result <- .vp_add_error(
         result,
-        paste0(
-          "education contains values outside allowed levels {",
-          paste(.VP_EDU_LEVELS, collapse = ", "), "}: ",
-          paste(bad, collapse = ", ")
-        )
+        paste0(edu_col, " must be a factor column.")
       )
     }
   }
@@ -524,7 +537,7 @@ validate_parquet_data <- function(file_path) {
 #' @examples
 #' \dontrun{
 #' res <- validate_partition_consistency(
-#'   "path/to/arrow/country=BOL/year=2012/welfare=INC"
+#'   "path/to/arrow/country=BOL/year=2012/welfare=INC/version=v01_v04"
 #' )
 #' res$valid
 #' res$files_checked

@@ -1,4 +1,21 @@
 {
   "schemaVersion": "compound-gpid-roadmap-v1",
-  "milestones": []
+  "milestones": [
+    {
+      "id": "phase-0-arrow-generation",
+      "title": "Phase 0 — Arrow Dataset Generation",
+      "description": "Master Arrow repository, partition pipeline in {pipdata}, release manifest generation.",
+      "status": "in-progress",
+      "features": [
+        {
+          "id": "version-partition-key",
+          "title": "Version as partition key with manifest-based resolution",
+          "description": "Add version (vermast_veralt) as a 4th Hive partition key. Manifest file_path is the sole version-resolution mechanism for {piptm}. Multiple versions coexist on disk.",
+          "status": "active",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+          "plan": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md"
+        }
+      ]
+    }
+  ]
 }
