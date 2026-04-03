@@ -58,7 +58,7 @@
     arrow::field("surveyid_year",  arrow::int32()),
     arrow::field("welfare_type",   arrow::utf8()),
     arrow::field("version",        arrow::utf8()),
-    arrow::field("survey_id",      arrow::utf8()),
+    arrow::field("pip_id",         arrow::utf8()),
     arrow::field("survey_acronym", arrow::utf8()),
     arrow::field("welfare",        arrow::float64()),
     arrow::field("weight",         arrow::float64()),
@@ -667,22 +667,22 @@ validate_partition_consistency <- function(partition_dir) {
     }
   }
 
-  # --- Check 4: no duplicate survey_id across files --------------------------
-  survey_ids <- vapply(parquet_files, function(f) {
+  # --- Check 4: no duplicate pip_id across files ----------------------------
+  pip_ids <- vapply(parquet_files, function(f) {
     tryCatch(
-      arrow::read_parquet(f, col_select = "survey_id")[[1L]][[1L]],
+      arrow::read_parquet(f, col_select = "pip_id")[[1L]][[1L]],
       error = function(e) NA_character_
     )
   }, character(1L))
 
-  survey_ids_clean <- survey_ids[!is.na(survey_ids)]
-  dupes            <- survey_ids_clean[duplicated(survey_ids_clean)]
+  pip_ids_clean <- pip_ids[!is.na(pip_ids)]
+  dupes         <- pip_ids_clean[duplicated(pip_ids_clean)]
 
   if (length(dupes) > 0L) {
     result <- .vp_add_error(
       result,
       paste0(
-        "Duplicate survey_id value(s) found across files in partition: ",
+        "Duplicate pip_id value(s) found across files in partition: ",
         paste(unique(dupes), collapse = ", ")
       )
     )

@@ -16,7 +16,7 @@ library(data.table)
 make_valid_dt <- function(country_code  = "COL",
                           surveyid_year = 2010L,
                           welfare_type  = "INC",
-                          survey_id     = "COL_2010_ECH_V01_M_V02_A_INC_ALL",
+                          pip_id        = "COL_2010_ECH_INC_ALL",
                           version       = "v01_v02",
                           dims          = character(0),
                           n_rows        = 5L) {
@@ -25,7 +25,7 @@ make_valid_dt <- function(country_code  = "COL",
     surveyid_year  = as.integer(surveyid_year),
     welfare_type   = welfare_type,
     version        = version,
-    survey_id      = survey_id,
+    pip_id         = pip_id,
     survey_acronym = "ECH",
     welfare        = seq(1.0, by = 0.5, length.out = n_rows),
     weight         = rep(1.0, n_rows)

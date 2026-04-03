@@ -23,7 +23,6 @@ Imports:
     rlang,
     collapse,
     jsonlite,
-    arrow,
 Suggests:
     testthat (>= 3.0.0),
     knitr,

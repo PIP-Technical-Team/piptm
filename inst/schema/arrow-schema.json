@@ -12,7 +12,7 @@
     "surveyid_year",
     "welfare_type",
     "version",
-    "survey_id",
+    "pip_id",
     "survey_acronym",
     "welfare",
     "weight"
@@ -89,20 +89,20 @@
       "description": "Combined master and alternative version string derived from metadata$vermast and metadata$veralt (e.g. 'v01_v04'). Atomic value — never split into components at the partition level. Must match the partition directory value (version=<version>). All rows in a single Parquet file share the same value."
     },
     {
-      "name": "survey_id",
+      "name": "pip_id",
       "arrow_type": "utf8",
       "r_type": "character",
       "required": true,
       "nullable": false,
       "is_partition_key": false,
       "source": "metadata",
-      "source_field": "survey_id",
+      "source_field": "pip_id",
       "construction": null,
       "constraints": {
-        "pattern": "^[A-Z]{3}_[0-9]{4}_[A-Z0-9]+_V[0-9]{2}_M_V[0-9]{2}_A_",
+        "pattern": "^[A-Z]{3}_[0-9]{4}_[A-Z0-9-]+_(INC|CON)_(ALL|GPWG)$",
         "unique_per_file": true
       },
-      "description": "Full survey identifier. Injected as a constant from metadata$survey_id. Used as-is without transformation. Used by {piptm} for manifest version resolution and Parquet filename derivation."
+      "description": "File-level survey identifier (e.g. 'BOL_2020_EH_INC_ALL'). Uniquely identifies a single Parquet file — one welfare type for one survey. Stored in the data column so the file is self-describing. Derived from the release inventory pip_id column. Used as the Parquet filename stem."
     },
     {
       "name": "survey_acronym",

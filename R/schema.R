@@ -29,7 +29,7 @@ pip_arrow_schema <- function() {
       surveyid_year  = list(type = arrow::int32(),    required = TRUE),
       welfare_type   = list(type = arrow::utf8(),     required = TRUE),
       version        = list(type = arrow::utf8(),     required = TRUE),
-      survey_id      = list(type = arrow::utf8(),     required = TRUE),
+      pip_id         = list(type = arrow::utf8(),     required = TRUE),
       survey_acronym = list(type = arrow::utf8(),     required = TRUE),
       welfare        = list(type = arrow::float64(),  required = TRUE),
       weight         = list(type = arrow::float64(),  required = TRUE),

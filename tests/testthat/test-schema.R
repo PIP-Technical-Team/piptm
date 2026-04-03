@@ -58,7 +58,7 @@ test_that("pip_arrow_schema contains all 8 required columns", {
   req_names <- names(Filter(function(f) isTRUE(f$required), s$fields))
   expected  <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
-    "survey_id", "survey_acronym", "welfare", "weight"
+    "pip_id", "survey_acronym", "welfare", "weight"
   )
   expect_setequal(req_names, expected)
 })
@@ -88,7 +88,7 @@ test_that("pip_allowed_cols includes all required and optional columns", {
   cols     <- pip_allowed_cols()
   expected <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
-    "survey_id", "survey_acronym", "welfare", "weight",
+    "pip_id", "survey_acronym", "welfare", "weight",
     "gender", "area", "educat4", "educat5", "educat7", "age"
   )
   expect_setequal(cols, expected)
