@@ -47,6 +47,9 @@
 #' in a given file.
 #'
 #' @return An `arrow::Schema` object.
+#' @importFrom arrow schema field utf8 int32 float64 dictionary open_dataset read_parquet write_parquet
+#' @importFrom dplyr any_of
+#' @importFrom data.table as.data.table uniqueN
 #' @keywords internal
 .vp_canonical_schema <- function() {
   # int32 indices: matches Arrow R's default when converting R factors.
@@ -77,7 +80,7 @@
 #'
 #' Extracts `country_code`, `surveyid_year`, and `welfare_type` from the
 #' directory components of `file_path`, e.g.:
-#'   `.../country=BOL/year=2012/welfare=INC/BOL_2012_...-0.parquet`
+#'   `.../country=BOL/year=2012/welfare_type=INC/BOL_2012_...-0.parquet`
 #'
 #' Returns `NULL` for any component that cannot be parsed (e.g. non-standard
 #' path), so callers can skip the path-matching check gracefully.
@@ -101,7 +104,7 @@
 
   country_raw  <- extract("country")
   year_raw     <- extract("year")
-  welfare_raw  <- extract("welfare")
+  welfare_raw  <- extract("welfare_type")
   version_raw  <- extract("version")
 
   list(
@@ -275,7 +278,7 @@ validate_parquet_schema <- function(file_path) {
 #' 3. `welfare_type` — all values in `{"INC", "CON"}`.
 #' 4. `country_code` — matches ISO3 pattern; matches partition directory.
 #' 5. `surveyid_year` — matches `year=` component of partition directory.
-#' 6. `welfare_type` data value — matches `welfare=` component of partition
+#' 6. `welfare_type` data value — matches `welfare_type=` component of partition
 #'    directory.
 #' 7. Partition key consistency — one unique value per key per file.
 #' 8. Factor level conformance for `gender`, `area`, `education` (if present).
@@ -523,7 +526,7 @@ validate_parquet_data <- function(file_path) {
 #' 4. No duplicate `survey_id` values across files in the partition.
 #'
 #' @param partition_dir Absolute path to a partition directory, e.g.
-#'   `.../country=BOL/year=2012/welfare=INC/`.
+#'   `.../country=BOL/year=2012/welfare_type=INC/`.
 #'
 #' @return A named list with `valid`, `errors`, `warnings`, `file` (set to
 #'   `partition_dir`) and an extra element:
@@ -537,7 +540,7 @@ validate_parquet_data <- function(file_path) {
 #' @examples
 #' \dontrun{
 #' res <- validate_partition_consistency(
-#'   "path/to/arrow/country=BOL/year=2012/welfare=INC/version=v01_v04"
+#'   "path/to/arrow/country=BOL/year=2012/welfare_type=INC/version=v01_v04"
 #' )
 #' res$valid
 #' res$files_checked

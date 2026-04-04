@@ -70,10 +70,10 @@ write_valid_parquet <- function(arrow_root,
                                 pip_id        = "COL_2010_ECH_V01_M_V02_A_INC_ALL") {
   dir_path <- file.path(
     arrow_root,
-    paste0("country=", country_code),
-    paste0("year=",    surveyid_year),
-    paste0("welfare=", welfare_type),
-    paste0("version=", version)
+    paste0("country=",      country_code),
+    paste0("year=",         surveyid_year),
+    paste0("welfare_type=", welfare_type),
+    paste0("version=",      version)
   )
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   out_file <- file.path(dir_path, paste0(pip_id, "-0.parquet"))
@@ -86,7 +86,7 @@ write_valid_parquet <- function(arrow_root,
 # ===========================================================================
 
 test_that(".vp_parse_partition_path extracts all 4 keys from a 4-level path", {
-  path   <- "/arrow/country=BOL/year=2020/welfare=INC/version=v01_v04/BOL_2020_EH_INC_ALL-0.parquet"
+  path   <- "/arrow/country=BOL/year=2020/welfare_type=INC/version=v01_v04/BOL_2020_EH_INC_ALL-0.parquet"
   result <- piptm:::.vp_parse_partition_path(path)
 
   expect_identical(result$country_code,  "BOL")
@@ -96,7 +96,7 @@ test_that(".vp_parse_partition_path extracts all 4 keys from a 4-level path", {
 })
 
 test_that(".vp_parse_partition_path returns NA for version when absent from path", {
-  path   <- "/arrow/country=BOL/year=2020/welfare=INC/BOL_2020_EH_INC_ALL-0.parquet"
+  path   <- "/arrow/country=BOL/year=2020/welfare_type=INC/BOL_2020_EH_INC_ALL-0.parquet"
   result <- piptm:::.vp_parse_partition_path(path)
 
   expect_true(is.na(result$version))
@@ -106,7 +106,7 @@ test_that(".vp_parse_partition_path returns NA for version when absent from path
 })
 
 test_that(".vp_parse_partition_path handles Windows-style backslash paths", {
-  path   <- "C:\\arrow\\country=COL\\year=2010\\welfare=INC\\version=v01_v02\\file.parquet"
+  path   <- "C:\\arrow\\country=COL\\year=2010\\welfare_type=INC\\version=v01_v02\\file.parquet"
   result <- piptm:::.vp_parse_partition_path(path)
 
   expect_identical(result$country_code,  "COL")
@@ -144,7 +144,7 @@ test_that("validate_parquet_schema fails for a file missing the version column",
   data.table::set(dt, j = "version", value = NULL)
 
   # Write directly without version col
-  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare=INC", "version=v01_v02")
+  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare_type=INC", "version=v01_v02")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
   arrow::write_parquet(dt, f)
@@ -171,7 +171,7 @@ test_that("validate_parquet_schema fails for a file with old 'education' column"
     levels = c("No education", "Primary", "Secondary", "Tertiary")
   ))
 
-  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare=INC", "version=v01_v02")
+  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare_type=INC", "version=v01_v02")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
   arrow::write_parquet(dt, f)
@@ -199,7 +199,7 @@ test_that("validate_parquet_data detects version mismatch between data and path"
   # Data says v01_v02, path says v99_v99
   dt  <- make_valid_dt(version = "v01_v02")
 
-  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare=INC", "version=v99_v99")
+  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare_type=INC", "version=v99_v99")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
   arrow::write_parquet(dt, f)
@@ -228,7 +228,7 @@ test_that("validate_parquet_data rejects educat4 that is not a factor", {
   # Add educat4 as character, not factor — should fail
   data.table::set(dt, j = "educat4", value = c("Primary", "Secondary", "Primary", "No education", "Secondary"))
 
-  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare=INC", "version=v01_v02")
+  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare_type=INC", "version=v01_v02")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
   # Arrow will encode as utf8 (not dictionary) — schema check will catch it
@@ -245,7 +245,7 @@ test_that("validate_parquet_data version consistency: multiple unique values abo
   # Inject two different version values — should trigger partition key consistency error
   data.table::set(dt, i = 1L, j = "version", value = "v01_v99")
 
-  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare=INC", "version=v01_v02")
+  dir_path <- file.path(tmp, "country=COL", "year=2010", "welfare_type=INC", "version=v01_v02")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
   arrow::write_parquet(dt, f)

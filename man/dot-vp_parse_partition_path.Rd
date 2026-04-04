@@ -11,7 +11,8 @@
 }
 \value{
 A named list with \code{country_code} (character), \code{surveyid_year}
-(integer), \code{welfare_type} (character). Any unparsable component is \code{NA}.
+(integer), \code{welfare_type} (character), \code{version} (character). Any
+unparsable component is \code{NA}.
 }
 \description{
 Extracts \code{country_code}, \code{surveyid_year}, and \code{welfare_type} from the

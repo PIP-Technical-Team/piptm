@@ -19,12 +19,16 @@ The returned list has two top-level elements:
 \itemize{
 \item \verb{$fields}: named list of field specs, each with \verb{$type} (Arrow type
 object) and \verb{$required} (logical).
-\item \verb{$levels}: named list of allowed character vectors for dictionary columns.
+\item \verb{$levels}: named list of allowed character vectors for fixed-level
+dictionary columns (\code{gender}, \code{area}, \code{welfare_type}). Education
+columns (\code{educat4}, \code{educat5}, \code{educat7}) have survey-specific levels
+and are not included here.
 }
 }
 \examples{
 s <- pip_arrow_schema()
 s$fields$welfare$type
+s$fields$version$type
 s$levels$gender
 }
 \seealso{

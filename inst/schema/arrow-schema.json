@@ -70,7 +70,7 @@
         "enum": ["INC", "CON"],
         "unique_per_file": true
       },
-      "description": "Welfare aggregate type. Not present as a data column — injected as a constant from metadata$welfare_type. Raw metadata value is a full string ('income', 'consumption'); recode to uppercase code required ('INC', 'CON'). Must match the partition directory value (welfare=<welfare_type>). All rows in a single Parquet file share the same value."
+      "description": "Welfare aggregate type. Not present as a data column — injected as a constant from metadata$welfare_type. Raw metadata value is a full string ('income', 'consumption'); recode to uppercase code required ('INC', 'CON'). Must match the partition directory value (welfare_type=<welfare_type>). All rows in a single Parquet file share the same value."
     },
     {
       "name": "version",

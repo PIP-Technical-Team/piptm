@@ -291,11 +291,9 @@ test_that("set_manifest_dir() rescans and updates manifest cache", {
 test_that("set_arrow_root() updates .piptm_env$arrow_root", {
   tmp <- withr::local_tempdir()
 
-  old_root <- piptm::piptm_arrow_root()
-  on.exit({
-    env <- getNamespace("piptm")$.piptm_env
-    env$arrow_root <- old_root
-  })
+  env      <- piptm:::.piptm_env
+  old_root <- env$arrow_root
+  withr::defer(env$arrow_root <- old_root)
 
   piptm::set_arrow_root(tmp)
   expect_identical(piptm::piptm_arrow_root(), tmp)

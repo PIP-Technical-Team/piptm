@@ -33,7 +33,7 @@ directory path.
 \examples{
 \dontrun{
 res <- validate_partition_consistency(
-  "path/to/arrow/country=BOL/year=2012/welfare=INC"
+  "path/to/arrow/country=BOL/year=2012/welfare=INC/version=v01_v04"
 )
 res$valid
 res$files_checked

@@ -59,6 +59,9 @@
 #' @param manifest_dir Absolute path to the manifest directory.
 #'
 #' @return Invisibly returns the number of manifests loaded.
+#' @importFrom cli cli_abort cli_warn cli_inform
+#' @importFrom data.table data.table set is.data.table setattr
+#' @importFrom jsonlite fromJSON
 #' @keywords internal
 .load_manifests <- function(manifest_dir) {
 
@@ -320,7 +323,7 @@ set_manifest_dir <- function(path) {
 #' previous call to this function). Useful for development and testing.
 #'
 #' @param path Absolute path to the root of the shared Arrow repository
-#'   (the directory containing `country=*/year=*/welfare=*/version=*`
+#'   (the directory containing `country=*/year=*/welfare_type=*/version=*`
 #'   subdirectories). Must exist.
 #'
 #' @return Invisibly returns `path`.

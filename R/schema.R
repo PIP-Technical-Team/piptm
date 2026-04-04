@@ -13,6 +13,7 @@
 #'   and are not included here.
 #'
 #' @return A named list describing the canonical schema.
+#' @importFrom arrow utf8 int32 float64 dictionary
 #' @export
 #' @family schema
 #' @examples
