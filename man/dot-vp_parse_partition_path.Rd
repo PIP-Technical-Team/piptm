@@ -17,7 +17,7 @@ unparsable component is \code{NA}.
 \description{
 Extracts \code{country_code}, \code{surveyid_year}, and \code{welfare_type} from the
 directory components of \code{file_path}, e.g.:
-\verb{.../country=BOL/year=2012/welfare=INC/BOL_2012_...-0.parquet}
+\verb{.../country_code=BOL/surveyid_year=2012/welfare_type=INC/BOL_2012_...-0.parquet}
 }
 \details{
 Returns \code{NULL} for any component that cannot be parsed (e.g. non-standard

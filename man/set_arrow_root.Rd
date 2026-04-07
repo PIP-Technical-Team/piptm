@@ -8,7 +8,7 @@ set_arrow_root(path)
 }
 \arguments{
 \item{path}{Absolute path to the root of the shared Arrow repository
-(the directory containing \verb{country=*/year=*/welfare=*/version=*}
+(the directory containing \verb{country_code=*/surveyid_year=*/welfare_type=*/version=*}
 subdirectories). Must exist.}
 }
 \value{

@@ -25,8 +25,8 @@ Checks performed:
 \item \code{weight} — all finite, all > 0, no NA.
 \item \code{welfare_type} — all values in \verb{\{"INC", "CON"\}}.
 \item \code{country_code} — matches ISO3 pattern; matches partition directory.
-\item \code{surveyid_year} — matches \verb{year=} component of partition directory.
-\item \code{welfare_type} data value — matches \verb{welfare=} component of partition
+\item \code{surveyid_year} — matches \verb{surveyid_year=} component of partition directory.
+\item \code{welfare_type} data value — matches \verb{welfare_type=} component of partition
 directory.
 \item Partition key consistency — one unique value per key per file.
 \item Factor level conformance for \code{gender}, \code{area}, \code{education} (if present).

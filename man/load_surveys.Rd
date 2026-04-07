@@ -8,8 +8,9 @@ load_surveys(entries_dt, release = NULL)
 }
 \arguments{
 \item{entries_dt}{A \code{data.table} with at least the columns \code{country_code},
-\code{year}, \code{welfare_type}, and \code{version} (i.e. a subset of what
-\code{\link[=piptm_manifest]{piptm_manifest()}} returns).}
+\code{year}, \code{welfare_type}, \code{version}, and \code{pip_id} (i.e. a subset of what
+\code{\link[=piptm_manifest]{piptm_manifest()}} returns). \code{pip_id} is used as the exact-tuple filter
+key against the Parquet data to avoid Cartesian over-fetching.}
 
 \item{release}{Character scalar release ID. Used only for error messages and
 to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}

@@ -8,7 +8,7 @@ validate_partition_consistency(partition_dir)
 }
 \arguments{
 \item{partition_dir}{Absolute path to a partition directory, e.g.
-\verb{.../country=BOL/year=2012/welfare=INC/}.}
+\verb{.../country_code=BOL/surveyid_year=2012/welfare_type=INC/}.}
 }
 \value{
 A named list with \code{valid}, \code{errors}, \code{warnings}, \code{file} (set to
@@ -33,7 +33,7 @@ directory path.
 \examples{
 \dontrun{
 res <- validate_partition_consistency(
-  "path/to/arrow/country=BOL/year=2012/welfare=INC/version=v01_v04"
+  "path/to/arrow/country_code=BOL/surveyid_year=2012/welfare_type=INC/version=v01_v04"
 )
 res$valid
 res$files_checked
