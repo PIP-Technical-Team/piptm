@@ -88,12 +88,22 @@ load_survey_microdata <- function(country_code,
   mf <- piptm_manifest(release)
 
   # --- 2. Filter manifest to the requested survey -----------------------------
+  # Rename scalars before filtering to avoid data.table's scoping rules:
+  # inside [.data.table, bare names resolve to columns first, so a column
+  # named `country_code` would shadow the function argument of the same name,
+  # making `country_code == country_code` always TRUE and returning all rows.
+  # Using distinct local names (prefixed with `.`) sidesteps the collision.
+  .cc  <- country_code
+  .yr  <- year
+  .wt  <- welfare_type
+
   entry <- mf[
-    mf$country_code == country_code &
-    mf$year         == year          &
-    mf$welfare_type == welfare_type
+    country_code == .cc &
+    year         == .yr &
+    welfare_type == .wt
   ]
 
+  
   if (nrow(entry) == 0L) {
     cli::cli_abort(
       c(
@@ -121,7 +131,7 @@ load_survey_microdata <- function(country_code,
     cli::cli_abort(
       c(
         "Arrow root is not configured.",
-        "i" = "Set {.envvar PIPTM_ARROW_ROOT} or call {.fn set_arrow_root}."
+        "i" = "Call {.fn set_arrow_root} to set the path to the Arrow repository."
       )
     )
   }
@@ -176,8 +186,9 @@ load_survey_microdata <- function(country_code,
 #' survey. A `"release"` attribute records the release ID.
 #'
 #' @param entries_dt A `data.table` with at least the columns `country_code`,
-#'   `year`, `welfare_type`, and `version` (i.e. a subset of what
-#'   [piptm_manifest()] returns).
+#'   `year`, `welfare_type`, `version`, and `pip_id` (i.e. a subset of what
+#'   [piptm_manifest()] returns). `pip_id` is used as the exact-tuple filter
+#'   key against the Parquet data to avoid Cartesian over-fetching.
 #' @param release Character scalar release ID. Used only for error messages and
 #'   to attach as an attribute on the result. Defaults to [piptm_current_release()].
 #'
@@ -197,7 +208,7 @@ load_surveys <- function(entries_dt, release = NULL) {
 
   stopifnot(
     data.table::is.data.table(entries_dt),
-    all(c("country_code", "year", "welfare_type", "version") %in% names(entries_dt))
+    all(c("country_code", "year", "welfare_type", "version", "pip_id") %in% names(entries_dt))
   )
 
   if (nrow(entries_dt) == 0L) {
@@ -219,25 +230,24 @@ load_surveys <- function(entries_dt, release = NULL) {
     cli::cli_abort(
       c(
         "Arrow root is not configured.",
-        "i" = "Set {.envvar PIPTM_ARROW_ROOT} or call {.fn set_arrow_root}."
+        "i" = "Call {.fn set_arrow_root} to set the path to the Arrow repository."
       )
     )
   }
 
-  # --- Build filter vectors ---------------------------------------------------
-  ccs  <- unique(entries_dt$country_code)
-  yrs  <- unique(as.integer(entries_dt$year))
-  wts  <- unique(entries_dt$welfare_type)
-  vers <- unique(entries_dt$version)
+  # --- Build exact-tuple filter -----------------------------------------------
+  # Independent %in% filters on each partition key are incorrect: they form a
+  # Cartesian product and can match surveys not present in entries_dt.
+  # Example: requesting COL/2010/INC and ARG/2004/INC would also pass
+  # COL/2004/INC through the filter if it happens to exist in the repository.
+  #
+  # The fix: filter on pip_id, which encodes the exact (cc/yr/wt/ver) tuple
+  # and is stored as a column in every Parquet file.
+  pip_ids <- unique(entries_dt$pip_id)
 
-  # --- Load data via partition pushdown with %in% filters ---------------------
+  # --- Load data via pip_id filter --------------------------------------------
   dt <- arrow::open_dataset(arrow_root) |>
-    dplyr::filter(
-      country_code  %in% ccs,
-      surveyid_year %in% yrs,
-      welfare_type  %in% wts,
-      version       %in% vers
-    ) |>
+    dplyr::filter(pip_id %in% pip_ids) |>
     dplyr::collect() |>
     data.table::as.data.table()
 
