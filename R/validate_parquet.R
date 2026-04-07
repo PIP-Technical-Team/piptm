@@ -80,7 +80,7 @@
 #'
 #' Extracts `country_code`, `surveyid_year`, and `welfare_type` from the
 #' directory components of `file_path`, e.g.:
-#'   `.../country=BOL/year=2012/welfare_type=INC/BOL_2012_...-0.parquet`
+#'   `.../country_code=BOL/surveyid_year=2012/welfare_type=INC/BOL_2012_...-0.parquet`
 #'
 #' Returns `NULL` for any component that cannot be parsed (e.g. non-standard
 #' path), so callers can skip the path-matching check gracefully.
@@ -102,8 +102,8 @@
     if (length(hit) == 1L) sub(paste0("^", prefix, "="), "", hit) else NA_character_
   }
 
-  country_raw  <- extract("country")
-  year_raw     <- extract("year")
+  country_raw  <- extract("country_code")
+  year_raw     <- extract("surveyid_year")
   welfare_raw  <- extract("welfare_type")
   version_raw  <- extract("version")
 
@@ -277,7 +277,7 @@ validate_parquet_schema <- function(file_path) {
 #' 2. `weight` — all finite, all > 0, no NA.
 #' 3. `welfare_type` — all values in `{"INC", "CON"}`.
 #' 4. `country_code` — matches ISO3 pattern; matches partition directory.
-#' 5. `surveyid_year` — matches `year=` component of partition directory.
+#' 5. `surveyid_year` — matches `surveyid_year=` component of partition directory.
 #' 6. `welfare_type` data value — matches `welfare_type=` component of partition
 #'    directory.
 #' 7. Partition key consistency — one unique value per key per file.
@@ -526,7 +526,7 @@ validate_parquet_data <- function(file_path) {
 #' 4. No duplicate `survey_id` values across files in the partition.
 #'
 #' @param partition_dir Absolute path to a partition directory, e.g.
-#'   `.../country=BOL/year=2012/welfare_type=INC/`.
+#'   `.../country_code=BOL/surveyid_year=2012/welfare_type=INC/`.
 #'
 #' @return A named list with `valid`, `errors`, `warnings`, `file` (set to
 #'   `partition_dir`) and an extra element:
@@ -540,7 +540,7 @@ validate_parquet_data <- function(file_path) {
 #' @examples
 #' \dontrun{
 #' res <- validate_partition_consistency(
-#'   "path/to/arrow/country=BOL/year=2012/welfare_type=INC/version=v01_v04"
+#'   "path/to/arrow/country_code=BOL/surveyid_year=2012/welfare_type=INC/version=v01_v04"
 #' )
 #' res$valid
 #' res$files_checked

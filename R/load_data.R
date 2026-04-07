@@ -9,14 +9,14 @@
 # key, ensuring reproducibility across releases.
 #
 # Partition structure (4-level Hive):
-#   <arrow_root>/country=<cc>/year=<yr>/welfare_type=<wt>/version=<ver>/
+#   <arrow_root>/country_code=<cc>/surveyid_year=<yr>/welfare_type=<wt>/version=<ver>/
 #
 # Note: the Parquet column is `surveyid_year` (integer); the Arrow Hive
-# partition directory is `year=<yr>`. Arrow exposes the directory value as
-# the partition column, and the Parquet column `surveyid_year` carries the
-# same integer inside each file. Filtering on `surveyid_year` inside
-# open_dataset() applies partition pruning because Arrow recognises `year` as
-# the hive key.  We therefore filter on `surveyid_year` to match the schema.
+# partition directory is `surveyid_year=<yr>`. Arrow exposes the directory
+# value as the partition column, and the Parquet column `surveyid_year`
+# carries the same integer inside each file. Filtering on `surveyid_year`
+# inside open_dataset() applies partition pruning because Arrow recognises
+# `surveyid_year` as the hive key.
 #
 # Exported functions
 # ------------------

@@ -323,7 +323,7 @@ set_manifest_dir <- function(path) {
 #' previous call to this function). Useful for development and testing.
 #'
 #' @param path Absolute path to the root of the shared Arrow repository
-#'   (the directory containing `country=*/year=*/welfare_type=*/version=*`
+#'   (the directory containing `country_code=*/surveyid_year=*/welfare_type=*/version=*`
 #'   subdirectories). Must exist.
 #'
 #' @return Invisibly returns `path`.

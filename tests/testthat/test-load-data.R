@@ -25,10 +25,10 @@ write_fixture_parquet <- function(arrow_root,
 
   dir_path <- file.path(
     arrow_root,
-    paste0("country=",      country_code),
-    paste0("year=",         year),
-    paste0("welfare_type=", welfare_type),
-    paste0("version=",      version)
+    paste0("country_code=",  country_code),
+    paste0("surveyid_year=", year),
+    paste0("welfare_type=",  welfare_type),
+    paste0("version=",       version)
   )
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
 
