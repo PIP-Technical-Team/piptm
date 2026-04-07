@@ -24,6 +24,22 @@
           "plan": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md"
         }
       ]
+    },
+    {
+      "id": "phase-1-computation-engine",
+      "title": "Phase 1 — Computation Engine",
+      "description": "Core computation engine: family-based orchestrator for poverty, inequality, and welfare measures with disaggregation across dimensions.",
+      "status": "planned",
+      "features": [
+        {
+          "id": "computation-engine-family-orchestrator",
+          "title": "Family-based computation orchestrator",
+          "description": "Three family-level compute functions (compute_poverty, compute_inequality, compute_welfare) dispatched by compute_measures() orchestrator. Long-format output, JSON-ready for API layer. 9 measures across 3 families.",
+          "status": "planned",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-07-computation-engine-design.md",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        }
+      ]
     }
   ]
 }
