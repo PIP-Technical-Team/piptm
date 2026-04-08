@@ -41,14 +41,22 @@ The manifest → load → compute pipeline already exists:
 - `mld` — Mean Log Deviation (Theil-L)
 
 **Welfare Measures** (no poverty line):
-- `mean` — weighted mean welfare
-- `median` — weighted median welfare
+- `mean` — weighted mean (`fmean`)
+- `median` — weighted median (`fmedian`)
+- `sd` — weighted standard deviation (`fsd`)
+- `var` — weighted variance (`fvar`)
+- `min` — minimum observed welfare (`fmin`)
+- `max` — maximum observed welfare (`fmax`)
+- `nobs` — unweighted observation count (`fnobs`)
+- `p10` — weighted 10th percentile (`fnth(0.10)`)
+- `p25` — weighted 25th percentile (`fnth(0.25)`)
+- `p75` — weighted 75th percentile (`fnth(0.75)`)
+- `p90` — weighted 90th percentile (`fnth(0.90)`)
 
-**Deferred measures** (require separate brainstorm):
-- `societal_poverty_rate` — depends on median + PPP-year-specific constants
-  (SPL = max($3.00, $1.30 + 0.5×Median) in 2021 PPPs). Requires
-  intra-computation dependency chain.
-- `prosperity_gap` — average shortfall from $28/day (2021 PPP). Depends on
+**Deferred measures** (out of scope for this project phase): phase):
+- `societal_poverty_rate` — depends on median + PPP-year-specific constants.
+  Requires intra-computation dependency chain.
+- `prosperity_gap` — average shortfall from prosperity standard. Depends on
   PPP-year-specific prosperity standard.
 
 ### Multi-Measure API

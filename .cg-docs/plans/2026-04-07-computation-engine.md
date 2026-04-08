@@ -13,10 +13,10 @@ tags: [computation, engine, orchestrator, measures, phase-1, performance]
 ## Objective
 
 Implement the core computation engine for {piptm}: a family-based measure
-orchestrator that computes 9 indicators (poverty, inequality, welfare) across
-disaggregation dimensions, returning long-format results ready for JSON
-serialization. The engine must be fast, correct, and cleanly integrated with
-the existing manifest → load pipeline.
+orchestrator that computes indicators across three families (poverty,
+inequality, welfare) and disaggregation dimensions, returning long-format
+results ready for JSON serialization. The engine must be fast, correct, and
+cleanly integrated with the existing manifest → load pipeline.anifest → load pipeline.
 
 ## Context
 
@@ -55,7 +55,8 @@ the existing manifest → load pipeline.
 
 **Dependencies already in DESCRIPTION:**
 
-- `collapse` — in Imports (for `fmean`, `fmedian`, `fsum`, `GRP`)
+- `collapse` — in Imports (for `fmean`, `fmedian`, `fnth`, `fvar`, `fsd`,
+  `fmax`, `fmin`, `fnobs`, `fsum`, `GRP`, `TRA`)
 - `data.table` — in Imports
 - `arrow`, `dplyr` — in Imports (for data loading)
 - `cli` — in Imports (for user-facing errors)
@@ -70,17 +71,32 @@ the existing manifest → load pipeline.
      canonical measure names to their family:
      ```r
      .MEASURE_REGISTRY <- list(
+       # Poverty family (all require poverty_lines)
        headcount   = "poverty",
        poverty_gap = "poverty",
        severity    = "poverty",
        watts       = "poverty",
        pop_poverty = "poverty",
+       # Inequality family
        gini        = "inequality",
        mld         = "inequality",
+       # Welfare family
        mean        = "welfare",
-       median      = "welfare"
+       median      = "welfare",
+       sd          = "welfare",
+       var         = "welfare",
+       min         = "welfare",
+       max         = "welfare",
+       nobs        = "welfare",
+       p10         = "welfare",
+       p25         = "welfare",
+       p75         = "welfare",
+       p90         = "welfare"
      )
      ```
+     Percentile measures (`p10`, `p25`, `p75`, `p90`) use `fnth()` with the
+     corresponding probability (0.10, 0.25, 0.75, 0.90). Additional percentiles
+     can be added to the registry without structural changes.
   2. Export `pip_measures()` — returns a character vector of all valid measure
      names (`names(.MEASURE_REGISTRY)`). Useful for user discovery and
      documentation.
@@ -106,7 +122,7 @@ the existing manifest → load pipeline.
      or empty. Errors if `poverty_lines` contains non-positive or non-finite
      values.
 - **Tests**: `tests/testthat/test-measures.R` (new)
-  - `pip_measures()` returns all 9 measure names
+  - `pip_measures()` returns all 17 measure names
   - `.classify_measures()` correctly groups measures by family
   - `.classify_measures()` errors on unknown measure names
   - `.validate_by()` accepts valid dimension combinations
@@ -295,28 +311,56 @@ the existing manifest → load pipeline.
 
 - **Files**: `R/compute_welfare.R` (new)
 - **Details**:
-  1. `compute_welfare(dt, by = NULL, measures = NULL)`:
+  1. `compute_welfare(dt, by = NULL, measures = NULL, grp = NULL)`:
      - **Signature**: `dt` with `welfare`, `weight`. `by` as character vector.
-       `measures` subset of `c("mean", "median")`; NULL = both.
+       `measures` subset of all welfare measure names (see registry); NULL = all.
+       `grp` optional pre-computed `GRP` object.
+     - **collapse function mapping**:
+       | Measure | collapse function | Notes |
+       |---------|------------------|-------|
+       | `mean`   | `fmean(welfare, w = weight, g = grp)` | Weighted mean |
+       | `median` | `fmedian(welfare, w = weight, g = grp)` | Weighted median |
+       | `sd`     | `fsd(welfare, w = weight, g = grp)` | Weighted standard deviation |
+       | `var`    | `fvar(welfare, w = weight, g = grp)` | Weighted variance |
+       | `min`    | `fmin(welfare, g = grp)` | No weight arg — applies to observed values |
+       | `max`    | `fmax(welfare, g = grp)` | No weight arg — applies to observed values |
+       | `nobs`   | `fnobs(welfare, g = grp)` | Unweighted observation count |
+       | `p10`    | `fnth(welfare, 0.10, w = weight, g = grp)` | Weighted 10th percentile |
+       | `p25`    | `fnth(welfare, 0.25, w = weight, g = grp)` | Weighted 25th percentile |
+       | `p75`    | `fnth(welfare, 0.75, w = weight, g = grp)` | Weighted 75th percentile |
+       | `p90`    | `fnth(welfare, 0.90, w = weight, g = grp)` | Weighted 90th percentile |
      - **Algorithm**:
-       1. Pre-compute grouping: `grp <- GRP(dt, by = by)`
-       2. **Mean**: `fmean(welfare, w = weight, g = grp)`
-       3. **Median**: `fmedian(welfare, w = weight, g = grp)`
-          - {collapse}'s `fmedian()` supports weighted medians natively.
-       4. Population: `fsum(weight, g = grp)`
-       5. Assemble wide result → subset → `melt()` to long format.
+       1. Pre-compute grouping if not provided: `grp <- GRP(dt, by = by)`
+       2. Compute only the requested measures (subset via `measures` arg)
+       3. Population: `fsum(weight, g = grp)` (always computed)
+       4. Assemble wide result as data.table from `grp$groups` + measure columns
+       5. Subset columns to requested measures + `population`
+       6. `melt()` to long format — variable column renamed to `measure`,
+          value column to `value`
+     - **Note on `min`/`max`**: `fmin()` and `fmax()` in {collapse} do not
+       accept a weight argument — they operate on observed values. This is
+       correct: min/max welfare is the lowest/highest observed welfare value,
+       not a weighted quantity.
+     - **Note on `nobs`**: `fnobs()` returns the unweighted observation count
+       (number of rows per group). Useful for reporting sample sizes alongside
+       estimates.
      - **Return**: data.table in long format:
        `[by cols]`, `measure`, `value`, `population`
   2. Export `compute_welfare()`.
 - **Tests**: `tests/testthat/test-compute-welfare.R` (new)
-  - Mean: equal weights → arithmetic mean; unequal weights → weighted mean
-  - Median: odd count, even count, weighted cases
-  - Grouped: per-group mean and median
+  - **Mean/median**: equal and unequal weights, grouped
+  - **SD/var**: equal weights → population SD; verify relationship `sd^2 == var`
+  - **Min/max**: correct group min and max
+  - **nobs**: correct row count per group (unweighted)
+  - **Percentiles**:
+    - p10, p25, p75, p90 on known distribution → hand-computed expected values
+    - Weighted vs unweighted percentiles differ correctly
+  - Grouped computation: all measures correct per group
   - Multiple dimensions: cross-tabulation
-  - `measures` subset: only "mean" or only "median"
-  - Output format: long format, correct columns
-- **Acceptance criteria**: Mean and median are numerically correct.
-  {collapse} `fmean` and `fmedian` used for performance. Long-format output.
+  - `measures` subset: requesting only `c("mean", "p90")` returns only those
+  - Output format: long format, correct columns, `population` present
+- **Acceptance criteria**: All welfare measures numerically correct. All
+  {collapse} fast functions used with pre-computed `GRP`. Long-format output.
 
 ### Step 6: `compute_measures()` — Orchestrator
 
@@ -353,7 +397,7 @@ the existing manifest → load pipeline.
   2. Do NOT export `compute_measures()` — it is internal. `table_maker()` is
      the public API.
 - **Tests**: `tests/testthat/test-compute-measures.R` (new)
-  - All 9 measures requested → output has 9 unique measure names
+  - All measures requested → output has 17 unique measure names
   - Only poverty measures → no inequality/welfare rows
   - Only inequality + welfare → `poverty_line` is NA for all rows
   - Mixed request → poverty rows have poverty_line; others have NA
@@ -488,8 +532,9 @@ the existing manifest → load pipeline.
      - `table_maker()` — family `"api"` or standalone
      - `pip_measures()`, `pip_age_bins()` — family `"schema"` or `"measures"`
   2. Add `@importFrom` tags for all collapse functions used:
-     - `collapse::fsum`, `collapse::fmean`, `collapse::fmedian`,
-       `collapse::GRP`, `collapse::BY`
+     - `collapse::fsum`, `collapse::fmean`, `collapse::fmedian`, `collapse::fnth`,
+       `collapse::fvar`, `collapse::fsd`, `collapse::fmin`, `collapse::fmax`,
+       `collapse::fnobs`, `collapse::GRP`, `collapse::TRA`, `collapse::BY`
   3. Add `@importFrom` tags for data.table functions:
      - `data.table::melt`, `data.table::fcase`, `data.table::rbindlist`,
        `data.table::setindex`, `data.table::copy`
@@ -565,7 +610,7 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 
 - [ ] `compute_poverty()` — roxygen2 with formula, parameters, return, examples
 - [ ] `compute_inequality()` — roxygen2 with Gini/MLD formulas, zero-welfare rule
-- [ ] `compute_welfare()` — roxygen2
+- [ ] `compute_welfare()` — roxygen2 with table of collapse function mapping
 - [ ] `compute_measures()` — internal documentation (not exported, no roxygen @export)
 - [ ] `table_maker()` — roxygen2 with full API docs, JSON example in @examples
 - [ ] `pip_measures()` — roxygen2
@@ -592,8 +637,8 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 
 ## Out of Scope
 
-- Societal Poverty Rate (SPR) — deferred, requires separate brainstorm
-- Prosperity Gap — deferred, requires separate brainstorm
+- Societal Poverty Rate (SPR) — out of scope for this project phase
+- Prosperity Gap — out of scope for this project phase
 - Marginals and totals — explicitly excluded from this iteration
 - API layer (plumber/JSON serving) — separate package/component
 - Caching of computed results — future optimization
