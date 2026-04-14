@@ -14,6 +14,13 @@ The current release is determined at load time by reading
 \code{current_release.json} in the manifest directory. Falls back to the
 lexicographically latest release ID when the pointer file is absent.
 }
+\details{
+At package load time this value is overridden by
+\code{pipfun::get_wrk_release()} to reflect the user's active working release,
+taking precedence over the \code{current_release.json} pointer file. This
+means two users with different working releases will see different default
+release IDs in the same session — by design.
+}
 \seealso{
 Other manifest-accessors: 
 \code{\link{piptm_arrow_root}()},

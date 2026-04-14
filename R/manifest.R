@@ -226,6 +226,12 @@ piptm_manifests <- function() {
 #' `current_release.json` in the manifest directory. Falls back to the
 #' lexicographically latest release ID when the pointer file is absent.
 #'
+#' At package load time this value is overridden by
+#' `pipfun::get_wrk_release()` to reflect the user's active working release,
+#' taking precedence over the `current_release.json` pointer file. This
+#' means two users with different working releases will see different default
+#' release IDs in the same session — by design.
+#'
 #' @return Character scalar release ID, or `NULL` when no manifests are loaded.
 #' @family manifest-accessors
 #' @export
@@ -271,15 +277,10 @@ piptm_manifest <- function(release = NULL) {
 
   manifests <- .piptm_env$manifests
   if (!release %in% names(manifests)) {
-    available <- if (length(manifests) > 0L) {
-      paste(sort(names(manifests)), collapse = ", ")
-    } else {
-      "(none loaded)"
-    }
     cli::cli_abort(
       c(
         "Release {.val {release}} not found in loaded manifests.",
-        "i" = "Available releases: {available}",
+        "i" = "Available releases: {.val {sort(names(manifests))}}",
         "i" = "Call {.fn set_manifest_dir} to load manifests from a directory."
       )
     )

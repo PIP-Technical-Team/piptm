@@ -600,3 +600,73 @@ test_that("load_surveys() fetches exactly the requested surveys — COL/2010/INC
   expect_false("COL_2004_ECH_INC_ALL" %in% dt$pip_id)
 })
 
+# ---------------------------------------------------------------------------
+# Regression: partial path failure — manifest entry exists but Parquet files
+# are missing from disk for one survey
+# ---------------------------------------------------------------------------
+
+# Bug: load_surveys() with some missing partition directories silently skipped
+# those surveys and returned fewer rows than expected rather than erroring.
+# Fix: the pip_id integrity check now catches any loaded surveys that were not
+# in entries_dt (contamination) AND the .build_parquet_paths() helper errors
+# when no Parquet files are found for a given survey.
+test_that("load_surveys() errors when a manifest entry has no Parquet files on disk", {
+
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  # Write Parquet only for survey 1 — survey 2 is manifest-only (missing files)
+  write_fixture_parquet(
+    arrow_root     = tmp_arrow,
+    country_code   = "COL",
+    year           = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_acronym = "ECH"
+  )
+  # Survey 2: manifest entry exists but NO Parquet directory written
+
+  entries_list <- list(
+    list(
+      pip_id         = "COL_2010_ECH_INC_ALL",
+      survey_id      = "COL_2010_ECH_v01_M_v02_A_GMD_ALL",
+      country_code   = "COL", year = 2010L, welfare_type = "INC",
+      version        = "v01_v02", survey_acronym = "ECH",
+      module = "ALL", dimensions = list()
+    ),
+    list(
+      pip_id         = "BOL_2015_EH_CON_ALL",
+      survey_id      = "BOL_2015_EH_v01_M_v01_A_GMD_ALL",
+      country_code   = "BOL", year = 2015L, welfare_type = "CON",
+      version        = "v01_v01", survey_acronym = "EH",
+      module = "ALL", dimensions = list()
+    )
+    # BOL/2015/CON partition directory was never written to tmp_arrow
+  )
+
+  write_fixture_manifest(
+    manifest_dir = tmp_manifest,
+    release      = "20260206",
+    entries      = entries_list,
+    set_current  = TRUE
+  )
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer({
+    env <- getNamespace("piptm")$.piptm_env
+    env$arrow_root      <- NULL
+    env$manifest_dir    <- NULL
+    env$manifests       <- list()
+    env$current_release <- NULL
+  })
+
+  mf <- piptm::piptm_manifest()
+
+  # Must error — the BOL partition path has no Parquet files
+  expect_error(
+    piptm::load_surveys(mf),
+    regexp = "No Parquet files found"
+  )
+})

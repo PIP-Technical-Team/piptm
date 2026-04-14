@@ -8,9 +8,9 @@ load_surveys(entries_dt, release = NULL)
 }
 \arguments{
 \item{entries_dt}{A \code{data.table} with at least the columns \code{country_code},
-\code{year}, \code{welfare_type}, \code{version}, and \code{pip_id} (i.e. a subset of what
-\code{\link[=piptm_manifest]{piptm_manifest()}} returns). \code{pip_id} is used as the exact-tuple filter
-key against the Parquet data to avoid Cartesian over-fetching.}
+\code{year}, \code{welfare_type}, and \code{version} (i.e. a subset of what
+\code{\link[=piptm_manifest]{piptm_manifest()}} returns). These four columns map directly to the Hive
+partition keys and are used to construct exact leaf directory paths.}
 
 \item{release}{Character scalar release ID. Used only for error messages and
 to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
@@ -22,8 +22,9 @@ A \code{data.table} of combined survey microdata with attribute
 \description{
 Accepts a subset of a manifest \code{data.table} (as returned by
 \code{\link[=piptm_manifest]{piptm_manifest()}}, possibly filtered by the caller) and loads all
-matching surveys in a single \code{open_dataset() |> filter()} call using \code{\%in\%}
-filters on the four partition keys.
+matching surveys by opening their exact Hive partition directories directly.
+This avoids a global dataset scan and is significantly faster than filtering
+on data columns.
 }
 \details{
 The returned \code{data.table} contains all surveys combined (row-bound). A

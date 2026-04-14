@@ -670,11 +670,22 @@ validate_partition_consistency <- function(partition_dir) {
     }
   }
 
-  # --- Check 4: no duplicate pip_id across files ----------------------------
+  # --- Check 4: no duplicate pip_id across files, and unique within each file --
+  # For cross-file deduplication: collect one pip_id per file.
+  # For within-file uniqueness (schema rule unique_per_file: true): read all
+  # values and use uniqueN() — a first-value read would miss corrupted files
+  # that contain mixed pip_id rows.
   pip_ids <- vapply(parquet_files, function(f) {
-    tryCatch(
-      arrow::read_parquet(f, col_select = "pip_id")[[1L]][[1L]],
-      error = function(e) NA_character_
+    tryCatch({
+      vals <- arrow::read_parquet(f, col_select = "pip_id")[[1L]]
+      if (data.table::uniqueN(vals) > 1L) {
+        cli::cli_warn(
+          "File {.path {basename(f)}} contains {data.table::uniqueN(vals)} distinct pip_id values (expected 1)."
+        )
+      }
+      as.character(vals[[1L]])
+    },
+    error = function(e) NA_character_
     )
   }, character(1L))
 

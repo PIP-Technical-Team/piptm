@@ -187,6 +187,8 @@ test_that(".load_manifests() warns and skips unreadable JSON files", {
   expect_true("20260206" %in% names(manifests))
   # The broken file key won't be there
   expect_false("broken" %in% names(manifests))
+  # Exactly one valid manifest loaded — not two, not zero
+  expect_equal(length(manifests), 1L)
 })
 
 test_that(".load_manifests() handles manifest with no entries (empty array)", {

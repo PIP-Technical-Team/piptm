@@ -4,15 +4,20 @@
 # configuration at load time. Never exported — access via accessor functions
 # in manifest.R.
 #
-# Path constants are hardcoded in .onLoad and assigned directly to .piptm_env:
+# Configuration is driven by two environment variables that each team member
+# sets once in their ~/.Renviron (run usethis::edit_r_environ() to open it):
 #
-#   arrow_root   = "Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow"
-#   manifest_dir = "Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests"
+#   PIPTM_ARROW_ROOT=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow
+#   PIPTM_MANIFEST_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests
 #
-# To point to a different location at runtime, call set_arrow_root() or
-# set_manifest_dir() after loading the package.
+# When either variable is unset (e.g. CI, new developer, different drive
+# letter), the corresponding slot stays NULL and the package starts in
+# dev / testing mode. Call set_arrow_root() or set_manifest_dir() at runtime
+# to configure the paths manually.
 #
-# The current release is constructed from pipfun::get_wrk_release():
+# The current release is set by pipfun::get_wrk_release() at load time,
+# overriding whatever current_release.json resolves, so each user's session
+# automatically tracks their own active working release.
 #   release_id <- paste(wrk$release, wrk$identity, sep = "_")
 #   e.g. "20260206_TEST"
 
@@ -26,12 +31,19 @@
   .piptm_env$manifests       <- list()
   .piptm_env$current_release <- NULL
 
-  # --- Canonical path constants ---------------------------------------------
-  arrow_root_opt    <- "Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow"
-  manifest_dir_opt  <- "Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests"
+  # --- Read paths from environment variables ---------------------------------
+  # Each team member sets PIPTM_ARROW_ROOT and PIPTM_MANIFEST_DIR in their
+  # ~/.Renviron. When unset (CI, new developer), the slots stay NULL and
+  # the package starts in dev / testing mode — configure at runtime via
+  # set_arrow_root() / set_manifest_dir().
+  arrow_root_opt   <- Sys.getenv("PIPTM_ARROW_ROOT",   unset = "")
+  manifest_dir_opt <- Sys.getenv("PIPTM_MANIFEST_DIR", unset = "")
 
   # --- Arrow root -----------------------------------------------------------
-  .piptm_env$arrow_root <- arrow_root_opt
+  # Only assign if the resolved path actually exists on this machine.
+  if (nzchar(arrow_root_opt) && dir.exists(arrow_root_opt)) {
+    .piptm_env$arrow_root <- arrow_root_opt
+  }
 
   # --- Manifest directory ---------------------------------------------------
   if (!nzchar(manifest_dir_opt)) {

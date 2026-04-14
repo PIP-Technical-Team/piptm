@@ -22,8 +22,8 @@ A \code{data.table} of survey microdata with attribute \code{"dimensions"}.
 \description{
 Looks up the manifest for \code{release} (defaulting to the current release),
 finds the entry matching \code{country_code}, \code{year}, and \code{welfare_type},
-extracts the \code{version} partition key, then opens the shared Arrow dataset
-and applies a partition-pushdown filter to retrieve only the matching rows.
+extracts the \code{version} partition key, then constructs the exact Hive leaf
+directory path and loads only the Parquet files in that directory.
 }
 \details{
 The returned \code{data.table} has a \code{"dimensions"} attribute: a character

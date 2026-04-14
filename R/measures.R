@@ -285,7 +285,8 @@ pip_age_bins <- function() {
 #'
 #' @keywords internal
 .bin_age <- function(dt) {
-  age <- NULL  # suppress R CMD check NOTE for NSE column reference
+  age       <- NULL  # suppress R CMD check NOTE for NSE column reference
+  age_group <- NULL  # suppress R CMD check NOTE for NSE column reference
 
   dt[, age_group := factor(
     fcase(
