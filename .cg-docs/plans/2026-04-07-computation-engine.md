@@ -53,6 +53,24 @@ cleanly integrated with the existing manifest → load pipeline.anifest → load
 - {collapse} for weighted statistics, {data.table} for data manipulation
   (per R instructions)
 
+**Critical data flow boundary:**
+
+`load_surveys()` returns a **single flat data.table** with all requested
+surveys row-bound together. The `pip_id` column (stored in every Parquet
+file) identifies which rows belong to which survey. There are no per-survey
+attributes on the batch result — only a `"release"` attribute on the whole
+table.
+
+`compute_measures()` always operates on a **single-survey slice** (one
+unique `pip_id`). The split happens inside `table_maker()`, which iterates
+over `unique(dt$pip_id)` and passes one slice at a time. `compute_measures()`
+never receives multi-survey data and never needs to be aware of `pip_id`.
+
+Dimension availability (which `by` columns exist for a survey) is checked
+against the **manifest** before loading — surveys missing a requested
+dimension are filtered out of `entries` before `load_surveys()` is called,
+so their data is never loaded.
+
 **Dependencies already in DESCRIPTION:**
 
 - `collapse` — in Imports (for `fmean`, `fmedian`, `fnth`, `fvar`, `fsd`,
@@ -367,11 +385,17 @@ cleanly integrated with the existing manifest → load pipeline.anifest → load
 - **Files**: `R/compute_measures.R` (new)
 - **Details**:
   1. `compute_measures(dt, measures, poverty_lines = NULL, by = NULL)`:
-     - **Signature**: `dt` is a data.table for a single survey (one `pip_id`).
+     - **Signature**: `dt` is a data.table for **exactly one survey** (one
+       unique `pip_id`). This function must never receive multi-survey data.
+       The caller (`table_maker()`) is responsible for splitting the batch
+       result of `load_surveys()` by `pip_id` before passing slices here.
        `measures` is a character vector of requested measure names.
        `poverty_lines` is numeric or NULL. `by` is character or NULL.
      - **Algorithm**:
-       1. Classify measures into families via `.classify_measures()`.
+       1. **Guard**: assert `uniqueN(dt$pip_id) == 1L` — error if `dt`
+          contains more than one survey. This is a programming error in the
+          caller, not a user error.
+       2. Classify measures into families via `.classify_measures()`.
        2. Pre-compute `GRP(dt, by = by)` once — pass to family functions
           to avoid redundant grouping. (Design note: family functions
           accept an optional `grp` argument; if provided, they skip their
@@ -397,6 +421,7 @@ cleanly integrated with the existing manifest → load pipeline.anifest → load
   2. Do NOT export `compute_measures()` — it is internal. `table_maker()` is
      the public API.
 - **Tests**: `tests/testthat/test-compute-measures.R` (new)
+  - Multi-survey guard: passing a dt with 2 pip_ids errors immediately
   - All measures requested → output has 17 unique measure names
   - Only poverty measures → no inequality/welfare rows
   - Only inequality + welfare → `poverty_line` is NA for all rows
@@ -431,40 +456,56 @@ cleanly integrated with the existing manifest → load pipeline.anifest → load
           ```r
           mf <- piptm_manifest(release)
           ```
-       3. Filter manifest to requested surveys. Build filter expression for
-          all combinations of `country_code × year × welfare_type`:
+       3. Filter manifest to requested surveys:
           ```r
+          .cc <- country_code; .yr <- as.integer(year); .wt <- welfare_type
           entries <- mf[country_code %in% .cc & year %in% .yr & welfare_type == .wt]
           ```
-       4. Check for missing dimension availability. For each entry in
-          `entries`, if any requested `by` dimension is not in the entry's
-          `dimensions` list column, warn and either skip the survey or
-          proceed (warn but continue — the dimension column will be absent
-          from that survey's data and cross-tab will produce NAs). Decision:
-          **skip surveys missing a requested dimension** with a warning.
-       5. Load data:
+       4. **Dimension pre-filter (before loading)**. For each entry in
+          `entries`, check whether all requested `by` dimensions appear in
+          `entry$dimensions`. Surveys with missing dimensions are **removed
+          from `entries`** with a `cli_warn()`. This happens before
+          `load_surveys()` so that missing-dimension surveys are never loaded
+          from disk.
           ```r
-          dt <- load_surveys(entries, release = release)
+          # Example: user requests by = c("gender") but BOL_2015 has no gender
+          # → BOL_2015 is dropped from entries with a warning
+          # → load_surveys() never reads BOL_2015's partition
           ```
-       6. Pre-process: if `"age"` is in `by`, call `.bin_age(dt)` and replace
-          `"age"` with `"age_group"` in the `by` vector.
-       7. Split data by `pip_id` and compute per survey:
+       5. **Load**: `load_surveys()` returns one flat data.table with all
+          remaining surveys row-bound. The `pip_id` column identifies rows:
+          ```r
+          # entries now has only dimension-compatible surveys
+          dt <- load_surveys(entries, release = release)
+          # dt is a flat data.table:
+          #   pip_id == "COL_2010_..." for rows from survey 1
+          #   pip_id == "ARG_2004_..." for rows from survey 2
+          #   etc.
+          ```
+       6. **Pre-process**: if `"age"` is in `by`, call `.bin_age(dt)` (modifies
+          in place) and replace `"age"` with `"age_group"` in the `by` vector.
+       7. **Split and compute — one survey at a time**:
+          `compute_measures()` always receives a single-survey slice. The split
+          happens here, not inside `compute_measures()`:
           ```r
           survey_ids <- unique(dt$pip_id)
           results <- lapply(survey_ids, function(pid) {
+            # Slice to exactly one survey
             survey_dt <- dt[pip_id == pid]
+            # compute_measures() sees only one pip_id — enforced by internal guard
             res <- compute_measures(survey_dt, measures, poverty_lines, by)
-            # Attach survey metadata columns
-            res[, pip_id := pid]
-            res[, country_code := survey_dt$country_code[1L]]
+            # Attach survey metadata AFTER computation (not needed by compute_measures)
+            res[, pip_id       := pid]
+            res[, country_code  := survey_dt$country_code[1L]]
             res[, surveyid_year := survey_dt$surveyid_year[1L]]
-            res[, welfare_type := survey_dt$welfare_type[1L]]
+            res[, welfare_type  := survey_dt$welfare_type[1L]]
             res
           })
           rbindlist(results)
           ```
-       8. Reorder columns: metadata first, then dimensions, then poverty_line,
-          then measure/value/population.
+       8. Reorder columns: metadata (`pip_id`, `country_code`, `surveyid_year`,
+          `welfare_type`) first, then dimension columns, then `poverty_line`,
+          then `measure`, `value`, `population`.
      - **Return**: data.table in long format. Ready for `jsonlite::toJSON()`.
   2. Export `table_maker()`.
 - **Tests**: `tests/testthat/test-table-maker.R` (new)
