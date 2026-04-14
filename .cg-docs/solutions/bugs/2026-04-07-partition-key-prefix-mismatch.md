@@ -129,4 +129,5 @@ to drift.
 
 ## Related
 
-None.
+- `.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md` — silent partial-miss bug in `load_surveys()` when path helper was not shared between single and batch loaders
+- `.cg-docs/solutions/testing-patterns/2026-04-14-partial-miss-regression-test-batch-loaders.md` — test pattern used to detect silent drops in batch loaders
