@@ -1,3 +1,5 @@
+^renv$
+^renv\.lock$
 ^piptm\.Rproj$
 ^\.Rproj\.user$
 ^\.cg-docs$
