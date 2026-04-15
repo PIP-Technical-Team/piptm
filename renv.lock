@@ -154,14 +154,14 @@
     },
     "cli": {
       "Package": "cli",
-      "Version": "3.6.6",
+      "Version": "3.6.5",
       "Source": "Repository",
-      "Repository": "CRAN",
+      "Repository": "https://packagemanager.posit.co/cran/2025-05-18",
       "Requirements": [
         "R",
         "utils"
       ],
-      "Hash": "a73d822b669d443ff8de6928f9c49850"
+      "Hash": "16850760556401a2eeb27d39bd11c9cb"
     },
     "clipr": {
       "Package": "clipr",
@@ -864,7 +864,7 @@
     },
     "testthat": {
       "Package": "testthat",
-      "Version": "3.3.2",
+      "Version": "3.2.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -874,6 +874,7 @@
         "callr",
         "cli",
         "desc",
+        "digest",
         "evaluate",
         "jsonlite",
         "lifecycle",
@@ -888,7 +889,7 @@
         "waldo",
         "withr"
       ],
-      "Hash": "0ff174f3cfef696f36a70dc84a0fd839"
+      "Hash": "42f889439ccb14c55fc3d75c9c755056"
     },
     "tibble": {
       "Package": "tibble",
