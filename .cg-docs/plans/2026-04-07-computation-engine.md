@@ -67,9 +67,12 @@ over `unique(dt$pip_id)` and passes one slice at a time. `compute_measures()`
 never receives multi-survey data and never needs to be aware of `pip_id`.
 
 Dimension availability (which `by` columns exist for a survey) is checked
-against the **manifest** before loading — surveys missing a requested
-dimension are filtered out of `entries` before `load_surveys()` is called,
-so their data is never loaded.
+against the **manifest** before loading. Surveys with **zero** overlap
+with the requested `by` dimensions are dropped from `entries` before
+`load_surveys()` is called. Surveys with **partial** overlap are kept —
+missing dimension columns are filled with `NA` before computation, producing
+a single NA group for that dimension in the cross-tabulation.
+(See `.cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md`.)
 
 **Dependencies already in DESCRIPTION:**
 
@@ -462,15 +465,24 @@ so their data is never loaded.
           entries <- mf[country_code %in% .cc & year %in% .yr & welfare_type == .wt]
           ```
        4. **Dimension pre-filter (before loading)**. For each entry in
-          `entries`, check whether all requested `by` dimensions appear in
-          `entry$dimensions`. Surveys with missing dimensions are **removed
-          from `entries`** with a `cli_warn()`. This happens before
-          `load_surveys()` so that missing-dimension surveys are never loaded
-          from disk.
+          `entries`, check how many of the requested `by` dimensions appear
+          in `entry$dimensions`. Surveys with **zero** overlap are removed
+          from `entries` with a `cli_warn()`. Surveys with **partial**
+          overlap are kept — missing dimensions will be filled with `NA`
+          later (step 7a). This ensures surveys are not silently dropped
+          just because they lack one of several requested dimensions.
           ```r
-          # Example: user requests by = c("gender") but BOL_2015 has no gender
-          # → BOL_2015 is dropped from entries with a warning
-          # → load_surveys() never reads BOL_2015's partition
+          # Example: user requests by = c("gender", "area")
+          # COL_2010 has c("gender", "area")       → kept (full match)
+          # BOL_2015 has c("gender")               → kept (partial match)
+          # PER_2008 has c("educat4")               → dropped (zero overlap)
+          #
+          # cli_warn() for partial matches:
+          #   "Survey BOL_2015 is missing dimension(s): area.
+          #    Results will have NA for missing dimensions."
+          # cli_warn() for dropped surveys:
+          #   "Survey PER_2008 has none of the requested dimensions
+          #    and will be excluded."
           ```
        5. **Load**: `load_surveys()` returns one flat data.table with all
           remaining surveys row-bound. The `pip_id` column identifies rows:
@@ -492,6 +504,13 @@ so their data is never loaded.
           results <- lapply(survey_ids, function(pid) {
             # Slice to exactly one survey
             survey_dt <- dt[pip_id == pid]
+            # 7a. Fill missing dimension columns with NA so that
+            #     compute_measures() always receives the full `by` vector.
+            #     GRP will produce a single NA group for missing dimensions.
+            missing_dims <- setdiff(by, names(survey_dt))
+            for (d in missing_dims) {
+              data.table::set(survey_dt, j = d, value = NA_character_)
+            }
             # compute_measures() sees only one pip_id — enforced by internal guard
             res <- compute_measures(survey_dt, measures, poverty_lines, by)
             # Attach survey metadata AFTER computation (not needed by compute_measures)
@@ -516,8 +535,11 @@ so their data is never loaded.
     - Multiple poverty lines → rows per poverty line for poverty measures
     - `by = c("gender", "area")` → cross-tabulated rows
     - `by = c("age")` → age bins appear in output
-    - Missing dimension warning: request `gender` for survey that lacks it →
-      survey skipped with warning
+    - Partial dimension match: request `by = c("gender", "area")` where one
+      survey has only `gender` → survey included, `area = NA` in its results,
+      warning emitted
+    - Zero dimension overlap: survey with none of the requested dimensions →
+      survey excluded with warning
     - Error: unknown measure name → informative error
     - Error: poverty measures without poverty_lines → error
     - Error: >4 dimensions → error
@@ -672,7 +694,7 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 | Zero-welfare rule inconsistency between Watts and MLD | Medium | Methodological error | Single internal helper `.handle_zero_welfare()` used by both families. Document rule prominently. |
 | Cross-join memory for very large surveys + many poverty lines | Low | OOM | Guard: warn if expansion >5M rows. At typical scale (50K × 5), this is 250K rows — negligible. |
 | {collapse} `fmedian` weighted behaviour | Low | Incorrect median | Verify against hand-computed weighted median in tests. {collapse} `fmedian` supports weights natively. |
-| Missing dimension in survey data | Medium | Runtime error or silent NA | `table_maker()` skips surveys missing requested dimensions with a warning. Documented behaviour. |
+| Missing dimension in survey data | Medium | Runtime error or silent NA | `table_maker()` keeps surveys with ≥1 matching dimension and fills missing columns with `NA`. Only surveys with zero overlap are dropped. Warning emitted for both cases. |
 | GRP object compatibility across collapse versions | Low | Breakage on upgrade | Pin collapse minimum version in DESCRIPTION. Test with current version. |
 | Gini per-group sort performance with many groups | Low | Slow | Pre-sort dt by `by` + welfare. Use `setindex()`. Benchmark confirms <1s at target scale. |
 
