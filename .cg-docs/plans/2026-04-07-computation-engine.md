@@ -449,6 +449,12 @@ a single NA group for that dimension in the cross-tabulation.
        - `poverty_lines` — numeric vector or NULL
        - `by` — character vector of dimension names or NULL
        - `release` — character scalar or NULL (defaults to current release)
+
+       > **Open item**: This signature assumes direct R calls with native
+       > types. How these parameters are received from the API layer
+       > (plumber URL parsing, type coercion, multi-value encoding, survey
+       > identifier representation) is deferred to a separate
+       > API–computation interface plan.
      - **Algorithm**:
        1. Validate inputs:
           - `.classify_measures(measures)` — validates measure names
@@ -792,6 +798,15 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 - Prosperity Gap — out of scope for this project phase
 - Marginals and totals — explicitly excluded from this iteration
 - API layer (plumber/JSON serving) — separate package/component
+- **API → `table_maker()` parameter interface** — how inputs are passed from
+  the plumber/URL layer to `table_maker()` (parameter structure, encoding of
+  survey identifiers, multi-value handling, default resolution) is **not yet
+  defined**. The current `table_maker()` signature assumes direct R calls with
+  native types. A separate dedicated plan will define the API–computation
+  engine interface contract, covering: URL parameter parsing, type coercion,
+  validation at the API boundary vs. the compute boundary, and how survey
+  identifiers (country_code + year + welfare_type vs. pip_id) are represented
+  in requests.
 - Caching of computed results — future optimization
 - Parallel computation across surveys — future optimization
 - Wide-format output option — not needed per brainstorm decision
