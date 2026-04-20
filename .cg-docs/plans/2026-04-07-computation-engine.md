@@ -464,26 +464,72 @@ a single NA group for that dimension in the cross-tabulation.
           .cc <- country_code; .yr <- as.integer(year); .wt <- welfare_type
           entries <- mf[country_code %in% .cc & year %in% .yr & welfare_type == .wt]
           ```
-       4. **Dimension pre-filter (before loading)**. For each entry in
-          `entries`, check how many of the requested `by` dimensions appear
-          in `entry$dimensions`. Surveys with **zero** overlap are removed
-          from `entries` with a `cli_warn()`. Surveys with **partial**
-          overlap are kept — missing dimensions will be filled with `NA`
-          later (step 7a). This ensures surveys are not silently dropped
-          just because they lack one of several requested dimensions.
+       4. **Dimension pre-filter (before loading)**. When `by` is non-NULL,
+          check each entry's `dimensions` list column against the requested
+          `by` vector and classify entries into full-match, partial-match,
+          and zero-overlap groups.
+          (See `.cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md`.)
+
+          The manifest stores `dimensions` as a **list column** — each
+          element is a character vector of dimension names available for
+          that survey (e.g. `c("gender", "area", "age")`). The pre-filter
+          uses `lengths(intersect(...))` to compute overlap:
+
           ```r
-          # Example: user requests by = c("gender", "area")
-          # COL_2010 has c("gender", "area")       → kept (full match)
-          # BOL_2015 has c("gender")               → kept (partial match)
-          # PER_2008 has c("educat4")               → dropped (zero overlap)
-          #
-          # cli_warn() for partial matches:
-          #   "Survey BOL_2015 is missing dimension(s): area.
-          #    Results will have NA for missing dimensions."
-          # cli_warn() for dropped surveys:
-          #   "Survey PER_2008 has none of the requested dimensions
-          #    and will be excluded."
+          if (!is.null(by)) {
+            # Compute per-entry overlap count between user's `by` and
+            # the survey's available dimensions (list column).
+            overlap <- vapply(
+              entries$dimensions,
+              function(d) length(intersect(by, d)),
+              integer(1L)
+            )
+
+            # --- Zero-overlap entries: drop with warning ---
+            zero_idx <- overlap == 0L
+            if (any(zero_idx)) {
+              dropped_ids <- entries$pip_id[zero_idx]
+              cli::cli_warn(c(
+                "Excluding {length(dropped_ids)} survey{?s} with none of",
+                " the requested dimensions ({.val {by}}):",
+                "i" = "{.val {dropped_ids}}"
+              ))
+              entries <- entries[!zero_idx]
+              overlap <- overlap[!zero_idx]
+            }
+
+            # --- Partial-match entries: keep, but warn about missing dims ---
+            partial_idx <- overlap > 0L & overlap < length(by)
+            if (any(partial_idx)) {
+              # Build a named list: pip_id → missing dimensions
+              partial_entries <- entries[partial_idx]
+              missing_info <- vapply(seq_len(nrow(partial_entries)), function(i) {
+                miss <- setdiff(by, partial_entries$dimensions[[i]])
+                paste0(partial_entries$pip_id[i], ": ", paste(miss, collapse = ", "))
+              }, character(1L))
+              cli::cli_warn(c(
+                "{sum(partial_idx)} survey{?s} {?is/are} missing some",
+                " requested dimensions. Results will have {.val NA} for",
+                " missing dimensions.",
+                "i" = "{missing_info}"
+              ))
+            }
+          }
           ```
+
+          **Inclusion rule**: keep any entry with **≥1** overlapping
+          dimension. Only drop entries with **zero** overlap. Missing
+          dimension columns are filled with `NA_character_` in step 7a
+          (per-survey loop), so `compute_measures()` always receives the
+          full `by` vector regardless of partial availability.
+
+          Example walkthrough for `by = c("gender", "area")`:
+
+          | Survey | `dimensions` | Overlap | Action |
+          |--------|-------------|---------|--------|
+          | COL_2010 | `c("gender", "area")` | 2 (full) | Kept as-is |
+          | BOL_2015 | `c("gender")` | 1 (partial) | Kept; `area` filled with `NA` in step 7a |
+          | PER_2008 | `c("educat4")` | 0 | Dropped with warning |
        5. **Load**: `load_surveys()` returns one flat data.table with all
           remaining surveys row-bound. The `pip_id` column identifies rows:
           ```r
@@ -568,14 +614,56 @@ a single NA group for that dimension in the cross-tabulation.
   3. **collapse usage audit**: Verify that `fsum`, `fmean`, `fmedian` are used
      with pre-computed `GRP` objects everywhere (not computing groups
      internally each time).
-  4. **Benchmark tests** (not unit tests — separate file, run manually):
+  4. **Orchestration strategy benchmark — per-slice vs grouped**:
+     Compare the two possible orchestration approaches on a realistic
+     multi-survey batch (e.g. 20 surveys × 50K rows = 1M total rows,
+     4 dimensions, 5 poverty lines, all measures):
+
+     | Strategy | Description | Pros | Cons |
+     |----------|-------------|------|------|
+     | **Per-slice** (current) | `lapply` over `unique(pip_id)`, subset dt, fill missing dims, call `compute_measures()` per slice | Simple NA-fill logic per survey; each slice is independent; easy to parallelize later | Repeated `dt[pip_id == pid]` subsetting overhead; `GRP()` called N times (once per survey) |
+     | **Grouped** | Single `GRP(dt, by = c("pip_id", by))` across entire batch; compute all surveys simultaneously | Single `GRP()` call; no subsetting; {collapse} fast functions handle all groups at once | Dimension NA-fill must happen before grouping (requires knowing which surveys lack which dims); Gini needs per-group sort (harder to vectorize across surveys); poverty cross-join inflates entire batch |
+
+     **Benchmark protocol**:
+     ```r
+     # Fixture: 20 surveys, 50K rows each, 4 dims, 5 poverty lines
+     bench::mark(
+       per_slice = table_maker_per_slice(dt_batch, ...),
+       grouped   = table_maker_grouped(dt_batch, ...),
+       iterations = 5L,
+       check = TRUE  # verify identical results
+     )
+     ```
+
+     **Decision rule**:
+     - If grouped is ≥2× faster: refactor `table_maker()` to use grouped
+       approach (accepting the added complexity of batch-level NA fill and
+       Gini vectorization).
+     - If grouped is <2× faster: keep per-slice (simpler code, easier to
+       maintain, trivial to parallelize with `future.apply` later).
+     - Document the benchmark results in `.cg-docs/solutions/performance-issues/`
+       regardless of outcome.
+
+     **Implementation note**: The grouped approach requires a
+     `table_maker_grouped()` prototype that:
+     1. Fills missing dimension columns across the entire batch (using
+        manifest metadata to identify which `pip_id`s lack which dims)
+     2. Builds `GRP(dt, by = c("pip_id", by))` once
+     3. Passes the compound GRP to family functions
+     4. Handles `compute_poverty()`'s cross-join at batch level (1M × 5 = 5M
+        rows — still feasible but worth measuring memory)
+
+     This prototype is built only for benchmarking in Step 8. The production
+     code uses whichever strategy wins.
+
+  5. **Per-function benchmarks** (not unit tests — separate file, run manually):
      - Create a synthetic 100K-row dataset with 4 dimensions
      - Time `compute_poverty()` with 5 poverty lines
      - Time `compute_inequality()` with 4 dimensions
      - Time `compute_welfare()` with 4 dimensions
      - Time full `compute_measures()` with all 9 measures
      - Target: <1 second per survey for all measures with 4 dimensions
-  5. **setindex()**: Add `setindex(dt, welfare)` before inequality/welfare
+  6. **setindex()**: Add `setindex(dt, welfare)` before inequality/welfare
      computations if `welfare` is not already sorted. Speeds up Gini's
      per-group sort.
 - **Tests**: `tests/testthat/test-performance.R` (new, skipped on CRAN)
@@ -694,7 +782,7 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 | Zero-welfare rule inconsistency between Watts and MLD | Medium | Methodological error | Single internal helper `.handle_zero_welfare()` used by both families. Document rule prominently. |
 | Cross-join memory for very large surveys + many poverty lines | Low | OOM | Guard: warn if expansion >5M rows. At typical scale (50K × 5), this is 250K rows — negligible. |
 | {collapse} `fmedian` weighted behaviour | Low | Incorrect median | Verify against hand-computed weighted median in tests. {collapse} `fmedian` supports weights natively. |
-| Missing dimension in survey data | Medium | Runtime error or silent NA | `table_maker()` keeps surveys with ≥1 matching dimension and fills missing columns with `NA`. Only surveys with zero overlap are dropped. Warning emitted for both cases. |
+| Missing dimension in survey data | Medium | Runtime error or silent NA | `table_maker()` Step 7.4 computes per-entry overlap via `vapply()` over manifest `dimensions` list column. Entries with ≥1 match kept; missing columns filled with `NA_character_` in Step 7.7a. Zero-overlap entries dropped. Consolidated `cli_warn()` for both partial and zero cases. (Brainstorm: `2026-04-16-dimension-prefilter-partial-match.md`.) |
 | GRP object compatibility across collapse versions | Low | Breakage on upgrade | Pin collapse minimum version in DESCRIPTION. Test with current version. |
 | Gini per-group sort performance with many groups | Low | Slow | Pre-sort dt by `by` + welfare. Use `setindex()`. Benchmark confirms <1s at target scale. |
 
