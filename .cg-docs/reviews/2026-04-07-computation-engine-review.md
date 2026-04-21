@@ -24,6 +24,24 @@ findings:
   P2.3: resolved
   P3.1: deferred
   P3.2: resolved
+# --- 2026-04-21 re-review (Step 4 readiness check, light) ---
+  re-P2.1: open
+  re-P2.2: open
+  re-P2.3: open
+  re-P3.1: open
+  re-P3.2: open
+  re-P3.3: open
+# --- 2026-04-21 Step 5 review (compute_welfare.R, thorough) ---
+  s5-P1.1: fixed
+  s5-P2.1: fixed
+  s5-P2.2: open
+  s5-P2.3: open
+  s5-P2.4: open
+  s5-P3.1: open
+  s5-P3.2: open
+  s5-P3.3: open
+  s5-P3.4: open
+  s5-P3.5: open
 ---
 
 ## Review Report
@@ -94,6 +112,40 @@ Auto-escalation applied: file calls `fsum` (statistical function) → `@cg-data-
   **Fix**: Add two tests — one verifying pre-built GRP gives identical results to internally-built GRP, one verifying `grp` is silently ignored when `by = NULL`.
 
 ---
+
+---
+
+## 2026-04-21 Re-review: Step 4 Readiness Check (light)
+
+**Review depth**: light (explicit override)
+**Scope**: Step 4 final state — `R/compute_inequality.R`, `tests/testthat/test-compute-inequality.R`
+**Test result**: FAIL 0 | WARN 1 | SKIP 0 | PASS 34 ✅
+**Verdict**: ✅ Step 4 is complete — proceed to Step 5
+
+### P2 — IMPORTANT
+
+- **[re-P2.1]** [cg-code-quality] `test-compute-inequality.R:1-2` — `library(testthat)` and `library(data.table)` called at file top-level outside any `test_that()` block.
+  **Why**: Causes the `package 'data.table' was built under R version 4.5.3` warning visible in the test run. More broadly, explicit `library()` calls in test files are unnecessary — `devtools::test()` attaches the package under test, which brings all Imports into scope.
+  **Fix**: Remove lines 1–2 (`library(testthat)` and `library(data.table)`).
+
+- **[re-P2.2]** [cg-testing] `compute_inequality.R` / `test-compute-inequality.R` — `grp` is silently ignored when `by = NULL`, but this contract is not tested.
+  **Why**: `compute_measures()` will pass a pre-computed GRP down. If `by` is ever NULL in that path, the GRP is silently dropped with no diagnostic. Unclear whether this is intentional.
+  **Fix**: Add a test for this case, or add a `cli_warn()` in the function body.
+
+- **[re-P2.3]** [cg-testing] `test-compute-inequality.R` — `mld: zero-welfare rows` test comment says "Negative MLD is expected" but only tests equality to `expected_mld`, not the sign.
+  **Why**: A sign error in the implementation would still pass the test.
+  **Fix**: Add `expect_lt(res[measure == "mld", value], 0)`.
+
+### P3 — MINOR
+
+- **[re-P3.1]** [cg-code-quality] `compute_inequality.R:95` — `grp$groups` accesses a collapse internal slot directly.
+  **Fix**: Replace with `collapse::GRP_groups(grp)`.
+
+- **[re-P3.2]** [cg-code-quality] `compute_inequality.R` — Comment "Subset to requested measures + melt to long" is misleading; subsetting is implicit via `measure.vars`.
+  **Fix**: Update to "melt only the requested measure columns to long".
+
+- **[re-P3.3]** [cg-code-quality] `compute_inequality.R:85` — `result <- grp_dt` is a data.table reference alias, not a copy; `:=` modifies in place.
+  **Fix**: Add comment clarifying the reference semantics.
 
 ### ✅ Passed
 
