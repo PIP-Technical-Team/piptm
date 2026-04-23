@@ -3,6 +3,18 @@ plan: .cg-docs/plans/2026-04-07-computation-engine.md
 review-date: 2026-04-20
 scope: compute_inequality.R (Step 4)
 findings:
+  # --- 2026-04-22 Step 6 review (compute_measures.R, thorough) ---
+  s6-P0.1: open
+  s6-P1.1: open
+  s6-P1.2: open
+  s6-P2.1: open
+  s6-P2.2: open
+  s6-P2.3: open
+  s6-P2.4: open
+  s6-P3.1: open
+  s6-P3.2: open
+  s6-P3.3: open
+  s6-P3.4: open
   P0.1: fixed
   P1.1: fixed
   P1.2: fixed
@@ -155,3 +167,128 @@ Auto-escalation applied: file calls `fsum` (statistical function) → `@cg-data-
 - **Numerical correctness**: All 32 existing tests pass. Hand-computed fixture values are verified.
 - **Data isolation**: `dt` is not modified.
 - **`fsum` for headcount/pop_poverty**: Computing `fsum(w * poor) / fsum(w)` is correct and `w_total` is already held.
+
+---
+
+## Step 6 Review — `compute_measures.R` (thorough, 2026-04-22)
+
+**Review depth**: thorough (all 10 agents)
+**Files reviewed**: `R/compute_measures.R`, `tests/testthat/test-compute-measures.R`
+**Findings**: 11 (P0: 1, P1: 2, P2: 4, P3: 4)
+
+Auto-escalation applied: files dispatch statistical family functions (`GRP`, `fsum` via family calls) → `@cg-data-quality` + `@cg-reproducibility` + `@cg-performance` (all already in thorough tier).
+
+---
+
+### P0 — BLOCKING
+
+- **[s6-P0.1]** [cg-adversarial] `R/compute_measures.R:109` + `tests/test-compute-measures.R:90` — `poverty_line` column silently absent from output when no poverty measures requested; `@return` contract broken; covering test passes vacuously.
+  **Why**: `rbindlist(results, fill=TRUE)` only creates `poverty_line` when at least one source table carries it. When only inequality/welfare families run, `poverty_line` never materialises. Test `expect_true(all(is.na(res$poverty_line)))` passes because `res$poverty_line` is `NULL`, `is.na(NULL)` is `logical(0)`, and `all(logical(0))` is `TRUE`. Confirmed in console: `all(is.na(NULL))` → `TRUE`.
+  **Fix** (two parts):
+  ```r
+  # R/compute_measures.R — after rbindlist
+  result <- data.table::rbindlist(results, fill = TRUE)
+  if (!"poverty_line" %in% names(result)) result[, poverty_line := NA_real_]
+  result
+  ```
+  ```r
+  # test file — replace vacuous assertion
+  expect_true("poverty_line" %in% names(res))
+  expect_equal(sum(!is.na(res$poverty_line)), 0L)
+  ```
+
+---
+
+### P1 — CRITICAL
+
+- **[s6-P1.1]** [cg-data-quality] `R/compute_measures.R` (between steps 3 and 4) — `.validate_by(by)` is never called; `by` argument is entirely unvalidated at the orchestrator level.
+  **Why**: `.classify_measures()` and `.validate_poverty_lines()` are both called, but `.validate_by()` is missing. Passing `by = c("gender", "area", "educat4", "educat5")` (two education columns, which is forbidden) silently proceeds to `GRP()`. Passing `by = c("invalid_dim")` proceeds with an opaque collapse error.
+  **Fix**: Add after `.validate_poverty_lines()`:
+  ```r
+  .validate_by(by)
+  ```
+
+- **[s6-P1.2]** [cg-data-quality] `R/compute_measures.R:53` — No guard for missing `pip_id` (or `welfare`/`weight`) columns; missing `pip_id` produces a misleading "0 surveys" abort.
+  **Why**: `dt[["pip_id"]]` returns `NULL` when absent. `uniqueN(NULL)` = `0L`, triggering "received data for 0 surveys" with `Found: NULL`. The real error — a missing required column — is hidden.
+  **Fix**: Add before the uniqueN check:
+  ```r
+  required <- c("pip_id", "welfare", "weight")
+  missing_cols <- setdiff(required, names(dt))
+  if (length(missing_cols)) {
+    cli_abort(
+      c("Required column{?s} missing from {.arg dt}: {.col {missing_cols}}."),
+      call = NULL
+    )
+  }
+  ```
+
+---
+
+### P2 — IMPORTANT
+
+- **[s6-P2.1]** [cg-learnings-researcher] `tests/test-compute-measures.R:24` — `piptm:::.MEASURE_REGISTRY` accessed via `:::` when the exported `pip_measures()` already surfaces the same data.
+  **Why**: `:::` couples the test to a private symbol. If `.MEASURE_REGISTRY` is renamed, refactored, or the package is byte-compiled with symbol hiding, tests break with a cryptic error.
+  **Fix**: `ALL_MEASURES <- names(pip_measures())`
+
+- **[s6-P2.2]** [cg-testing] `tests/test-compute-measures.R:57,62,68` — Row counts `18L`, `23L`, `13L` are hardcoded literals that will silently break if the registry grows.
+  **Why**: The registry grew from 17 to 18 measures during Step 1 development; the plan's text still says "17". A future measure addition breaks three tests with no diagnostic.
+  **Fix**: Drive from `ALL_MEASURES`:
+  ```r
+  n_all  <- length(ALL_MEASURES)              # 18 today, dynamic tomorrow
+  n_pov  <- sum(pip_measures() == "poverty")  # 5
+  n_ineq_welf <- n_all - n_pov               # 13
+  expect_equal(nrow(res), n_all)
+  expect_equal(nrow(res), n_all + n_pov)      # 2 PL: +5 extra poverty rows
+  expect_equal(nrow(res), n_ineq_welf)
+  ```
+
+- **[s6-P2.3]** [cg-testing] `tests/test-compute-measures.R:90` — Vacuous `all(is.na(...))` assertion (independent of P0.1; the logical flaw persists even after the contract fix).
+  **Why**: `all(is.na(x))` gives a single `TRUE`/`FALSE` with no diagnostic on failure. Standard pattern for "all NA" in testthat:
+  **Fix**: `expect_equal(sum(!is.na(res$poverty_line)), 0L)` — fails with count information.
+
+- **[s6-P2.4]** [cg-testing] `tests/test-compute-measures.R` — No numerical correctness test; all assertions are structural only.
+  **Why**: `compute_measures()` is the integration layer. A dispatch bug (e.g., wrong `grp` passed, wrong `classified$family`) could produce wrong values that pass all structural tests. One cross-check against direct family function calls would catch this.
+  **Fix**:
+  ```r
+  test_that("compute_measures welfare value matches compute_welfare directly", {
+    dt  <- make_single_dt(10L)
+    direct <- compute_welfare(dt, measures = "mean")$value
+    via_cm <- compute_measures(dt, measures = "mean")$value
+    expect_equal(via_cm, direct)
+  })
+  ```
+
+---
+
+### P3 — MINOR
+
+- **[s6-P3.1]** [cg-code-quality] `R/compute_measures.R:54` — `unique(dt[["pip_id"]])` uses base R `unique()` in a data.table+collapse codebase; also not truncated — could print hundreds of pip_ids in an error message.
+  **Fix**: `collapse::funique(dt[["pip_id"]])` or truncate: `head(unique(dt[["pip_id"]]), 5L)`.
+
+- **[s6-P3.2]** [cg-documentation] `R/compute_measures.R:45` — Missing `@family compute` tag; all three exported family functions declare it but the orchestrator does not.
+  **Fix**: Add `@family compute` below `@keywords internal`.
+
+- **[s6-P3.3]** [cg-testing] `tests/test-compute-measures.R` — No test for duplicate measure names (e.g., `c("mean", "mean")`).
+  **Fix**:
+  ```r
+  test_that("duplicate measure names produce no duplicate rows", {
+    dt  <- make_single_dt(10L)
+    res <- compute_measures(dt, measures = c("mean", "mean", "gini"))
+    expect_equal(nrow(res), 2L)
+  })
+  ```
+
+- **[s6-P3.4]** [cg-performance] `R/compute_measures.R:73` — `GRP(dt, by = by)` built on full `dt` (all columns) rather than on the `by` subset. Functionally identical (confirmed: `group.id` and `groups` are identical), but increases GRP object memory footprint unnecessarily for wide tables.
+  **Fix** (advisory): `collapse::GRP(dt[, by, with = FALSE], by = by)`
+
+---
+
+### ✅ Passed
+
+| Agent | Area |
+|---|---|
+| **cg-version-control** | No secrets, credentials, or new path gaps; `.Rbuildignore` already contains `.cg-docs/` |
+| **cg-reproducibility** | Deterministic; no seeds required; no lockfile changes |
+| **cg-performance** | GRP sharing across all three family dispatches correctly implemented and measured; `rbindlist` merge is idiomatic |
+| **cg-architecture** | `compute_measures` correctly unexported; naming, dispatch pattern, and call-chain position are consistent with plan contract |
+| **cg-code-quality** (overall) | Section headers, alignment, step comments, and NULL-guard patterns consistent with rest of package |
