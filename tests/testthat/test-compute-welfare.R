@@ -162,6 +162,37 @@ test_that("weighted p25 differs from unweighted when weights concentrate mass", 
 })
 
 # ══════════════════════════════════════════════════════════════════════════════
+# sum (weighted sum of welfare)
+# ══════════════════════════════════════════════════════════════════════════════
+
+test_that("sum: equal weights — equals simple sum of welfare values", {
+  # welfare = 1:5, weight = 1 each → weighted sum = 1+2+3+4+5 = 15
+  res <- compute_welfare(make_five_dt(), measures = "sum")
+  expect_equal(res[measure == "sum", value], 15, tolerance = 1e-9)
+})
+
+test_that("sum: unequal weights — weighted sum is correct", {
+  # welfare = 1:5, weight = 2 each → weighted sum = 2*(1+2+3+4+5) = 30
+  dt  <- data.table(welfare = as.numeric(1:5), weight = rep(2.0, 5L))
+  res <- compute_welfare(dt, measures = "sum")
+  expect_equal(res[measure == "sum", value], 30, tolerance = 1e-9)
+})
+
+test_that("sum: grouped — correct weighted sum per group", {
+  # female: welfare 1,3, weight 1 → sum = 4
+  # male:   welfare 2,4, weight 1 → sum = 6
+  dt <- data.table(
+    welfare = as.numeric(1:4),
+    weight  = rep(1, 4),
+    gender  = factor(c("female", "male", "female", "male"),
+                     levels = c("female", "male"))
+  )
+  res <- compute_welfare(dt, by = "gender", measures = "sum")
+  expect_equal(res[gender == "female", value], 4, tolerance = 1e-9)
+  expect_equal(res[gender == "male",   value], 6, tolerance = 1e-9)
+})
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Grouped computation
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -251,12 +282,12 @@ test_that("measures subset: only 'mean' and 'p90' returned", {
   expect_setequal(res[["measure"]], c("mean", "p90"))
 })
 
-test_that("measures = NULL computes all 11 measures", {
+test_that("measures = NULL computes all 12 measures", {
   res <- compute_welfare(make_five_dt())
   expect_setequal(
     res[["measure"]],
     c("mean", "median", "sd", "var", "min", "max", "nobs",
-      "p10", "p25", "p75", "p90")
+      "p10", "p25", "p75", "p90", "sum")
   )
 })
 

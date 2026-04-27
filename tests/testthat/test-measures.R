@@ -11,16 +11,16 @@ test_that("pip_measures() returns a named character vector", {
   expect_named(m)
 })
 
-test_that("pip_measures() contains all 18 measure names", {
+test_that("pip_measures() contains all 19 measure names", {
   m <- pip_measures()
-  expect_length(m, 18L)
+  expect_length(m, 19L)
   expect_setequal(
     names(m),
     c(
       "headcount", "poverty_gap", "severity", "watts", "pop_poverty",
       "gini", "mld",
       "mean", "median", "sd", "var", "min", "max", "nobs",
-      "p10", "p25", "p75", "p90"
+      "p10", "p25", "p75", "p90", "sum"
     )
   )
 })
@@ -47,7 +47,7 @@ test_that("pip_measures() maps welfare measures to 'welfare' family", {
   m <- pip_measures()
   welfare_names <- c(
     "mean", "median", "sd", "var", "min", "max", "nobs",
-    "p10", "p25", "p75", "p90"
+    "p10", "p25", "p75", "p90", "sum"
   )
   expect_true(all(m[welfare_names] == "welfare"))
 })

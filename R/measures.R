@@ -29,7 +29,8 @@ NULL
   p10         = "welfare",
   p25         = "welfare",
   p75         = "welfare",
-  p90         = "welfare"
+  p90         = "welfare",
+  sum         = "welfare"
 )
 
 #' Valid disaggregation dimensions

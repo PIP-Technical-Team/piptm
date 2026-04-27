@@ -4,17 +4,20 @@ review-date: 2026-04-20
 scope: compute_inequality.R (Step 4)
 findings:
   # --- 2026-04-22 Step 6 review (compute_measures.R, thorough) ---
-  s6-P0.1: open
-  s6-P1.1: open
-  s6-P1.2: open
-  s6-P2.1: open
-  s6-P2.2: open
-  s6-P2.3: open
-  s6-P2.4: open
-  s6-P3.1: open
-  s6-P3.2: open
-  s6-P3.3: open
-  s6-P3.4: open
+  # --- 2026-04-27 Step 6 light verification review ---
+  s6v-P0.1: open
+  s6v-P2.1: fixed
+  s6-P0.1: fixed
+  s6-P1.1: fixed
+  s6-P1.2: fixed
+  s6-P2.1: fixed
+  s6-P2.2: fixed
+  s6-P2.3: fixed
+  s6-P2.4: fixed
+  s6-P3.1: fixed
+  s6-P3.2: fixed
+  s6-P3.3: fixed
+  s6-P3.4: fixed
   P0.1: fixed
   P1.1: fixed
   P1.2: fixed
@@ -292,3 +295,37 @@ Auto-escalation applied: files dispatch statistical family functions (`GRP`, `fs
 | **cg-performance** | GRP sharing across all three family dispatches correctly implemented and measured; `rbindlist` merge is idiomatic |
 | **cg-architecture** | `compute_measures` correctly unexported; naming, dispatch pattern, and call-chain position are consistent with plan contract |
 | **cg-code-quality** (overall) | Section headers, alignment, step comments, and NULL-guard patterns consistent with rest of package |
+
+---
+
+## Step 6 Light Verification — fix-triage correctness check (2026-04-27)
+
+**Review depth**: light
+**Files reviewed**: `R/compute_measures.R`, `tests/testthat/test-compute-measures.R`, `R/compute_welfare.R` (out-of-scope change detected)
+**Test result before this review**: FAIL 0 | WARN 1 | SKIP 0 | PASS 30
+**Test result after**: FAIL 0 | WARN 0 | SKIP 0 | PASS 30 ✅
+
+### P0 — BLOCKING
+
+- **[s6v-P0.1]** [cg-code-quality] `R/compute_welfare.R:72-77` — `"sum"` added to `all_welfare_measures` and dispatched via `fsum`, but `sum` is **absent from `.MEASURE_REGISTRY`**. Out-of-scope change not part of any s6 finding.
+  **Why**: `pip_measures()` / `names(pip_measures())` / `ALL_MEASURES` do not include `"sum"`. Any call to `compute_measures(dt, measures="sum")` will error with "Unknown measure". The `@param measures` docstring also incorrectly says "all twelve" and adds `sum` to the mapping table without registry backing.
+  **Fix — two options (requires your decision)**:
+  - **Option A (add to registry)**: Add `sum = "welfare"` to `.MEASURE_REGISTRY` in `R/measures.R`, add a test in `test-compute-welfare.R`, update `pip_measures()` docs.
+  - **Option B (revert)**: Remove `"sum"` from `all_welfare_measures`, remove the `fsum` dispatch line, and revert the docstring changes in `compute_welfare.R`.
+
+### P2 — IMPORTANT
+
+- **[s6v-P2.1]** [cg-testing] `tests/test-compute-measures.R` — Hardcoded `%in% c("gini","mld","mean",...)` list in the `n_all-n_pov` row-count test would silently under-select if registry grows. **Fixed** — replaced with `ALL_MEASURES[pip_measures()[ALL_MEASURES] != "poverty"]`.
+
+### ✅ Passed
+
+| Check | Result |
+|---|---|
+| All 11 s6 fixes implemented as specified | ✅ |
+| `funique` in `@importFrom` | ✅ |
+| `.validate_by(by)` call order | ✅ |
+| `GRP(dt[, by, with=FALSE], by=by)` syntax | ✅ |
+| `poverty_line` guarantee position (after `rbindlist`, before return) | ✅ |
+| `n_all`/`n_pov` derivation from `pip_measures()` correct | ✅ |
+| `n_all + n_pov` math for 2-PL all-measures test | ✅ |
+| 3 numerical cross-checks isolated correctly | ✅ |

@@ -1,4 +1,4 @@
-#' @importFrom collapse GRP
+#' @importFrom collapse GRP funique
 #' @importFrom data.table uniqueN rbindlist
 #' @importFrom cli cli_abort
 NULL
@@ -42,14 +42,25 @@ NULL
 #'   \item{`population`}{(numeric) Total weighted population in the group.}
 #' }
 #'
+#' @family compute
 #' @keywords internal
 compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
 
-  # ── 1. Guard: single-survey slice only ─────────────────────────────────────
+  # ── 1. Guard: required columns present ─────────────────────────────────────
+  required     <- c("pip_id", "welfare", "weight")
+  missing_cols <- setdiff(required, names(dt))
+  if (length(missing_cols)) {
+    cli_abort(
+      c("Required column{?s} missing from {.arg dt}: {.col {missing_cols}}."),
+      call = NULL
+    )
+  }
+
+  # ── 2. Guard: single-survey slice only ─────────────────────────────────────
   # This is a programming error in the caller — not a user-facing validation.
   n_surveys <- data.table::uniqueN(dt[["pip_id"]])
   if (n_surveys != 1L) {
-    found <- unique(dt[["pip_id"]])
+    found <- collapse::funique(dt[["pip_id"]])
     cli_abort(
       c(
         "{.fn compute_measures} received data for {n_surveys} surveys.",
@@ -60,23 +71,25 @@ compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
     )
   }
 
-  # ── 2. Classify measures → families ────────────────────────────────────────
+  # ── 3. Classify measures → families ────────────────────────────────────────
   classified <- .classify_measures(measures)
   families   <- names(classified)
 
-  # ── 3. Validate poverty lines ───────────────────────────────────────────────
+  # ── 4. Validate inputs ──────────────────────────────────────────────────────
   .validate_poverty_lines(poverty_lines, families)
+  .validate_by(by)
 
-  # ── 4. Pre-compute single GRP — shared across all family dispatches ─────────
+  # ── 5. Pre-compute single GRP — shared across all family dispatches ─────────
   # Family functions accept an optional `grp` argument and skip their own
   # GRP() call when it is provided, avoiding redundant grouping computation.
+  # Built on the by-column subset to minimise GRP object memory footprint.
   if (!is.null(by)) {
-    grp <- collapse::GRP(dt, by = by)
+    grp <- collapse::GRP(dt[, by, with = FALSE], by = by)
   } else {
     grp <- NULL
   }
 
-  # ── 5. Dispatch to each active family ──────────────────────────────────────
+  # ── 6. Dispatch to each active family ──────────────────────────────────────
   results <- list()
 
   if ("poverty" %in% families) {
@@ -107,6 +120,11 @@ compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
     )
   }
 
-  # ── 6. Merge — poverty rows have poverty_line; others receive NA_real_ ──────
-  data.table::rbindlist(results, fill = TRUE)
+  # ── 7. Merge — poverty rows have poverty_line; others receive NA_real_ ──────
+  # rbindlist(fill=TRUE) only creates poverty_line when at least one source
+  # table carries it.  When no poverty measures are requested the column never
+  # materialises via fill, so we guarantee its presence explicitly.
+  result <- data.table::rbindlist(results, fill = TRUE)
+  if (!"poverty_line" %in% names(result)) result[, poverty_line := NA_real_]
+  result
 }

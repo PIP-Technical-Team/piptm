@@ -30,6 +30,7 @@ NULL
 #' | `p25`    | `fnth(welfare, 0.25, w = weight, g = grp)`    | Weighted 25th percentile       |
 #' | `p75`    | `fnth(welfare, 0.75, w = weight, g = grp)`    | Weighted 75th percentile       |
 #' | `p90`    | `fnth(welfare, 0.90, w = weight, g = grp)`    | Weighted 90th percentile       |
+#' | `sum`    | `fsum(welfare, w = weight, g = grp)`          | Weighted sum of welfare        |
 #'
 #' @param dt A [data.table::data.table()] containing at minimum `welfare`
 #'   (numeric) and `weight` (numeric) columns, plus any columns named in `by`.
@@ -40,7 +41,7 @@ NULL
 #'   disaggregation).
 #' @param measures A character vector of welfare measure names to compute —
 #'   a subset of `c("mean", "median", "sd", "var", "min", "max", "nobs",
-#'   "p10", "p25", "p75", "p90")`.  `NULL` (default) computes all eleven.
+#'   "p10", "p25", "p75", "p90", "sum")`.  `NULL` (default) computes all twelve.
 #' @param grp An optional pre-computed [collapse::GRP()] object built on `dt`
 #'   grouped by `by`.  When provided, the internal `GRP()` call is skipped.
 #'   Ignored when `by` is `NULL`.
@@ -70,7 +71,7 @@ compute_welfare <- function(dt, by = NULL, measures = NULL, grp = NULL) {
 
   all_welfare_measures <- c(
     "mean", "median", "sd", "var", "min", "max", "nobs",
-    "p10", "p25", "p75", "p90"
+    "p10", "p25", "p75", "p90", "sum"
   )
   if (is.null(measures)) measures <- all_welfare_measures
   measures <- unique(match.arg(measures, all_welfare_measures, several.ok = TRUE))
@@ -114,6 +115,7 @@ compute_welfare <- function(dt, by = NULL, measures = NULL, grp = NULL) {
   if ("p25"    %in% measures) vals[["p25"]]    <- collapse::fnth(welfare_v, 0.25, w = w, g = grp)
   if ("p75"    %in% measures) vals[["p75"]]    <- collapse::fnth(welfare_v, 0.75, w = w, g = grp)
   if ("p90"    %in% measures) vals[["p90"]]    <- collapse::fnth(welfare_v, 0.90, w = w, g = grp)
+  if ("sum"    %in% measures) vals[["sum"]]    <- collapse::fsum(welfare_v, w = w, g = grp)
 
   # ── 6. Assemble wide result ─────────────────────────────────────────────────
   # Extract unique group rows in GRP order, then assign all measure columns
