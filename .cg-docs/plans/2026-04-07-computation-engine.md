@@ -436,26 +436,66 @@ a single NA group for that dimension in the cross-tabulation.
 - **Acceptance criteria**: Orchestrator correctly dispatches to families and
   merges results. `rbindlist(fill = TRUE)` produces the expected schema.
 
-### Step 7: `table_maker()` — Top-Level API
+### Step 7: `table_maker()` and `pip_lookup()` — Top-Level API
 
 - **Files**: `R/table_maker.R` (new)
+- **Brainstorm**: `.cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md`
+  (status: decided, chosen approach: "Approach A with built-in triplet fallback")
 - **Details**:
-  1. `table_maker(country_code, year, welfare_type, measures, poverty_lines = NULL, by = NULL, release = NULL)`:
+  1. `pip_lookup(country_code, year, welfare_type, release = NULL)`:
+     - **Purpose**: Resolve human-friendly survey triplets to `pip_id` strings
+       via the manifest. Exported utility for ad-hoc R users and the
+       `table_maker()` triplet fallback path.
      - **Signature**:
-       - `country_code` — character vector (1+ countries)
-       - `year` — integer vector (1+ years)
-       - `welfare_type` — character scalar (`"INC"` or `"CON"`)
+       - `country_code` — character vector
+       - `year` — integer vector (same length as `country_code`)
+       - `welfare_type` — character vector (same length as `country_code`)
+       - `release` — character scalar or NULL (defaults to current release)
+     - **Algorithm**:
+       1. Guard: all three vectors must have equal length.
+       2. Build a query `data.table(country_code, year, welfare_type)`.
+       3. Join against `piptm_manifest(release)` on
+          `.(country_code, year, welfare_type)` with `nomatch = NULL`.
+       4. If fewer matches than queries, emit `cli_warn()` listing
+          unmatched triplets.
+       5. Return `matched$pip_id` (character vector).
+     - **Return**: Character vector of pip_id strings.
+  2. `table_maker(pip_id = NULL, country_code = NULL, year = NULL, welfare_type = NULL, measures, poverty_lines = NULL, by = NULL, release = NULL)`:
+     - **Signature** (dual-input — decided in brainstorm):
+       - `pip_id` — character vector of survey identifiers (primary input,
+         used by the API layer). Exact manifest PK lookup via `%chin%`.
+       - `country_code` — character vector (fallback input for ad-hoc R use)
+       - `year` — integer vector (fallback, same length as `country_code`)
+       - `welfare_type` — character vector (fallback, same length)
        - `measures` — character vector of measure names
        - `poverty_lines` — numeric vector or NULL
        - `by` — character vector of dimension names or NULL
        - `release` — character scalar or NULL (defaults to current release)
 
-       > **Open item**: This signature assumes direct R calls with native
-       > types. How these parameters are received from the API layer
-       > (plumber URL parsing, type coercion, multi-value encoding, survey
-       > identifier representation) is deferred to a separate
-       > API–computation interface plan.
+       **Input dispatch rule**: Either `pip_id` OR all three triplet params
+       (`country_code` + `year` + `welfare_type`) must be provided. If
+       `pip_id` is NULL, the function calls `pip_lookup()` internally to
+       resolve triplets. If both are provided, `pip_id` takes precedence.
+
+       | `pip_id` | Triplets | Outcome |
+       |----------|----------|---------|
+       | provided | NULL | Use pip_id directly |
+       | NULL | all three provided | Resolve via `pip_lookup()` |
+       | NULL | any missing | Error |
+       | provided | also provided | Use pip_id, ignore triplets |
      - **Algorithm**:
+       0. **Resolve survey identifiers**:
+          ```r
+          if (is.null(pip_id)) {
+            if (is.null(country_code) || is.null(year) || is.null(welfare_type)) {
+              cli::cli_abort(
+                "Provide either {.arg pip_id} or all of {.arg country_code},
+                 {.arg year}, and {.arg welfare_type}."
+              )
+            }
+            pip_id <- pip_lookup(country_code, year, welfare_type, release)
+          }
+          ```
        1. Validate inputs:
           - `.classify_measures(measures)` — validates measure names
           - `.validate_poverty_lines(poverty_lines, families)` — poverty
@@ -465,10 +505,12 @@ a single NA group for that dimension in the cross-tabulation.
           ```r
           mf <- piptm_manifest(release)
           ```
-       3. Filter manifest to requested surveys:
+       3. Filter manifest to requested surveys (exact PK lookup):
           ```r
-          .cc <- country_code; .yr <- as.integer(year); .wt <- welfare_type
-          entries <- mf[country_code %in% .cc & year %in% .yr & welfare_type == .wt]
+          entries <- mf[pip_id %chin% .pip_id]
+          if (nrow(entries) == 0L) {
+            cli::cli_abort("No matching surveys found in manifest.")
+          }
           ```
        4. **Dimension pre-filter (before loading)**. When `by` is non-NULL,
           check each entry's `dimensions` list column against the requested
@@ -580,10 +622,23 @@ a single NA group for that dimension in the cross-tabulation.
      - **Return**: data.table in long format. Ready for `jsonlite::toJSON()`.
   2. Export `table_maker()`.
 - **Tests**: `tests/testthat/test-table-maker.R` (new)
-  - Full integration test using Parquet fixtures (reuse `write_fixture_parquet`
-    and `write_fixture_manifest` helpers from `test-load-data.R`):
-    - Single country, single year, all measures → correct output shape
-    - Multiple countries → results for each survey
+  - **`pip_lookup()` tests**:
+    - Single triplet → correct pip_id
+    - Multiple triplets → correct pip_id vector
+    - Unmatched triplet → warning listing missing surveys
+    - Mismatched vector lengths → error
+  - **Dual-input dispatch tests**:
+    - `pip_id` provided → uses pip_id directly (no manifest triplet lookup)
+    - Triplets provided (no `pip_id`) → resolves via `pip_lookup()`
+    - Neither provided → informative error
+    - Partial triplets (e.g. `country_code` without `year`) → error
+    - Both `pip_id` and triplets provided → uses `pip_id`, ignores triplets
+  - **Full integration tests** using Parquet fixtures (reuse
+    `write_fixture_parquet` and `write_fixture_manifest` helpers from
+    `test-load-data.R`):
+    - Single survey (via pip_id), all measures → correct output shape
+    - Multiple surveys (via pip_id) → results for each survey
+    - Multiple surveys via triplet fallback → same results as pip_id path
     - Multiple poverty lines → rows per poverty line for poverty measures
     - `by = c("gender", "area")` → cross-tabulated rows
     - `by = c("age")` → age bins appear in output
@@ -601,7 +656,8 @@ a single NA group for that dimension in the cross-tabulation.
   - JSON serialization test: verify `jsonlite::toJSON(result, na = "null")`
     produces valid JSON matching the expected schema
 - **Acceptance criteria**: End-to-end pipeline works from fixture data through
-  to long-format output. All validation errors produce informative messages.
+  to long-format output. Both input paths (pip_id and triplets) produce
+  identical results. All validation errors produce informative messages.
   JSON output matches the brainstorm schema.
 
 ### Step 8: Performance Optimization and Benchmarking
@@ -769,7 +825,8 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 - [ ] `compute_inequality()` — roxygen2 with Gini/MLD formulas, zero-welfare rule
 - [ ] `compute_welfare()` — roxygen2 with table of collapse function mapping
 - [ ] `compute_measures()` — internal documentation (not exported, no roxygen @export)
-- [ ] `table_maker()` — roxygen2 with full API docs, JSON example in @examples
+- [ ] `table_maker()` — roxygen2 with full API docs, dual-input examples, JSON example in @examples
+- [ ] `pip_lookup()` — roxygen2 with triplet resolution examples
 - [ ] `pip_measures()` — roxygen2
 - [ ] `pip_age_bins()` — roxygen2
 - [ ] `.bin_age()` — @keywords internal
@@ -798,15 +855,13 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 - Prosperity Gap — out of scope for this project phase
 - Marginals and totals — explicitly excluded from this iteration
 - API layer (plumber/JSON serving) — separate package/component
-- **API → `table_maker()` parameter interface** — how inputs are passed from
-  the plumber/URL layer to `table_maker()` (parameter structure, encoding of
-  survey identifiers, multi-value handling, default resolution) is **not yet
-  defined**. The current `table_maker()` signature assumes direct R calls with
-  native types. A separate dedicated plan will define the API–computation
-  engine interface contract, covering: URL parameter parsing, type coercion,
-  validation at the API boundary vs. the compute boundary, and how survey
-  identifiers (country_code + year + welfare_type vs. pip_id) are represented
-  in requests.
+- **API → `table_maker()` parameter interface** — ~~not yet defined~~
+  **Resolved** in brainstorm `2026-04-27-table-maker-input-parameters.md`.
+  `table_maker()` uses a dual-input signature: `pip_id` (primary, for API)
+  or `country_code`/`year`/`welfare_type` triplets (fallback, for ad-hoc R).
+  The plumber API layer passes `pip_id` directly; triplet resolution happens
+  via `pip_lookup()`. See brainstorm for full pipeline analysis
+  (UI → URL → Plumber → table_maker).
 - Caching of computed results — future optimization
 - Parallel computation across surveys — future optimization
 - Wide-format output option — not needed per brainstorm decision
@@ -822,7 +877,7 @@ make_survey_dt <- function(n = 10L, dims = character(0L)) {
 | `R/compute_inequality.R` | New | Inequality family: Gini + MLD |
 | `R/compute_welfare.R` | New | Welfare family: mean + median |
 | `R/compute_measures.R` | New | Orchestrator: family dispatch + merge |
-| `R/table_maker.R` | New | Top-level API: manifest → load → compute → output |
+| `R/table_maker.R` | New | Top-level API: `table_maker()` (dual-input) + `pip_lookup()` |
 | `tests/testthat/test-measures.R` | New | Registry, validation, age binning tests |
 | `tests/testthat/test-compute-poverty.R` | New | Poverty measure tests |
 | `tests/testthat/test-compute-inequality.R` | New | Inequality measure tests |
