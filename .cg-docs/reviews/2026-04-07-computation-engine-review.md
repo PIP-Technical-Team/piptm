@@ -10,11 +10,11 @@ findings:
   s7-P2.1: fixed
   s7-P2.2: fixed
   s7-P2.3: false-positive
-  s7-P3.1: open
-  s7-P3.2: open
+  s7-P3.1: fixed
+  s7-P3.2: fixed
   # --- 2026-04-22 Step 6 review (compute_measures.R, thorough) ---
   # --- 2026-04-27 Step 6 light verification review ---
-  s6v-P0.1: open
+  s6v-P0.1: fixed
   s6v-P2.1: fixed
   s6-P0.1: fixed
   s6-P1.1: fixed

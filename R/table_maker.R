@@ -2,6 +2,11 @@
 #' @importFrom cli cli_abort cli_warn
 NULL
 
+# ── Internal helpers ─────────────────────────────────────────────────────────
+
+# Null-coalescing operator (used internally; not exported)
+`%||%` <- function(x, y) if (!is.null(x)) x else y
+
 # ── pip_lookup ────────────────────────────────────────────────────────────────
 
 #' Resolve survey triplets to pip_ids via the manifest
@@ -150,7 +155,11 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   \item{`poverty_line`}{Poverty threshold; `NA` for non-poverty measures.}
 #'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
 #'   \item{`value`}{Computed statistic.}
-#'   \item{`population`}{Total weighted population in the group.}
+#'   \item{`population`}{Total weighted population in the group.  For surveys
+#'     where a requested dimension is absent (partial-match), this reflects the
+#'     weighted count of respondents in the non-`NA` grouping cells only; rows
+#'     with `NA` in the missing dimension still carry the correct weighted count
+#'     for their observed group.}
 #' }
 #'
 #' @family api
@@ -373,7 +382,3 @@ table_maker <- function(pip_id        = NULL,
   result[]
 }
 
-# ── Internal helper ───────────────────────────────────────────────────────────
-
-# Null-coalescing operator (used internally; not exported)
-`%||%` <- function(x, y) if (!is.null(x)) x else y
