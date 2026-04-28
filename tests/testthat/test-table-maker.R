@@ -629,3 +629,44 @@ test_that("table_maker() output serializes to valid JSON with na='null'", {
   # Non-poverty rows should have null poverty_line in JSON
   expect_true(any(is.na(parsed$poverty_line)))
 })
+
+# ===========================================================================
+# table_maker() — by = NULL aggregate mode
+# ===========================================================================
+
+test_that("table_maker() returns aggregate result when by = NULL", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id        = "COL_2010_ECH_INC_ALL",
+    measures      = c("headcount", "mean"),
+    poverty_lines = 2.15,
+    by            = NULL
+  )
+  # No dimension columns present
+  expect_false(any(c("area", "gender", "educat4") %in% names(res)))
+  # Required output columns present
+  expect_true(all(c("pip_id", "measure", "value", "population") %in% names(res)))
+  # One row for mean (no poverty_line) + one row for headcount at 2.15
+  expect_equal(nrow(res), 2L)
+  # mean row: poverty_line is NA
+  expect_true(is.na(res[measure == "mean"]$poverty_line))
+  # headcount row: poverty_line = 2.15
+  expect_equal(res[measure == "headcount"]$poverty_line, 2.15)
+})
+
+test_that("table_maker() aggregate population equals sum of survey weights", {
+  # Fixture weight = 1 each, n = 10 → population = 10
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    by       = NULL
+  )
+  expect_equal(res$population, 10)
+})

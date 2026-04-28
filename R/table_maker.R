@@ -242,8 +242,9 @@ table_maker <- function(pip_id        = NULL,
   # Drop: 0 overlap — warn with pip_id list
   # Partial: keep but warn — missing dims filled with NA in per-survey loop
   if (!is.null(by)) {
-    # `age` maps to `age_group` after binning; check original `age` in manifest
-    by_check <- if ("age" %in% by) c(setdiff(by, "age"), "age") else by
+    # The manifest stores the pre-binning dimension name "age" (not "age_group"),
+    # so we can intersect directly against `by` without any remapping.
+    by_check <- by
 
     overlap <- vapply(
       entries$dimensions,
@@ -292,6 +293,29 @@ table_maker <- function(pip_id        = NULL,
 
   # ── 4. Load ─────────────────────────────────────────────────────────────────
   dt <- load_surveys(entries, release = release)
+
+  if (nrow(dt) == 0L) {
+    cli_abort(
+      c(
+        "{.fn load_surveys} returned no rows for the requested surveys.",
+        "i" = "Check the Arrow repository path and partition keys."
+      )
+    )
+  }
+
+  # Guard: assert load_surveys() attached the expected metadata columns so that
+  # downstream sdt$country_code[[1L]] etc. fail at the right place with a clear
+  # message if the contract changes.
+  required_meta <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
+  missing_meta  <- setdiff(required_meta, names(dt))
+  if (length(missing_meta)) {
+    cli_abort(
+      c(
+        "{.fn load_surveys} result is missing expected metadata columns.",
+        "i" = "Missing: {.val {missing_meta}}"
+      )
+    )
+  }
 
   # ── 5. Age binning ──────────────────────────────────────────────────────────
   # .bin_age adds an `age_group` column; we replace the raw `age` column with

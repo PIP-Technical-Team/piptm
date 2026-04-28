@@ -103,5 +103,10 @@ is present, the test returns all rows and fails the `nrow == 1` assertion.
 
 - `.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md` — companion
   bug in `load_surveys()` path construction
+- `.cg-docs/solutions/bugs/2026-04-28-cli-dot-prefix-glue-expression-rejected.md` —
+  tension: dot-prefix local variables (required here) are rejected by cli glue
+  expressions; use parentheses `{(.ids)}` to resolve
+- `.cg-docs/solutions/bugs/2026-04-28-fsetdiff-wrong-namespace-collapse-vs-datatable.md` —
+  related namespace confusion between data.table and collapse
 - data.table FAQ: [https://rdatatable.gitlab.io/data.table/articles/datatable-faq.html](https://rdatatable.gitlab.io/data.table/articles/datatable-faq.html)
   (search "column names shadows")

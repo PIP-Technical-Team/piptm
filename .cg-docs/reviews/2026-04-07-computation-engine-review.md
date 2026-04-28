@@ -1,8 +1,17 @@
 ---
 plan: .cg-docs/plans/2026-04-07-computation-engine.md
-review-date: 2026-04-20
-scope: compute_inequality.R (Step 4)
+review-date: 2026-04-28
+scope: compute_inequality.R (Step 4), compute_measures.R (Step 6), table_maker.R (Step 7)
 findings:
+  # --- 2026-04-28 Step 7 review (table_maker.R, thorough) ---
+  s7-P0.1: false-positive
+  s7-P1.1: fixed
+  s7-P1.2: fixed
+  s7-P2.1: fixed
+  s7-P2.2: fixed
+  s7-P2.3: false-positive
+  s7-P3.1: open
+  s7-P3.2: open
   # --- 2026-04-22 Step 6 review (compute_measures.R, thorough) ---
   # --- 2026-04-27 Step 6 light verification review ---
   s6v-P0.1: open
@@ -329,3 +338,50 @@ Auto-escalation applied: files dispatch statistical family functions (`GRP`, `fs
 | `n_all`/`n_pov` derivation from `pip_measures()` correct | ✅ |
 | `n_all + n_pov` math for 2-PL all-measures test | ✅ |
 | 3 numerical cross-checks isolated correctly | ✅ |
+
+---
+
+## Step 7 review � `table_maker.R` (2026-04-28, thorough)
+
+**Scope**: `R/table_maker.R` � `pip_lookup()` + `table_maker()` + `%||%`
+**Depth**: thorough
+**Auto-escalation**: `@cg-data-quality`, `@cg-reproducibility` (statistical functions present)
+
+### Findings
+
+#### P0 � BLOCKING
+
+- **[s7-P0.1] open** � [cg-code-quality] `table_maker.R:214`: bare `piptm_manifest` symbol at file top level outside any function body. Evaluated on `load_all()` / `library()`. Dead/stray code; delete line 214.
+
+#### P1 � CRITICAL
+
+- **[s7-P1.1] open** � [cg-data-quality] No guard when `load_surveys()` returns 0 rows. `lapply` iterates 0 times ? `rbindlist(list(), fill=TRUE)` returns a 0-column `data.table` ? `setcolorder` silently no-ops or errors. Add explicit `nrow(dt) == 0L` abort after Step 4.
+
+- **[s7-P1.2] open** � [cg-adversarial] `sdt\[[1L]]` (and `surveyid_year`, `welfare_type`) called without asserting the columns exist on `dt`. If `load_surveys()` changes its contract the error surfaces inside `table_maker` with a misleading traceback. Add a `required_meta` column assertion after Step 4 load.
+
+#### P2 � IMPORTANT
+
+- **[s7-P2.1] open** � [cg-code-quality] `by_check` construction (`c(setdiff(by, "age"), "age")`) is a no-op: produces the same set as `by` with `"age"` reordered last. The manifest stores `"age"` (pre-binning name) already. Replace with `by_check <- by` and add an explanatory comment.
+
+- **[s7-P2.2] open** � [cg-testing] No test coverage for `by = NULL` (aggregate mode). Step 6a `if (!is.null(by))` branch and Step 7 `dim_cols <- character(0L)` branch are untested.
+
+- **[s7-P2.3] open** � [cg-code-quality] `.cg-docs/` not excluded from package build via `.Rbuildignore`.
+
+#### P3 � MINOR
+
+- **[s7-P3.1] open** � [cg-code-quality] `%||%` defined at bottom of file but used at top. Move to `utils-internal.R` or place above `pip_lookup`.
+
+- **[s7-P3.2] open** � [cg-documentation] `@return` for `population` column does not note that for partial-match surveys, population reflects only non-NA cell counts.
+
+### Passed (Step 7)
+
+| Check | Result |
+|---|---|
+| Clean separation `pip_lookup` / `table_maker` / internals | pass |
+| `.` prefix on all internal helpers | pass |
+| No hardcoded paths; `release` defaults to `piptm_current_release()` | pass |
+| Arrow partition pushdown before load | pass |
+| Per-survey loop over `unique(dt\)` (keyed) | pass |
+| `rbindlist(fill=TRUE)` for final bind | pass |
+| Metadata attached after `compute_measures()` | pass |
+| Loud failures � no silent fallbacks | pass |
