@@ -78,5 +78,17 @@
     )
   })
 
+  # --- collapse threading ----------------------------------------------------
+  # Benchmark (benchmarks/orchestration-strategy.R, 2026-04-28) showed that
+  # nthreads = 4 is optimal for typical 15-survey workloads (0.12s vs 0.13s
+  # for nthreads = 1). We cap at the physical core count so we never
+  # over-subscribe on a 2-core CI runner. Falls back silently when the
+  # package was compiled without OpenMP support.
+  tryCatch({
+    n <- min(4L, max(1L, parallel::detectCores(logical = FALSE)))
+    collapse::set_collapse(nthreads = n)
+  },
+  error = function(e) NULL)
+
   invisible(NULL)
 }
