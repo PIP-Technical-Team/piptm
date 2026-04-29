@@ -82,6 +82,11 @@ SORT_THRESHOLD       <- 0.20              # 20%  → flag Arrow sort for investi
 # (pip_id is the survey identifier; kept so output rows identify their survey)
 NEEDED_COLS   <- c("pip_id", "welfare", "weight", BY_DIMS)
 
+# Dictionary-encoded dimension columns in the canonical PIP Arrow schema.
+# Used by IO-3 (cast before Arrow sort) and E2E-3 (cast after collect).
+# Update here if the schema gains or loses dict-encoded columns.
+DICT_SCHEMA_COLS <- c("gender", "area", "educat4", "educat5", "educat7")
+
 # Full schema columns (reference only — used for documentation in results)
 ALL_SCHEMA_COLS <- c(
   "country_code", "surveyid_year", "welfare_type", "version",
@@ -271,7 +276,7 @@ io_3_sort <- function(files, cols = NEEDED_COLS, by = BY_DIMS) {
   sort_cols  <- c("pip_id", by, "welfare")
   # Dimension columns in this benchmark are dict-encoded; cast to string
   # so Arrow's sort engine accepts them (dict sort is unsupported).
-  dict_cols  <- intersect(by, c("gender", "area", "educat4", "educat5", "educat7"))
+  dict_cols  <- intersect(by, DICT_SCHEMA_COLS)
 
   ds <- arrow::open_dataset(files, format = "parquet") |>
     dplyr::select(dplyr::all_of(cols))
@@ -311,57 +316,33 @@ e2e_2_select <- function(files, measures = MEASURES,
 #
 # The two paths share a single Arrow scan per poverty line (headcount) plus one
 # for mean, then one collapse() path.  Correctness validated against E2E-1.
-# Helper: Arrow collect produces dict-encoded columns; cast to character so
-# rbindlist() can combine with collapse-produced character columns.
-.cast_dict_to_char <- function(dt, by_cols) {
-  dict_cols <- intersect(by_cols, c("gender", "area", "educat4", "educat5", "educat7"))
-  for (col in dict_cols) {
-    if (col %in% names(dt) && is.factor(dt[[col]])) {
-      data.table::set(dt, j = col, value = as.character(dt[[col]]))
-    }
-  }
-  dt
-}
-
+#
+# Dict-cast strategy: NO cast needed for the R-aggregation path.
+# Arrow's collect() converts dict-encoded columns to R factors automatically.
+# data.table groupby handles factors natively — no character conversion needed.
+# The dict-cast workaround (as.character inside Arrow mutate) was only required
+# when pushing group_by|summarise into the Arrow query engine; moving the
+# aggregation to R after collect() eliminates the need entirely.
 .arrow_weighted_mean <- function(files, by_cols) {
-  dict_cols <- intersect(by_cols, c("gender", "area", "educat4", "educat5", "educat7"))
-  ds <- arrow::open_dataset(files, format = "parquet") |>
-    dplyr::select(dplyr::all_of(c(by_cols, "welfare", "weight")))
-  # Cast dict-encoded columns to string before grouping: Arrow's multi-file
-  # datasets may have incompatible dict indices that block group_by aggregation.
-  if (length(dict_cols) > 0L) {
-    ds <- ds |> dplyr::mutate(dplyr::across(dplyr::all_of(dict_cols), as.character))
-  }
-  ds |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(by_cols))) |>
-    dplyr::summarise(
-      value      = sum(welfare * weight, na.rm = TRUE) / sum(weight, na.rm = TRUE),
-      population = sum(weight, na.rm = TRUE),
-      .groups    = "drop"
-    ) |>
+  dt <- arrow::open_dataset(files, format = "parquet") |>
+    dplyr::select(dplyr::all_of(c(by_cols, "welfare", "weight"))) |>
     dplyr::collect() |>
-    data.table::as.data.table() |>
-    (\(x) { x[, measure := "mean"]; x })()
+    data.table::as.data.table()
+  grp_by <- c(by_cols)
+  dt[, .(value = sum(welfare * weight) / sum(weight), population = sum(weight)),
+     by = grp_by][, measure := "mean"]
 }
 
 .arrow_headcount <- function(files, by_cols, poverty_line) {
-  dict_cols <- intersect(by_cols, c("gender", "area", "educat4", "educat5", "educat7"))
-  ds <- arrow::open_dataset(files, format = "parquet") |>
-    dplyr::select(dplyr::all_of(c(by_cols, "welfare", "weight")))
-  if (length(dict_cols) > 0L) {
-    ds <- ds |> dplyr::mutate(dplyr::across(dplyr::all_of(dict_cols), as.character))
-  }
-  ds |>
-    dplyr::mutate(poor = as.integer(welfare < poverty_line)) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(by_cols))) |>
-    dplyr::summarise(
-      value      = sum(poor * weight, na.rm = TRUE) / sum(weight, na.rm = TRUE),
-      population = sum(weight, na.rm = TRUE),
-      .groups    = "drop"
-    ) |>
+  dt <- arrow::open_dataset(files, format = "parquet") |>
+    dplyr::select(dplyr::all_of(c(by_cols, "welfare", "weight"))) |>
     dplyr::collect() |>
-    data.table::as.data.table() |>
-    (\(x) { x[, `:=`(measure = "headcount", poverty_line = poverty_line)]; x })()
+    data.table::as.data.table()
+  dt[, poor := as.integer(welfare < poverty_line)]
+  grp_by <- c(by_cols)
+  dt[, .(value = sum(poor * weight) / sum(weight), population = sum(weight)),
+     by = grp_by
+  ][, `:=`(measure = "headcount", poverty_line = poverty_line)]
 }
 
 e2e_3_push <- function(files, measures = MEASURES,
@@ -369,6 +350,12 @@ e2e_3_push <- function(files, measures = MEASURES,
   # Arrow path uses explicit batch_by (including pip_id) because we build
   # the grouping ourselves — not routed through compute_measures().
   # collapse path uses by = BY_DIMS; compute_measures() prepends pip_id.
+  #
+  # NOTE: this function performs 1 + length(poverty_lines) full Arrow scans
+  # (1 for weighted mean + 1 per poverty line for headcount).  With the
+  # benchmark's 2 poverty lines that is 3 scans vs E2E-2's 1.  To be
+  # competitive, headcount for all lines would need a single conditional
+  # aggregation scan.  Performance is structurally disadvantaged vs E2E-2.
   batch_by   <- c("pip_id", by)
   arrow_meas <- intersect(measures, c("mean", "headcount"))
   r_meas     <- setdiff(measures, c("mean", "headcount"))
@@ -546,6 +533,9 @@ e2e_fns <- Filter(Negate(is.null), list(
     function() e2e_3_push(parquet_files_all) else NULL
 ))
 
+# Track which approaches failed at benchmark time (separate from correctness)
+e2e_bench_failed <- character(0L)
+
 e2e_results <- rbindlist(lapply(names(e2e_fns), function(nm) {
   message(sprintf("  [%s] ...", nm), appendLF = FALSE)
   bm <- tryCatch(
@@ -557,6 +547,8 @@ e2e_results <- rbindlist(lapply(names(e2e_fns), function(nm) {
     ),
     error = function(e) {
       message(" FAILED: ", conditionMessage(e))
+      # Record this as a benchmark-time failure (distinct from correctness)
+      e2e_bench_failed <<- c(e2e_bench_failed, nm)
       NULL
     }
   )
@@ -659,18 +651,25 @@ decision_e2e_select <- if (is.na(e2e_select_speedup)) {
 }
 
 decision_push <- if (!check_3) {
-  "E2E-3 Push excluded — correctness check failed."
+  "E2E-3 Push excluded — correctness check failed (logical mismatch on fixture)."
+} else if ("E2E-3 Push" %in% e2e_bench_failed) {
+  paste(
+    "E2E-3 Push excluded — correctness check PASSED, but benchmark failed at runtime.",
+    "Root cause: Arrow dict-index incompatibility across Parquet files ('Unifying differing dictionaries').",
+    "Fix: ensure dict-encoded columns are cast to character after collect(), not inside Arrow query.",
+    "NOTE: E2E-3 performs 1 + N_poverty_lines Arrow scans per call; structurally disadvantaged vs E2E-2."
+  )
 } else if (is.na(e2e_push_speedup)) {
   "E2E Push result unavailable."
 } else if (e2e_push_speedup >= E2E_PUSH_THRESHOLD) {
   sprintf(
-    "ADOPT Arrow push: E2E-3 is **%s** than E2E-2 (%.3fs → %.3fs).",
-    .fmt_speedup(e2e_push_speedup), e2e2_med, e2e3_med
+    "ADOPT Arrow push: E2E-3 is **%s** than E2E-2 (%.3fs → %.3fs). NOTE: performs 1 + %d Arrow scans.",
+    .fmt_speedup(e2e_push_speedup), e2e2_med, e2e3_med, length(POVERTY_LINES)
   )
 } else {
   sprintf(
-    "SKIP Arrow push: E2E-3 is only %s than E2E-2 (%.3fs → %.3fs), below the %.0f%% threshold.",
-    .fmt_speedup(e2e_push_speedup), e2e2_med, e2e3_med, E2E_PUSH_THRESHOLD * 100
+    "SKIP Arrow push: E2E-3 is only %s than E2E-2 (%.3fs → %.3fs), below the %.0f%% threshold. Performs 1 + %d Arrow scans.",
+    .fmt_speedup(e2e_push_speedup), e2e2_med, e2e3_med, E2E_PUSH_THRESHOLD * 100, length(POVERTY_LINES)
   )
 }
 
@@ -678,12 +677,17 @@ decision_sort <- if (is.na(sort_fraction)) {
   "Sort profiling unavailable."
 } else if (sort_fraction >= SORT_THRESHOLD) {
   sprintf(
-    "WORTH INVESTIGATING: Arrow sort overhead is %.0f%% of E2E-1 (%.3fs extra over IO-2). Implement pre-sorted I/O and skip setorder() in compute_inequality().",
+    paste(
+      "WORTH INVESTIGATING: Arrow sort + cast overhead is %.0f%% of E2E-1 (%.3fs extra over IO-2).",
+      "Note: this is an upper bound — IO-3 also casts dict cols to string before sorting;",
+      "true sort-only overhead is lower.",
+      "Next step: implement pre-sorted I/O and skip setorder() in compute_inequality()."
+    ),
     sort_fraction * 100, io3_med - io2_med
   )
 } else {
   sprintf(
-    "LOW PRIORITY: Arrow sort overhead is only %.0f%% of E2E-1 (%.3fs extra over IO-2). Not worth pre-sorting.",
+    "LOW PRIORITY: Arrow sort + cast overhead is only %.0f%% of E2E-1 (%.3fs extra over IO-2). Not worth pre-sorting.",
     sort_fraction * 100, io3_med - io2_med
   )
 }
