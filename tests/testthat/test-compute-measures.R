@@ -23,7 +23,24 @@ make_single_dt <- function(n = 10L, dims = character(0L)) {
   dt
 }
 
-# All 18 canonical measure names — driven from the exported function, not :::.
+make_multi_dt <- function(n_surveys = 3L, n_rows = 10L, dims = character(0L)) {
+  rbindlist(lapply(seq_len(n_surveys), function(i) {
+    sdt <- data.table(
+      pip_id  = sprintf("TST_2020_S%d", i),
+      welfare = seq(i, by = 1, length.out = n_rows),
+      weight  = rep(1.0, n_rows)
+    )
+    if ("gender" %in% dims) {
+      sdt[, gender := factor(
+        rep(c("male", "female"), length.out = n_rows),
+        levels = c("male", "female")
+      )]
+    }
+    sdt
+  }))
+}
+
+
 ALL_MEASURES <- names(pip_measures())
 ALL_PL       <- c(3.5, 6.5)
 
@@ -31,29 +48,52 @@ ALL_PL       <- c(3.5, 6.5)
 n_all  <- length(ALL_MEASURES)             # 18: 5 pov + 2 ineq + 11 welfare
 n_pov  <- sum(pip_measures() == "poverty") # 5
 
-# ── 1. Multi-survey guard ────────────────────────────────────────────────────
+# ── 1. Multi-survey capability ──────────────────────────────────────────────
 
-test_that("multi-survey guard errors when dt contains 2 pip_ids", {
-  dt <- data.table(
-    pip_id  = c("A", "B"),
-    welfare = c(1, 2),
-    weight  = c(1, 1)
-  )
-  expect_error(
-    compute_measures(dt, measures = "mean"),
-    class = "rlang_error"
-  )
+test_that("multi-survey: output always contains pip_id column", {
+  dt  <- make_multi_dt(3L)
+  res <- compute_measures(dt, measures = "mean")
+  expect_true("pip_id" %in% names(res))
 })
 
-test_that("multi-survey guard error message names the found pip_ids", {
-  dt <- data.table(
-    pip_id  = c("SUR_2001", "SUR_2002"),
-    welfare = c(1, 2),
-    weight  = c(1, 1)
-  )
-  expect_error(
-    compute_measures(dt, measures = "mean"),
-    regexp = "SUR_2001|SUR_2002"
+test_that("multi-survey: output has one row per survey per measure (by = NULL)", {
+  dt  <- make_multi_dt(3L)
+  res <- compute_measures(dt, measures = c("mean", "gini"))
+  # 3 surveys × 2 measures = 6 rows
+  expect_equal(nrow(res), 6L)
+  expect_equal(uniqueN(res$pip_id), 3L)
+})
+
+test_that("multi-survey values match per-survey lapply approach", {
+  dt      <- make_multi_dt(3L)
+  meas    <- c("mean", "gini", "headcount")
+  pl      <- 3.5
+
+  # Reference: original per-survey lapply approach
+  ref <- rbindlist(lapply(unique(dt$pip_id), function(pid) {
+    sdt <- dt[pip_id == pid]
+    res <- rbindlist(list(
+      compute_welfare(sdt,  by = NULL, measures = "mean"),
+      compute_inequality(sdt, by = NULL, measures = "gini"),
+      compute_poverty(sdt,  poverty_lines = pl, by = NULL, measures = "headcount")
+    ), fill = TRUE)
+    res[, pip_id := pid]
+    res
+  }), fill = TRUE)
+
+  # New multi-survey call
+  result <- compute_measures(dt, measures = meas, poverty_lines = pl)
+
+  # Compare values after normalising to common sort order
+  ref[is.na(poverty_line), poverty_line := NA_real_]
+  key <- c("pip_id", "measure")
+  setkeyv(ref,    key)
+  setkeyv(result, key)
+
+  expect_equal(
+    result[, .(pip_id, measure, value)],
+    ref[,    .(pip_id, measure, value)],
+    tolerance = 1e-10
   )
 })
 
