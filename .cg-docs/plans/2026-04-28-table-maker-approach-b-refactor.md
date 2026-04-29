@@ -1,7 +1,8 @@
 ---
 date: 2026-04-28
 title: "Refactor table_maker() to Approach B — Grouped Collapse Orchestration"
-status: active
+status: completed
+completed-date: 2026-04-29
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md"
 language: "R"
@@ -242,11 +243,11 @@ implementation for any given input. This is verified by:
 
 ## Documentation Checklist
 
-- [ ] `compute_measures()` roxygen updated (multi-survey capable)
-- [ ] `table_maker()` internal comments updated (new step numbering)
-- [ ] `.onLoad()` nthreads setting commented
-- [ ] Computation engine plan Step 8 updated with links
-- [ ] `compound-gpid.md` Current Focus updated if needed
+- [x] `compute_measures()` roxygen updated (multi-survey capable)
+- [x] `table_maker()` internal comments updated (new step numbering)
+- [x] `.onLoad()` nthreads setting commented
+- [x] Computation engine plan Step 8 updated with links
+- [x] `compound-gpid.md` Current Focus updated
 
 ## Risks & Mitigations
 

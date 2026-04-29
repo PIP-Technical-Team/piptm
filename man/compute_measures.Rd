@@ -2,14 +2,14 @@
 % Please edit documentation in R/compute_measures.R
 \name{compute_measures}
 \alias{compute_measures}
-\title{Dispatch welfare, inequality, and poverty computations for a single survey}
+\title{Dispatch welfare, inequality, and poverty computations across one or more surveys}
 \usage{
 compute_measures(dt, measures, poverty_lines = NULL, by = NULL)
 }
 \arguments{
-\item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} for \strong{exactly one survey} — one
-unique value in the \code{pip_id} column.  Must contain at minimum \code{welfare},
-\code{weight}, and \code{pip_id} columns, plus any columns named in \code{by}.}
+\item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} for \strong{one or more surveys}.  Must
+contain at minimum \code{welfare}, \code{weight}, and \code{pip_id} columns, plus any
+columns named in \code{by}.}
 
 \item{measures}{A non-empty character vector of measure names drawn from
 \code{\link[=pip_measures]{pip_measures()}}.  Validated by \code{\link[=.classify_measures]{.classify_measures()}}.}
@@ -34,19 +34,17 @@ non-poverty measures.}
 }
 \description{
 Internal orchestrator that classifies requested measures into their
-computation families, builds a single \code{\link[collapse:GRP]{collapse::GRP()}} object (shared
-across all family functions), and dispatches to \code{\link[=compute_poverty]{compute_poverty()}},
-\code{\link[=compute_inequality]{compute_inequality()}}, and \code{\link[=compute_welfare]{compute_welfare()}} as required.  Results are
-row-bound via \code{\link[data.table:rbindlist]{data.table::rbindlist()}} with \code{fill = TRUE}, so poverty rows
-carry a \code{poverty_line} column while inequality and welfare rows receive
-\code{NA_real_} in that column.
+computation families, builds a single compound \code{\link[collapse:GRP]{collapse::GRP()}} object
+keyed by \code{c("pip_id", by)} (shared across inequality and welfare family
+functions), and dispatches to \code{\link[=compute_poverty]{compute_poverty()}}, \code{\link[=compute_inequality]{compute_inequality()}},
+and \code{\link[=compute_welfare]{compute_welfare()}} as required.  Results are row-bound via
+\code{\link[data.table:rbindlist]{data.table::rbindlist()}} with \code{fill = TRUE}, so poverty rows carry a
+\code{poverty_line} column while inequality and welfare rows receive \code{NA_real_}.
 }
 \details{
-\strong{This function must never receive multi-survey data.}  It asserts
-\code{uniqueN(dt$pip_id) == 1L} and aborts with a clear programming-error
-message otherwise.  The caller (\code{\link[=table_maker]{table_maker()}}) is responsible for
-splitting the batch result of \code{\link[=load_surveys]{load_surveys()}} by \code{pip_id} before passing
-slices here.
+\code{pip_id} is always included in the grouping structure so every output row
+identifies its source survey.  A single-survey call is a degenerate batch
+of one and behaves identically to the previous single-survey contract.
 }
 \seealso{
 Other compute: 

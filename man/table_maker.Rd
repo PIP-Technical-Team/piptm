@@ -55,7 +55,11 @@ A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long 
 \item{\code{poverty_line}}{Poverty threshold; \code{NA} for non-poverty measures.}
 \item{\code{measure}}{Measure name (e.g. \code{"headcount"}, \code{"gini"}).}
 \item{\code{value}}{Computed statistic.}
-\item{\code{population}}{Total weighted population in the group.}
+\item{\code{population}}{Total weighted population in the group.  For surveys
+where a requested dimension is absent (partial-match), this reflects the
+weighted count of respondents in the non-\code{NA} grouping cells only; rows
+with \code{NA} in the missing dimension still carry the correct weighted count
+for their observed group.}
 }
 }
 \description{

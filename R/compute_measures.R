@@ -54,6 +54,21 @@ compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
     )
   }
 
+  # ── 1b. Guard: all `by` columns present ────────────────────────────────────
+  if (!is.null(by)) {
+    missing_by <- setdiff(by, names(dt))
+    if (length(missing_by)) {
+      cli_abort(
+        c(
+          "Column{?s} listed in {.arg by} not found in {.arg dt}: {.col {missing_by}}.",
+          "i" = "Use {.fn table_maker} (which NA-fills missing dimension columns automatically),",
+          "i" = "or add the columns to {.arg dt} before calling {.fn compute_measures} directly."
+        ),
+        call = NULL
+      )
+    }
+  }
+
   # ── 2. Classify measures → families ────────────────────────────────────────
   classified <- .classify_measures(measures)
   families   <- names(classified)

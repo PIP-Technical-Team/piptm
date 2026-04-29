@@ -48,7 +48,20 @@ Key internal components:
 
 ## Current Focus
 
-Architecture and planning stage. The Arrow dataset generation pipeline (Phase 0) and the core computation engine (Phase 1) are the current priorities. See `docs/roadmap.md` for the full phased implementation plan (awaiting team alignment).
+Phase 1 (Computation Engine) is **complete**. The full `table_maker()` pipeline
+is implemented, tested (414 passing), and optimised:
+
+- `compute_measures()` now handles multi-survey batches using a compound
+  `GRP(c("pip_id", by))` — single GRP construction regardless of batch size.
+- `table_maker()` uses a single batch call + keyed metadata join (Approach B),
+  replacing the per-survey `lapply()` loop. Verified 72% faster (0.12 s vs
+  0.43 s for 15 surveys).
+- `collapse::set_collapse(nthreads = min(4L, physical_cores))` set on load.
+
+Next priorities (Phase 2 / Phase 3):
+- API service layer connecting PIP platform to `table_maker()`
+- Validation & documentation pass (`devtools::check()` clean, CRAN-ready)
+- {pipdata} harmonization pipeline alignment
 
 ## Roadmap
 

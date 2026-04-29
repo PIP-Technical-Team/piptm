@@ -357,7 +357,18 @@ table_maker <- function(pip_id        = NULL,
   # ── 8. Attach survey metadata ────────────────────────────────────────────────
   # country_code, surveyid_year, welfare_type are attached via a keyed join
   # from a pip_id → metadata lookup extracted from the loaded data.
-  meta   <- unique(dt[, .(pip_id, country_code, surveyid_year, welfare_type)])
+  meta <- unique(dt[, .(pip_id, country_code, surveyid_year, welfare_type)])
+  if (data.table::uniqueN(meta, by = "pip_id") != nrow(meta)) {
+    dups <- meta[duplicated(meta, by = "pip_id"), pip_id]
+    cli_abort(
+      c(
+        "{.fn load_surveys} returned inconsistent metadata for {length(dups)} pip_id{?s}.",
+        "i" = "Each pip_id must map to exactly one country_code / surveyid_year / welfare_type.",
+        "i" = "Affected: {.val {dups}}"
+      ),
+      call = NULL
+    )
+  }
   result <- meta[result, on = "pip_id"]
 
   # ── 9. Reorder columns ──────────────────────────────────────────────────────
