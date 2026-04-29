@@ -1,4 +1,4 @@
-#' @importFrom data.table is.data.table data.table setcolorder rbindlist set fsetdiff
+#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
 #' @importFrom cli cli_abort cli_warn
 NULL
 
@@ -338,34 +338,29 @@ table_maker <- function(pip_id        = NULL,
     age_was_binned <- TRUE
   }
 
-  # ── 6. Per-survey compute ───────────────────────────────────────────────────
-  survey_ids <- unique(dt$pip_id)
-  results <- lapply(survey_ids, function(pid) {
-    sdt <- dt[pip_id == pid]
-
-    # 6a. Fill missing dimension columns with NA_character_ so that
-    #     compute_measures() always receives the full `by` vector.
-    #     GRP naturally produces a single NA group for missing dimensions.
-    if (!is.null(by)) {
-      for (d in setdiff(by, names(sdt))) {
-        data.table::set(sdt, j = d, value = NA_character_)
-      }
+  # ── 6. Batch NA-fill for missing dimension columns ───────────────────────────
+  # Add any `by` columns that are absent from some/all surveys so that
+  # compute_measures() always receives the full `by` vector. GRP naturally
+  # produces a single NA group for surveys where the dimension is missing.
+  if (!is.null(by)) {
+    for (d in setdiff(by, names(dt))) {
+      data.table::set(dt, j = d, value = NA_character_)
     }
+  }
 
-    res <- compute_measures(sdt, measures, poverty_lines, by)
+  # ── 7. Batch compute ────────────────────────────────────────────────────────
+  # Single grouped call across all surveys (Approach B). compute_measures()
+  # uses GRP(c("pip_id", by)) internally, paying the overhead once instead
+  # of once per survey.
+  result <- compute_measures(dt, measures, poverty_lines, by)
 
-    # Attach survey metadata AFTER computation (compute_measures does not
-    # need nor use these columns)
-    res[, pip_id        := pid]
-    res[, country_code  := sdt$country_code[[1L]]]
-    res[, surveyid_year := sdt$surveyid_year[[1L]]]
-    res[, welfare_type  := sdt$welfare_type[[1L]]]
-    res
-  })
+  # ── 8. Attach survey metadata ────────────────────────────────────────────────
+  # country_code, surveyid_year, welfare_type are attached via a keyed join
+  # from a pip_id → metadata lookup extracted from the loaded data.
+  meta   <- unique(dt[, .(pip_id, country_code, surveyid_year, welfare_type)])
+  result <- meta[result, on = "pip_id"]
 
-  result <- data.table::rbindlist(results, fill = TRUE)
-
-  # ── 7. Reorder columns ──────────────────────────────────────────────────────
+  # ── 9. Reorder columns ──────────────────────────────────────────────────────
   # When age was binned, rename the "age" column to "age_group" in the output.
   if (age_was_binned) {
     data.table::setnames(result, "age", "age_group")

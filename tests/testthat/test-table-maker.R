@@ -337,6 +337,39 @@ test_that("table_maker() returns data for each survey when multiple pip_ids give
   expect_true("BOL_2000_ECH_INC_ALL" %in% res$pip_id)
 })
 
+test_that("table_maker() batch result matches sequential single-survey calls", {
+  # Regression test: Approach B (batch) must be numerically identical to
+  # calling table_maker() once per survey and rbindlisting the results.
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  ids <- c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
+
+  batch <- piptm::table_maker(
+    pip_id        = ids,
+    measures      = c("mean", "headcount", "gini"),
+    poverty_lines = c(3.0, 7.0)
+  )
+
+  sequential <- data.table::rbindlist(lapply(ids, function(pid) {
+    piptm::table_maker(
+      pip_id        = pid,
+      measures      = c("mean", "headcount", "gini"),
+      poverty_lines = c(3.0, 7.0)
+    )
+  }), fill = TRUE)
+
+  # Align row order before comparing
+  key_cols <- c("pip_id", "measure", "poverty_line")
+  data.table::setkeyv(batch,      key_cols)
+  data.table::setkeyv(sequential, key_cols)
+
+  expect_equal(batch$value,      sequential$value,      tolerance = 1e-10)
+  expect_equal(batch$population, sequential$population, tolerance = 1e-10)
+  expect_equal(batch$pip_id,     sequential$pip_id)
+})
+
 # ===========================================================================
 # table_maker() — measures and poverty lines
 # ===========================================================================
