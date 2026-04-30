@@ -25,10 +25,16 @@
 #                             then compute_measures() for all 4 measures.
 #                             Same compute as A1, cheaper I/O.
 #
-#   A3  Hybrid compute      — Same column-pruned Arrow I/O as A2; then
-#                             data.table for mean + headcount (closed-form
-#                             weighted aggregates, one grouped pass each);
-#                             compute_measures() only for gini + median.
+#   A3  Arrow push-down      — Two Arrow scans:
+#                             Scan 1: group_by + summarise inside Arrow
+#                               (before collect) for mean + headcount.
+#                               Collects a tiny aggregated table
+#                               (one row per group, not per person).
+#                             Scan 2: column-pruned collect of full
+#                               microdata → collapse for gini + median.
+#                             Arrow's aggregation engine handles the
+#                             closed-form measures; R only receives what
+#                             it strictly needs.
 #
 # Key outputs:
 #   benchmarks/pipeline-comparison-results.png
@@ -59,6 +65,13 @@ BASE_SEED     <- 2026L
 # All other schema columns (country_code, surveyid_year, welfare_type, version,
 # survey_acronym, educat5, educat7, age) are dropped at I/O time for A2/A3.
 NEEDED_COLS <- c("pip_id", "welfare", "weight", BY_DIMS)
+
+# Dictionary-encoded dimension columns in the PIP Arrow schema.
+# Arrow's aggregation engine requires these to be cast to character before
+# group_by + summarise across multiple Parquet files (different files may
+# encode the same category with different integer indices, which Arrow
+# cannot unify automatically during a lazy grouped query).
+DICT_SCHEMA_COLS <- c("gender", "area", "educat4", "educat5", "educat7")
 
 # ── 1. Manifest setup ─────────────────────────────────────────────────────────
 
@@ -147,56 +160,108 @@ run_a2 <- function(entries_dt) {
   list(result = result, t_io = t_io, t_cmp = t_cmp)
 }
 
-# ── A3: Hybrid compute ────────────────────────────────────────────────────────
-# I/O: identical to A2 (single column-pruned Arrow scan).
+# \u2500\u2500 A3: Arrow push-down aggregation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 #
 # Compute split:
-#   mean      — weighted mean, closed-form: sum(w*y)/sum(w) per group.
-#               One grouped data.table pass.
-#   headcount — weighted share below poverty line: sum(w*(y<pl))/sum(w).
-#               One grouped pass per poverty line (all in-memory; no extra
-#               Arrow scan).
-#   gini      — requires sorted welfare vector; dispatched to collapse via
-#               compute_measures().
-#   median    — requires quantile algorithm; dispatched to collapse via
-#               compute_measures().
 #
-# By splitting at this boundary we avoid the collapse overhead for the two
-# simple measures while still delegating the two hard ones to collapse.
+# Two Arrow scans, both timed as I/O (network → R boundary):
+#
+#   Scan 1 — Arrow group_by + summarise BEFORE collect().
+#     Arrow executes the aggregation on the Parquet files and returns one row
+#     per (pip_id × gender × area × educat4) group instead of one row per
+#     person.  For 15 surveys this reduces the collected row count from
+#     ~millions to ~hundreds.
+#     Computes in one scan:
+#       sum_w        — total weighted population per group (denominator)
+#       sum_ww       — sum(welfare * weight) per group  → mean numerator
+#       poor_w_1..N  — sum(weight * 1[welfare < pl]) per group × poverty line
+#                      → headcount numerator per poverty line
+#     Dict-encoded columns (gender, area, educat4) must be cast to character
+#     inside the Arrow query before group_by — Arrow cannot hash-aggregate
+#     on dictionary types across Parquet files with different encodings.
+#
+#   Scan 2 — column-pruned collect of full microdata.
+#     Identical to A2's I/O step.  Needed because gini and median require
+#     the full per-person welfare vector (gini needs a sorted vector for the
+#     Lorenz curve; median needs a weighted quantile algorithm).  These
+#     cannot be expressed as scalar aggregations in Arrow.
+#
+#   Compute (after both scans):
+#     mean + headcount — pure R arithmetic on the tiny aggregated table
+#                        (division of two columns, no iteration over rows).
+#     gini + median    — dispatched to collapse via compute_measures() on
+#                        the full microdata from Scan 2.
+#
+# Performance expectation:
+#   Scan 1 transfers far less data than A2's single scan (aggregated rows
+#   vs full microdata).  But Scan 2 is the same size as A2's scan.  The
+#   net I/O is therefore slightly MORE than A2 (two scans vs one).  Any
+#   advantage must come from compute: the collapse overhead for mean +
+#   headcount is eliminated.  Whether that outweighs the extra scan cost
+#   is what this approach measures.
 run_a3 <- function(entries_dt) {
+  files    <- .bm_paths(entries_dt)
+  batch_by <- c("pip_id", BY_DIMS)
+  dict_by  <- intersect(BY_DIMS, DICT_SCHEMA_COLS)  # cols needing char cast
+
   t0 <- proc.time()
-  files <- .bm_paths(entries_dt)
+
+  # ── Scan 1: Arrow group_by + summarise (push-down aggregation) ─────────────
+  # Build one conditional-sum expression per poverty line dynamically so that
+  # a single Arrow scan computes all headcount numerators simultaneously.
+  hc_exprs <- setNames(
+    lapply(POVERTY_LINES, function(pl) {
+      rlang::expr(sum(dplyr::if_else(welfare < !!pl, weight, 0), na.rm = TRUE))
+    }),
+    paste0("poor_w_", seq_along(POVERTY_LINES))
+  )
+
+  agg <- arrow::open_dataset(files, format = "parquet") |>
+    dplyr::select(dplyr::all_of(NEEDED_COLS)) |>
+    # Cast dict-encoded cols to string so Arrow can hash-aggregate across files
+    dplyr::mutate(dplyr::across(dplyr::all_of(dict_by), as.character)) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(batch_by))) |>
+    dplyr::summarise(
+      sum_w  = sum(weight,           na.rm = TRUE),
+      sum_ww = sum(welfare * weight, na.rm = TRUE),
+      !!!hc_exprs,
+      .groups = "drop"
+    ) |>
+    dplyr::collect() |>
+    data.table::as.data.table()
+
+  # ── Scan 2: column-pruned microdata for gini + median ──────────────────────
   dt <- arrow::open_dataset(files, format = "parquet") |>
     dplyr::select(dplyr::all_of(NEEDED_COLS)) |>
     dplyr::collect() |>
     data.table::as.data.table()
+
   t_io <- .elapsed(proc.time() - t0)
 
-  t0       <- proc.time()
-  batch_by <- c("pip_id", BY_DIMS)
+  # ── Compute: mean + headcount from aggregated table (pure arithmetic) ───────
+  t0 <- proc.time()
 
-  # Weighted mean — single grouped pass
-  r_mean <- dt[,
-    .(value       = sum(welfare * weight) / sum(weight),
-      population  = sum(weight),
-      measure     = "mean",
-      poverty_line = NA_real_),
-    by = batch_by
-  ]
+  r_mean <- agg[, .(
+    value        = sum_ww / sum_w,
+    population   = sum_w,
+    measure      = "mean",
+    poverty_line = NA_real_
+  ), by = batch_by]
 
-  # Headcount per poverty line — one in-memory pass per line
-  r_hc <- rbindlist(lapply(POVERTY_LINES, function(pl) {
-    dt[,
-      .(value       = sum(weight * (welfare < pl)) / sum(weight),
-        population  = sum(weight),
-        measure     = "headcount",
-        poverty_line = pl),
-      by = batch_by
-    ]
+  r_hc <- rbindlist(lapply(seq_along(POVERTY_LINES), function(j) {
+    pl     <- POVERTY_LINES[[j]]
+    pw_col <- paste0("poor_w_", j)
+    agg[, .(
+      value        = get(pw_col) / sum_w,
+      population   = sum_w,
+      measure      = "headcount",
+      poverty_line = pl
+    ), by = batch_by]
   }))
 
-  # Gini + median — delegated to collapse via compute_measures().
-  # poverty_lines = NULL because neither measure uses poverty lines.
+  # ── Compute: gini + median from microdata via collapse ──────────────────────
+  # poverty_lines = NULL: neither measure requires a poverty threshold.
+  # compute_measures() prepends pip_id to by internally.
   r_gm <- compute_measures(dt, c("gini", "median"), poverty_lines = NULL, by = BY_DIMS)
 
   result <- rbindlist(list(r_mean, r_hc, r_gm), fill = TRUE)
@@ -566,8 +631,9 @@ results_md <- c(
     "| `compute_measures()` for headcount, gini, mean, median |"
   ),
   paste0(
-    "| **A3 Hybrid** | Arrow `select(", length(NEEDED_COLS), " cols)` before `collect()` ",
-    "| data.table for mean + headcount; `compute_measures()` for gini + median |"
+    "| **A3 Arrow push-down** | Scan 1: Arrow `group_by + summarise` → tiny aggregated table (",
+    "one row/group); Scan 2: Arrow `select(", length(NEEDED_COLS), " cols)` → full microdata ",
+    "| mean + headcount: arithmetic on aggregated table; gini + median: `compute_measures()` |"
   ),
   "",
   "## Results",
