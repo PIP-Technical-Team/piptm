@@ -18,47 +18,61 @@ tags: [performance, arrow, io, benchmark, pipeline]
 
 ## Configuration
 
-- **Surveys per iteration**: 15
+- **Surveys per iteration**: 10
 - **Iterations**: 50
-- **Measures**: `headcount`, `gini`, `mean`, `median`
-- **Poverty lines**: 2.15, 3.65
-- **By dimensions**: `gender`, `area`, `educat4`
-- **Survey pool size**: 59 surveys (filtered from 60 total to those with all BY_DIMS)
+- **Measures**: `headcount`, `sum`, `median`, `gini`
+- **Poverty lines**: 3, 4.1
+- **By dimensions**: `age`, `gender`, `educat4`
+- **Survey pool size**: 60 surveys (filtered from 60 total to those with all BY_DIMS)
 
 ## Approaches
 
 | | I/O | Compute |
 | --- | --- | --- |
-| **A1 Current** | `load_surveys()` — all 14 schema columns | `compute_measures()` for headcount, gini, mean, median |
-| **A2 Column-pruned** | Arrow `select(6 cols)` before `collect()` | `compute_measures()` for headcount, gini, mean, median |
-| **A3 Hybrid** | Arrow `select(6 cols)` before `collect()` | data.table for mean + headcount; `compute_measures()` for gini + median |
+| **A1 Baseline** | `load_surveys()` -- all 14 schema cols | `compute_measures()` for headcount, sum, median, gini |
+| **A Column-pruned** | Arrow `select(6 cols)` before `collect()` | `compute_measures()` for headcount, sum, median, gini |
+| **B Arrow push-down** | Scan 1: Arrow `group_by+summarise` -> tiny aggregated table (one row/group, 6 cols); Scan 2: Arrow `select(6 cols)` -> full microdata | headcount + sum: R arithmetic on aggregated table; gini + median (not Arrow-feasible for PIP): `compute_measures()` |
+
+## Arrow Push-Down Feasibility
+
+| Measure | Arrow-feasible? | Reason |
+| --- | --- | --- |
+| headcount | YES | Conditional sum / total weight -- scalar aggregate |
+| sum | YES | sum(welfare * weight) -- scalar aggregate |
+| median | NO (Arrow unweighted only) | Arrow median() is unweighted; PIP requires collapse::fmedian |
+| gini | NO | Lorenz curve requires sorted welfare vector; not a scalar aggregate |
 
 ## Results
 
 ```
-                 approach I/O med (s) CMP med (s) Total med (s) Total p25 (s) Total p75 (s)
-                   <char>       <num>       <num>         <num>         <num>         <num>
-1: A1: Current (all cols)       1.030       1.315         2.370         1.965         2.905
-2:  A2: Column-pruned I/O       0.405       1.270         1.675         1.442         2.005
-3:     A3: Hybrid compute       0.400       1.195         1.625         1.430         1.867
+                  approach I/O med (s) CMP med (s) Total med (s) Total p25 (s) Total p75 (s)
+                    <char>       <num>       <num>         <num>         <num>         <num>
+1: A1: Baseline (all cols)       0.870       1.210         1.980         1.540         2.632
+2:   A:  Column-pruned I/O       0.290       1.110         1.455         1.150         1.657
+3:     B:  Arrow push-down       1.045       0.445         1.500         1.243         1.803
+4:    C:  DuckDB push-down       0.955       0.460         1.465         1.165         1.738
 ```
 
 ## Speedup Summary
 
 | Comparison | I/O speedup | Total speedup | Decision |
 | ---------- | ----------- | ------------- | -------- |
-| A2 vs A1 | 61% faster | 29% faster | ✅ ADOPT |
-| A3 vs A2 | same as A2 | 3% faster | ❌ KEEP A2 |
+| A vs A1 | 67% faster | 27% faster | ADOPT |
+| B vs A | same as A | 3% slower | KEEP A |
+| C vs A | same as A | 1% slower | KEEP A |
 
 ## Decisions
 
-**A2 vs A1**: ADOPT column pruning in load_surveys(): A2 is **29% faster** total vs A1 (I/O alone: 61% faster).
+**A vs A1**: ADOPT column pruning in load_surveys(): Approach A is **27% faster** total vs A1 (I/O alone: 67% faster).
 
-**A3 vs A2**: KEEP A2 compute path: A3 is only 3% faster total vs A2 — below the 15% threshold.
+**B vs A**: KEEP Approach A compute path: Approach B is only 3% slower total vs A -- below the 15% threshold.
+
+**C vs A**: KEEP Approach A compute path: Approach C is only 1% slower total vs A -- below the 15% threshold.
 
 ## Correctness
 
-- A2 vs A1 (full result):  ✅ PASS
-- A3 vs A1 (all measures): ✅ PASS
+- A  vs A1 (full result):  PASS
+- B  vs A1 (all measures): PASS
+- C  vs A1 (all measures): PASS
 
-*Generated: 2026-04-29 16:16*
+*Generated: 2026-05-04 10:48*
