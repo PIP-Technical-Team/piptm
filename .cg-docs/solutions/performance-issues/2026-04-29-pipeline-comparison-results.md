@@ -47,27 +47,27 @@ tags: [performance, arrow, io, benchmark, pipeline]
 ```
                   approach I/O med (s) CMP med (s) Total med (s) Total p25 (s) Total p75 (s)
                     <char>       <num>       <num>         <num>         <num>         <num>
-1: A1: Baseline (all cols)       0.870       1.210         1.980         1.540         2.632
-2:   A:  Column-pruned I/O       0.290       1.110         1.455         1.150         1.657
-3:     B:  Arrow push-down       1.045       0.445         1.500         1.243         1.803
-4:    C:  DuckDB push-down       0.955       0.460         1.465         1.165         1.738
+1: A1: Baseline (all cols)        0.82       1.385         2.240         1.638         2.655
+2:   A:  Column-pruned I/O        0.28       1.200         1.460         1.213         1.712
+3:     B:  Arrow push-down        1.12       0.470         1.575         1.363         1.810
+4:    C:  DuckDB push-down        0.96       0.475         1.530         1.145         1.807
 ```
 
 ## Speedup Summary
 
 | Comparison | I/O speedup | Total speedup | Decision |
 | ---------- | ----------- | ------------- | -------- |
-| A vs A1 | 67% faster | 27% faster | ADOPT |
-| B vs A | same as A | 3% slower | KEEP A |
-| C vs A | same as A | 1% slower | KEEP A |
+| A vs A1 | 66% faster | 35% faster | ADOPT |
+| B vs A | same as A | 8% slower | KEEP A |
+| C vs A | same as A | 5% slower | KEEP A |
 
 ## Decisions
 
-**A vs A1**: ADOPT column pruning in load_surveys(): Approach A is **27% faster** total vs A1 (I/O alone: 67% faster).
+**A vs A1**: ADOPT column pruning in load_surveys(): Approach A is **35% faster** total vs A1 (I/O alone: 66% faster).
 
-**B vs A**: KEEP Approach A compute path: Approach B is only 3% slower total vs A -- below the 15% threshold.
+**B vs A**: KEEP Approach A compute path: Approach B is only 8% slower total vs A -- below the 15% threshold.
 
-**C vs A**: KEEP Approach A compute path: Approach C is only 1% slower total vs A -- below the 15% threshold.
+**C vs A**: KEEP Approach A compute path: Approach C is only 5% slower total vs A -- below the 15% threshold.
 
 ## Correctness
 
@@ -75,4 +75,4 @@ tags: [performance, arrow, io, benchmark, pipeline]
 - B  vs A1 (all measures): PASS
 - C  vs A1 (all measures): PASS
 
-*Generated: 2026-05-04 10:48*
+*Generated: 2026-05-04 14:05*
