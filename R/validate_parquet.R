@@ -245,10 +245,24 @@ validate_parquet_schema <- function(file_path) {
   cols_to_check <- intersect(actual_cols, .VP_ALLOWED_COLS)
 
   for (col in cols_to_check) {
-    actual_type    <- file_schema$GetFieldByName(col)$type$ToString()
-    canonical_type <- canonical_sch$GetFieldByName(col)$type$ToString()
+    actual_field   <- file_schema$GetFieldByName(col)$type
+    canonical_field <- canonical_sch$GetFieldByName(col)$type
 
-    if (!identical(actual_type, canonical_type)) {
+    actual_type    <- actual_field$ToString()
+    canonical_type <- canonical_field$ToString()
+
+    # Dictionary columns: Arrow picks the smallest index integer type that
+    # fits the number of distinct values (int8 for ≤127 levels, int16 for
+    # ≤32767, int32 otherwise). Accept any integer-indexed dictionary over
+    # utf8 values rather than requiring exactly int32.
+    is_dict_mismatch <- (
+      !identical(actual_type, canonical_type) &&
+      inherits(canonical_field, "DictionaryType") &&
+      inherits(actual_field,    "DictionaryType") &&
+      identical(actual_field$value_type$ToString(), "string")
+    )
+
+    if (!is_dict_mismatch && !identical(actual_type, canonical_type)) {
       result <- .vp_add_error(
         result,
         paste0(
