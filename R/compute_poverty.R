@@ -1,5 +1,5 @@
 #' @importFrom collapse fsum GRP
-#' @importFrom data.table melt fifelse rbindlist as.data.table
+#' @importFrom data.table melt rbindlist as.data.table
 NULL
 
 # ── Poverty family computation ────────────────────────────────────────────────
@@ -107,8 +107,10 @@ compute_poverty <- function(dt, poverty_lines, by = NULL, measures = NULL,
   # log(welfare) computed once outside the loop.
   # Zero-welfare rule: welfare == 0 → logw = 0 here; those rows are masked
   # by pos inside the loop so no +Inf or NaN can arise.
+  # log(welfare_v + (welfare_v == 0)): adds 1 only where welfare==0 so
+  # log(1)=0, avoiding fifelse's eager double-evaluation on n rows.
   pos  <- welfare_v > 0                       # loop-invariant; hoisted
-  logw <- fifelse(pos, log(welfare_v), 0)
+  logw <- log(welfare_v + (welfare_v == 0L))  # single allocation, no branch
 
   # ── 3. Loop over poverty lines — O(n) memory per iteration ─────────────────
   grp_cols <- c("poverty_line", by)
@@ -116,18 +118,32 @@ compute_poverty <- function(dt, poverty_lines, by = NULL, measures = NULL,
   results  <- vector("list", n_pl)
   grp_dt   <- if (!is.null(grp)) as.data.table(grp$groups) else NULL  # hoisted
 
+  # Pre-allocate loop temporaries once.  Inside the loop []<- replacement
+  # modifies in-place (ref-count == 1) instead of allocating fresh vectors
+  # on every iteration — reduces GC pressure across all poverty lines.
+  # neg_logw is loop-invariant; hoisting it avoids recomputing -logw and
+  # allocating the negation vector on every iteration.
+  n             <- length(welfare_v)
+  poor          <- logical(n)
+  poor_pos      <- logical(n)
+  gap           <- numeric(n)
+  watts_contrib <- numeric(n)
+  neg_logw      <- -logw                      # loop-invariant; hoisted
+
   for (i in seq_along(poverty_lines)) {
-    z      <- poverty_lines[[i]]
-    poor   <- welfare_v < z
-    w_poor <- w * poor                              # P1.1: computed once
+    z <- poverty_lines[[i]]
+
+    poor[]          <- welfare_v < z
+    w_poor          <- w * poor                     # P1.1: computed once
 
     # Normalised gap: (z - y) / z for poor; 0 for non-poor.
     # Logical coercion: TRUE * x = x, FALSE * x = 0.
-    gap <- poor * (z - welfare_v) / z
+    gap[]           <- poor * (z - welfare_v) / z
 
     # Watts contribution: log(z / y) for poor with y > 0; 0 otherwise.
-    # Uses hoisted `pos` (welfare_v > 0) — loop-invariant comparison.
-    watts_contrib <- (poor & pos) * (log(z) - logw)
+    # poor_pos reuses a pre-allocated logical vector; neg_logw is hoisted.
+    poor_pos[]      <- poor & pos
+    watts_contrib[] <- poor_pos * (log(z) + neg_logw)
 
     hc <- collapse::fsum(w_poor,            g = grp) / w_total
     pg <- collapse::fsum(w * gap,           g = grp) / w_total
