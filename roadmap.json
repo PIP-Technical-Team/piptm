@@ -5,23 +5,25 @@
       "id": "phase-0-arrow-generation",
       "title": "Phase 0 — Arrow Dataset Generation",
       "description": "Master Arrow repository, partition pipeline in {pipdata}, release manifest generation.",
-      "status": "in-progress",
+      "status": "done",
       "features": [
         {
           "id": "version-partition-key",
           "title": "Version as partition key with manifest-based resolution",
           "description": "Add version (vermast_veralt) as a 4th Hive partition key. Manifest file_path is the sole version-resolution mechanism for {piptm}. Multiple versions coexist on disk.",
-          "status": "active",
+          "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
-          "plan": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md"
+          "plan": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+          "review": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
         },
         {
           "id": "manifest-generation-partition-filter",
           "title": "Manifest generation and partition-filter loading",
           "description": "Transition manifest from file_path to partition filter keys. Release-inventory-driven generation in {pipdata} with dimension introspection. Manifest loading and open_dataset()|>filter() data access in {piptm}.",
-          "status": "planned",
+          "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
-          "plan": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md"
+          "plan": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+          "review": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
         }
       ]
     },
@@ -29,15 +31,158 @@
       "id": "phase-1-computation-engine",
       "title": "Phase 1 — Computation Engine",
       "description": "Core computation engine: family-based orchestrator for poverty, inequality, and welfare measures with disaggregation across dimensions.",
+      "status": "done",
+      "features": [
+        {
+          "id": "measure-registry",
+          "title": "Measure registry and input validation",
+          "description": "Define 19 canonical measures (5 poverty, 2 inequality, 12 welfare) in .MEASURE_REGISTRY. Implement .classify_measures(), .validate_by(), .validate_poverty_lines() validators.",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "family-compute-functions",
+          "title": "Family-level compute functions",
+          "description": "Implement compute_poverty() (FGT measures), compute_inequality() (Gini, MLD), compute_welfare() (mean, median, quantiles, etc.) with collapse backend.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
+          "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+        },
+        {
+          "id": "computation-engine-family-orchestrator",
+          "title": "Family-based computation orchestrator (compute_measures)",
+          "description": "Orchestrator dispatches compute_poverty(), compute_inequality(), compute_welfare() based on requested measure families. Builds compound GRP(c('pip_id', by)) for batch processing. Long-format output with poverty_line, measure, value, population columns.",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
+          "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+        },
+        {
+          "id": "dimension-disaggregation",
+          "title": "Disaggregation across dimensions (gender, area, education, age)",
+          "description": "Support up to 4 dimensions including at most 1 education column. Age binning (0–14, 15–24, 25–64, 65+). NA-fill for partial-match surveys. Dimension pre-filter with warnings.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-table-maker-api",
+      "title": "Phase 2 — table_maker() Top-Level API",
+      "description": "Build the top-level table_maker() API function, data loading pipeline, and orchestration layer. Implement pip_lookup() triplet resolver. Optimize orchestration and I/O.",
+      "status": "done",
+      "features": [
+        {
+          "id": "table-maker-dual-input",
+          "title": "table_maker() with dual input patterns (pip_id and triplets)",
+          "description": "Implement table_maker(pip_id | country_code/year/welfare_type, measures, poverty_lines, by, release). Accept pip_id for API usage; fall back to triplet resolution via pip_lookup() for ad-hoc R console usage.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "pip-lookup-triplet-resolver",
+          "title": "pip_lookup() triplet-to-pip_id resolver",
+          "description": "Translate human-friendly (country_code, year, welfare_type) tuples to canonical pip_ids via manifest inner join. Emit warnings for unmatched triplets.",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "load-surveys-data-loading",
+          "title": "load_surveys() data loading with manifest resolution",
+          "description": "Resolve manifest entries to Arrow partition paths. Lazy load via open_dataset(). Column selection and dictionary casting. Return with metadata columns (pip_id, country_code, surveyid_year, welfare_type).",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "orchestration-batch-vs-per-survey",
+          "title": "Orchestration: batch vs. per-survey optimization",
+          "description": "Compare Approach A (per-survey lapply with GRP rebuild) vs Approach B (single batch GRP). Benchmark on 15 surveys × 50 iterations. Adopt Approach B (72% faster, 0.127s vs 0.432s). Update table_maker() implementation.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+          "plan": ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+          "review": ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md"
+        },
+        {
+          "id": "arrow-vs-collapse-benchmark",
+          "title": "Arrow push-down vs. in-memory compute benchmark",
+          "description": "Measure feasibility of pushing grouping/aggregation to Arrow vs. loading and computing in R. Identify which measures can be pushed down (headcount, gini, mean via collapse). Document performance implications for future optimization.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+          "plan": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+          "review": ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-validation-testing",
+      "title": "Phase 3 — Validation, Testing & Quality",
+      "description": "Build comprehensive test suite, parquet validation layer, performance profiling, and documentation.",
+      "status": "in-progress",
+      "features": [
+        {
+          "id": "parquet-validation-schema-data",
+          "title": "Parquet file validation (schema + data checks)",
+          "description": "Implement validate_parquet_schema() (structural checks, dictionary type index width tolerance) and validate_parquet_data() (row-level validation: required columns present, no NAs in welfare/weight, factor level checks). Fast schema-only checks for pipeline validation.",
+          "status": "active",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "unit-test-coverage",
+          "title": "Unit test suite (≥90% coverage)",
+          "description": "Tests for measure registry, validators, family compute functions, orchestrator, data loading, and table_maker(). Fixture-based testing with synthetic survey data. 414 tests written; 414 passing.",
+          "status": "active",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "performance-profiling",
+          "title": "Performance benchmarking and profiling",
+          "description": "Profile I/O, compute, and GC overhead. Document 15-survey and 100-survey performance. Identify optimization targets for future work.",
+          "status": "active",
+          "plan": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md"
+        },
+        {
+          "id": "documentation-api-dev",
+          "title": "Documentation: API reference and developer guide",
+          "description": "roxygen2 docstrings for all exported and internal functions. Developer guide for extending measure registry. Architecture overview (manifest, computation pipeline, output schema).",
+          "status": "planned",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "cran-readiness",
+          "title": "CRAN readiness (devtools::check clean)",
+          "description": "Resolve all warnings, notes, and errors from R CMD check. Finalize NAMESPACE, imports, and package metadata.",
+          "status": "planned",
+          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-api-service",
+      "title": "Phase 4 — API Service Layer",
+      "description": "Build plumber service layer connecting PIP UI platform to table_maker(). Support GET/POST endpoints, request validation, response serialization.",
       "status": "planned",
       "features": [
         {
-          "id": "computation-engine-family-orchestrator",
-          "title": "Family-based computation orchestrator",
-          "description": "Three family-level compute functions (compute_poverty, compute_inequality, compute_welfare) dispatched by compute_measures() orchestrator. Long-format output, JSON-ready for API layer. 9 measures across 3 families.",
+          "id": "plumber-table-endpoint",
+          "title": "Plumber /table endpoint (GET/POST)",
+          "description": "Accept pip_id vector, measures, poverty_lines, by dimensions. Return long-format JSON with poverty_line, measure, value, population. Support batch requests (>50 surveys via POST with JSON body).",
           "status": "planned",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-07-computation-engine-design.md",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+          "plan": ".cg-docs/plans/2026-04-27-table-maker-input-parameters.md"
+        },
+        {
+          "id": "plumber-lookup-endpoint",
+          "title": "Plumber /lookup endpoint",
+          "description": "Resolve (country_code, year, welfare_type) triplets to pip_ids for UI discovery. Caching layer for manifest queries.",
+          "status": "planned",
+          "plan": ".cg-docs/plans/2026-04-27-table-maker-input-parameters.md"
+        },
+        {
+          "id": "error-handling-logging",
+          "title": "Error handling, logging, and request tracing",
+          "description": "Structured error responses (invalid pip_ids, unsupported measures, missing poverty_lines). Request logging with timestamps and parameter echoing. Optional telemetry for performance monitoring.",
+          "status": "planned"
         }
       ]
     }
