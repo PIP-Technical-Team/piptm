@@ -71,9 +71,13 @@ handler — all delegating to existing tested {piptm} functions.
      - `year` coercible to integer
      Returns same structure.
   5. `coerce_poverty_lines(x)` — `as.numeric(x)`, errors on NA introduction.
-  6. `capture_with_warnings(expr)` — wraps `expr` in `withCallingHandlers()`
-     to collect `cli_warn` messages into a character vector while still
-     executing. Returns `list(result = ..., warnings = ...)`.
+  6. `capture_with_warnings(expr)` — wraps `expr` in
+     `withCallingHandlers()` (to collect warnings) nested inside `tryCatch()`
+     (to catch errors). Returns
+     `list(result = ..., warnings = ..., error = NULL|character)`.
+     When an error is caught, `result` is `NULL` and `error` holds the
+     conditionMessage. This ensures `cli_abort()` inside `table_maker()` is
+     caught at the handler level, not left to plumber internals.
 - **Test Scenarios**:
   - ✅ `api_response()` produces correct envelope shape
   - ✅ `validate_table_input()` passes with valid inputs
@@ -95,9 +99,14 @@ handler — all delegating to existing tested {piptm} functions.
      `Access-Control-Allow-Methods: GET, POST, OPTIONS`,
      `Access-Control-Allow-Headers: Content-Type`. Handle OPTIONS preflight
      with 200 and empty body.
-  3. **Error handler filter**: Wrap `forward()` in `tryCatch()`:
-     - Catch `rlang_error` (cli_abort): extract message, return 422 via `api_error()`.
-     - Catch generic `error`: return 500 with "Internal server error" (no stack trace).
+  3. **Global error handler** (not a filter): Register via
+     `pr_set_error(pr, function(req, res, err) { ... })` in the router
+     setup section. This catches any unhandled error from any endpoint:
+     - If `inherits(err, "rlang_error")`: extract `conditionMessage(err)`,
+       return 422 via `api_error()`.
+     - Otherwise: return 500 with "Internal server error" (no stack trace).
+     This replaces the previous tryCatch-around-forward approach, which
+     cannot intercept errors thrown inside endpoint handlers.
   4. **Request logger filter** (lightweight): `message()` with timestamp,
      method, path, elapsed time after forward completes.
 - **Test Scenarios**:
@@ -116,6 +125,13 @@ handler — all delegating to existing tested {piptm} functions.
 - **Details**:
 
   **3a. `GET|POST /table`**
+
+  > **Vector parameters**: Plumber delivers repeated query params
+  > (`?pip_id=A&pip_id=B`) as character vectors. For POST with JSON body,
+  > arrays map directly. No comma-splitting needed — callers must use
+  > repeated params (GET) or JSON arrays (POST) for `pip_id`, `measures`,
+  > `poverty_lines`, and `by`.
+
   ```r
   #* @get /table
   #* @post /table
@@ -129,6 +145,7 @@ handler — all delegating to existing tested {piptm} functions.
       table_maker(pip_id = pip_id, measures = measures,
                   poverty_lines = poverty_lines, by = by, release = release)
     )
+    if (!is.null(out$error)) return(api_error(out$error, 422L, res))
     api_response(out$result, warnings = out$warnings,
                  meta = list(release = release %||% piptm_current_release(),
                              n_surveys = length(unique(out$result$pip_id))))
@@ -147,6 +164,7 @@ handler — all delegating to existing tested {piptm} functions.
     out <- capture_with_warnings(
       pip_lookup(country_code, year, welfare_type, release)
     )
+    if (!is.null(out$error)) return(api_error(out$error, 422L, res))
     api_response(out$result, warnings = out$warnings)
   }
   ```
@@ -157,10 +175,9 @@ handler — all delegating to existing tested {piptm} functions.
   #* @serializer json list(na = "null")
   function(release = NULL, res) {
     mf <- piptm_manifest(release)
-    # Convert list-column 'dimensions' to JSON-friendly format
-    mf_out <- data.table::copy(mf)
-    mf_out[, dimensions := lapply(dimensions, identity)]
-    api_response(mf_out)
+    # Plumber's JSON serializer handles list-columns natively;
+    # no conversion needed.
+    api_response(mf)
   }
   ```
 
@@ -201,7 +218,7 @@ handler — all delegating to existing tested {piptm} functions.
   #* @get /health
   #* @serializer json
   function() {
-    list(status = "ok", release = piptm_current_release())
+    api_response(list(status = "ok", release = piptm_current_release()))
   }
   ```
 
