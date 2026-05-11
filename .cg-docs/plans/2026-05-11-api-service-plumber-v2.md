@@ -8,6 +8,8 @@ supersedes: ".cg-docs/plans/2026-05-08-api-service-plumber.md"
 language: "R"
 estimated-effort: "medium"
 tags: [api, plumber, endpoints, phase-4]
+completed-steps: [1]
+current-step: 2
 ---
 
 # Plan: API Service Layer — Plumber Endpoints (v2)
