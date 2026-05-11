@@ -27,7 +27,7 @@ to the full API surface.
 5. **Partial success** — invalid pip_ids are skipped with warnings echoed in response metadata
 6. **Max 15 surveys per request** — enforced server-side
 7. **API serves manifest** — UI gets survey/release data from the API, not from files
-8. **`release` is an API parameter** — passed to all relevant endpoints
+8. **`release` is an API parameter** — passed to all relevant endpoints; defaults to `piptm_current_release()` when omitted. The parameter exists for QA and internal tooling — the UI should omit it in production.
 9. **Structured response envelope** — every response has `status`, `data`, `warnings`, `errors`
 10. **Full manifest rows** returned from `/surveys` (no field filtering)
 
@@ -153,7 +153,7 @@ Error responses (400/422):
 | `measures` | Required for `/table`. Must be subset of `names(pip_measures())`. |
 | `poverty_lines` | Coerce to numeric. Must be positive finite values. |
 | `by` | Optional. Must be subset of `.VALID_DIMENSIONS`. |
-| `release` | Optional. Must match a loaded release ID. |
+| `release` | Optional. Defaults to `piptm_current_release()` when omitted. Must match a loaded release ID if provided. |
 | `country_code` | Required for `/lookup`. Character vector. |
 | `year` | Required for `/lookup`. Coerce to integer. |
 | `welfare_type` | Required for `/lookup`. Must be "INC" or "CON". |
@@ -163,8 +163,8 @@ Error responses (400/422):
 ```
 PIP UI (browser)
   │
-  ├─ On load: GET /releases → pick current release
-  ├─ On load: GET /surveys?release=X → populate survey picker
+  ├─ On load: GET /releases → receive current release (used internally, not exposed to users)
+  ├─ On load: GET /surveys → populate survey picker (release defaults server-side)
   ├─ On load: GET /measures → populate measure picker
   ├─ On load: GET /dimensions → populate dimension picker
   │

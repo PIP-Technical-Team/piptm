@@ -1,7 +1,7 @@
 ---
 date: 2026-05-08
 title: "API Service Layer — Plumber Endpoints"
-status: active
+status: superseded
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md"
 language: "R"
@@ -45,6 +45,7 @@ handler — all delegating to existing tested {piptm} functions.
 | R10 | Warning capture: partial matches echoed in response      | brainstorm    |
 | R11 | Input validation before delegation (max 15, valid measures, etc.) | brainstorm |
 | R12 | CORS filter for browser access                           | implied       |
+| R13 | `release` defaults to current when omitted; API-internal param, not user-facing | brainstorm (updated) |
 
 ## Implementation Steps
 
@@ -57,21 +58,27 @@ handler — all delegating to existing tested {piptm} functions.
      success envelope: `list(status = "success", data = data, warnings = warnings, errors = character(), meta = meta)`.
   2. `api_error(errors, status_code, res)` — builds error envelope and sets
      `res$status` to the HTTP code. Returns `list(status = "error", data = NULL, warnings = character(), errors = errors, meta = list())`.
-  3. `validate_table_input(pip_id, measures, poverty_lines, by, release)` —
+  3. `validate_table_input(pip_id, measures, poverty_lines, by)` —
      checks:
      - `pip_id` is character, length 1–15
      - `measures` is character, all in `names(pip_measures())`
      - `poverty_lines` (if not NULL) is numeric, positive, finite
      - `by` (if not NULL) is subset of `.VALID_DIMENSIONS`
-     - `release` (if not NULL) is in `names(piptm_manifests())`
      Returns a list: `list(valid = TRUE/FALSE, errors = character())`.
+     Note: `release` validation is handled by `resolve_release()` (item 6),
+     not here.
   4. `validate_lookup_input(country_code, year, welfare_type)` — checks:
      - All three non-NULL, same length
      - `welfare_type` all in `c("INC", "CON")`
      - `year` coercible to integer
      Returns same structure.
   5. `coerce_poverty_lines(x)` — `as.numeric(x)`, errors on NA introduction.
-  6. `capture_with_warnings(expr)` — wraps `expr` in
+  6. `resolve_release(release)` — if `release` is NULL, returns
+     `piptm_current_release()`. Otherwise validates against
+     `names(piptm_manifests())`; if invalid, returns an error list.
+     Every handler that accepts `release` calls this once at the top,
+     centralising the default-or-validate logic.
+  7. `capture_with_warnings(expr)` — wraps `expr` in
      `withCallingHandlers()` (to collect warnings) nested inside `tryCatch()`
      (to catch errors). Returns
      `list(result = ..., warnings = ..., error = NULL|character)`.
@@ -84,6 +91,9 @@ handler — all delegating to existing tested {piptm} functions.
   - 🛑 `validate_table_input()` rejects >15 pip_ids
   - 🛑 `validate_table_input()` rejects unknown measure names
   - ❌ `coerce_poverty_lines("abc")` returns appropriate error
+  - ✅ `resolve_release(NULL)` returns `piptm_current_release()`
+  - ✅ `resolve_release("20260401")` returns the value unchanged
+  - ❌ `resolve_release("bogus")` returns error list
   - ✅ `capture_with_warnings()` collects cli warnings
 - **Tests**: `tests/testthat/test-api-helpers.R`
 - **Acceptance criteria**: All helper functions return predictable structures;
@@ -137,8 +147,11 @@ handler — all delegating to existing tested {piptm} functions.
   #* @post /table
   #* @serializer json list(na = "null")
   function(pip_id, measures, poverty_lines = NULL, by = NULL, release = NULL, res) {
+    release <- resolve_release(release)           # default to current if NULL
+    if (is.list(release)) return(api_error(release$errors, 400L, res))
+
     poverty_lines <- coerce_poverty_lines(poverty_lines)
-    check <- validate_table_input(pip_id, measures, poverty_lines, by, release)
+    check <- validate_table_input(pip_id, measures, poverty_lines, by)
     if (!check$valid) return(api_error(check$errors, 400L, res))
 
     out <- capture_with_warnings(
@@ -147,7 +160,7 @@ handler — all delegating to existing tested {piptm} functions.
     )
     if (!is.null(out$error)) return(api_error(out$error, 422L, res))
     api_response(out$result, warnings = out$warnings,
-                 meta = list(release = release %||% piptm_current_release(),
+                 meta = list(release = release,
                              n_surveys = length(unique(out$result$pip_id))))
   }
   ```
@@ -157,6 +170,9 @@ handler — all delegating to existing tested {piptm} functions.
   #* @get /lookup
   #* @serializer json
   function(country_code, year, welfare_type, release = NULL, res) {
+    release <- resolve_release(release)
+    if (is.list(release)) return(api_error(release$errors, 400L, res))
+
     year <- as.integer(year)
     check <- validate_lookup_input(country_code, year, welfare_type)
     if (!check$valid) return(api_error(check$errors, 400L, res))
@@ -165,7 +181,8 @@ handler — all delegating to existing tested {piptm} functions.
       pip_lookup(country_code, year, welfare_type, release)
     )
     if (!is.null(out$error)) return(api_error(out$error, 422L, res))
-    api_response(out$result, warnings = out$warnings)
+    api_response(out$result, warnings = out$warnings,
+                 meta = list(release = release))
   }
   ```
 
@@ -174,10 +191,11 @@ handler — all delegating to existing tested {piptm} functions.
   #* @get /surveys
   #* @serializer json list(na = "null")
   function(release = NULL, res) {
+    release <- resolve_release(release)
+    if (is.list(release)) return(api_error(release$errors, 400L, res))
+
     mf <- piptm_manifest(release)
-    # Plumber's JSON serializer handles list-columns natively;
-    # no conversion needed.
-    api_response(mf)
+    api_response(mf, meta = list(release = release))
   }
   ```
 
@@ -261,11 +279,13 @@ handler — all delegating to existing tested {piptm} functions.
      rely on the live manifest already loaded in the test session.
 - **Test Scenarios**:
   - ✅ Full round-trip: `/table` with 3 real pip_ids → check result shape
+  - ✅ `/table` with no `release` param → `meta.release` equals `piptm_current_release()`
   - 🛑 `/table` with 1 valid + 1 invalid pip_id → partial success + warning
+  - ❌ `/table` with `release = "bogus"` → HTTP 400 with error message
   - ❌ Server error simulation (if feasible with mock)
 - **Tests**: `tests/testthat/test-api-endpoints.R`
-- **Acceptance criteria**: ≥30 integration test cases covering all endpoints
-  and error paths. All green.
+- **Acceptance criteria**: ≥32 integration test cases covering all endpoints,
+  error paths, and `release` default/invalid behaviour. All green.
 
 ### Step 5: Launch Script and Documentation
 
