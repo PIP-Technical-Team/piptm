@@ -21,9 +21,27 @@
 
 # ── 2a. Source helpers ────────────────────────────────────────────────────────
 # Use system.file() so the path is correct whether the package is installed or
-# loaded via devtools::load_all().  Sourced once at router startup.
+# loaded via devtools::load_all().  Do NOT replace with a relative path —
+# source("helpers.R") breaks if plumb() is called from any directory other
+# than inst/plumber/.  Sourced once at router startup.
 
-source(system.file("plumber", "helpers.R", package = "piptm"))
+.helpers_path <- system.file("plumber", "helpers.R", package = "piptm")
+if (!nzchar(.helpers_path)) {
+  stop(
+    "Could not locate inst/plumber/helpers.R. ",
+    "Ensure piptm is installed or loaded via devtools::load_all() ",
+    "before starting the API."
+  )
+}
+source(.helpers_path)
+
+# Require plumber >= 1.1.0 for @plumber decorator and pr$setErrorHandler().
+if (utils::packageVersion("plumber") < "1.1.0") {
+  stop(
+    "plumber >= 1.1.0 is required (for @plumber decorator / setErrorHandler). ",
+    "Found: ", utils::packageVersion("plumber")
+  )
+}
 
 # ── 2b. CORS filter ───────────────────────────────────────────────────────────
 
@@ -39,10 +57,12 @@ function(req, res) {
     "Content-Type"
   )
 
-  # Handle OPTIONS preflight — return 200 with empty body immediately
+  # Handle OPTIONS preflight — return 204 No Content.
+  # Must be 204 (not 200) with an empty body; Chrome >= 124 rejects 200/{}
+  # preflight responses for cross-origin requests.
   if (identical(req$REQUEST_METHOD, "OPTIONS")) {
-    res$status <- 200L
-    return(list())
+    res$status <- 204L
+    return("")
   }
 
   plumber::forward()
@@ -106,23 +126,27 @@ function(pip_id, measures, poverty_lines = NULL, by = NULL,
   poverty_lines <- check$poverty_lines
 
   out <- capture_with_warnings({
-    rel <- resolve_release(release)
-    piptm::table_maker(
+    rel  <- resolve_release(release)
+    data <- piptm::table_maker(
       pip_id        = pip_id,
       measures      = measures,
       poverty_lines = poverty_lines,
       by            = by,
       release       = rel
     )
+    list(data = data, rel = rel)
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
 
   api_response(
-    out$result,
+    out$result$data,
     warnings = out$warnings,
     meta = list(
-      release   = rlang::`%||%`(release, piptm::piptm_current_release()),
-      n_surveys = data.table::uniqueN(out$result, by = "pip_id")
+      release   = out$result$rel,
+      n_surveys = tryCatch(
+        data.table::uniqueN(out$result$data, by = "pip_id"),
+        error = function(e) NA_integer_
+      )
     )
   )
 }
@@ -138,20 +162,21 @@ function(pip_id, measures, poverty_lines = NULL, by = NULL,
 #* @serializer json list(na = "null")
 #* @get /lookup
 function(country_code, year, welfare_type, release = NULL, res) {
-  year  <- suppressWarnings(as.integer(year))
   check <- validate_lookup_input(country_code, year, welfare_type)
   if (!check$valid) return(api_error(check$errors, 400L, res))
+  year <- check$year
 
   out <- capture_with_warnings({
-    rel <- resolve_release(release)
-    piptm::pip_lookup(country_code, year, welfare_type, rel)
+    rel  <- resolve_release(release)
+    data <- piptm::pip_lookup(country_code, year, welfare_type, rel)
+    list(data = data, rel = rel)
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
 
   api_response(
-    out$result,
+    out$result$data,
     warnings = out$warnings,
-    meta = list(release = rlang::`%||%`(release, piptm::piptm_current_release()))
+    meta = list(release = out$result$rel)
   )
 }
 
@@ -166,15 +191,16 @@ function(country_code, year, welfare_type, release = NULL, res) {
 #* @get /surveys
 function(release = NULL, res) {
   out <- capture_with_warnings({
-    rel <- resolve_release(release)
-    piptm::piptm_manifest(rel)
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_manifest(rel)
+    list(data = data, rel = rel)
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
 
   api_response(
-    out$result,
+    out$result$data,
     warnings = out$warnings,
-    meta = list(release = rlang::`%||%`(release, piptm::piptm_current_release()))
+    meta = list(release = out$result$rel)
   )
 }
 

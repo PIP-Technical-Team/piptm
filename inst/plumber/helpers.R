@@ -141,6 +141,24 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
         length(pip_id), " were supplied."
       )
     )
+  } else {
+    # P1.10 — allowlist: pip_id values must match the canonical survey-ID
+    # pattern (ISO3 _ year _ survey-acronym _ welfare-type _ area-code).
+    # This prevents path-traversal, shell-injection, and garbage input from
+    # reaching the filesystem or computation layer.
+    pip_id_pattern <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
+    bad_ids <- pip_id[!grepl(pip_id_pattern, pip_id)]
+    if (length(bad_ids) > 0L) {
+      errors <- c(
+        errors,
+        paste0(
+          "`pip_id` value(s) contain invalid characters or format: ",
+          paste(bad_ids, collapse = ", "),
+          ". Expected pattern: ISO3_YYYY_<survey-info> (uppercase letters, ",
+          "digits, hyphens, underscores; max 50 characters)."
+        )
+      )
+    }
   }
 
   # ── measures ───────────────────────────────────────────────────────────────
@@ -167,18 +185,19 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   coerced_pl <- NULL
   if (!is.null(poverty_lines)) {
     coerced_pl <- suppressWarnings(as.numeric(poverty_lines))
-    if (anyNA(coerced_pl) && !anyNA(poverty_lines)) {
-      # Coercion introduced NAs — original values were non-numeric strings
+    if (anyNA(coerced_pl)) {
+      # Reject any NA unconditionally — whether introduced by coercion or
+      # present in the original input.
       errors <- c(
         errors,
         paste0(
-          "`poverty_lines` must be numeric; could not coerce: ",
+          "`poverty_lines` contains NA or non-numeric values; problematic: ",
           paste(poverty_lines[is.na(coerced_pl)], collapse = ", "),
           "."
         )
       )
       coerced_pl <- NULL
-    } else if (!is.null(coerced_pl)) {
+    } else {
       bad <- !is.finite(coerced_pl) | coerced_pl <= 0
       if (any(bad)) {
         errors <- c(
@@ -195,9 +214,9 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
     }
   }
 
-  # ── by ─────────────────────────────────────────────────────────────────────
+  # ── by ──────────────────────────────────────────────────────────────────────────────
   if (!is.null(by)) {
-    valid_dims <- piptm:::.VALID_DIMENSIONS
+    valid_dims <- piptm::pip_valid_dimensions()
     unknown_dims <- setdiff(by, valid_dims)
     if (length(unknown_dims) > 0L) {
       errors <- c(
@@ -278,20 +297,26 @@ validate_lookup_input <- function(country_code, year, welfare_type) {
     )
   }
 
-  # ── year coercible to integer ──────────────────────────────────────────────
+  # ── year coercible to integer (coerce here; return result for handler reuse) ─
   coerced_year <- suppressWarnings(as.integer(year))
-  if (anyNA(coerced_year) && !anyNA(year)) {
+  if (anyNA(coerced_year)) {
+    bad_orig <- year[is.na(coerced_year)]
     errors <- c(
       errors,
       paste0(
         "`year` must be coercible to integer; problematic values: ",
-        paste(year[is.na(coerced_year)], collapse = ", "),
+        paste(bad_orig, collapse = ", "),
         "."
       )
     )
+    coerced_year <- NULL
   }
 
-  list(valid = length(errors) == 0L, errors = errors)
+  list(
+    valid  = length(errors) == 0L,
+    errors = errors,
+    year   = coerced_year
+  )
 }
 
 # ── Warning capture ───────────────────────────────────────────────────────────
@@ -341,13 +366,15 @@ capture_with_warnings <- function(expr) {
       }
     ),
     error = function(e) {
-      list(.__error__ = conditionMessage(e))
+      # Use a typed S3 class instead of a list-key sentinel to avoid
+      # colliding with domain functions that legitimately return list(.__error__ = ...).
+      structure(list(message = conditionMessage(e)), class = "cw_error")
     }
   )
 
-  # Distinguish a caught error from a normal return value
-  if (is.list(result) && !is.null(result$.__error__)) {
-    return(list(result = NULL, warnings = collected, error = result$.__error__))
+  # Distinguish a caught error from a normal return value via S3 class.
+  if (inherits(result, "cw_error")) {
+    return(list(result = NULL, warnings = collected, error = result$message))
   }
 
   list(result = result, warnings = collected, error = NULL)

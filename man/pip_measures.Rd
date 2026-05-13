@@ -21,6 +21,7 @@ pip_measures()
 }
 \seealso{
 Other measures: 
-\code{\link{pip_age_bins}()}
+\code{\link{pip_age_bins}()},
+\code{\link{pip_valid_dimensions}()}
 }
 \concept{measures}

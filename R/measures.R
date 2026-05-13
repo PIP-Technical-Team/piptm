@@ -87,6 +87,25 @@ pip_age_bins <- function() {
   .AGE_BIN_LEVELS
 }
 
+#' Valid disaggregation dimension names
+#'
+#' Returns the character vector of disaggregation dimension names accepted by
+#' [table_maker()] and the API.  Use this instead of accessing the internal
+#' constant `piptm:::.VALID_DIMENSIONS` directly (internal constants may be
+#' renamed without notice).
+#'
+#' @return A character vector of valid dimension names.
+#'
+#' @family measures
+#'
+#' @examples
+#' pip_valid_dimensions()
+#'
+#' @export
+pip_valid_dimensions <- function() {
+  .VALID_DIMENSIONS
+}
+
 # ── Internal validators ───────────────────────────────────────────────────────
 
 #' Classify requested measures by computation family

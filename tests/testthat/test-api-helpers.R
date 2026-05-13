@@ -124,6 +124,33 @@ test_that("validate_table_input() rejects more than 15 pip_ids", {
   expect_true(any(grepl("15", result$errors)))
 })
 
+# P1.9 — boundary: exactly 15 pip_ids must pass the length check
+test_that("validate_table_input() accepts exactly 15 pip_ids (boundary)", {
+  ids    <- paste0("ARM_2012_ILCS_CON_ALL_", seq_len(15L))
+  result <- validate_table_input(pip_id = ids, measures = "mean")
+
+  # Length check passes; other errors (e.g. format) may exist but not length
+  expect_false(any(grepl("15", result$errors)))
+})
+
+# P1.10 — pip_id allowlist: path-traversal and shell-injection attempts are rejected
+test_that("validate_table_input() rejects pip_ids that fail the allowlist pattern", {
+  bad_ids <- c(
+    "../etc/passwd",          # path traversal
+    "ARM_2012_ILCS; rm -rf",  # shell injection
+    "ARM 2012 ILCS CON ALL",  # spaces
+    ""                        # empty string
+  )
+  for (bad in bad_ids) {
+    result <- validate_table_input(pip_id = bad, measures = "mean")
+    expect_false(result$valid, info = paste("Should reject:", bad))
+    expect_true(
+      any(grepl("pip_id", result$errors, ignore.case = TRUE)),
+      info = paste("Error should mention pip_id for:", bad)
+    )
+  }
+})
+
 test_that("validate_table_input() rejects unknown measure names", {
   result <- validate_table_input(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
