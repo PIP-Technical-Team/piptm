@@ -1,15 +1,15 @@
 ---
 date: 2026-05-11
 title: "API Service Layer — Plumber Endpoints (v2)"
-status: active
+status: completed
+completed-date: 2026-05-13
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md"
 supersedes: ".cg-docs/plans/2026-05-08-api-service-plumber.md"
 language: "R"
 estimated-effort: "medium"
 tags: [api, plumber, endpoints, phase-4]
-completed-steps: [1, 2, 3, 4]
-current-step: 5
+completed-steps: [1, 2, 3, 4, 5]
 ---
 
 # Plan: API Service Layer — Plumber Endpoints (v2)

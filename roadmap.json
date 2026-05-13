@@ -162,27 +162,28 @@
       "id": "phase-4-api-service",
       "title": "Phase 4 — API Service Layer",
       "description": "Build plumber service layer connecting PIP UI platform to table_maker(). Support GET/POST endpoints, request validation, response serialization.",
-      "status": "planned",
+      "status": "done",
       "features": [
         {
           "id": "plumber-table-endpoint",
           "title": "Plumber /table endpoint (GET/POST)",
           "description": "Accept pip_id vector, measures, poverty_lines, by dimensions. Return long-format JSON with poverty_line, measure, value, population. Support batch requests (>50 surveys via POST with JSON body).",
-          "status": "planned",
-          "plan": ".cg-docs/plans/2026-04-27-table-maker-input-parameters.md"
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
         },
         {
           "id": "plumber-lookup-endpoint",
           "title": "Plumber /lookup endpoint",
           "description": "Resolve (country_code, year, welfare_type) triplets to pip_ids for UI discovery. Caching layer for manifest queries.",
-          "status": "planned",
-          "plan": ".cg-docs/plans/2026-04-27-table-maker-input-parameters.md"
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
         },
         {
           "id": "error-handling-logging",
           "title": "Error handling, logging, and request tracing",
           "description": "Structured error responses (invalid pip_ids, unsupported measures, missing poverty_lines). Request logging with timestamps and parameter echoing. Optional telemetry for performance monitoring.",
-          "status": "planned"
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
         }
       ]
     }
