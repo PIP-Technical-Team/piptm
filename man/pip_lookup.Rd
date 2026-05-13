@@ -46,6 +46,7 @@ ids <- pip_lookup(
 }
 \seealso{
 Other api: 
+\code{\link{run_api}()},
 \code{\link{table_maker}()}
 }
 \concept{api}

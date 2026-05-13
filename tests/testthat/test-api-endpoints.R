@@ -589,7 +589,7 @@ test_that("GET /lookup resolves a known triplet and returns the pip_id", {
     welfare_type = "INC"
   ))))
   expect_equal(body$status, "success")
-  expect_true("COL_2010_ECH_INC_ALL" %in% unlist(body$data))
+  expect_true("COL_2010_ECH_INC_ALL" %in% body$data)
 })
 
 test_that("GET /lookup echoes release in meta", {
@@ -617,7 +617,7 @@ test_that("GET /lookup with unmatched triplet returns success with warnings", {
   # pip_lookup() emits cli_warn for unmatched triplet → captured in warnings
   expect_true(length(body$warnings) > 0L)
   # The matched row is returned
-  expect_true("COL_2010_ECH_INC_ALL" %in% unlist(body$data))
+  expect_true("COL_2010_ECH_INC_ALL" %in% body$data)
 })
 
 # =============================================================================

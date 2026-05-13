@@ -17,6 +17,9 @@
 
 # ── Response envelopes ────────────────────────────────────────────────────────
 
+# Maximum number of surveys accepted per /table request.
+.MAX_SURVEYS_PER_REQUEST <- 15L
+
 #' Build a structured success response envelope
 #'
 #' @param data     The payload to include in the `data` field.
@@ -133,11 +136,12 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   # ── pip_id ─────────────────────────────────────────────────────────────────
   if (is.null(pip_id) || !is.character(pip_id) || length(pip_id) == 0L) {
     errors <- c(errors, "`pip_id` must be a non-empty character vector.")
-  } else if (length(pip_id) > 15L) {
+  } else if (length(pip_id) > .MAX_SURVEYS_PER_REQUEST) {
     errors <- c(
       errors,
       paste0(
-        "`pip_id` may contain at most 15 surveys per request; ",
+        "`pip_id` may contain at most ", .MAX_SURVEYS_PER_REQUEST,
+        " surveys per request; ",
         length(pip_id), " were supplied."
       )
     )
@@ -331,8 +335,8 @@ validate_lookup_input <- function(country_code, year, welfare_type) {
 #' `resolve_release()` aborts and `table_maker()` domain errors are both
 #' caught here and surfaced as the `error` field.
 #'
-#' @param expr An expression to evaluate (passed with `substitute()`; do not
-#'   wrap in `quote()` at the call site).
+#' @param expr An expression to evaluate. Passed and evaluated normally;
+#'   do not wrap in `quote()`.
 #'
 #' @return A named list:
 #'   \describe{

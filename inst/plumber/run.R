@@ -2,7 +2,6 @@
 #
 # Usage:
 #   Rscript inst/plumber/run.R
-#   Rscript inst/plumber/run.R --port 8888
 #
 # Environment variables (optional — override defaults):
 #   PIPTM_API_PORT  : port to listen on (default: 8080)

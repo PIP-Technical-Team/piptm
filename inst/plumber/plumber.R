@@ -25,6 +25,15 @@
 # source("helpers.R") breaks if plumb() is called from any directory other
 # than inst/plumber/.  Sourced once at router startup.
 
+# Fail fast: check plumber version before sourcing helpers, so a version
+# mismatch produces an actionable error rather than one buried after source().
+if (utils::packageVersion("plumber") < "1.1.0") {
+  stop(
+    "plumber >= 1.1.0 is required (for @plumber decorator / setErrorHandler). ",
+    "Found: ", utils::packageVersion("plumber")
+  )
+}
+
 .helpers_path <- system.file("plumber", "helpers.R", package = "piptm")
 if (!nzchar(.helpers_path)) {
   stop(
@@ -34,14 +43,6 @@ if (!nzchar(.helpers_path)) {
   )
 }
 source(.helpers_path)
-
-# Require plumber >= 1.1.0 for @plumber decorator and pr$setErrorHandler().
-if (utils::packageVersion("plumber") < "1.1.0") {
-  stop(
-    "plumber >= 1.1.0 is required (for @plumber decorator / setErrorHandler). ",
-    "Found: ", utils::packageVersion("plumber")
-  )
-}
 
 # ── 2b. CORS filter ───────────────────────────────────────────────────────────
 
@@ -93,6 +94,9 @@ function(pr) {
 function(req) {
   start <- proc.time()[["elapsed"]]
   plumber::forward()
+  # Note: if the global errorHandler fires for an uncaught exception, the
+  # lines below may not execute for that request.  500-level errors are
+  # therefore not guaranteed to appear in the log.
   elapsed <- round(proc.time()[["elapsed"]] - start, 3L)
   message(
     format(Sys.time(), "%Y-%m-%dT%H:%M:%S"),
@@ -238,7 +242,7 @@ function() {
 #* @serializer json list(na = "null")
 #* @get /dimensions
 function() {
-  api_response(piptm:::.VALID_DIMENSIONS)
+  api_response(piptm::pip_valid_dimensions())
 }
 
 # ── GET /health ───────────────────────────────────────────────────────────────

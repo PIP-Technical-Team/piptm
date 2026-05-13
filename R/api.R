@@ -30,9 +30,9 @@
 #' directory configured via [set_arrow_root()] / [set_manifest_dir()] or the
 #' `PIPTM_ARROW_ROOT` / `PIPTM_MANIFEST_DIR` environment variables.
 #'
-#' @param port Integer. TCP port to listen on. Defaults to `8080`. Override
-#'   at deployment time via the `PIPTM_API_PORT` environment variable:
-#'   `port = as.integer(Sys.getenv("PIPTM_API_PORT", unset = "8080"))`.
+#' @param port Integer. TCP port to listen on. Defaults to `8080`.
+#'   The CLI launcher (`inst/plumber/run.R`) reads the `PIPTM_API_PORT`
+#'   environment variable automatically.
 #' @param host Character scalar. IP address to bind to. Defaults to
 #'   `"0.0.0.0"` (all interfaces). Use `"127.0.0.1"` to restrict to
 #'   localhost only.
