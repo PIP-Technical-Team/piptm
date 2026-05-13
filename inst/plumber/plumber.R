@@ -118,7 +118,7 @@ function(req) {
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
-function(pip_id, measures, poverty_lines = NULL, by = NULL,
+function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
          release = NULL, res) {
 
   check <- validate_table_input(pip_id, measures, poverty_lines, by)
@@ -161,7 +161,7 @@ function(pip_id, measures, poverty_lines = NULL, by = NULL,
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /lookup
-function(country_code, year, welfare_type, release = NULL, res) {
+function(country_code = NULL, year = NULL, welfare_type = NULL, release = NULL, res) {
   check <- validate_lookup_input(country_code, year, welfare_type)
   if (!check$valid) return(api_error(check$errors, 400L, res))
   year <- check$year
