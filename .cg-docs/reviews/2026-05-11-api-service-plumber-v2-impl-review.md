@@ -28,29 +28,29 @@ scope:
 findings:
   P1:
     - id: P1.1
-      status: open
+      status: fixed
     - id: P1.2
-      status: open
+      status: fixed
     - id: P1.3
-      status: open
+      status: fixed
   P2:
     - id: P2.1
       status: open
     - id: P2.2
-      status: open
+      status: fixed
     - id: P2.3
-      status: open
+      status: fixed
     - id: P2.4
-      status: open
+      status: fixed
     - id: P2.5
-      status: open
+      status: fixed
   P3:
     - id: P3.1
-      status: open
+      status: fixed
     - id: P3.2
-      status: open
+      status: fixed
     - id: P3.3
-      status: open
+      status: fixed
 ---
 
 # Implementation Review — API Service Layer (Plumber v2)
