@@ -3,7 +3,7 @@ Type: Package
 Title: Computation Engine for the PIP Table Maker
 Version: 0.1.0
 Authors@R: 
-    person("First", "Last", email = "your@email.org", role = c("aut", "cre"))
+    person("Rossana", "Tatulli", email = "rtatulli@worldbank.org", role = c("aut", "cre"))
 Description: 
     Provides the computation engine for the PIP Table Maker system. 
     The package loads survey microdata stored as partitioned Arrow/Parquet datasets 

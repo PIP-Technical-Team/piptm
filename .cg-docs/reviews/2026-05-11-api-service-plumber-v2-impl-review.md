@@ -35,7 +35,7 @@ findings:
       status: fixed
   P2:
     - id: P2.1
-      status: open
+      status: fixed
     - id: P2.2
       status: fixed
     - id: P2.3
