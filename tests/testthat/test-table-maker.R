@@ -22,7 +22,7 @@ write_fixture_parquet_tm <- function(arrow_root,
                                      welfare_type,
                                      version,
                                      pip_id,
-                                     survey_acronym,
+                                     survey_acronym = NULL,
                                      n_rows  = 10L,
                                      welfare = NULL,
                                      weight  = NULL,
@@ -46,7 +46,6 @@ write_fixture_parquet_tm <- function(arrow_root,
     welfare_type   = welfare_type,
     version        = version,
     pip_id         = pip_id,
-    survey_acronym = survey_acronym,
     welfare        = as.numeric(welfare),
     weight         = as.numeric(weight)
   )
@@ -113,7 +112,6 @@ make_tm_fixtures <- function(env = parent.frame()) {
     welfare_type  = "INC",
     version       = "v01_v01",
     pip_id        = "COL_2010_ECH_INC_ALL",
-    survey_acronym = "ECH",
     extra_cols    = c("gender", "area")
   )
 
@@ -123,8 +121,7 @@ make_tm_fixtures <- function(env = parent.frame()) {
     year          = 2000L,
     welfare_type  = "INC",
     version       = "v01_v01",
-    pip_id        = "BOL_2000_ECH_INC_ALL",
-    survey_acronym = "ECH"
+    pip_id        = "BOL_2000_ECH_INC_ALL"
   )
 
   write_fixture_parquet_tm(
@@ -134,7 +131,6 @@ make_tm_fixtures <- function(env = parent.frame()) {
     welfare_type  = "INC",
     version       = "v01_v01",
     pip_id        = "COL_2015_ECH_INC_ALL",
-    survey_acronym = "ECH",
     extra_cols    = c("age")
   )
 
@@ -702,4 +698,89 @@ test_that("table_maker() aggregate population equals sum of survey weights", {
     by       = NULL
   )
   expect_equal(res$population, 10)
+})
+
+# ---------------------------------------------------------------------------
+# ppp argument — table_maker() pass-through
+# ---------------------------------------------------------------------------
+
+#' Write a multi-welfare Parquet + manifest fixture for table_maker ppp tests.
+make_tm_ppp_fixtures <- function(env = parent.frame()) {
+  tmp_arrow    <- withr::local_tempdir(.local_envir = env)
+  tmp_manifest <- withr::local_tempdir(.local_envir = env)
+
+  dp <- file.path(
+    tmp_arrow,
+    "country_code=COL", "surveyid_year=2010",
+    "welfare_type=INC",  "version=v01_v01"
+  )
+  dir.create(dp, recursive = TRUE)
+  dt <- data.table::data.table(
+    country_code   = "COL", surveyid_year  = 2010L,
+    welfare_type   = "INC", version = "v01_v01",
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    welfare_lcu              = seq(100, by = 100, length.out = 10L),
+    welfare_ppp_2017_01_02   = seq(1,   by = 1,   length.out = 10L),
+    welfare_ppp_2011_01_01   = seq(2,   by = 1,   length.out = 10L),
+    weight         = rep(1.0, 10L)
+  )
+  arrow::write_parquet(dt, file.path(dp, "data.parquet"))
+
+  entries <- list(list(
+    pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S",
+    country_code = "COL", year = 2010L, welfare_type = "INC",
+    version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+    dimensions = list(),
+    welfare_vars = list("welfare_lcu", "welfare_ppp_2017_01_02", "welfare_ppp_2011_01_01"),
+    ppp_sort = 2017L
+  ))
+  write_fixture_manifest_tm(tmp_manifest, "20260206", entries)
+
+  list(tmp_arrow = tmp_arrow, tmp_manifest = tmp_manifest)
+}
+
+test_that("table_maker() ppp=2017 computes on welfare_ppp_2017_01_02 column", {
+  fx <- make_tm_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = 2017L
+  )
+  expect_s3_class(res, "data.table")
+  # welfare_ppp_2017_01_02 = 1..10, weight = 1 each → mean = 5.5
+  expect_equal(res$value, 5.5)
+})
+
+test_that("table_maker() ppp=NULL uses manifest ppp_sort default", {
+  fx <- make_tm_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = NULL
+  )
+  # ppp_sort = 2017 → same result as ppp = 2017
+  expect_equal(res$value, 5.5)
+})
+
+test_that("table_maker() ppp=2011 computes on welfare_ppp_2011_01_01 column", {
+  fx <- make_tm_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = 2011L
+  )
+  # welfare_ppp_2011_01_01 = 2..11, mean = 6.5
+  expect_equal(res$value, 6.5)
 })

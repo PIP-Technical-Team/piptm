@@ -13,7 +13,6 @@
     "welfare_type",
     "version",
     "pip_id",
-    "survey_acronym",
     "welfare",
     "weight"
   ],
@@ -103,18 +102,6 @@
         "unique_per_file": true
       },
       "description": "File-level survey identifier (e.g. 'BOL_2020_EH_INC_ALL'). Uniquely identifies a single Parquet file — one welfare type for one survey. Stored in the data column so the file is self-describing. Derived from the release inventory pip_id column. Used as the Parquet filename stem."
-    },
-    {
-      "name": "survey_acronym",
-      "arrow_type": "utf8",
-      "r_type": "character",
-      "required": true,
-      "nullable": false,
-      "is_partition_key": false,
-      "source": "metadata",
-      "source_field": "survey_acronym",
-      "constraints": {},
-      "description": "Short survey name (e.g. EH, LSMS, GEIH). Not present as a data column — injected as a constant from metadata$survey_acronym. Stored for human readability in downstream outputs."
     },
     {
       "name": "welfare",

@@ -141,6 +141,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   aggregate results.  Valid values: `"gender"`, `"area"`, `"educat4"`,
 #'   `"educat5"`, `"educat7"`, `"age"`.  At most 4 dimensions; at most one
 #'   education column.
+#' @param ppp          Integer scalar PPP year (e.g. `2017L`), or `NULL`.
+#'   Passed through to [load_surveys()]. Selects which `welfare_ppp_*` column
+#'   to use as `welfare` for surveys written with the deflated-data schema.
+#'   When `NULL` (default), the manifest `ppp_sort` default is used.
 #' @param release Character scalar release ID (e.g. `"20260206"`). Defaults
 #'   to the current release as returned by [piptm_current_release()].
 #'
@@ -194,6 +198,7 @@ table_maker <- function(pip_id        = NULL,
                         measures,
                         poverty_lines = NULL,
                         by            = NULL,
+                        ppp           = NULL,
                         release       = NULL) {
 
   # ── 0. Resolve survey identifiers ──────────────────────────────────────────
@@ -301,7 +306,7 @@ table_maker <- function(pip_id        = NULL,
   }
 
   # ── 4. Load ─────────────────────────────────────────────────────────────────
-  dt <- load_surveys(entries, release = release)
+  dt <- load_surveys(entries, ppp = ppp, release = release)
 
   if (nrow(dt) == 0L) {
     cli_abort(

@@ -13,7 +13,7 @@ to the current release as returned by \code{\link[=piptm_current_release]{piptm_
 \value{
 A \code{data.table} with columns: \code{pip_id}, \code{survey_id}, \code{country_code},
 \code{year}, \code{welfare_type}, \code{version}, \code{survey_acronym}, \code{module},
-\code{dimensions}.
+\code{reporting_level}, \code{dimensions}.
 }
 \description{
 Looks up the in-memory manifest cache and returns the \code{data.table} of

@@ -90,7 +90,7 @@ DICT_SCHEMA_COLS <- c("gender", "area", "educat4", "educat5", "educat7")
 # Full schema columns (reference only — used for documentation in results)
 ALL_SCHEMA_COLS <- c(
   "country_code", "surveyid_year", "welfare_type", "version",
-  "pip_id", "survey_acronym", "welfare", "weight",
+  "pip_id", "welfare", "weight",
   "gender", "area", "educat4", "educat5", "educat7", "age"
 )
 DROPPED_COLS  <- setdiff(ALL_SCHEMA_COLS, NEEDED_COLS)

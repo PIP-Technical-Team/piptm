@@ -228,7 +228,11 @@ validate_parquet_schema <- function(file_path) {
   }
 
   # --- Check 4: no extra columns outside schema ------------------------------
-  extra_cols <- setdiff(actual_cols, .VP_ALLOWED_COLS)
+  # Any column starting with "welfare" (old single-welfare OR new multi-welfare_*)
+  # is considered allowed. Column-count enforcement is not the responsibility of
+  # this check — welfare columns are enumerated per-survey in the manifest.
+  welfare_cols_in_file <- grep("^welfare", actual_cols, value = TRUE)
+  extra_cols <- setdiff(actual_cols, c(.VP_ALLOWED_COLS, welfare_cols_in_file))
   if (length(extra_cols) > 0L) {
     result <- .vp_add_error(
       result,
@@ -296,7 +300,7 @@ validate_parquet_schema <- function(file_path) {
 #'    directory.
 #' 7. Partition key consistency — one unique value per key per file.
 #' 8. Factor level conformance for `gender`, `area`, `education` (if present).
-#' 9. `age` range [0, 130] (if present).
+#' 9. `age` range \[0, 130\] (if present).
 #'
 #' @param file_path Absolute path to a `.parquet` file.
 #'

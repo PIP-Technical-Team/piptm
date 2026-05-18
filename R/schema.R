@@ -18,7 +18,6 @@
 #' @family schema
 #' @examples
 #' s <- pip_arrow_schema()
-#' s$fields$welfare$type
 #' s$fields$version$type
 #' s$levels$gender
 pip_arrow_schema <- function() {
@@ -31,8 +30,6 @@ pip_arrow_schema <- function() {
       welfare_type   = list(type = arrow::utf8(),     required = TRUE),
       version        = list(type = arrow::utf8(),     required = TRUE),
       pip_id         = list(type = arrow::utf8(),     required = TRUE),
-      survey_acronym = list(type = arrow::utf8(),     required = TRUE),
-      welfare        = list(type = arrow::float64(),  required = TRUE),
       weight         = list(type = arrow::float64(),  required = TRUE),
       gender         = list(type = dict_type,         required = FALSE),
       area           = list(type = dict_type,         required = FALSE),
@@ -50,9 +47,41 @@ pip_arrow_schema <- function() {
   )
 }
 
-#' Extract required column names from the canonical schema
+#' Build welfare field specs for a set of welfare column names
 #'
-#' @return Character vector of required column names.
+#' Returns a named list of field specs (each with `$type` = `float64()` and
+#' `$required = TRUE`) for every column name in `welfare_vars`. This is the
+#' companion to [pip_arrow_schema()] for the dynamic welfare columns written
+#' by `{pipdata}` — `welfare_lcu` and one or more `welfare_ppp_*` variants.
+#'
+#' @param welfare_vars Character vector of welfare column names, e.g.
+#'   `c("welfare_lcu", "welfare_ppp_2017_01_02")`. Must be non-empty.
+#'
+#' @return A named list of field specs (`$type`, `$required`).
+#' @importFrom arrow float64
+#' @export
+#' @family schema
+#' @examples
+#' wf <- pip_welfare_schema(c("welfare_lcu", "welfare_ppp_2017_01_02"))
+#' wf[["welfare_ppp_2017_01_02"]]$type
+pip_welfare_schema <- function(welfare_vars) {
+  if (!is.character(welfare_vars) || length(welfare_vars) == 0L) {
+    cli::cli_abort(
+      "{.arg welfare_vars} must be a non-empty character vector."
+    )
+  }
+  field_spec <- list(type = arrow::float64(), required = TRUE)
+  stats::setNames(rep(list(field_spec), length(welfare_vars)), welfare_vars)
+}
+
+#' Extract required column names from the canonical base schema
+#'
+#' Returns the 6 fixed required columns (no welfare columns — those are
+#' survey-specific and enumerated via [pip_welfare_schema()]).
+#'
+#' @return Character vector of 6 required column names:
+#'   `country_code`, `surveyid_year`, `welfare_type`, `version`,
+#'   `pip_id`, `weight`.
 #' @export
 #' @family schema
 pip_required_cols <- function() {
@@ -62,9 +91,21 @@ pip_required_cols <- function() {
 
 #' Extract all allowed column names from the canonical schema
 #'
-#' @return Character vector of all column names (required + optional).
+#' Returns the 12 base columns (required + optional breakdown dimensions).
+#' Pass `welfare_vars` to append the survey-specific welfare columns for a
+#' particular Parquet file.
+#'
+#' @param welfare_vars Optional character vector of welfare column names (e.g.
+#'   from a manifest entry's `welfare_vars` field). When `NULL` (default)
+#'   only the 12 base columns are returned.
+#'
+#' @return Character vector of allowed column names.
 #' @export
 #' @family schema
-pip_allowed_cols <- function() {
-  names(pip_arrow_schema()$fields)
+#' @examples
+#' pip_allowed_cols()  # 12 base columns
+#' pip_allowed_cols(c("welfare_lcu", "welfare_ppp_2017_01_02"))  # 14 columns
+pip_allowed_cols <- function(welfare_vars = NULL) {
+  base <- names(pip_arrow_schema()$fields)
+  if (!is.null(welfare_vars)) c(base, welfare_vars) else base
 }

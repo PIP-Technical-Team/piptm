@@ -30,7 +30,7 @@ Checks performed:
 directory.
 \item Partition key consistency — one unique value per key per file.
 \item Factor level conformance for \code{gender}, \code{area}, \code{education} (if present).
-\item \code{age} range \link{0, 130} (if present).
+\item \code{age} range [0, 130] (if present).
 }
 }
 \examples{

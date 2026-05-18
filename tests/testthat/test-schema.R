@@ -53,12 +53,12 @@ test_that("pip_arrow_schema$levels contains gender and area with correct values"
   expect_identical(s$levels$area,   c("urban", "rural"))
 })
 
-test_that("pip_arrow_schema contains all 8 required columns", {
+test_that("pip_arrow_schema contains all 6 required columns", {
   s         <- pip_arrow_schema()
   req_names <- names(Filter(function(f) isTRUE(f$required), s$fields))
   expected  <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
-    "pip_id", "survey_acronym", "welfare", "weight"
+    "pip_id", "weight"
   )
   expect_setequal(req_names, expected)
 })
@@ -67,10 +67,11 @@ test_that("pip_arrow_schema contains all 8 required columns", {
 # pip_required_cols()
 # ===========================================================================
 
-test_that("pip_required_cols returns exactly 8 columns including version", {
+test_that("pip_required_cols returns exactly 6 columns including version", {
   cols <- pip_required_cols()
-  expect_length(cols, 8L)
+  expect_length(cols, 6L)
   expect_true("version" %in% cols)
+  expect_false("welfare" %in% cols)
 })
 
 test_that("pip_required_cols does not include optional columns", {
@@ -84,11 +85,11 @@ test_that("pip_required_cols does not include optional columns", {
 # pip_allowed_cols()
 # ===========================================================================
 
-test_that("pip_allowed_cols includes all required and optional columns", {
+test_that("pip_allowed_cols includes all required and optional base columns", {
   cols     <- pip_allowed_cols()
   expected <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
-    "pip_id", "survey_acronym", "welfare", "weight",
+    "pip_id", "weight",
     "gender", "area", "educat4", "educat5", "educat7", "age"
   )
   expect_setequal(cols, expected)
@@ -98,6 +99,43 @@ test_that("pip_allowed_cols does not include education", {
   expect_false("education" %in% pip_allowed_cols())
 })
 
-test_that("pip_allowed_cols returns 14 columns total", {
-  expect_length(pip_allowed_cols(), 14L)
+test_that("pip_allowed_cols does not include welfare column", {
+  expect_false("welfare" %in% pip_allowed_cols())
+})
+
+test_that("pip_allowed_cols returns 12 base columns total", {
+  expect_length(pip_allowed_cols(), 12L)
+})
+
+test_that("pip_allowed_cols with welfare_vars appends welfare columns", {
+  wv   <- c("welfare_lcu", "welfare_ppp_2017_01_02")
+  cols <- pip_allowed_cols(welfare_vars = wv)
+  expect_length(cols, 14L)
+  expect_true("welfare_lcu"            %in% cols)
+  expect_true("welfare_ppp_2017_01_02" %in% cols)
+})
+
+# ===========================================================================
+# pip_welfare_schema()
+# ===========================================================================
+
+test_that("pip_welfare_schema returns float64 field specs for all supplied cols", {
+  wv  <- c("welfare_lcu", "welfare_ppp_2017_01_02")
+  wfs <- pip_welfare_schema(wv)
+  expect_named(wfs, wv)
+  for (nm in wv) {
+    expect_identical(wfs[[nm]]$type$ToString(), arrow::float64()$ToString())
+    expect_true(wfs[[nm]]$required)
+  }
+})
+
+test_that("pip_welfare_schema errors on empty welfare_vars", {
+  expect_error(pip_welfare_schema(character(0L)), regexp = "non-empty")
+  expect_error(pip_welfare_schema(NULL),          regexp = "non-empty")
+})
+
+test_that("pip_welfare_schema handles single column", {
+  wfs <- pip_welfare_schema("welfare_lcu")
+  expect_length(wfs, 1L)
+  expect_named(wfs, "welfare_lcu")
 })

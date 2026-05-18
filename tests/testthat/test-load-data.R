@@ -670,3 +670,338 @@ test_that("load_surveys() errors when a manifest entry has no Parquet files on d
     regexp = "No Parquet files found"
   )
 })
+
+# ---------------------------------------------------------------------------
+# PPP welfare column selection — new-schema surveys
+# ---------------------------------------------------------------------------
+
+#' Write a multi-welfare Parquet fixture (new deflated-data schema).
+#' Returns list(arrow_root, manifest_dir) with env reset deferred to `env`.
+make_ppp_fixtures <- function(env = parent.frame()) {
+  tmp_arrow    <- withr::local_tempdir(.local_envir = env)
+  tmp_manifest <- withr::local_tempdir(.local_envir = env)
+
+  dir_path <- file.path(
+    tmp_arrow,
+    "country_code=COL", "surveyid_year=2010",
+    "welfare_type=INC", "version=v01_v02"
+  )
+  dir.create(dir_path, recursive = TRUE)
+  dt <- data.table::data.table(
+    country_code   = "COL",
+    surveyid_year  = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_acronym = "ECH",
+    welfare_lcu          = c(500, 600, 700, 800, 900),
+    welfare_ppp_2017_01_02 = c(1.5, 2.0, 2.5, 3.0, 3.5),
+    welfare_ppp_2011_01_01 = c(2.1, 2.8, 3.5, 4.2, 4.9),
+    weight         = rep(1.0, 5L)
+  )
+  arrow::write_parquet(dt, file.path(dir_path, "data.parquet"))
+
+  entries_list <- list(list(
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_id      = "COL_2010_ECH_v01_M_v02_A_GMD_ALL",
+    country_code   = "COL",
+    year           = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    survey_acronym = "ECH",
+    module         = "ALL",
+    dimensions     = list("gender"),
+    welfare_vars   = list("welfare_lcu", "welfare_ppp_2017_01_02", "welfare_ppp_2011_01_01"),
+    ppp_sort       = 2017L
+  ))
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  list(tmp_arrow = tmp_arrow, tmp_manifest = tmp_manifest)
+}
+
+reset_load_env <- function() {
+  env <- getNamespace("piptm")$.piptm_env
+  env$arrow_root      <- NULL
+  env$manifest_dir    <- NULL
+  env$manifests       <- list()
+  env$current_release <- NULL
+}
+
+test_that("load_survey_microdata() with ppp selects and renames the correct welfare column", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC", ppp = 2017L)
+
+  expect_true("welfare" %in% names(dt))
+  expect_false("welfare_ppp_2017_01_02" %in% names(dt))
+  expect_false("welfare_ppp_2011_01_01" %in% names(dt))
+  expect_false("welfare_lcu"            %in% names(dt))
+  expect_equal(dt$welfare, c(1.5, 2.0, 2.5, 3.0, 3.5))
+})
+
+test_that("load_survey_microdata() ppp=NULL uses ppp_sort from manifest", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC", ppp = NULL)
+
+  # ppp_sort = 2017 → should load welfare_ppp_2017_01_02
+  expect_true("welfare" %in% names(dt))
+  expect_equal(dt$welfare, c(1.5, 2.0, 2.5, 3.0, 3.5))
+})
+
+test_that("load_survey_microdata() errors when requested ppp not in welfare_vars", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  expect_error(
+    piptm::load_survey_microdata("COL", 2010L, "INC", ppp = 2005L),
+    regexp = "not available"
+  )
+})
+
+test_that("load_survey_microdata() with ppp=NULL and ppp_sort=NA errors informatively", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  dir_path <- file.path(
+    tmp_arrow,
+    "country_code=COL", "surveyid_year=2010",
+    "welfare_type=INC",  "version=v01_v02"
+  )
+  dir.create(dir_path, recursive = TRUE)
+  dt <- data.table::data.table(
+    country_code  = "COL", surveyid_year = 2010L,
+    welfare_type  = "INC", version = "v01_v02",
+    pip_id        = "COL_2010_ECH_INC_ALL", survey_acronym = "ECH",
+    welfare_ppp_2017_01_02 = c(1.5, 2.0, 2.5),
+    weight = rep(1.0, 3L)
+  )
+  arrow::write_parquet(dt, file.path(dir_path, "data.parquet"))
+
+  entries <- list(list(
+    pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S",
+    country_code = "COL", year = 2010L, welfare_type = "INC",
+    version = "v01_v02", survey_acronym = "ECH", module = "ALL",
+    dimensions = list(),
+    welfare_vars = list("welfare_ppp_2017_01_02"),
+    ppp_sort = NA_integer_   # no default set
+  ))
+  write_fixture_manifest(tmp_manifest, "20260206", entries, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  expect_error(
+    piptm::load_survey_microdata("COL", 2010L, "INC"),
+    regexp = "No default PPP"
+  )
+})
+
+test_that("load_survey_microdata() legacy survey (welfare_vars empty) loads as-is", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  # Legacy Parquet has single `welfare` column; manifest has welfare_vars=character(0)
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC")
+  expect_true("welfare" %in% names(dt))
+  expect_equal(nrow(dt), 5L)
+})
+
+test_that("load_surveys() with ppp selects correct welfare column across all surveys", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  for (cc in c("COL", "BOL")) {
+    dp <- file.path(
+      tmp_arrow,
+      paste0("country_code=", cc), "surveyid_year=2010",
+      "welfare_type=INC", "version=v01_v01"
+    )
+    dir.create(dp, recursive = TRUE)
+    dt_i <- data.table::data.table(
+      country_code   = cc, surveyid_year = 2010L,
+      welfare_type   = "INC", version = "v01_v01",
+      pip_id         = paste0(cc, "_2010_ECH_INC_ALL"), survey_acronym = "ECH",
+      welfare_lcu              = c(500, 600, 700),
+      welfare_ppp_2017_01_02   = c(1.0, 2.0, 3.0),
+      welfare_ppp_2011_01_01   = c(1.5, 2.5, 3.5),
+      weight         = rep(1.0, 3L)
+    )
+    arrow::write_parquet(dt_i, file.path(dp, "data.parquet"))
+  }
+
+  entries_list <- lapply(c("COL", "BOL"), function(cc) {
+    list(
+      pip_id = paste0(cc, "_2010_ECH_INC_ALL"), survey_id = "S",
+      country_code = cc, year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list("welfare_lcu", "welfare_ppp_2017_01_02", "welfare_ppp_2011_01_01"),
+      ppp_sort = 2017L
+    )
+  })
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  dt <- piptm::load_surveys(mf, ppp = 2017L)
+
+  expect_true("welfare" %in% names(dt))
+  expect_false(any(grepl("^welfare_ppp_|^welfare_lcu", names(dt))))
+  expect_equal(nrow(dt), 6L)
+  expect_true(all(dt$welfare %in% c(1.0, 2.0, 3.0)))
+})
+
+test_that("load_surveys() ppp=NULL uses uniform ppp_sort across surveys", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  for (cc in c("COL", "BOL")) {
+    dp <- file.path(
+      tmp_arrow, paste0("country_code=", cc), "surveyid_year=2010",
+      "welfare_type=INC", "version=v01_v01"
+    )
+    dir.create(dp, recursive = TRUE)
+    dt_i <- data.table::data.table(
+      country_code = cc, surveyid_year = 2010L, welfare_type = "INC",
+      version = "v01_v01", pip_id = paste0(cc, "_2010_ECH_INC_ALL"),
+      survey_acronym = "ECH",
+      welfare_ppp_2017_01_02 = c(1.0, 2.0),
+      weight = rep(1.0, 2L)
+    )
+    arrow::write_parquet(dt_i, file.path(dp, "data.parquet"))
+  }
+
+  entries_list <- lapply(c("COL", "BOL"), function(cc) {
+    list(
+      pip_id = paste0(cc, "_2010_ECH_INC_ALL"), survey_id = "S",
+      country_code = cc, year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"),
+      ppp_sort = 2017L  # same for both
+    )
+  })
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  dt <- piptm::load_surveys(mf, ppp = NULL)
+
+  expect_true("welfare" %in% names(dt))
+  expect_equal(nrow(dt), 4L)
+})
+
+test_that("load_surveys() errors when surveys have inconsistent ppp_sort and ppp=NULL", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  ppp_sorts <- c(COL = 2017L, BOL = 2011L)
+  for (cc in c("COL", "BOL")) {
+    dp <- file.path(
+      tmp_arrow, paste0("country_code=", cc), "surveyid_year=2010",
+      "welfare_type=INC", "version=v01_v01"
+    )
+    dir.create(dp, recursive = TRUE)
+    ps <- ppp_sorts[[cc]]
+    col_nm <- paste0("welfare_ppp_", ps, "_01_01")
+    dt_i <- data.table::data.table(
+      country_code = cc, surveyid_year = 2010L, welfare_type = "INC",
+      version = "v01_v01", pip_id = paste0(cc, "_2010_ECH_INC_ALL"),
+      survey_acronym = "ECH",
+      weight = rep(1.0, 2L)
+    )
+    dt_i[, (col_nm) := c(1.0, 2.0)]
+    arrow::write_parquet(dt_i, file.path(dp, "data.parquet"))
+  }
+
+  entries_list <- lapply(c("COL", "BOL"), function(cc) {
+    ps <- ppp_sorts[[cc]]
+    col_nm <- paste0("welfare_ppp_", ps, "_01_01")
+    list(
+      pip_id = paste0(cc, "_2010_ECH_INC_ALL"), survey_id = "S",
+      country_code = cc, year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list(col_nm),
+      ppp_sort = ps
+    )
+  })
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  expect_error(
+    piptm::load_surveys(mf, ppp = NULL),
+    regexp = "different.*ppp_sort|ppp_sort.*different"
+  )
+})
+
+test_that("load_surveys() errors when a survey lacks the requested ppp column", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  # COL has ppp 2017; BOL has only ppp 2011 → requesting ppp=2017 must error
+  welfare_by_cc <- list(
+    COL = list(col = "welfare_ppp_2017_01_02", val = c(1.0, 2.0)),
+    BOL = list(col = "welfare_ppp_2011_01_01", val = c(1.5, 2.5))
+  )
+  for (cc in c("COL", "BOL")) {
+    dp <- file.path(
+      tmp_arrow, paste0("country_code=", cc), "surveyid_year=2010",
+      "welfare_type=INC", "version=v01_v01"
+    )
+    dir.create(dp, recursive = TRUE)
+    info <- welfare_by_cc[[cc]]
+    dt_i <- data.table::data.table(
+      country_code = cc, surveyid_year = 2010L, welfare_type = "INC",
+      version = "v01_v01", pip_id = paste0(cc, "_2010_ECH_INC_ALL"),
+      survey_acronym = "ECH", weight = rep(1.0, 2L)
+    )
+    dt_i[, (info$col) := info$val]
+    arrow::write_parquet(dt_i, file.path(dp, "data.parquet"))
+  }
+
+  entries_list <- lapply(c("COL", "BOL"), function(cc) {
+    info <- welfare_by_cc[[cc]]
+    list(
+      pip_id = paste0(cc, "_2010_ECH_INC_ALL"), survey_id = "S",
+      country_code = cc, year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list(info$col),
+      ppp_sort = NA_integer_
+    )
+  })
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  expect_error(
+    piptm::load_surveys(mf, ppp = 2017L),
+    regexp = "not available"
+  )
+})

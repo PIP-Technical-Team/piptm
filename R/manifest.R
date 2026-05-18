@@ -14,15 +14,16 @@
 #     "generated_at": "2026-04-03T17:00:00Z",
 #     "entries": [
 #       {
-#         "pip_id":         "COL_2010_GEIH_INC_ALL",
-#         "survey_id":      "COL_2010_GEIH_v01_M_v05_A_GMD_ALL",
-#         "country_code":   "COL",
-#         "year":           2010,
-#         "welfare_type":   "INC",
-#         "version":        "v01_v05",
-#         "survey_acronym": "GEIH",
-#         "module":         "ALL",
-#         "dimensions":     ["area", "gender", "age"]
+#         "pip_id":          "COL_2010_GEIH_INC_ALL",
+#         "survey_id":       "COL_2010_GEIH_v01_M_v05_A_GMD_ALL",
+#         "country_code":    "COL",
+#         "year":            2010,
+#         "welfare_type":    "INC",
+#         "version":         "v01_v05",
+#         "survey_acronym":  "GEIH",
+#         "module":          "ALL",
+#         "reporting_level": "national",
+#         "dimensions":      ["area", "gender", "age"]
 #       }
 #     ]
 #   }
@@ -112,14 +113,19 @@
     # Convert list-of-lists to data.table.
     # 'dimensions' is a list column (each element = character vector).
     dt <- data.table::data.table(
-      pip_id         = vapply(entries, `[[`, character(1L), "pip_id"),
-      survey_id      = vapply(entries, `[[`, character(1L), "survey_id"),
-      country_code   = vapply(entries, `[[`, character(1L), "country_code"),
-      year           = vapply(entries, function(e) as.integer(e$year), integer(1L)),
-      welfare_type   = vapply(entries, `[[`, character(1L), "welfare_type"),
-      version        = vapply(entries, `[[`, character(1L), "version"),
-      survey_acronym = vapply(entries, `[[`, character(1L), "survey_acronym"),
-      module         = vapply(entries, `[[`, character(1L), "module")
+      pip_id          = vapply(entries, `[[`, character(1L), "pip_id"),
+      survey_id       = vapply(entries, `[[`, character(1L), "survey_id"),
+      country_code    = vapply(entries, `[[`, character(1L), "country_code"),
+      year            = vapply(entries, function(e) as.integer(e$year), integer(1L)),
+      welfare_type    = vapply(entries, `[[`, character(1L), "welfare_type"),
+      version         = vapply(entries, `[[`, character(1L), "version"),
+      survey_acronym  = vapply(entries, `[[`, character(1L), "survey_acronym"),
+      module          = vapply(entries, `[[`, character(1L), "module"),
+      # TODO: reporting_level is a placeholder ("national") until inventory column is available
+      reporting_level = vapply(entries, function(e) {
+        rl <- e$reporting_level
+        if (is.null(rl)) NA_character_ else as.character(rl)
+      }, character(1L))
     )
     # dimensions is a list column — each entry is a character vector.
     # Use data.table::set() to avoid CEDTA errors before NAMESPACE is generated.
@@ -128,6 +134,28 @@
       if (is.null(d)) character(0L) else as.character(unlist(d))
     })
     data.table::set(dt, j = "dimensions", value = dims_col)
+
+    # welfare_vars: list column — each element is a character vector of the
+    # welfare column names written in this survey's Parquet file.
+    # Absent in legacy manifests — falls back to character(0).
+    welfare_vars_col <- lapply(entries, function(e) {
+      wv <- e$welfare_vars
+      if (is.null(wv)) character(0L) else as.character(unlist(wv))
+    })
+    data.table::set(dt, j = "welfare_vars", value = welfare_vars_col)
+
+    # ppp_sort: integer scalar per survey — the "preferred" PPP year used to
+    # identify the default welfare column.  Absent in legacy manifests —
+    # falls back to NA_integer_.
+    ppp_sort_col <- vapply(entries, function(e) {
+      ps <- e$ppp_sort
+      if (is.null(ps) || (length(ps) == 1L && is.na(ps))) {
+        NA_integer_
+      } else {
+        suppressWarnings(as.integer(ps))
+      }
+    }, integer(1L))
+    data.table::set(dt, j = "ppp_sort", value = ppp_sort_col)
 
     manifests[[release_id]] <- dt[]
   }
@@ -165,15 +193,18 @@
 #' @keywords internal
 .empty_manifest_dt <- function() {
   dt <- data.table::data.table(
-    pip_id         = character(0L),
-    survey_id      = character(0L),
-    country_code   = character(0L),
-    year           = integer(0L),
-    welfare_type   = character(0L),
-    version        = character(0L),
-    survey_acronym = character(0L),
-    module         = character(0L),
-    dimensions     = list()
+    pip_id          = character(0L),
+    survey_id       = character(0L),
+    country_code    = character(0L),
+    year            = integer(0L),
+    welfare_type    = character(0L),
+    version         = character(0L),
+    survey_acronym  = character(0L),
+    module          = character(0L),
+    reporting_level = character(0L),
+    dimensions      = list(),
+    welfare_vars    = list(),
+    ppp_sort        = integer(0L)
   )
   dt
 }
@@ -252,7 +283,7 @@ piptm_current_release <- function() {
 #'
 #' @return A `data.table` with columns: `pip_id`, `survey_id`, `country_code`,
 #'   `year`, `welfare_type`, `version`, `survey_acronym`, `module`,
-#'   `dimensions`.
+#'   `reporting_level`, `dimensions`, `welfare_vars`, `ppp_sort`.
 #'
 #' @family manifest-accessors
 #' @export

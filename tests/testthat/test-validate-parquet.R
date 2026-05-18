@@ -26,7 +26,6 @@ make_valid_dt <- function(country_code  = "COL",
     welfare_type   = welfare_type,
     version        = version,
     pip_id         = pip_id,
-    survey_acronym = "ECH",
     welfare        = seq(1.0, by = 0.5, length.out = n_rows),
     weight         = rep(1.0, n_rows)
   )

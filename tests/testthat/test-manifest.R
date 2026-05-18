@@ -89,7 +89,8 @@ test_that(".load_manifests() parses a valid manifest into data.table in env", {
   expect_equal(nrow(dt), 1L)
   expect_named(dt,
     c("pip_id", "survey_id", "country_code", "year", "welfare_type",
-      "version", "survey_acronym", "module", "dimensions"),
+      "version", "survey_acronym", "module", "reporting_level",
+      "dimensions", "welfare_vars", "ppp_sort"),
     ignore.order = FALSE
   )
   expect_identical(dt$pip_id,        "COL_2010_ECH_INC_ALL")
@@ -333,4 +334,57 @@ test_that("piptm_current_release() returns a character scalar after loading", {
   write_fixture_manifest(tmp, release = "20260206", current = TRUE)
   piptm::set_manifest_dir(tmp)
   expect_identical(piptm::piptm_current_release(), "20260206")
+})
+
+# ---------------------------------------------------------------------------
+# welfare_vars and ppp_sort parsing
+# ---------------------------------------------------------------------------
+
+test_that(".load_manifests() parses welfare_vars as list column", {
+  tmp <- withr::local_tempdir()
+  entries <- list(list(
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_id      = "COL_2010_ECH_V01_M_V02_A_GMD_ALL",
+    country_code   = "COL",
+    year           = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    survey_acronym = "ECH",
+    module         = "ALL",
+    dimensions     = c("gender", "area"),
+    welfare_vars   = c("welfare_lcu", "welfare_ppp_2017_01_02"),
+    ppp_sort       = 2017L
+  ))
+  write_fixture_manifest(tmp, release = "20260206", current = TRUE,
+                         entries = entries)
+  piptm:::.load_manifests(tmp)
+  dt <- piptm::piptm_manifest("20260206")
+
+  expect_true("welfare_vars" %in% names(dt))
+  expect_true("ppp_sort"     %in% names(dt))
+  expect_identical(dt$welfare_vars[[1L]], c("welfare_lcu", "welfare_ppp_2017_01_02"))
+  expect_identical(dt$ppp_sort[[1L]],    2017L)
+})
+
+test_that(".load_manifests() legacy entry: welfare_vars=character(0), ppp_sort=NA", {
+  # Legacy manifests (before the deflated-data schema) have no welfare_vars
+  # or ppp_sort fields. The parser must fall back gracefully.
+  tmp <- withr::local_tempdir()
+  write_fixture_manifest(tmp, release = "20260206", current = TRUE)
+  # Default fixture has no welfare_vars / ppp_sort
+
+  piptm:::.load_manifests(tmp)
+  dt <- piptm::piptm_manifest("20260206")
+
+  expect_identical(dt$welfare_vars[[1L]], character(0L))
+  expect_identical(dt$ppp_sort[[1L]],    NA_integer_)
+})
+
+test_that(".empty_manifest_dt() includes welfare_vars list col and ppp_sort integer col", {
+  dt <- piptm:::.empty_manifest_dt()
+  expect_true("welfare_vars" %in% names(dt))
+  expect_true("ppp_sort"     %in% names(dt))
+  expect_type(dt$welfare_vars, "list")
+  expect_type(dt$ppp_sort,     "integer")
+  expect_equal(nrow(dt), 0L)
 })

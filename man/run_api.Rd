@@ -7,9 +7,9 @@
 run_api(port = 8080L, host = "0.0.0.0", quiet = FALSE)
 }
 \arguments{
-\item{port}{Integer. TCP port to listen on. Defaults to \code{8080}. Override
-at deployment time via the \code{PIPTM_API_PORT} environment variable:
-\code{port = as.integer(Sys.getenv("PIPTM_API_PORT", unset = "8080"))}.}
+\item{port}{Integer. TCP port to listen on. Defaults to \code{8080}.
+The CLI launcher (\code{inst/plumber/run.R}) reads the \code{PIPTM_API_PORT}
+environment variable automatically.}
 
 \item{host}{Character scalar. IP address to bind to. Defaults to
 \code{"0.0.0.0"} (all interfaces). Use \code{"127.0.0.1"} to restrict to
