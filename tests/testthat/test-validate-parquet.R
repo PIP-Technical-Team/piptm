@@ -238,6 +238,97 @@ test_that("validate_parquet_data rejects educat4 that is not a factor", {
   expect_false(res_schema$valid)
 })
 
+# ===========================================================================
+# validate_parquet()  — unified wrapper
+# ===========================================================================
+
+test_that("validate_parquet() default (schema) delegates to validate_parquet_schema()", {
+  tmp <- withr::local_tempdir()
+  dt  <- make_valid_dt()
+  f   <- write_valid_parquet(tmp, dt)
+
+  res_wrapper <- validate_parquet(f)
+  res_direct  <- validate_parquet_schema(f)
+
+  expect_identical(res_wrapper$valid,    res_direct$valid)
+  expect_identical(res_wrapper$errors,   res_direct$errors)
+  expect_identical(res_wrapper$warnings, res_direct$warnings)
+  expect_identical(res_wrapper$file,     res_direct$file)
+})
+
+test_that("validate_parquet(check = 'data') delegates to validate_parquet_data()", {
+  tmp <- withr::local_tempdir()
+  dt  <- make_valid_dt()
+  f   <- write_valid_parquet(tmp, dt)
+
+  res_wrapper <- validate_parquet(f, check = "data")
+  res_direct  <- validate_parquet_data(f)
+
+  expect_identical(res_wrapper$valid,    res_direct$valid)
+  expect_identical(res_wrapper$errors,   res_direct$errors)
+  expect_identical(res_wrapper$warnings, res_direct$warnings)
+})
+
+test_that("validate_parquet(check = 'consistency') delegates to validate_partition_consistency()", {
+  tmp <- withr::local_tempdir()
+  dt  <- make_valid_dt()
+  f   <- write_valid_parquet(tmp, dt)
+  dir <- dirname(f)
+
+  res_wrapper <- validate_parquet(dir, check = "consistency")
+  res_direct  <- validate_partition_consistency(dir)
+
+  expect_identical(res_wrapper$valid,         res_direct$valid)
+  expect_identical(res_wrapper$errors,        res_direct$errors)
+  expect_identical(res_wrapper$files_checked, res_direct$files_checked)
+})
+
+test_that("validate_parquet(check = c('schema', 'data')) merges results — valid when both pass", {
+  tmp <- withr::local_tempdir()
+  dt  <- make_valid_dt()
+  f   <- write_valid_parquet(tmp, dt)
+
+  res <- validate_parquet(f, check = c("schema", "data"))
+
+  expect_true(res$valid)
+  expect_length(res$errors,   0L)
+  expect_length(res$warnings, 0L)
+  expect_identical(res$file, f)
+})
+
+test_that("validate_parquet(check = c('schema', 'data')) sets valid = FALSE when schema fails", {
+  tmp <- withr::local_tempdir()
+  # Missing required column 'version' → schema error
+  dt  <- make_valid_dt()
+  data.table::set(dt, j = "version", value = NULL)
+
+  dir_path <- file.path(tmp, "country_code=COL", "surveyid_year=2010", "welfare_type=INC", "version=v01_v02")
+  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(dir_path, "COL_2010-0.parquet")
+  arrow::write_parquet(dt, f)
+
+  res <- validate_parquet(f, check = c("schema", "data"))
+
+  expect_false(res$valid)
+  expect_true(any(grepl("version", res$errors)))
+})
+
+test_that("validate_parquet() errors on unknown check value", {
+  expect_error(
+    validate_parquet("any.parquet", check = "foobar"),
+    regexp = "Unknown check value"
+  )
+})
+
+test_that("validate_parquet() errors when 'consistency' is combined with other checks", {
+  expect_error(
+    validate_parquet("any", check = c("schema", "consistency")),
+    regexp = "'consistency' cannot be combined"
+  )
+})
+
+# ===========================================================================
+
 test_that("validate_parquet_data version consistency: multiple unique values abort", {
   tmp <- withr::local_tempdir()
   dt  <- make_valid_dt()

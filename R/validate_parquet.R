@@ -529,6 +529,117 @@ validate_parquet_data <- function(file_path) {
 }
 
 # ---------------------------------------------------------------------------
+# validate_parquet()   — unified wrapper
+# ---------------------------------------------------------------------------
+
+#' Validate a Parquet file or partition directory
+#'
+#' A single-entry-point wrapper around the three lower-level validators.
+#' Choose what to check via the `check` argument; results always follow the
+#' same `list(valid, errors, warnings, file)` contract.
+#'
+#' | `check` value    | Delegates to                        | `path` type |
+#' |------------------|-------------------------------------|-------------|
+#' | `"schema"`       | [validate_parquet_schema()]         | file        |
+#' | `"data"`         | [validate_parquet_data()]           | file        |
+#' | `"consistency"`  | [validate_partition_consistency()]  | directory   |
+#'
+#' When multiple file-level checks are requested (e.g.
+#' `check = c("schema", "data")`), both are run and their results are merged:
+#' `valid` is `FALSE` if **either** check finds an error; `errors` and
+#' `warnings` are concatenated.  Combining `"consistency"` with any other
+#' check is not supported because `"consistency"` takes a directory while the
+#' others take a file — pass `"consistency"` alone.
+#'
+#' @param path  For `check = "schema"` or `"data"`: absolute path to a
+#'   `.parquet` file.  For `check = "consistency"`: absolute path to a
+#'   partition directory (e.g.
+#'   `.../country_code=BOL/surveyid_year=2012/welfare_type=INC/version=v01_v04`).
+#' @param check Character vector, one or more of `"schema"`, `"data"`,
+#'   `"consistency"`.  Defaults to `"schema"`.
+#'
+#' @return A named list:
+#'   \describe{
+#'     \item{`valid`}{`TRUE` if no errors were found across all requested
+#'       checks; `FALSE` otherwise.}
+#'     \item{`errors`}{Character vector of hard failures.}
+#'     \item{`warnings`}{Character vector of soft issues.}
+#'     \item{`file`}{`path`, for traceability.}
+#'   }
+#'   When `check = "consistency"` the result also contains
+#'   `files_checked` (see [validate_partition_consistency()]).
+#'
+#' @family parquet-validation
+#' @export
+#' @examples
+#' \dontrun{
+#' # Schema check only (default — fast, metadata only)
+#' validate_parquet("path/to/KAZ_2006_HBS_CON_ALL-0.parquet")
+#'
+#' # Data-quality check
+#' validate_parquet("path/to/KAZ_2006_HBS_CON_ALL-0.parquet", check = "data")
+#'
+#' # Both schema and data in one call
+#' res <- validate_parquet(
+#'   "path/to/KAZ_2006_HBS_CON_ALL-0.parquet",
+#'   check = c("schema", "data")
+#' )
+#' res$valid
+#' res$errors
+#'
+#' # Cross-file consistency check for a partition directory
+#' validate_parquet(
+#'   "path/to/arrow/country_code=KAZ/surveyid_year=2006/welfare_type=CON/version=v01_v05",
+#'   check = "consistency"
+#' )
+#' }
+validate_parquet <- function(path, check = "schema") {
+  stopifnot(is.character(path), length(path) == 1L)
+
+  valid_checks <- c("schema", "data", "consistency")
+  check <- unique(check)
+  bad   <- setdiff(check, valid_checks)
+  if (length(bad) > 0L) {
+    stop(
+      "Unknown check value(s): ", paste(bad, collapse = ", "),
+      ". Must be one or more of: ", paste(valid_checks, collapse = ", "), "."
+    )
+  }
+
+  if ("consistency" %in% check && length(check) > 1L) {
+    stop(
+      "'consistency' cannot be combined with other checks: it validates a ",
+      "partition *directory*, while 'schema' and 'data' validate a single ",
+      "*file*. Call validate_parquet() separately for each."
+    )
+  }
+
+  # --- Single-check fast paths -----------------------------------------------
+  if (identical(check, "schema")) {
+    return(validate_parquet_schema(path))
+  }
+  if (identical(check, "data")) {
+    return(validate_parquet_data(path))
+  }
+  if (identical(check, "consistency")) {
+    return(validate_partition_consistency(path))
+  }
+
+  # --- Multiple file-level checks: run and merge -----------------------------
+  results <- lapply(check, function(chk) {
+    if (chk == "schema") validate_parquet_schema(path)
+    else                 validate_parquet_data(path)
+  })
+
+  list(
+    valid    = all(vapply(results, `[[`, logical(1L), "valid")),
+    errors   = unlist(lapply(results, `[[`, "errors"),   use.names = FALSE),
+    warnings = unlist(lapply(results, `[[`, "warnings"), use.names = FALSE),
+    file     = path
+  )
+}
+
+# ---------------------------------------------------------------------------
 # validate_partition_consistency()   — Step 6 (cross-file checks)
 # ---------------------------------------------------------------------------
 
