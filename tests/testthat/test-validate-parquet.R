@@ -328,6 +328,103 @@ test_that("validate_parquet() errors when 'consistency' is combined with other c
 })
 
 # ===========================================================================
+# validate_arrow()  — batch validator
+# ===========================================================================
+
+test_that("validate_arrow() returns a tidy data.table with expected columns", {
+  tmp <- withr::local_tempdir()
+  dt  <- make_valid_dt(country_code = "KAZ", surveyid_year = 2006L,
+                       welfare_type = "CON", pip_id = "KAZ_2006_HBS_CON_ALL",
+                       version = "v01_v03")
+  write_valid_parquet(tmp, dt,
+    country_code = "KAZ", surveyid_year = 2006L, welfare_type = "CON",
+    version = "v01_v03", pip_id = "KAZ_2006_HBS_CON_ALL"
+  )
+
+  res <- validate_arrow(country_code = "KAZ", arrow_root = tmp)
+
+  expect_s3_class(res, "data.table")
+  expect_named(res, c("pip_id", "file", "valid", "n_errors", "n_warnings",
+                       "errors", "warnings"))
+  expect_equal(nrow(res), 1L)
+  expect_true(res$valid)
+  expect_equal(res$n_errors, 0L)
+})
+
+test_that("validate_arrow() with pip_ids filter returns only matching files", {
+  tmp <- withr::local_tempdir()
+  for (yr in c(2006L, 2007L)) {
+    pip_id <- paste0("KAZ_", yr, "_HBS_CON_ALL")
+    dt <- make_valid_dt(country_code = "KAZ", surveyid_year = yr,
+                        welfare_type = "CON", pip_id = pip_id,
+                        version = "v01_v03")
+    write_valid_parquet(tmp, dt, country_code = "KAZ", surveyid_year = yr,
+                        welfare_type = "CON", version = "v01_v03",
+                        pip_id = pip_id)
+  }
+
+  res <- validate_arrow(pip_ids = "KAZ_2006_HBS_CON_ALL", arrow_root = tmp)
+
+  expect_equal(nrow(res), 1L)
+  expect_equal(res$pip_id, "KAZ_2006_HBS_CON_ALL")
+})
+
+test_that("validate_arrow() with surveys data.table resolves pip_ids from it", {
+  tmp <- withr::local_tempdir()
+  pip_id <- "KAZ_2006_HBS_CON_ALL"
+  dt <- make_valid_dt(country_code = "KAZ", surveyid_year = 2006L,
+                      welfare_type = "CON", pip_id = pip_id, version = "v01_v03")
+  write_valid_parquet(tmp, dt, country_code = "KAZ", surveyid_year = 2006L,
+                      welfare_type = "CON", version = "v01_v03", pip_id = pip_id)
+
+  surveys_dt <- data.table::data.table(pip_id = pip_id)
+  res <- validate_arrow(surveys = surveys_dt, arrow_root = tmp)
+
+  expect_equal(nrow(res), 1L)
+  expect_equal(res$pip_id, pip_id)
+})
+
+test_that("validate_arrow() surfaces errors from invalid files in the summary", {
+  tmp <- withr::local_tempdir()
+  # Write a file with a bad welfare value (negative) — data check will fail
+  dt <- make_valid_dt(country_code = "KAZ", surveyid_year = 2006L,
+                      welfare_type = "CON", pip_id = "KAZ_2006_HBS_CON_ALL",
+                      version = "v01_v03")
+  data.table::set(dt, i = 1L, j = "welfare", value = -99.0)
+  write_valid_parquet(tmp, dt, country_code = "KAZ", surveyid_year = 2006L,
+                      welfare_type = "CON", version = "v01_v03",
+                      pip_id = "KAZ_2006_HBS_CON_ALL")
+
+  res <- validate_arrow(country_code = "KAZ", check = c("schema", "data"),
+                        arrow_root = tmp)
+
+  expect_false(res$valid)
+  expect_gt(res$n_errors, 0L)
+  expect_true(nzchar(res$errors))
+})
+
+test_that("validate_arrow() returns empty data.table when no files match", {
+  tmp <- withr::local_tempdir()
+  res <- validate_arrow(country_code = "ZZZ", arrow_root = tmp)
+
+  expect_s3_class(res, "data.table")
+  expect_equal(nrow(res), 0L)
+})
+
+test_that("validate_arrow() errors when arrow_root is not configured", {
+  expect_error(
+    validate_arrow(country_code = "KAZ", arrow_root = NULL),
+    regexp = "Arrow root is not configured"
+  )
+})
+
+test_that("validate_arrow() errors when more than one filter is supplied", {
+  expect_error(
+    validate_arrow(country_code = "KAZ", pip_ids = "KAZ_2006_HBS_CON_ALL",
+                   arrow_root = withr::local_tempdir()),
+    regexp = "at most one"
+  )
+})
 
 test_that("validate_parquet_data version consistency: multiple unique values abort", {
   tmp <- withr::local_tempdir()

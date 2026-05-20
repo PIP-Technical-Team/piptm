@@ -640,6 +640,153 @@ validate_parquet <- function(path, check = "schema") {
 }
 
 # ---------------------------------------------------------------------------
+# validate_arrow()   — batch validator over the Arrow repository
+# ---------------------------------------------------------------------------
+
+#' Batch-validate Parquet files in the Arrow repository
+#'
+#' Discovers `.parquet` files under [piptm_arrow_root()] and runs
+#' [validate_parquet()] on each one, returning a tidy `data.table` summary
+#' (one row per file).
+#'
+#' **Filtering** — narrow the scope with one of:
+#' - `country_code`: one or more ISO3 codes (e.g. `"KAZ"` or `c("KAZ","COL")`).
+#' - `pip_ids`: one or more `pip_id` strings that determine the file names to
+#'   look for.
+#' - `surveys`: a `data.table` / `data.frame` with at least a `pip_id` column
+#'   (e.g. the output of [piptm_manifest()]).
+#'
+#' Only one filter may be supplied at a time. If none is supplied the function
+#' validates the entire repository (potentially slow).
+#'
+#' @param country_code Character vector of ISO3 country codes to validate.
+#' @param pip_ids      Character vector of `pip_id` values to validate.
+#' @param surveys      A `data.table` / `data.frame` with a `pip_id` column.
+#' @param check        Character vector passed to [validate_parquet()].
+#'   Defaults to `c("schema", "data")`.
+#' @param arrow_root   Path to the Arrow repository root. Defaults to
+#'   [piptm_arrow_root()].
+#'
+#' @return A `data.table` with one row per `.parquet` file and columns:
+#'   \describe{
+#'     \item{`pip_id`}{Survey identifier derived from the filename.}
+#'     \item{`file`}{Absolute path to the `.parquet` file.}
+#'     \item{`valid`}{`TRUE` / `FALSE`.}
+#'     \item{`n_errors`}{Number of hard errors.}
+#'     \item{`n_warnings`}{Number of soft warnings.}
+#'     \item{`errors`}{Errors collapsed with `" | "`, or `""` if none.}
+#'     \item{`warnings`}{Warnings collapsed with `" | "`, or `""` if none.}
+#'   }
+#'
+#' @family parquet-validation
+#' @export
+#' @examples
+#' \dontrun{
+#' # All KAZ files — schema + data checks
+#' validate_arrow("KAZ")
+#'
+#' # Several countries
+#' validate_arrow(c("KAZ", "COL"))
+#'
+#' # From a pip_inv subset (has a pip_id column)
+#' validate_arrow(surveys = pip_inv_subset)
+#'
+#' # Schema check only — much faster
+#' validate_arrow("KAZ", check = "schema")
+#'
+#' # Show only failures
+#' res <- validate_arrow("KAZ")
+#' res[valid == FALSE]
+#' }
+validate_arrow <- function(country_code = NULL,
+                           pip_ids      = NULL,
+                           surveys      = NULL,
+                           check        = c("schema", "data"),
+                           arrow_root   = piptm_arrow_root()) {
+
+  # --- Validate arguments ----------------------------------------------------
+  n_filters <- (!is.null(country_code)) + (!is.null(pip_ids)) + (!is.null(surveys))
+  if (n_filters > 1L) {
+    stop("Supply at most one of 'country_code', 'pip_ids', or 'surveys'.")
+  }
+
+  if (is.null(arrow_root) || !nzchar(arrow_root)) {
+    stop(
+      "Arrow root is not configured. ",
+      "Set PIPTM_ARROW_ROOT in ~/.Renviron or call set_arrow_root()."
+    )
+  }
+  if (!dir.exists(arrow_root)) {
+    stop("Arrow root directory does not exist: ", arrow_root)
+  }
+
+  # --- Resolve pip_ids from the surveys data.frame --------------------------
+  if (!is.null(surveys)) {
+    if (!is.data.frame(surveys) || !"pip_id" %in% names(surveys)) {
+      stop("'surveys' must be a data.frame / data.table with a 'pip_id' column.")
+    }
+    pip_ids <- unique(as.character(surveys[["pip_id"]]))
+  }
+
+  # --- Discover parquet files ------------------------------------------------
+  search_root <- if (!is.null(country_code)) {
+    # One search per country — file.path vectorises over country_code
+    file.path(arrow_root, paste0("country_code=", toupper(country_code)))
+  } else {
+    arrow_root
+  }
+
+  parquet_files <- unlist(lapply(search_root, function(root) {
+    if (!dir.exists(root)) {
+      warning("Directory not found (skipping): ", root)
+      return(character(0L))
+    }
+    list.files(root, pattern = "\\.parquet$", full.names = TRUE, recursive = TRUE)
+  }), use.names = FALSE)
+
+  # --- Filter by pip_id if requested ----------------------------------------
+  if (!is.null(pip_ids)) {
+    # Parquet filename is <pip_id>-0.parquet (or -1, -2, … for multi-chunk)
+    keep <- vapply(parquet_files, function(f) {
+      any(startsWith(basename(f), paste0(pip_ids, "-")))
+    }, logical(1L))
+    parquet_files <- parquet_files[keep]
+  }
+
+  if (length(parquet_files) == 0L) {
+    message("No .parquet files found matching the supplied filter.")
+    return(data.table::data.table(
+      pip_id    = character(0L),
+      file      = character(0L),
+      valid     = logical(0L),
+      n_errors  = integer(0L),
+      n_warnings = integer(0L),
+      errors    = character(0L),
+      warnings  = character(0L)
+    ))
+  }
+
+  # --- Run validate_parquet() on each file ----------------------------------
+  results <- lapply(parquet_files, validate_parquet, check = check)
+
+  # --- Build tidy summary data.table ----------------------------------------
+  data.table::rbindlist(lapply(results, function(r) {
+    fname  <- basename(r$file)
+    # Strip trailing -<chunk>.parquet to recover pip_id
+    pip_id <- sub("-[0-9]+\\.parquet$", "", fname)
+    data.table::data.table(
+      pip_id     = pip_id,
+      file       = r$file,
+      valid      = r$valid,
+      n_errors   = length(r$errors),
+      n_warnings = length(r$warnings),
+      errors     = paste(r$errors,   collapse = " | "),
+      warnings   = paste(r$warnings, collapse = " | ")
+    )
+  }))
+}
+
+# ---------------------------------------------------------------------------
 # validate_partition_consistency()   — Step 6 (cross-file checks)
 # ---------------------------------------------------------------------------
 
