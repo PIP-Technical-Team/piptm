@@ -42,6 +42,8 @@ res$warnings  # e.g. zero-welfare rows
 }
 \seealso{
 Other parquet-validation: 
+\code{\link{validate_arrow}()},
+\code{\link{validate_parquet}()},
 \code{\link{validate_parquet_schema}()},
 \code{\link{validate_partition_consistency}()}
 }

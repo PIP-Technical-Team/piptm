@@ -42,6 +42,8 @@ res$errors
 }
 \seealso{
 Other parquet-validation: 
+\code{\link{validate_arrow}()},
+\code{\link{validate_parquet}()},
 \code{\link{validate_parquet_data}()},
 \code{\link{validate_partition_consistency}()}
 }

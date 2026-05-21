@@ -4,17 +4,29 @@
 \alias{pip_allowed_cols}
 \title{Extract all allowed column names from the canonical schema}
 \usage{
-pip_allowed_cols()
+pip_allowed_cols(welfare_vars = NULL)
+}
+\arguments{
+\item{welfare_vars}{Optional character vector of welfare column names (e.g.
+from a manifest entry's \code{welfare_vars} field). When \code{NULL} (default)
+only the 12 base columns are returned.}
 }
 \value{
-Character vector of all column names (required + optional).
+Character vector of allowed column names.
 }
 \description{
-Extract all allowed column names from the canonical schema
+Returns the 12 base columns (required + optional breakdown dimensions).
+Pass \code{welfare_vars} to append the survey-specific welfare columns for a
+particular Parquet file.
+}
+\examples{
+pip_allowed_cols()  # 12 base columns
+pip_allowed_cols(c("welfare_lcu", "welfare_ppp_2017_01_02"))  # 14 columns
 }
 \seealso{
 Other schema: 
 \code{\link{pip_arrow_schema}()},
-\code{\link{pip_required_cols}()}
+\code{\link{pip_required_cols}()},
+\code{\link{pip_welfare_schema}()}
 }
 \concept{schema}

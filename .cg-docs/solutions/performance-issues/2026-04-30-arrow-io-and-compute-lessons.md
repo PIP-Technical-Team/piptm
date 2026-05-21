@@ -307,3 +307,4 @@ requiring a separate Arrow scan — defeating the purpose.
 - `.cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md` — Numeric results
 - `.cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md` — Numeric results
 - `.cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md` — Numeric results
+- `.cg-docs/solutions/performance-issues/2026-05-21-load-surveys-column-pruning-implementation.md` — **Implementation of L1** (select-before-collect applied to `load_surveys()`)

@@ -4,7 +4,13 @@
 \alias{load_survey_microdata}
 \title{Load microdata for a single survey from the shared Arrow repository}
 \usage{
-load_survey_microdata(country_code, year, welfare_type, release = NULL)
+load_survey_microdata(
+  country_code,
+  year,
+  welfare_type,
+  ppp = NULL,
+  release = NULL
+)
 }
 \arguments{
 \item{country_code}{Character scalar ISO3 country code (e.g. \code{"COL"}).}
@@ -13,11 +19,18 @@ load_survey_microdata(country_code, year, welfare_type, release = NULL)
 
 \item{welfare_type}{Character scalar welfare type (\code{"INC"} or \code{"CON"}).}
 
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
+When non-NULL, selects the \verb{welfare_ppp_<ppp>} column and renames it to
+\code{welfare}. When \code{NULL} (default), the manifest's \code{ppp_sort} field is used
+as the default PPP for new-schema surveys; errors if \code{ppp_sort} is \code{NA}.
+Has no effect for legacy surveys whose manifest entry has no \code{welfare_vars}.}
+
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}).
 Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
 }
 \value{
-A \code{data.table} of survey microdata with attribute \code{"dimensions"}.
+A \code{data.table} of survey microdata with a single \code{welfare} column
+and attribute \code{"dimensions"}.
 }
 \description{
 Looks up the manifest for \code{release} (defaulting to the current release),
@@ -26,6 +39,11 @@ extracts the \code{version} partition key, then constructs the exact Hive leaf
 directory path and loads only the Parquet files in that directory.
 }
 \details{
+For surveys written with the deflated-data schema (multiple \verb{welfare_ppp_*}
+columns), the \code{ppp} argument controls which welfare column is selected and
+returned as \code{welfare}. For legacy surveys with a single \code{welfare} column,
+the \code{ppp} argument has no effect.
+
 The returned \code{data.table} has a \code{"dimensions"} attribute: a character
 vector of the available breakdown dimension columns recorded in the
 manifest entry (e.g. \code{c("area", "gender", "age")}).
@@ -34,7 +52,7 @@ manifest entry (e.g. \code{c("area", "gender", "age")}).
 \dontrun{
 set_manifest_dir("//server/manifests")
 set_arrow_root("//server/pip/arrow")
-dt <- load_survey_microdata("COL", 2010L, "INC")
+dt <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L)
 attr(dt, "dimensions")
 }
 }

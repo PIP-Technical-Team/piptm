@@ -4,7 +4,7 @@
 \alias{load_surveys}
 \title{Batch-load microdata for multiple surveys from the shared Arrow repository}
 \usage{
-load_surveys(entries_dt, release = NULL)
+load_surveys(entries_dt, ppp = NULL, cols = NULL, release = NULL)
 }
 \arguments{
 \item{entries_dt}{A \code{data.table} with at least the columns \code{country_code},
@@ -12,12 +12,28 @@ load_surveys(entries_dt, release = NULL)
 \code{\link[=piptm_manifest]{piptm_manifest()}} returns). These four columns map directly to the Hive
 partition keys and are used to construct exact leaf directory paths.}
 
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
+Applied uniformly to all new-schema surveys in \code{entries_dt}.  When
+\code{NULL} (default), \code{ppp_sort} from each entry's manifest row is used; if
+entries have inconsistent \code{ppp_sort} values, an error is raised asking
+the caller to supply \code{ppp} explicitly.  Has no effect for legacy surveys.}
+
+\item{cols}{Character vector of \strong{logical} column names to load, or
+\code{NULL} (default).  When non-\code{NULL}, only those columns are fetched from
+the Parquet files (the \code{select()} happens before \code{collect()}, so network
+bytes are skipped).  Use the logical name \code{"welfare"} regardless of the
+underlying PPP column name in the file — the translation is handled
+internally.  \code{"pip_id"} is always included automatically for integrity
+checking.  Columns absent from a survey's schema are silently omitted
+(they will appear as \code{NA} if added back by the caller).
+When \code{NULL}, all columns are loaded (current default behaviour).}
+
 \item{release}{Character scalar release ID. Used only for error messages and
 to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
 }
 \value{
-A \code{data.table} of combined survey microdata with attribute
-\code{"release"}. Contains all rows from matching surveys.
+A \code{data.table} of combined survey microdata with a single \code{welfare}
+column and attribute \code{"release"}. Contains all rows from matching surveys.
 }
 \description{
 Accepts a subset of a manifest \code{data.table} (as returned by
@@ -30,13 +46,18 @@ on data columns.
 The returned \code{data.table} contains all surveys combined (row-bound). A
 \code{pip_id} column (already present in the Parquet files) identifies each row's
 survey. A \code{"release"} attribute records the release ID.
+
+For surveys written with the deflated-data schema (multiple \verb{welfare_ppp_*}
+columns), the \code{ppp} argument selects a single welfare column uniformly
+across all surveys and renames it to \code{welfare}. Legacy surveys (no
+\code{welfare_vars} in manifest entry) are loaded as-is.
 }
 \examples{
 \dontrun{
 set_manifest_dir("//server/manifests")
 set_arrow_root("//server/pip/arrow")
 colombia <- piptm_manifest()[country_code == "COL"]
-dt <- load_surveys(colombia)
+dt <- load_surveys(colombia, ppp = 2017L)
 }
 }
 \seealso{

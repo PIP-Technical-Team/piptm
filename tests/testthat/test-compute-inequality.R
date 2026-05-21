@@ -270,3 +270,39 @@ test_that("duplicate measure names are silently deduplicated (P3.3)", {
   expect_equal(nrow(res_dup), nrow(res_single))
   expect_equal(sum(res_dup[["measure"]] == "gini"), 1L)
 })
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Pre-sort contract + NA guard (review findings P1.3, P1.7, P1.8)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+test_that("gini: unsorted input raises an error (pre-sort contract, by = NULL)", {
+  dt_unsorted <- data.table(
+    welfare = as.numeric(c(5, 1, 8, 3, 10, 2, 7, 4, 9, 6)),
+    weight  = rep(1, 10)
+  )
+  expect_error(
+    compute_inequality(dt_unsorted, measures = "gini"),
+    regexp = "Pre-sort contract violated"
+  )
+})
+
+test_that("gini: sorted input does NOT trigger the pre-sort guard", {
+  dt_sorted <- data.table(welfare = as.numeric(1:10), weight = rep(1, 10))
+  expect_no_error(compute_inequality(dt_sorted, measures = "gini"))
+})
+
+test_that("NA welfare raises error before any computation (P1.7)", {
+  dt <- data.table(welfare = c(1, NA, 3), weight = rep(1, 3))
+  expect_error(
+    compute_inequality(dt, measures = "gini"),
+    regexp = "NA value"
+  )
+})
+
+test_that("NA weight raises error before any computation (P1.7)", {
+  dt <- data.table(welfare = c(1, 2, 3), weight = c(1, NA, 1))
+  expect_error(
+    compute_inequality(dt, measures = "mld"),
+    regexp = "NA value"
+  )
+})

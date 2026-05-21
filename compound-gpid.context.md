@@ -14,7 +14,8 @@ knowledge is discovered.
 
 ### Physical layout
 
-- Location: UNC share `//w1wbgencifs01/pip/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow`
+- Location: UNC share `//pip-server/pip/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow`
+  (replace `pip-server` with the actual internal server name — not committed to version control)
 - Partition path: `country_code=X / surveyid_year=Y / welfare_type=Z / version=V / <pip_id>-0.parquet`
 - 14 columns per file: `country_code`, `surveyid_year`, `welfare_type`, `version`, `pip_id`, `survey_acronym`, `welfare`, `weight`, `gender`, `area`, `educat4`, `educat5`, `educat7`, `age`
 - Dictionary-encoded columns (integer index, not plain string): `gender`, `area`, `educat4`, `educat5`, `educat7`
@@ -86,7 +87,7 @@ Arrow push-down feasibility (as of 2026-04-30):
 
 ### Arrow I/O (cold network reads)
 - Full 14-col read: 1.658s
-- Column-pruned 6-col read: 0.524s — **68% faster** — TO BE ADOPTED in `load_surveys()`
+- Column-pruned 6-col read: 0.524s — **68% faster** — ADOPTED (2026-05-21, `cols` param in `load_surveys()`)
 
 ### Pipeline E2E (I/O + compute, 15 surveys × headcount/gini/mean/median × gender/area/educat4)
 - A1 Current (all cols): 2.370s

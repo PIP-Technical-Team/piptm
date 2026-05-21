@@ -138,7 +138,7 @@
         {
           "id": "performance-profiling",
           "title": "Performance benchmarking and profiling",
-          "description": "Profile I/O, compute, and GC overhead. Document 15-survey and 100-survey performance. Identify optimization targets for future work.",
+          "description": "Profile I/O, compute, and GC overhead. Document 15-survey and 100-survey performance. Identify optimization targets for future work. Column-pruning I/O optimization applied (2026-05-21): load_surveys() cols parameter added, select() before collect(); 68% I/O reduction (1.658s → 0.524s, 15 surveys over UNC share).",
           "status": "active",
           "plan": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md"
         },

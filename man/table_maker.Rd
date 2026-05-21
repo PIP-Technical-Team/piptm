@@ -12,6 +12,7 @@ table_maker(
   measures,
   poverty_lines = NULL,
   by = NULL,
+  ppp = NULL,
   release = NULL
 )
 }
@@ -39,6 +40,11 @@ params below must be supplied.}
 aggregate results.  Valid values: \code{"gender"}, \code{"area"}, \code{"educat4"},
 \code{"educat5"}, \code{"educat7"}, \code{"age"}.  At most 4 dimensions; at most one
 education column.}
+
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
+Passed through to \code{\link[=load_surveys]{load_surveys()}}. Selects which \verb{welfare_ppp_*} column
+to use as \code{welfare} for surveys written with the deflated-data schema.
+When \code{NULL} (default), the manifest \code{ppp_sort} default is used.}
 
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}). Defaults
 to the current release as returned by \code{\link[=piptm_current_release]{piptm_current_release()}}.}

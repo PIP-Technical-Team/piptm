@@ -12,77 +12,8 @@ library(data.table)
 library(arrow)
 library(jsonlite)
 
-# ---------------------------------------------------------------------------
-# Re-export fixture builders (inline copies of the helpers in test-load-data.R)
-# ---------------------------------------------------------------------------
-
-write_fixture_parquet_tm <- function(arrow_root,
-                                     country_code,
-                                     year,
-                                     welfare_type,
-                                     version,
-                                     pip_id,
-                                     survey_acronym = NULL,
-                                     n_rows  = 10L,
-                                     welfare = NULL,
-                                     weight  = NULL,
-                                     extra_cols = character(0L)) {
-
-  dir_path <- file.path(
-    arrow_root,
-    paste0("country_code=",  country_code),
-    paste0("surveyid_year=", year),
-    paste0("welfare_type=",  welfare_type),
-    paste0("version=",       version)
-  )
-  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
-
-  if (is.null(welfare)) welfare <- seq(1, by = 1, length.out = n_rows)
-  if (is.null(weight))  weight  <- rep(1.0, n_rows)
-
-  dt <- data.table(
-    country_code   = country_code,
-    surveyid_year  = as.integer(year),
-    welfare_type   = welfare_type,
-    version        = version,
-    pip_id         = pip_id,
-    welfare        = as.numeric(welfare),
-    weight         = as.numeric(weight)
-  )
-
-  for (col in extra_cols) {
-    if (col == "gender") dt[, gender := factor(
-      rep_len(c("male", "female"), n_rows), levels = c("male", "female"))]
-    if (col == "area")   dt[, area   := factor(
-      rep(c("urban", "urban", "rural", "rural"), length.out = n_rows),
-      levels = c("urban", "rural"))]
-    if (col == "age")    dt[, age    := as.integer(seq(10L, by = 10L, length.out = n_rows))]
-    if (col == "educat4") dt[, educat4 := factor(
-      rep_len(c("Primary", "Secondary", "Tertiary (complete or incomplete)", "No education"), n_rows))]
-  }
-
-  arrow::write_parquet(dt, file.path(dir_path, "data.parquet"))
-  invisible(pip_id)
-}
-
-write_fixture_manifest_tm <- function(manifest_dir, release, entries,
-                                      set_current = TRUE) {
-  manifest <- list(
-    release      = release,
-    generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    entries      = entries
-  )
-  fname <- file.path(manifest_dir, paste0("manifest_", release, ".json"))
-  jsonlite::write_json(manifest, fname, auto_unbox = TRUE, pretty = TRUE)
-  if (set_current) {
-    jsonlite::write_json(
-      list(current_release = release),
-      file.path(manifest_dir, "current_release.json"),
-      auto_unbox = TRUE
-    )
-  }
-  invisible(fname)
-}
+# Fixture builders write_fixture_parquet_tm() and write_fixture_manifest_tm()
+# are defined in tests/testthat/helper-fixtures.R (auto-loaded by testthat).
 
 reset_piptm_env <- function() {
   env <- getNamespace("piptm")$.piptm_env
@@ -783,4 +714,66 @@ test_that("table_maker() ppp=2011 computes on welfare_ppp_2011_01_01 column", {
   )
   # welfare_ppp_2011_01_01 = 2..11, mean = 6.5
   expect_equal(res$value, 6.5)
+})
+
+# ---------------------------------------------------------------------------
+# Column pruning — table_maker() passes only needed cols to load_surveys()
+# ---------------------------------------------------------------------------
+
+test_that("table_maker() result does not expose extra Parquet columns (column pruning)", {
+  # Build a fixture with an extra column that should never reach the output.
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  dir_path <- file.path(
+    tmp_arrow,
+    "country_code=COL", "surveyid_year=2010",
+    "welfare_type=INC",  "version=v01_v02"
+  )
+  dir.create(dir_path, recursive = TRUE)
+
+  n <- 10L
+  dt_file <- data.table::data.table(
+    country_code   = "COL",
+    surveyid_year  = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_acronym = "ECH",
+    welfare        = seq_len(n) * 1.0,
+    weight         = rep(1.0, n),
+    gender         = rep(c("male", "female"), length.out = n),
+    # extra column not used in any computation — should not appear in output
+    extra_unused   = rep("noise", n)
+  )
+  arrow::write_parquet(dt_file, file.path(dir_path, "data.parquet"))
+
+  entries_list <- list(list(
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_id      = "COL_2010_ECH_v01_M_v02_A_GMD_ALL",
+    country_code   = "COL",
+    year           = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v02",
+    survey_acronym = "ECH",
+    module         = "ALL",
+    dimensions     = list("gender")
+  ))
+
+  write_fixture_manifest_tm(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_piptm_env())
+
+  res <- piptm::table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    by       = "gender"
+  )
+
+  expect_s3_class(res, "data.table")
+  # output is long-format — extra_unused must never appear
+  expect_false("extra_unused" %in% names(res))
+  expect_true("gender" %in% names(res))
+  expect_true("value"  %in% names(res))
 })

@@ -2,19 +2,23 @@
 % Please edit documentation in R/schema.R
 \name{pip_required_cols}
 \alias{pip_required_cols}
-\title{Extract required column names from the canonical schema}
+\title{Extract required column names from the canonical base schema}
 \usage{
 pip_required_cols()
 }
 \value{
-Character vector of required column names.
+Character vector of 6 required column names:
+\code{country_code}, \code{surveyid_year}, \code{welfare_type}, \code{version},
+\code{pip_id}, \code{weight}.
 }
 \description{
-Extract required column names from the canonical schema
+Returns the 6 fixed required columns (no welfare columns — those are
+survey-specific and enumerated via \code{\link[=pip_welfare_schema]{pip_welfare_schema()}}).
 }
 \seealso{
 Other schema: 
 \code{\link{pip_allowed_cols}()},
-\code{\link{pip_arrow_schema}()}
+\code{\link{pip_arrow_schema}()},
+\code{\link{pip_welfare_schema}()}
 }
 \concept{schema}

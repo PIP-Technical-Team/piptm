@@ -10,6 +10,9 @@ compute_inequality(dt, by = NULL, measures = NULL, grp = NULL)
 \item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} containing at minimum \code{welfare}
 (numeric) and \code{weight} (numeric) columns, plus any columns named in \code{by}.
 This must be a \strong{single-survey slice} — rows for exactly one \code{pip_id}.
+\strong{Pre-sort contract}: rows must be sorted in ascending order of \code{welfare}.
+This is guaranteed by the upstream pipeline (\code{load_surveys()} preserves
+the welfare sort written by \code{pipdata::generate_arrow_dataset()}).
 The data.table is not modified; a working copy is created internally.}
 
 \item{by}{A character vector of grouping column names present in \code{dt}
@@ -38,10 +41,10 @@ coefficient} and the \strong{Mean Log Deviation (MLD)} — for a single survey
 slice, optionally disaggregated across one or more dimensions.
 }
 \details{
-\strong{Gini} is computed via a fully vectorised data.table sort + cumulative-sum
-approach (no per-group explicit loop).  The grouping GRP is used to assign
-group ids; within each group the data are sorted by welfare, then the
-trapezoid Lorenz formula is applied through \code{.gini_sorted()}.
+\strong{Gini} is computed via a fully vectorised collapse C-level cumulative-sum
+approach (no per-group explicit loop).  The grouping GRP assigns group ids;
+\code{.gini_sorted()} applies the Brown (1994) trapezoid formula per group.
+Rows must already be sorted ascending by welfare (pre-sort contract on \code{dt}).
 
 \strong{MLD (Mean Log Deviation)} is the Theil L index:
 \deqn{
@@ -56,6 +59,18 @@ the weighted mean, but their individual log-ratio is set to 0.  This is
 consistent with the zero-welfare treatment in \code{compute_poverty()} for the
 Watts index.
 }
+\section{Pre-sort contract}{
+
+Rows in \code{dt} must be sorted in ascending order of \code{welfare} \strong{before}
+calling this function.  When \code{dt} comes from \code{\link[=load_surveys]{load_surveys()}}, this is
+guaranteed automatically by the upstream \code{{pipdata}} Arrow pipeline.
+When calling \code{compute_inequality()} directly (e.g. in tests or standalone
+use), ensure the data is sorted first:
+\code{data.table::setorder(dt, welfare)}.
+Passing unsorted data produces silently wrong Gini values (empirically:
+errors up to 0.39 for realistic distributions).
+}
+
 \examples{
 library(data.table)
 dt <- data.table(

@@ -646,7 +646,7 @@ validate_parquet <- function(path, check = "schema") {
 #' Batch-validate Parquet files in the Arrow repository
 #'
 #' Discovers `.parquet` files under [piptm_arrow_root()] and runs
-#' [validate_parquet()] on each one, returning a tidy `data.table` summary
+#' [piptm::validate_parquet()] on each one, returning a tidy `data.table` summary
 #' (one row per file).
 #'
 #' **Filtering** — narrow the scope with one of:
@@ -662,7 +662,7 @@ validate_parquet <- function(path, check = "schema") {
 #' @param country_code Character vector of ISO3 country codes to validate.
 #' @param pip_ids      Character vector of `pip_id` values to validate.
 #' @param surveys      A `data.table` / `data.frame` with a `pip_id` column.
-#' @param check        Character vector passed to [validate_parquet()].
+#' @param check        Character vector passed to [piptm::validate_parquet()].
 #'   Defaults to `c("schema", "data")`.
 #' @param arrow_root   Path to the Arrow repository root. Defaults to
 #'   [piptm_arrow_root()].

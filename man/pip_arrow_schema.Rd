@@ -27,13 +27,13 @@ and are not included here.
 }
 \examples{
 s <- pip_arrow_schema()
-s$fields$welfare$type
 s$fields$version$type
 s$levels$gender
 }
 \seealso{
 Other schema: 
 \code{\link{pip_allowed_cols}()},
-\code{\link{pip_required_cols}()}
+\code{\link{pip_required_cols}()},
+\code{\link{pip_welfare_schema}()}
 }
 \concept{schema}

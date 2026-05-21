@@ -1005,3 +1005,91 @@ test_that("load_surveys() errors when a survey lacks the requested ppp column", 
     regexp = "not available"
   )
 })
+
+# ---------------------------------------------------------------------------
+# cols parameter — column pruning
+# ---------------------------------------------------------------------------
+
+test_that("load_surveys() cols=NULL loads all columns (no-op, backward compat)", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  col <- mf[mf$country_code == "COL" & mf$year == 2010L]
+  dt_all  <- piptm::load_surveys(col, cols = NULL)
+  dt_none <- piptm::load_surveys(col)
+
+  expect_equal(names(dt_all), names(dt_none))
+  expect_equal(nrow(dt_all), nrow(dt_none))
+})
+
+test_that("load_surveys() cols subset returns only requested columns", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf  <- piptm::piptm_manifest()
+  col <- mf[mf$country_code == "COL" & mf$year == 2010L]
+  # The COL/2010 fixture has columns: country_code, surveyid_year, welfare_type,
+  # version, pip_id, survey_acronym, welfare, weight, gender, area
+  requested <- c("welfare", "weight", "pip_id", "gender")
+  dt <- piptm::load_surveys(col, cols = requested)
+
+  # pip_id is always included (integrity check) + the 3 we explicitly requested
+  expect_true(all(c("welfare", "weight", "pip_id", "gender") %in% names(dt)))
+  # Columns NOT in requested (and not pip_id) must be absent
+  expect_false("survey_acronym" %in% names(dt))
+  expect_false("area"           %in% names(dt))
+  expect_false("version"        %in% names(dt))
+})
+
+test_that("load_surveys() cols with partial-match survey omits absent dimension silently", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  # COL/2010 has gender+area; BOL/2015 has neither.
+  # Requesting both should succeed — BOL rows simply won't have those cols loaded.
+  mf <- piptm::piptm_manifest()
+  dt <- piptm::load_surveys(
+    mf,
+    cols = c("pip_id", "welfare", "weight", "gender", "area")
+  )
+  expect_s3_class(dt, "data.table")
+  # Must include all 3 surveys (15 rows total)
+  expect_equal(nrow(dt), 15L)
+  # gender / area present (loaded from COL surveys; BOL rows will be NA/absent
+  # in the schema-unified result or just absent if BOL files have no such cols)
+  expect_true("pip_id"  %in% names(dt))
+  expect_true("welfare" %in% names(dt))
+  expect_true("weight"  %in% names(dt))
+  # gender/area absent from BOL — Arrow unified schema fills them as NA
+  expect_true("gender" %in% names(dt))
+  expect_true("area"   %in% names(dt))
+  bol_rows <- dt[pip_id == "BOL_2015_EH_CON_ALL"]
+  expect_true(all(is.na(bol_rows$gender)))
+  expect_true(all(is.na(bol_rows$area)))
+})
+
+test_that("load_surveys() cols with new-schema survey translates 'welfare' to PPP column", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  dt <- piptm::load_surveys(mf, ppp = 2017L, cols = c("welfare", "weight", "pip_id"))
+
+  # The physical file had welfare_ppp_2017_01_02 and welfare_ppp_2011_01_01;
+  # only the PPP-2017 column should have been loaded, renamed to "welfare"
+  expect_true("welfare" %in% names(dt))
+  expect_false("welfare_ppp_2017_01_02" %in% names(dt))
+  expect_false("welfare_ppp_2011_01_01" %in% names(dt))
+  expect_false("welfare_lcu"            %in% names(dt))
+  # Only 3 cols (welfare, weight, pip_id) should be present
+  expect_setequal(names(dt), c("welfare", "weight", "pip_id"))
+})

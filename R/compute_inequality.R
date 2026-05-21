@@ -1,5 +1,5 @@
 #' @importFrom collapse fmean GRP fsum fcumsum flag
-#' @importFrom data.table melt as.data.table setorder fifelse
+#' @importFrom data.table melt as.data.table fifelse
 NULL
 
 # ── Inequality family computation ─────────────────────────────────────────────
@@ -51,10 +51,10 @@ NULL
 #' coefficient** and the **Mean Log Deviation (MLD)** — for a single survey
 #' slice, optionally disaggregated across one or more dimensions.
 #'
-#' **Gini** is computed via a fully vectorised data.table sort + cumulative-sum
-#' approach (no per-group explicit loop).  The grouping GRP is used to assign
-#' group ids; within each group the data are sorted by welfare, then the
-#' trapezoid Lorenz formula is applied through `.gini_sorted()`.
+#' **Gini** is computed via a fully vectorised collapse C-level cumulative-sum
+#' approach (no per-group explicit loop).  The grouping GRP assigns group ids;
+#' `.gini_sorted()` applies the Brown (1994) trapezoid formula per group.
+#' Rows must already be sorted ascending by welfare (pre-sort contract on `dt`).
 #'
 #' **MLD (Mean Log Deviation)** is the Theil L index:
 #' \deqn{
@@ -72,6 +72,9 @@ NULL
 #' @param dt A [data.table::data.table()] containing at minimum `welfare`
 #'   (numeric) and `weight` (numeric) columns, plus any columns named in `by`.
 #'   This must be a **single-survey slice** — rows for exactly one `pip_id`.
+#'   **Pre-sort contract**: rows must be sorted in ascending order of `welfare`.
+#'   This is guaranteed by the upstream pipeline (`load_surveys()` preserves
+#'   the welfare sort written by `pipdata::generate_arrow_dataset()`).
 #'   The data.table is not modified; a working copy is created internally.
 #' @param by A character vector of grouping column names present in `dt`
 #'   (e.g. `c("gender", "area")`), or `NULL` for the aggregate (no
@@ -89,6 +92,16 @@ NULL
 #'   \item{`value`}{(numeric) The computed statistic.}
 #'   \item{`population`}{(numeric) Total weighted population in the group.}
 #' }
+#'
+#' @section Pre-sort contract:
+#' Rows in `dt` must be sorted in ascending order of `welfare` **before**
+#' calling this function.  When `dt` comes from [load_surveys()], this is
+#' guaranteed automatically by the upstream `{pipdata}` Arrow pipeline.
+#' When calling `compute_inequality()` directly (e.g. in tests or standalone
+#' use), ensure the data is sorted first:
+#' `data.table::setorder(dt, welfare)`.
+#' Passing unsorted data produces silently wrong Gini values (empirically:
+#' errors up to 0.39 for realistic distributions).
 #'
 #' @family compute
 #'
@@ -127,23 +140,38 @@ compute_inequality <- function(dt, by = NULL, measures = NULL, grp = NULL) {
   # Group-level population (reused for both measures)
   population <- collapse::fsum(w, g = grp)
 
-  # ── 3. Gini — per-group sort + collapse C-level cumulative sum ───────────────
+  # ── NA guard — fail loudly; NA welfare/weight produces silently biased results
+  if (anyNA(welfare_v))
+    cli::cli_abort(
+      "{.arg dt}$welfare contains {sum(is.na(welfare_v))} NA value(s). Remove or impute before calling {.fn compute_inequality}."
+    )
+  if (anyNA(w))
+    cli::cli_abort(
+      "{.arg dt}$weight contains {sum(is.na(w))} NA value(s). Remove or impute before calling {.fn compute_inequality}."
+    )
+
+  # ── 3. Gini — collapse C-level cumulative sum (pre-sorted contract) ──────────
   if ("gini" %in% measures) {
     if (!is.null(by)) {
-      # Need .grp_id for per-group sort; create working copy with group ids
-      work_g <- dt[, c("welfare", "weight", by), with = FALSE]
+      # Pre-sort contract: welfare is already sorted ascending (from pipeline).
+      # data.table by= preserves row order within each group, so within-group
+      # welfare order is guaranteed. No setorder() needed.
+      work_g <- dt[, c("welfare", "weight"), with = FALSE]
       work_g[, .grp_id := grp$group.id]
-      setorder(work_g, .grp_id, welfare)
-      gini_dt <- work_g[,
-        .(gini = .gini_sorted(welfare, weight)),
-        by = .grp_id
-      ]
-      setorder(gini_dt, .grp_id)
+      gini_dt <- work_g[, .(gini = .gini_sorted(welfare, weight)), by = .grp_id]
       gini_vals <- gini_dt[["gini"]]
     } else {
-      # Single group: sort vectors directly — no data.table copy needed
-      ord       <- order(welfare_v)
-      gini_vals <- .gini_sorted(welfare_v[ord], w[ord])
+      # Pre-sort contract: welfare is already sorted ascending.
+      # Guard against direct callers passing unsorted dt (is.unsorted()
+      # short-circuits on the first out-of-order pair — negligible cost).
+      if (is.unsorted(welfare_v))
+        cli::cli_abort(
+          c(
+            "Pre-sort contract violated: {.arg dt}$welfare is not sorted ascending.",
+            "i" = "Sort before calling: {.code data.table::setorder(dt, welfare)}"
+          )
+        )
+      gini_vals <- .gini_sorted(welfare_v, w)
     }
   }
 

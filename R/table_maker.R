@@ -306,7 +306,16 @@ table_maker <- function(pip_id        = NULL,
   }
 
   # ── 4. Load ─────────────────────────────────────────────────────────────────
-  dt <- load_surveys(entries, ppp = ppp, release = release)
+  # Column pruning: request only the columns needed for computation.
+  # "welfare" is the logical name; load_surveys() translates it to the physical
+  # PPP column internally. country_code / surveyid_year / welfare_type are
+  # needed for the metadata join in Step 8.
+  needed_cols <- unique(c(
+    "pip_id", "country_code", "surveyid_year", "welfare_type",
+    "welfare", "weight",
+    by   # NULL is silently dropped by c()
+  ))
+  dt <- load_surveys(entries, ppp = ppp, cols = needed_cols, release = release)
 
   if (nrow(dt) == 0L) {
     cli_abort(

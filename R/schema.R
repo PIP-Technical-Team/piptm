@@ -77,7 +77,7 @@ pip_welfare_schema <- function(welfare_vars) {
 #' Extract required column names from the canonical base schema
 #'
 #' Returns the 6 fixed required columns (no welfare columns — those are
-#' survey-specific and enumerated via [pip_welfare_schema()]).
+#' survey-specific and enumerated via [piptm::pip_welfare_schema()]).
 #'
 #' @return Character vector of 6 required column names:
 #'   `country_code`, `surveyid_year`, `welfare_type`, `version`,
