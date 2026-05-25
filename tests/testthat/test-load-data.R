@@ -818,6 +818,84 @@ test_that("load_survey_microdata() legacy survey (welfare_vars empty) loads as-i
   expect_equal(nrow(dt), 5L)
 })
 
+# ---------------------------------------------------------------------------
+# load_survey_microdata() — cols parameter (P3.3)
+# ---------------------------------------------------------------------------
+
+test_that("load_survey_microdata() cols subsets columns before collect", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  # COL/2010 fixture has: country_code, surveyid_year, welfare_type, version,
+  # pip_id, survey_acronym, welfare, weight, gender, area
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC",
+                                     cols = c("welfare", "weight", "gender"))
+
+  expect_true(all(c("welfare", "weight", "gender", "pip_id") %in% names(dt)))
+  expect_false("survey_acronym" %in% names(dt))
+  expect_false("area"           %in% names(dt))
+  expect_false("version"        %in% names(dt))
+  expect_equal(nrow(dt), 5L)
+})
+
+test_that("load_survey_microdata() cols always auto-includes welfare, weight, pip_id", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  # Request only gender — welfare, weight, pip_id must still appear
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC", cols = c("gender"))
+
+  expect_true("welfare" %in% names(dt))
+  expect_true("weight"  %in% names(dt))
+  expect_true("pip_id"  %in% names(dt))
+  expect_true("gender"  %in% names(dt))
+})
+
+test_that("load_survey_microdata() cols with new-schema survey translates 'welfare'", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC", ppp = 2017L,
+                                     cols = c("welfare", "weight", "pip_id"))
+
+  expect_true("welfare" %in% names(dt))
+  expect_false("welfare_ppp_2017_01_02" %in% names(dt))
+  expect_false("welfare_ppp_2011_01_01" %in% names(dt))
+  expect_setequal(names(dt), c("welfare", "weight", "pip_id"))
+  expect_equal(dt$welfare, c(1.5, 2.0, 2.5, 3.0, 3.5))
+})
+
+test_that("load_survey_microdata() cols errors on non-character input", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  expect_error(
+    piptm::load_survey_microdata("COL", 2010L, "INC", cols = 1:3),
+    regexp = "non-empty character vector"
+  )
+})
+
+test_that("load_survey_microdata() cols=NULL loads all columns (backward compat)", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  dt_null <- piptm::load_survey_microdata("COL", 2010L, "INC", cols = NULL)
+  dt_def  <- piptm::load_survey_microdata("COL", 2010L, "INC")
+
+  expect_equal(names(dt_null), names(dt_def))
+  expect_equal(nrow(dt_null),  nrow(dt_def))
+})
+
 test_that("load_surveys() with ppp selects correct welfare column across all surveys", {
   tmp_arrow    <- withr::local_tempdir()
   tmp_manifest <- withr::local_tempdir()

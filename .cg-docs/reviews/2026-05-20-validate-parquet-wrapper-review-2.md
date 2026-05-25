@@ -9,7 +9,7 @@ findings:
   P2.5: fixed
   P3.1: fixed
   P3.2: fixed
-  P3.3: open
+  P3.3: fixed
 ---
 
 ## Review Report

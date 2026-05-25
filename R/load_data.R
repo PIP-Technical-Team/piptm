@@ -104,6 +104,16 @@
 #'   `welfare`. When `NULL` (default), the manifest's `ppp_sort` field is used
 #'   as the default PPP for new-schema surveys; errors if `ppp_sort` is `NA`.
 #'   Has no effect for legacy surveys whose manifest entry has no `welfare_vars`.
+#' @param cols         Character vector of **logical** column names to load, or
+#'   `NULL` (default).  When non-`NULL`, only those columns are fetched from
+#'   the Parquet file (the `select()` happens before `collect()`, so network
+#'   bytes are skipped).  Use the logical name `"welfare"` regardless of the
+#'   underlying PPP column name in the file — the translation is handled
+#'   internally.  Do **not** pass physical welfare column names (e.g.
+#'   `"welfare_ppp_2017_01_02"`).  `"welfare"`, `"weight"`, and `"pip_id"` are
+#'   always included automatically, even if not listed.  Columns absent from
+#'   the survey's schema are silently omitted.  When `NULL`, all columns are
+#'   loaded (default behaviour).
 #' @param release      Character scalar release ID (e.g. `"20260206"`).
 #'   Defaults to [piptm_current_release()].
 #'
@@ -112,21 +122,24 @@
 #'
 #' @seealso [load_surveys()], [piptm_manifest()], [set_arrow_root()]
 #' @importFrom arrow open_dataset
-#' @importFrom dplyr collect
+#' @importFrom dplyr collect select all_of
 #' @importFrom data.table as.data.table setattr is.data.table setnames
-#' @importFrom cli cli_abort
+#' @importFrom cli cli_abort cli_warn
 #' @export
 #' @examples
 #' \dontrun{
 #' set_manifest_dir("//server/manifests")
 #' set_arrow_root("//server/pip/arrow")
 #' dt <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L)
+#' dt_slim <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L,
+#'                                  cols = c("welfare", "weight", "gender"))
 #' attr(dt, "dimensions")
 #' }
 load_survey_microdata <- function(country_code,
                                   year,
                                   welfare_type,
                                   ppp     = NULL,
+                                  cols    = NULL,
                                   release = NULL) {
 
   stopifnot(
@@ -134,6 +147,9 @@ load_survey_microdata <- function(country_code,
     is.numeric(year),           length(year) == 1L,          !is.na(year),
     is.character(welfare_type), length(welfare_type) == 1L,  !is.na(welfare_type)
   )
+
+  if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
+    cli::cli_abort("{.arg cols} must be NULL or a non-empty character vector.")
 
   year <- as.integer(year)
 
@@ -215,7 +231,47 @@ load_survey_microdata <- function(country_code,
     version       = version
   )
 
-  dt <- arrow::open_dataset(parquet_files, format = "parquet") |>
+  # --- 4a. Resolve physical target_col for column pruning --------------------
+  # For new-schema surveys the physical welfare column name (e.g.
+  # "welfare_ppp_2017_01_02") is needed before open_dataset() so that
+  # logical "welfare" in `cols` can be translated before the Arrow select.
+  # We replicate the same PPP resolution logic used later in step 5, but
+  # only when cols != NULL — otherwise skip to avoid double work.
+  target_col_for_prune <- "welfare"   # default (legacy surveys)
+  if (!is.null(cols) && length(welfare_vars) > 0L) {
+    find_ppp_col_lsm <- function(wv, year_val) {
+      prefix <- paste0("welfare_ppp_", year_val)
+      wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
+    }
+    ppp_year_for_prune <- if (!is.null(ppp)) ppp else ppp_sort_val
+    if (!is.na(ppp_year_for_prune)) {
+      cands <- find_ppp_col_lsm(welfare_vars, ppp_year_for_prune)
+      if (length(cands) > 0L) target_col_for_prune <- cands[[1L]]
+    }
+    # If resolution fails (bad ppp / NA ppp_sort), fall back to loading all
+    # columns — step 5 will raise the informative error as usual.
+  }
+
+  ds <- arrow::open_dataset(parquet_files, format = "parquet")
+
+  if (!is.null(cols)) {
+    physical_cols <- cols
+    physical_cols[physical_cols == "welfare"] <- target_col_for_prune
+    physical_cols <- union(physical_cols, c("pip_id", target_col_for_prune, "weight"))
+    safe_cols     <- intersect(physical_cols, ds$schema$names)
+    # Warn for requested columns absent from the schema (welfare-family and
+    # auto-included columns are silently omitted by design).
+    auto_or_welfare_cols_lsm <- unique(c(welfare_vars, target_col_for_prune,
+                                         "welfare", "weight", "pip_id"))
+    dropped <- setdiff(setdiff(physical_cols, safe_cols), auto_or_welfare_cols_lsm)
+    if (length(dropped) > 0L)
+      cli::cli_warn(
+        "Requested column(s) absent from Arrow schema and skipped: {.val {dropped}}"
+      )
+    ds <- dplyr::select(ds, dplyr::all_of(safe_cols))
+  }
+
+  dt <- ds |>
     dplyr::collect() |>
     data.table::as.data.table()
 
