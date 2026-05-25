@@ -325,10 +325,15 @@ load_survey_microdata <- function(country_code,
 #'   the Parquet files (the `select()` happens before `collect()`, so network
 #'   bytes are skipped).  Use the logical name `"welfare"` regardless of the
 #'   underlying PPP column name in the file — the translation is handled
-#'   internally.  `"welfare"`, `"weight"`, and `"pip_id"` are always included
-#'   automatically, even if not listed.  Columns absent from a survey's schema
-#'   are silently omitted (they will appear as `NA` if added back by the
-#'   caller).  When `NULL`, all columns are loaded (current default behaviour).
+#'   internally.  Do **not** pass physical welfare column names (e.g.
+#'   `"welfare_ppp_2017_01_02"`) — those are treated as explicitly-requested
+#'   welfare-family columns, will trigger a warning, and are dropped; always
+#'   use `"welfare"` as the logical name instead.  `"welfare"`, `"weight"`,
+#'   and `"pip_id"` are always included automatically, even if not listed
+#'   (`pip_id` is required for the loaded-vs-requested integrity check and
+#'   cannot be excluded).  Columns absent from a survey's schema are silently
+#'   omitted (they will appear as `NA` if added back by the caller).  When
+#'   `NULL`, all columns are loaded (current default behaviour).
 #' @param release Character scalar release ID. Used only for error messages and
 #'   to attach as an attribute on the result. Defaults to [piptm_current_release()].
 #'
@@ -512,10 +517,14 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     physical_cols <- union(physical_cols, c("pip_id", target_col, "weight"))
     # Only select columns that actually exist in the unified schema.
     safe_cols <- intersect(physical_cols, ds$schema$names)
-    # Warn for non-welfare columns that are absent from the unified schema
-    # (welfare-family columns are silently omitted by design — see ppp=).
-    welfare_family_set <- unique(c(all_welfare_vars, target_col, "welfare", "weight"))
-    dropped_requested  <- setdiff(setdiff(physical_cols, safe_cols), welfare_family_set)
+    # Warn for non-welfare columns that are absent from the unified schema.
+    # Columns in auto_or_welfare_cols are never surfaced in this warning:
+    #   - welfare-variant columns are handled by PPP selection above
+    #   - "weight" and "pip_id" are auto-fetched unconditionally, so a
+    #     schema miss on either is handled separately (not a user error).
+    auto_or_welfare_cols <- unique(c(all_welfare_vars, target_col, "welfare",
+                                     "weight", "pip_id"))
+    dropped_requested  <- setdiff(setdiff(physical_cols, safe_cols), auto_or_welfare_cols)
     if (length(dropped_requested) > 0L)
       cli::cli_warn(
         "Requested column(s) absent from Arrow schema and skipped: {.val {dropped_requested}}"

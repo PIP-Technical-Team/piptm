@@ -3,12 +3,12 @@ plan: .cg-docs/plans/2026-05-20-validate-parquet-wrapper.md
 findings:
   P1.1: fixed
   P2.1: fixed
-  P2.2: open
-  P2.3: open
+  P2.2: fixed
+  P2.3: skipped
   P2.4: fixed
-  P2.5: open
+  P2.5: fixed
   P3.1: open
-  P3.2: open
+  P3.2: fixed
   P3.3: open
 ---
 
