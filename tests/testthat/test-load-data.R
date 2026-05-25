@@ -896,6 +896,21 @@ test_that("load_survey_microdata() cols=NULL loads all columns (backward compat)
   expect_equal(nrow(dt_null),  nrow(dt_def))
 })
 
+test_that("load_survey_microdata() cols with ppp=NULL uses ppp_sort for translation", {
+  fx <- make_ppp_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  dt <- piptm::load_survey_microdata("COL", 2010L, "INC", ppp = NULL,
+                                     cols = c("welfare", "weight", "pip_id"))
+
+  expect_true("welfare" %in% names(dt))
+  expect_setequal(names(dt), c("welfare", "weight", "pip_id"))
+  # ppp_sort = 2017 in make_ppp_fixtures(); welfare_ppp_2017_01_02 = c(1.5, 2.0, 2.5, 3.0, 3.5)
+  expect_equal(sort(dt$welfare), c(1.5, 2.0, 2.5, 3.0, 3.5))
+})
+
 test_that("load_surveys() with ppp selects correct welfare column across all surveys", {
   tmp_arrow    <- withr::local_tempdir()
   tmp_manifest <- withr::local_tempdir()

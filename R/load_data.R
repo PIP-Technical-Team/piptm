@@ -77,6 +77,25 @@
 }
 
 # ---------------------------------------------------------------------------
+# .find_welfare_col()  — shared internal helper
+# ---------------------------------------------------------------------------
+
+#' Find welfare column(s) in a welfare_vars vector for a given PPP year
+#'
+#' Matches column names following the pattern
+#' `welfare_ppp_<year>` or `welfare_ppp_<year>_<vermast>_<veralt>`.
+#'
+#' @param wv       Character vector of welfare column names from the manifest.
+#' @param year_val Integer or numeric PPP year to search for.
+#'
+#' @return Character vector of matching column names (length 0 if none found).
+#' @keywords internal
+.find_welfare_col <- function(wv, year_val) {
+  prefix <- paste0("welfare_ppp_", year_val)
+  wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
+}
+
+# ---------------------------------------------------------------------------
 # load_survey_microdata()
 # ---------------------------------------------------------------------------
 
@@ -239,13 +258,9 @@ load_survey_microdata <- function(country_code,
   # only when cols != NULL — otherwise skip to avoid double work.
   target_col_for_prune <- "welfare"   # default (legacy surveys)
   if (!is.null(cols) && length(welfare_vars) > 0L) {
-    find_ppp_col_lsm <- function(wv, year_val) {
-      prefix <- paste0("welfare_ppp_", year_val)
-      wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
-    }
     ppp_year_for_prune <- if (!is.null(ppp)) ppp else ppp_sort_val
     if (!is.na(ppp_year_for_prune)) {
-      cands <- find_ppp_col_lsm(welfare_vars, ppp_year_for_prune)
+      cands <- .find_welfare_col(welfare_vars, ppp_year_for_prune)
       if (length(cands) > 0L) target_col_for_prune <- cands[[1L]]
     }
     # If resolution fails (bad ppp / NA ppp_sort), fall back to loading all
@@ -289,16 +304,8 @@ load_survey_microdata <- function(country_code,
   # New-schema surveys have multiple welfare_ppp_* columns (welfare_vars != "").
   # Legacy surveys have a single `welfare` column — skip selection.
   if (length(welfare_vars) > 0L) {
-    # Helper: find welfare column by PPP year prefix.
-    # Column names follow the pattern welfare_ppp_<year>_<vermast>_<veralt>.
-    # Prefix matching: ppp = 2017 matches "welfare_ppp_2017_01_02" etc.
-    find_ppp_col <- function(wv, year_val) {
-      prefix <- paste0("welfare_ppp_", year_val)
-      wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
-    }
-
     if (!is.null(ppp)) {
-      candidates <- find_ppp_col(welfare_vars, ppp)
+      candidates <- .find_welfare_col(welfare_vars, ppp)
       if (length(candidates) == 0L) {
         available_ppp <- unique(sub(
           "^welfare_ppp_([0-9]+).*", "\\1",
@@ -321,7 +328,7 @@ load_survey_microdata <- function(country_code,
           )
         )
       }
-      candidates <- find_ppp_col(welfare_vars, ppp_sort_val)
+      candidates <- .find_welfare_col(welfare_vars, ppp_sort_val)
       if (length(candidates) == 0L) {
         cli::cli_abort(
           c(
@@ -469,12 +476,6 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     new_schema_mask <- rep(FALSE, nrow(entries_dt))
   }
 
-  # Helper: find welfare column(s) matching PPP year by prefix.
-  find_ppp_col_wv <- function(wv, year_val) {
-    prefix <- paste0("welfare_ppp_", year_val)
-    wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
-  }
-
   # target_col: the physical welfare column name in the Parquet files.
   # For legacy surveys (no welfare_vars), it stays "welfare".
   # For new-schema surveys, it becomes e.g. "welfare_ppp_2017_01_02".
@@ -521,7 +522,7 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     # Validate all new-schema entries have a column matching this PPP year
     bad_mask <- new_schema_mask & !vapply(
       entries_dt$welfare_vars,
-      function(wv) length(find_ppp_col_wv(wv, effective_year)) > 0L,
+      function(wv) length(.find_welfare_col(wv, effective_year)) > 0L,
       logical(1L)
     )
     if (any(bad_mask)) {
@@ -539,7 +540,7 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     # year (same version suffix). Error if they diverge.
     target_cols <- unique(vapply(
       which(new_schema_mask),
-      function(i) find_ppp_col_wv(entries_dt$welfare_vars[[i]], effective_year)[[1L]],
+      function(i) .find_welfare_col(entries_dt$welfare_vars[[i]], effective_year)[[1L]],
       character(1L)
     ))
     if (length(target_cols) > 1L) {
