@@ -7,7 +7,7 @@ findings:
   P2.3: skipped
   P2.4: fixed
   P2.5: fixed
-  P3.1: open
+  P3.1: fixed
   P3.2: fixed
   P3.3: open
 ---

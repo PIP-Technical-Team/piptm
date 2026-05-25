@@ -1010,8 +1010,34 @@ test_that("load_surveys() errors when a survey lacks the requested ppp column", 
 # cols parameter — column pruning
 # ---------------------------------------------------------------------------
 
-test_that("load_surveys() cols=NULL loads all columns (no-op, backward compat)", {
+# P3.1: cols type validation
+test_that("load_surveys() errors when cols is a non-character vector", {
   fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  expect_error(
+    piptm::load_surveys(mf, cols = 1:3),
+    regexp = "non-empty character vector"
+  )
+})
+
+test_that("load_surveys() errors when cols is an empty character vector", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  expect_error(
+    piptm::load_surveys(mf, cols = character(0L)),
+    regexp = "non-empty character vector"
+  )
+})
+
+test_that("load_surveys() cols=NULL loads all columns (no-op, backward compat)", {  fx <- make_fixtures()
   piptm::set_manifest_dir(fx$tmp_manifest)
   piptm::set_arrow_root(fx$tmp_arrow)
   withr::defer(reset_load_env())

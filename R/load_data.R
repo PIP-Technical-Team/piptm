@@ -356,7 +356,7 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     all(c("country_code", "year", "welfare_type", "version") %in% names(entries_dt))
   )
 
-  if (!is.null(cols) && length(cols) == 0L)
+  if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
     cli::cli_abort("{.arg cols} must be NULL or a non-empty character vector.")
 
   if (nrow(entries_dt) == 0L) {
