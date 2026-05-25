@@ -1093,3 +1093,87 @@ test_that("load_surveys() cols with new-schema survey translates 'welfare' to PP
   # Only 3 cols (welfare, weight, pip_id) should be present
   expect_setequal(names(dt), c("welfare", "weight", "pip_id"))
 })
+
+# P2.1: weight auto-inclusion — weight must be present even when not in cols
+test_that("load_surveys() cols always includes weight even when not requested", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf  <- piptm::piptm_manifest()
+  col <- mf[mf$country_code == "COL" & mf$year == 2010L]
+  # Deliberately omit "weight" and "welfare" from cols — they must still appear
+  dt  <- piptm::load_surveys(col, cols = c("pip_id", "gender"))
+
+  expect_true("weight"  %in% names(dt))
+  expect_true("welfare" %in% names(dt))
+  expect_true("pip_id"  %in% names(dt))
+  # Columns not in the requested set and not auto-included must be absent
+  expect_false("survey_acronym" %in% names(dt))
+  expect_false("version"        %in% names(dt))
+})
+
+# P2.4: mixed legacy + new-schema batch must abort with an informative error
+test_that("load_surveys() errors informatively on mixed legacy + new-schema batch", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  # Legacy survey: single `welfare` column (no welfare_vars in manifest)
+  write_fixture_parquet(
+    arrow_root     = tmp_arrow,
+    country_code   = "COL",
+    year           = 2010L,
+    welfare_type   = "INC",
+    version        = "v01_v01",
+    pip_id         = "COL_2010_ECH_INC_ALL",
+    survey_acronym = "ECH"
+  )
+
+  # New-schema survey: welfare_ppp_* columns only (no `welfare` column)
+  dp <- file.path(tmp_arrow, "country_code=BOL", "surveyid_year=2015",
+                  "welfare_type=INC", "version=v01_v01")
+  dir.create(dp, recursive = TRUE)
+  arrow::write_parquet(
+    data.table::data.table(
+      country_code   = "BOL",
+      surveyid_year  = 2015L,
+      welfare_type   = "INC",
+      version        = "v01_v01",
+      pip_id         = "BOL_2015_EH_INC_ALL",
+      survey_acronym = "EH",
+      welfare_ppp_2017_01_02 = c(1.0, 2.0),
+      weight         = rep(1.0, 2L)
+    ),
+    file.path(dp, "data.parquet")
+  )
+
+  entries_list <- list(
+    list(
+      pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S",
+      country_code = "COL", year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list()
+      # No welfare_vars → legacy survey
+    ),
+    list(
+      pip_id = "BOL_2015_EH_INC_ALL", survey_id = "S",
+      country_code = "BOL", year = 2015L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "EH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"),
+      ppp_sort = 2017L
+    )
+  )
+  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  expect_error(
+    piptm::load_surveys(mf, ppp = 2017L),
+    regexp = "[Mm]ixed|legacy.*new-schema|new-schema.*legacy"
+  )
+})

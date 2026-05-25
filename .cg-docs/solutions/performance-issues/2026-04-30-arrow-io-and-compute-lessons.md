@@ -308,3 +308,4 @@ requiring a separate Arrow scan — defeating the purpose.
 - `.cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md` — Numeric results
 - `.cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md` — Numeric results
 - `.cg-docs/solutions/performance-issues/2026-05-21-load-surveys-column-pruning-implementation.md` — **Implementation of L1** (select-before-collect applied to `load_surveys()`)
+- `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md` — **Consequence of L5**: why Arrow sort must not be added as a safety net, and the multi-file guard that protects the sort contract instead

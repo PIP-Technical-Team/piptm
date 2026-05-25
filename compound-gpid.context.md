@@ -49,6 +49,13 @@ knowledge is discovered.
 4. Arrow CAN sort rows (`arrange()`), but this is expensive over a network
    share (~800ms overhead for 15 surveys). R's `setorder()` on in-memory data
    is far cheaper.
+5. **One file per partition — enforced**. Each leaf directory must contain
+   exactly one `.parquet` file. `open_dataset()` on multiple files concatenates
+   them in file-system order, breaking the within-survey welfare sort invariant
+   that `compute_inequality()` relies on. `.build_parquet_paths()` aborts with
+   an explicit error if more than one file is found. Do not remove this guard
+   without re-establishing and testing the sort contract for the multi-file case.
+   See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md`.
 
 ---
 
@@ -64,6 +71,24 @@ Arrow push-down feasibility (as of 2026-04-30):
 | ✅ Yes | `headcount`, `poverty_gap`, `severity`, `watts`, `pop_poverty`, `mean`, `sd`, `var`, `min`, `max`, `nobs`, `sum`, `mld` |
 | ⚠️ Arrow unweighted only (wrong for PIP) | `p10`, `p25`, `p75`, `p90`, `median` — PIP uses weighted quantiles; Arrow's `quantile()`/`median()` are unweighted |
 | ❌ No | `gini` — requires sorted welfare vector for Lorenz curve; not a single-pass scalar aggregate |
+
+### Gini pre-sort contract (established 2026-05-21)
+
+`compute_inequality()` does **not** sort welfare internally. The sort guarantee
+flows from the upstream pipeline:
+`pipdata::generate_arrow_dataset()` sorts by welfare on write →
+`write_survey_parquet()` (Arrow preserves row order) →
+`load_surveys()` (`open_dataset` + `collect` preserves order).
+
+Enforcement layers:
+- `is.unsorted(welfare_v)` guard in the `by = NULL` path of `compute_inequality()` — errors immediately.
+- `length(files) > 1L` guard in `.build_parquet_paths()` — prevents multi-file concatenation from silently breaking the sort.
+- `anyNA(welfare_v)` / `anyNA(w)` guards — prevent `collapse` silent NA-drop from biasing results.
+
+If the upstream pipeline ever shards a survey into multiple files, the
+multi-file guard fires immediately. Fix: write a single sorted file, then
+remove the guard only after the sort contract is re-verified.
+See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md`.
 
 ---
 

@@ -325,10 +325,10 @@ load_survey_microdata <- function(country_code,
 #'   the Parquet files (the `select()` happens before `collect()`, so network
 #'   bytes are skipped).  Use the logical name `"welfare"` regardless of the
 #'   underlying PPP column name in the file — the translation is handled
-#'   internally.  `"pip_id"` is always included automatically for integrity
-#'   checking.  Columns absent from a survey's schema are silently omitted
-#'   (they will appear as `NA` if added back by the caller).
-#'   When `NULL`, all columns are loaded (current default behaviour).
+#'   internally.  `"welfare"`, `"weight"`, and `"pip_id"` are always included
+#'   automatically, even if not listed.  Columns absent from a survey's schema
+#'   are silently omitted (they will appear as `NA` if added back by the
+#'   caller).  When `NULL`, all columns are loaded (current default behaviour).
 #' @param release Character scalar release ID. Used only for error messages and
 #'   to attach as an attribute on the result. Defaults to [piptm_current_release()].
 #'
@@ -504,16 +504,17 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
   ds <- arrow::open_dataset(parquet_files, format = "parquet")
 
   if (!is.null(cols)) {
-    # Translate logical "welfare" → physical column name, then always ensure
-    # pip_id is present for the integrity check below.
+    # Translate logical "welfare" → physical column name. Always ensure
+    # pip_id (integrity check), target_col (welfare), and weight are included
+    # regardless of what the caller requested.
     physical_cols <- cols
     physical_cols[physical_cols == "welfare"] <- target_col
-    physical_cols <- union(physical_cols, "pip_id")
+    physical_cols <- union(physical_cols, c("pip_id", target_col, "weight"))
     # Only select columns that actually exist in the unified schema.
     safe_cols <- intersect(physical_cols, ds$schema$names)
     # Warn for non-welfare columns that are absent from the unified schema
     # (welfare-family columns are silently omitted by design — see ppp=).
-    welfare_family_set <- unique(c(all_welfare_vars, target_col, "welfare"))
+    welfare_family_set <- unique(c(all_welfare_vars, target_col, "welfare", "weight"))
     dropped_requested  <- setdiff(setdiff(physical_cols, safe_cols), welfare_family_set)
     if (length(dropped_requested) > 0L)
       cli::cli_warn(
@@ -556,6 +557,24 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
   # welfare_ppp_* column in dt (others were excluded by the select above).
   # When cols was NULL, all_welfare_vars may include multiple columns — drop
   # everything except target_col, then rename.
+  # target_col is always fetched (added unconditionally above), so the rename
+  # is always safe regardless of what cols the caller requested.
+  #
+  # Guard: a mixed legacy + new-schema batch produces a unified Arrow schema
+  # that contains BOTH a "welfare" column (from legacy files) AND the PPP
+  # column (from new-schema files).  data.table::setnames() refuses to rename
+  # to a name that already exists — abort with a clear message rather than
+  # letting the rename crash with an opaque error.
+  if (target_col != "welfare" && "welfare" %in% names(dt)) {
+    cli::cli_abort(
+      c(
+        "Mixed legacy/new-schema surveys in the same batch: cannot safely rename {.val {target_col}} to {.val \"welfare\"}.",
+        "i" = "Legacy surveys (no {.field welfare_vars}) store welfare in a plain {.val \"welfare\"} column.",
+        "i" = "New-schema surveys store welfare in {.val {target_col}}.",
+        "i" = "Load legacy and new-schema surveys separately, or pass a batch containing only one schema type."
+      )
+    )
+  }
   if (target_col != "welfare") {
     welfare_data_cols <- intersect(all_welfare_vars, names(dt))
     if (target_col %in% welfare_data_cols) {
