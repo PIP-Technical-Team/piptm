@@ -118,16 +118,18 @@ function(req) {
 #* @param measures:character Measure names (repeatable)
 #* @param poverty_lines:numeric Poverty line values (optional, repeatable)
 #* @param by:character Disaggregation dimensions (optional, repeatable)
+#* @param ppp:integer PPP reference year — e.g. 2017 (optional; defaults to manifest ppp_sort)
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
 function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
-         release = NULL, res) {
+         ppp = NULL, release = NULL, res) {
 
-  check <- validate_table_input(pip_id, measures, poverty_lines, by)
+  check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp)
   if (!check$valid) return(api_error(check$errors, 400L, res))
   poverty_lines <- check$poverty_lines
+  ppp           <- check$ppp
 
   out <- capture_with_warnings({
     rel  <- resolve_release(release)
@@ -136,6 +138,7 @@ function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
       measures      = measures,
       poverty_lines = poverty_lines,
       by            = by,
+      ppp           = ppp,
       release       = rel
     )
     list(data = data, rel = rel)

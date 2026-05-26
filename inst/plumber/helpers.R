@@ -101,7 +101,7 @@ resolve_release <- function(release) {
 #'
 #' Checks all user-supplied parameters for the `/table` endpoint.  Returns a
 #' list so the handler can act on the validation result and use the coerced
-#' `poverty_lines` value without re-coercing.
+#' `poverty_lines` and `ppp` values without re-coercing.
 #'
 #' Checks performed:
 #' \itemize{
@@ -111,6 +111,8 @@ resolve_release <- function(release) {
 #'   \item `poverty_lines`, if not `NULL`, coerces cleanly to numeric (no NAs
 #'     introduced), and all values are positive and finite
 #'   \item `by`, if not `NULL`, is a subset of [piptm::.VALID_DIMENSIONS]
+#'   \item `ppp`, if not `NULL`, is a single value coercible to a positive
+#'     integer (PPP reference year, e.g. `2017`)
 #' }
 #'
 #' Note: `release` validation is handled separately by [resolve_release()].
@@ -121,6 +123,9 @@ resolve_release <- function(release) {
 #'   `NULL`.
 #' @param by           Character vector of disaggregation dimensions, or
 #'   `NULL`.
+#' @param ppp          Integer scalar PPP reference year (e.g. `2017`), or
+#'   `NULL` to use the manifest default.  Must be a single positive integer
+#'   value when provided.
 #'
 #' @return A named list:
 #'   \describe{
@@ -128,9 +133,11 @@ resolve_release <- function(release) {
 #'     \item{`errors`}{Character vector of error messages (empty when valid).}
 #'     \item{`poverty_lines`}{The coerced numeric vector, or `NULL`.  Use this
 #'       in the handler rather than the original input.}
+#'     \item{`ppp`}{The coerced integer scalar, or `NULL`.  Use this in the
+#'       handler rather than the original input.}
 #'   }
 validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
-                                 by = NULL) {
+                                 by = NULL, ppp = NULL) {
   errors <- character()
 
   # ── pip_id ─────────────────────────────────────────────────────────────────
@@ -236,10 +243,47 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
     }
   }
 
+  # ── ppp ────────────────────────────────────────────────────────────────────
+  # Optional PPP reference year (e.g. 2017). Must be a single positive integer
+  # when supplied. Query params arrive as character; coerce before checking.
+  coerced_ppp <- NULL
+  if (!is.null(ppp)) {
+    if (length(ppp) != 1L) {
+      errors <- c(
+        errors,
+        paste0(
+          "`ppp` must be a single scalar value; ",
+          length(ppp), " value(s) were supplied."
+        )
+      )
+    } else {
+      coerced_ppp <- suppressWarnings(as.integer(ppp))
+      if (is.na(coerced_ppp)) {
+        errors <- c(
+          errors,
+          paste0(
+            "`ppp` must be coercible to an integer PPP year (e.g. 2017); ",
+            "got: ", ppp, "."
+          )
+        )
+        coerced_ppp <- NULL
+      } else if (coerced_ppp <= 0L) {
+        errors <- c(
+          errors,
+          paste0(
+            "`ppp` must be a positive integer PPP year; got: ", coerced_ppp, "."
+          )
+        )
+        coerced_ppp <- NULL
+      }
+    }
+  }
+
   list(
     valid         = length(errors) == 0L,
     errors        = errors,
-    poverty_lines = coerced_pl
+    poverty_lines = coerced_pl,
+    ppp           = coerced_ppp
   )
 }
 

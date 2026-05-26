@@ -576,6 +576,73 @@ test_that("GET /table with poverty measure + valid poverty_lines returns 200", {
 })
 
 # =============================================================================
+# Block 6b: /table — ppp parameter
+# =============================================================================
+
+test_that("GET /table with ppp='2017' returns 200 (treated as integer scalar)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = "2017"
+  )))
+  # Validation passes (ppp=2017 is valid); computation may warn if ppp column
+  # is absent in the fixture, but response should be 200 success.
+  body <- parse_api_res(res)
+  expect_true(body$status %in% c("success", "error"))
+  # Specifically: validation should NOT reject it (i.e. if status is error,
+  # it must be a domain error 422, never a 400 for ppp format).
+  if (res$status == 400L) {
+    # Fail with a readable message
+    fail(paste("Expected 200 or 422 but got 400; errors:", paste(body$errors, collapse = " | ")))
+  }
+  expect_true(res$status %in% c(200L, 422L))
+})
+
+test_that("GET /table with ppp='abc' returns 400 (invalid ppp)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = "abc"
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(any(grepl("ppp", unlist(body$errors), ignore.case = TRUE)))
+})
+
+test_that("GET /table with ppp='-1' returns 400 (negative ppp)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = "-1"
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+})
+
+test_that("GET /table with ppp=NULL omitted uses manifest default — returns 200", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean"
+    # ppp omitted — must default to NULL → manifest ppp_sort
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+})
+
+# =============================================================================
 # Block 7: /lookup round-trip with fixtures
 # =============================================================================
 

@@ -212,6 +212,78 @@ test_that("validate_table_input() rejects NULL measures", {
   expect_false(result$valid)
 })
 
+# ── validate_table_input() — ppp param ────────────────────────────────────────
+
+test_that("validate_table_input() accepts ppp = NULL (default)", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = NULL
+  )
+  expect_true(result$valid)
+  expect_null(result$ppp)
+})
+
+test_that("validate_table_input() coerces character ppp to integer", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = "2017"
+  )
+  expect_true(result$valid)
+  expect_identical(result$ppp, 2017L)
+})
+
+test_that("validate_table_input() accepts integer ppp", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = 2011L
+  )
+  expect_true(result$valid)
+  expect_identical(result$ppp, 2011L)
+})
+
+test_that("validate_table_input() rejects non-numeric ppp string", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = "abc"
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("ppp", result$errors, ignore.case = TRUE)))
+})
+
+test_that("validate_table_input() rejects negative ppp", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = -2017L
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("positive", result$errors)))
+})
+
+test_that("validate_table_input() rejects ppp = 0", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = 0L
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("positive", result$errors)))
+})
+
+test_that("validate_table_input() rejects ppp with length > 1", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = c(2011L, 2017L)
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("scalar", result$errors)))
+})
+
 # ── validate_lookup_input() ────────────────────────────────────────────────────
 
 test_that("validate_lookup_input() passes with valid equal-length inputs", {
