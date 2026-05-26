@@ -642,6 +642,21 @@ test_that("GET /table with ppp=NULL omitted uses manifest default — returns 20
   expect_equal(body$status, "success")
 })
 
+# P1.8 — repeated ppp query param: should be rejected (not scalar)
+test_that("GET /table with repeated ppp param (ppp=2017&ppp=2011) returns 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = c("2017", "2011")
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(any(grepl("scalar", unlist(body$errors))))
+})
+
 # =============================================================================
 # Block 7: /lookup round-trip with fixtures
 # =============================================================================

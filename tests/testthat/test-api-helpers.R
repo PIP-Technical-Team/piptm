@@ -284,6 +284,76 @@ test_that("validate_table_input() rejects ppp with length > 1", {
   expect_true(any(grepl("scalar", result$errors)))
 })
 
+# P1.5 — NA input
+test_that("validate_table_input() rejects NA ppp", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = NA
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("ppp", result$errors, ignore.case = TRUE)))
+  expect_null(result$ppp)
+})
+
+# P1.6 — empty character vector
+test_that("validate_table_input() rejects character(0) ppp", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = character(0L)
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("scalar", result$errors)))
+  expect_null(result$ppp)
+})
+
+# P1.7 — error accumulation: invalid ppp + invalid pip_id
+test_that("validate_table_input() accumulates errors from multiple params including ppp", {
+  result <- validate_table_input(
+    pip_id   = NULL,
+    measures = "mean",
+    ppp      = "abc"
+  )
+  expect_false(result$valid)
+  expect_true(length(result$errors) >= 2L)
+  expect_null(result$ppp)
+})
+
+# P2.2 — decimal string: documents current (pre-P1.1-fix) behaviour.
+# P1.1 digit-only guard: decimal strings must be rejected (not silently truncated).
+test_that("validate_table_input() rejects decimal string ppp '2017.5'", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = "2017.5"
+  )
+  expect_false(result$valid)
+  expect_null(result$ppp)
+  expect_match(result$errors, "digits only", all = FALSE)
+})
+
+# P2.3 — return list shape contract
+test_that("validate_table_input() return list has the expected 4-field shape", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean"
+  )
+  expect_named(result, c("valid", "errors", "poverty_lines", "ppp"), ignore.order = FALSE)
+})
+
+# P1.1 digit-only guard: hex strings must be rejected (not silently accepted as 2047L).
+test_that("validate_table_input() rejects hex string ppp '0x7FF'", {
+  result <- validate_table_input(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    ppp      = "0x7FF"
+  )
+  expect_false(result$valid)
+  expect_null(result$ppp)
+  expect_match(result$errors, "digits only", all = FALSE)
+})
+
 # ── validate_lookup_input() ────────────────────────────────────────────────────
 
 test_that("validate_lookup_input() passes with valid equal-length inputs", {

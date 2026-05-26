@@ -246,9 +246,33 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   # ── ppp ────────────────────────────────────────────────────────────────────
   # Optional PPP reference year (e.g. 2017). Must be a single positive integer
   # when supplied. Query params arrive as character; coerce before checking.
+  #
+  # Validation layers (applied in order):
+  #   1. Type guard  — rejects non-numeric/non-character atomics (e.g. TRUE/FALSE).
+  #                    Logical inputs would otherwise coerce: TRUE→1L, FALSE→0L.
+  #   2. Length guard — rejects vectors; repeated query params arrive as vectors.
+  #   3. Digit guard  — rejects strings containing non-digit characters after
+  #                    trimming whitespace.  This blocks scientific notation
+  #                    ("1e5"→100000L), hex strings ("0x7FF"→2047L), decimal
+  #                    strings ("2017.5"→2017L) and embedded newlines — all of
+  #                    which as.integer() silently accepts.
+  #   4. Positive guard — rejects zero and negative years.
   coerced_ppp <- NULL
   if (!is.null(ppp)) {
-    if (length(ppp) != 1L) {
+    # Layer 1: type guard — only character and numeric atomics are accepted.
+    # Logical scalars (TRUE/FALSE) and lists must be rejected before length
+    # or coercion checks, since as.integer(TRUE) == 1L passes all later tests.
+    if (!is.character(ppp) && !is.numeric(ppp)) {
+      errors <- c(
+        errors,
+        paste0(
+          "`ppp` must be a numeric or character value; ",
+          "got type: ", class(ppp)[[1L]], "."
+        )
+      )
+      coerced_ppp <- NULL
+    } else if (length(ppp) != 1L) {
+      # Layer 2: scalar guard.
       errors <- c(
         errors,
         paste0(
@@ -256,25 +280,50 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
           length(ppp), " value(s) were supplied."
         )
       )
+      coerced_ppp <- NULL
     } else {
-      coerced_ppp <- suppressWarnings(as.integer(ppp))
-      if (is.na(coerced_ppp)) {
+      # Layer 3: digit-only guard for character inputs.
+      # as.integer() silently parses hex ("0x7FF"→2047L), scientific notation
+      # ("1e5"→100000L), and decimal strings ("2017.5"→2017L).  We reject any
+      # string that is not purely decimal digits (after trimming whitespace).
+      # Numeric inputs (already integer or double) skip this guard and go
+      # straight to the positive check — a numeric 2017.0 is fine; 2017.9
+      # truncates to 2017L which is acceptable for a typed R call.
+      ppp_safe <- substr(as.character(ppp), 1L, 40L)  # bound length for echo
+      if (is.character(ppp) && !grepl("^[0-9]+$", trimws(ppp))) {
         errors <- c(
           errors,
           paste0(
-            "`ppp` must be coercible to an integer PPP year (e.g. 2017); ",
-            "got: ", ppp, "."
+            "`ppp` must be a plain integer year (digits only, e.g. 2017); ",
+            "got: ", ppp_safe, "."
           )
         )
         coerced_ppp <- NULL
-      } else if (coerced_ppp <= 0L) {
-        errors <- c(
-          errors,
-          paste0(
-            "`ppp` must be a positive integer PPP year; got: ", coerced_ppp, "."
+      } else {
+        # Layer 4: coerce and check positive.
+        # suppressWarnings() silences the overflow warning when a numeric value
+        # exceeds .Machine$integer.max — the resulting NA_integer_ is caught
+        # by the is.na() check below.
+        coerced_ppp <- suppressWarnings(as.integer(ppp))
+        if (is.na(coerced_ppp)) {
+          errors <- c(
+            errors,
+            paste0(
+              "`ppp` must be coercible to an integer PPP year (e.g. 2017); ",
+              "got: ", ppp_safe, "."
+            )
           )
-        )
-        coerced_ppp <- NULL
+          coerced_ppp <- NULL
+        } else if (coerced_ppp <= 0L) {
+          errors <- c(
+            errors,
+            paste0(
+              "`ppp` must be a positive integer PPP year; ",
+              "got: ", coerced_ppp, "."
+            )
+          )
+          coerced_ppp <- NULL
+        }
       }
     }
   }

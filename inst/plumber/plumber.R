@@ -118,7 +118,9 @@ function(req) {
 #* @param measures:character Measure names (repeatable)
 #* @param poverty_lines:numeric Poverty line values (optional, repeatable)
 #* @param by:character Disaggregation dimensions (optional, repeatable)
-#* @param ppp:integer PPP reference year — e.g. 2017 (optional; defaults to manifest ppp_sort)
+#* @param ppp:integer PPP reference year (e.g. 2017; optional). Must be a
+#*   positive whole number. When omitted, the manifest ppp_sort default is
+#*   used. Non-integer or non-positive values return HTTP 400.
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /table
