@@ -51,7 +51,7 @@ write_fixture_parquet_tm <- function(arrow_root,
     welfare_type   = welfare_type,
     version        = version,
     pip_id         = pip_id,
-    welfare        = as.numeric(welfare),
+    welfare_ppp_2017_01_02 = as.numeric(welfare),
     weight         = as.numeric(weight)
   )
 

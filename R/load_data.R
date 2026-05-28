@@ -5,7 +5,9 @@
 #
 # Provides functions for loading PIP survey microdata from the shared Arrow
 # repository. The manifest is the authoritative source for the `version`
-# partition key, ensuring reproducibility across releases.
+# partition key, ensuring reproducibility across releases. All surveys must
+# use the current deflated-data schema (non-empty `welfare_vars`); the
+# retired single-`welfare`-column schema is not supported.
 #
 # Partition structure (4-level Hive):
 #   <arrow_root>/country_code=<cc>/surveyid_year=<yr>/welfare_type=<wt>/version=<ver>/
@@ -121,8 +123,7 @@
 #' @param ppp          Integer scalar PPP year (e.g. `2017L`), or `NULL`.
 #'   When non-NULL, selects the `welfare_ppp_<ppp>` column and renames it to
 #'   `welfare`. When `NULL` (default), the manifest's `ppp_sort` field is used
-#'   as the default PPP for new-schema surveys; errors if `ppp_sort` is `NA`.
-#'   Has no effect for legacy surveys whose manifest entry has no `welfare_vars`.
+#'   as the default PPP; errors if `ppp_sort` is `NA`.
 #' @param cols         Character vector of **logical** column names to load, or
 #'   `NULL` (default).  When non-`NULL`, only those columns are fetched from
 #'   the Parquet file (the `select()` happens before `collect()`, so network
@@ -137,7 +138,8 @@
 #'   Defaults to [piptm_current_release()].
 #'
 #' @return A `data.table` of survey microdata with a single `welfare` column
-#'   and attribute `"dimensions"`.
+#'   and attribute `"dimensions"`. The manifest entry must have a non-empty
+#'   `welfare_vars` — the retired single-`welfare`-column schema is not supported.
 #'
 #' @seealso [load_surveys()], [piptm_manifest()], [set_arrow_root()]
 #' @importFrom arrow open_dataset
@@ -251,13 +253,11 @@ load_survey_microdata <- function(country_code,
   )
 
   # --- 4a. Resolve physical target_col for column pruning --------------------
-  # For new-schema surveys the physical welfare column name (e.g.
-  # "welfare_ppp_2017_01_02") is needed before open_dataset() so that
-  # logical "welfare" in `cols` can be translated before the Arrow select.
-  # We replicate the same PPP resolution logic used later in step 5, but
-  # only when cols != NULL — otherwise skip to avoid double work.
-  target_col_for_prune <- "welfare"   # default (legacy surveys)
-  if (!is.null(cols) && length(welfare_vars) > 0L) {
+  # The physical welfare column name (e.g. "welfare_ppp_2017_01_02") is needed
+  # before open_dataset() so that logical "welfare" in `cols` can be translated
+  # before the Arrow select.  Resolved only when cols != NULL.
+  target_col_for_prune <- NULL
+  if (!is.null(cols)) {
     ppp_year_for_prune <- if (!is.null(ppp)) ppp else ppp_sort_val
     if (!is.na(ppp_year_for_prune)) {
       cands <- .find_welfare_col(welfare_vars, ppp_year_for_prune)
@@ -269,7 +269,7 @@ load_survey_microdata <- function(country_code,
 
   ds <- arrow::open_dataset(parquet_files, format = "parquet")
 
-  if (!is.null(cols)) {
+  if (!is.null(cols) && !is.null(target_col_for_prune)) {
     physical_cols <- cols
     physical_cols[physical_cols == "welfare"] <- target_col_for_prune
     physical_cols <- union(physical_cols, c("pip_id", target_col_for_prune, "weight"))
@@ -300,50 +300,46 @@ load_survey_microdata <- function(country_code,
     )
   }
 
-  # --- 5. PPP welfare column selection (new-schema surveys only) --------------
-  # New-schema surveys have multiple welfare_ppp_* columns (welfare_vars != "").
-  # Legacy surveys have a single `welfare` column — skip selection.
-  if (length(welfare_vars) > 0L) {
-    if (!is.null(ppp)) {
-      candidates <- .find_welfare_col(welfare_vars, ppp)
-      if (length(candidates) == 0L) {
-        available_ppp <- unique(sub(
-          "^welfare_ppp_([0-9]+).*", "\\1",
-          welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
-        ))
-        cli::cli_abort(
-          c(
-            "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
-            "i" = "Available PPPs: {.val {available_ppp}}"
-          )
+  # --- 5. PPP welfare column selection ------------------------------------------
+  if (!is.null(ppp)) {
+    candidates <- .find_welfare_col(welfare_vars, ppp)
+    if (length(candidates) == 0L) {
+      available_ppp <- unique(sub(
+        "^welfare_ppp_([0-9]+).*", "\\1",
+        welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
+      ))
+      cli::cli_abort(
+        c(
+          "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
+          "i" = "Available PPPs: {.val {available_ppp}}"
         )
-      }
-      target_col <- candidates[[1L]]
-    } else {
-      if (is.na(ppp_sort_val)) {
-        cli::cli_abort(
-          c(
-            "No default PPP available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
-            "i" = "The manifest entry has no {.field ppp_sort}. Pass {.arg ppp} explicitly."
-          )
-        )
-      }
-      candidates <- .find_welfare_col(welfare_vars, ppp_sort_val)
-      if (length(candidates) == 0L) {
-        cli::cli_abort(
-          c(
-            "Default PPP year {.val {ppp_sort_val}} not found in the manifest welfare columns.",
-            "i" = "Available welfare columns: {.val {welfare_vars}}"
-          )
-        )
-      }
-      target_col <- candidates[[1L]]
+      )
     }
-    welfare_data_cols <- intersect(welfare_vars, names(dt))
-    data.table::setnames(dt, target_col, "welfare")
-    drop_cols <- setdiff(welfare_data_cols, target_col)
-    if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
+    target_col <- candidates[[1L]]
+  } else {
+    if (is.na(ppp_sort_val)) {
+      cli::cli_abort(
+        c(
+          "No default PPP available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
+          "i" = "The manifest entry has no {.field ppp_sort}. Pass {.arg ppp} explicitly."
+        )
+      )
+    }
+    candidates <- .find_welfare_col(welfare_vars, ppp_sort_val)
+    if (length(candidates) == 0L) {
+      cli::cli_abort(
+        c(
+          "Default PPP year {.val {ppp_sort_val}} not found in the manifest welfare columns.",
+          "i" = "Available welfare columns: {.val {welfare_vars}}"
+        )
+      )
+    }
+    target_col <- candidates[[1L]]
   }
+  welfare_data_cols <- intersect(welfare_vars, names(dt))
+  data.table::setnames(dt, target_col, "welfare")
+  drop_cols <- setdiff(welfare_data_cols, target_col)
+  if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
 
   # --- 6. Attach manifest metadata as attributes ------------------------------
   data.table::setattr(dt, "dimensions", dimensions)
@@ -369,20 +365,21 @@ load_survey_microdata <- function(country_code,
 #' `pip_id` column (already present in the Parquet files) identifies each row's
 #' survey. A `"release"` attribute records the release ID.
 #'
-#' For surveys written with the deflated-data schema (multiple `welfare_ppp_*`
-#' columns), the `ppp` argument selects a single welfare column uniformly
-#' across all surveys and renames it to `welfare`. Legacy surveys (no
-#' `welfare_vars` in manifest entry) are loaded as-is.
+#' The `ppp` argument selects a single welfare column uniformly across all
+#' surveys and renames it to `welfare`. All surveys must carry the current
+#' deflated-data schema (non-empty `welfare_vars`).
 #'
 #' @param entries_dt A `data.table` with at least the columns `country_code`,
-#'   `year`, `welfare_type`, and `version` (i.e. a subset of what
-#'   [piptm_manifest()] returns). These four columns map directly to the Hive
-#'   partition keys and are used to construct exact leaf directory paths.
+#'   `year`, `welfare_type`, `version`, `welfare_vars`, and `ppp_sort` (i.e. a
+#'   subset of what [piptm_manifest()] returns). The first four map directly to
+#'   the Hive partition keys; `welfare_vars` and `ppp_sort` drive welfare column
+#'   selection.  Every entry must have a non-empty `welfare_vars` — the retired
+#'   single-`welfare`-column schema is no longer supported.
 #' @param ppp        Integer scalar PPP year (e.g. `2017L`), or `NULL`.
-#'   Applied uniformly to all new-schema surveys in `entries_dt`.  When
+#'   Applied uniformly to all surveys in `entries_dt`.  When
 #'   `NULL` (default), `ppp_sort` from each entry's manifest row is used; if
 #'   entries have inconsistent `ppp_sort` values, an error is raised asking
-#'   the caller to supply `ppp` explicitly.  Has no effect for legacy surveys.
+#'   the caller to supply `ppp` explicitly.
 #' @param cols      Character vector of **logical** column names to load, or
 #'   `NULL` (default).  When non-`NULL`, only those columns are fetched from
 #'   the Parquet files (the `select()` happens before `collect()`, so network
@@ -402,6 +399,9 @@ load_survey_microdata <- function(country_code,
 #'
 #' @return A `data.table` of combined survey microdata with a single `welfare`
 #'   column and attribute `"release"`. Contains all rows from matching surveys.
+#'   All surveys must use the current deflated-data schema (non-empty
+#'   `welfare_vars`). The retired single-`welfare`-column schema is not
+#'   supported.
 #'
 #' @seealso [load_survey_microdata()], [piptm_manifest()]
 #' @export
@@ -416,7 +416,8 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
 
   stopifnot(
     data.table::is.data.table(entries_dt),
-    all(c("country_code", "year", "welfare_type", "version") %in% names(entries_dt))
+    all(c("country_code", "year", "welfare_type", "version",
+          "welfare_vars", "ppp_sort") %in% names(entries_dt))
   )
 
   if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
@@ -437,6 +438,7 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
 
   # --- Resolve Arrow root -----------------------------------------------------
   arrow_root <- piptm_arrow_root()
+
   if (is.null(arrow_root)) {
     cli::cli_abort(
       c(
@@ -459,102 +461,71 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
     )
   }))
 
-  # --- PPP welfare column selection (new-schema surveys only) ----------------
+  # --- PPP welfare column selection ------------------------------------------
   # Resolve target_col BEFORE open_dataset so column pruning (cols parameter)
   # can translate logical "welfare" → the physical PPP column name.
-  #
-  # New-schema entries carry non-empty welfare_vars in entries_dt.
-  # Legacy entries (welfare_vars absent or empty) are skipped.
-  has_welfare_vars <- "welfare_vars" %in% names(entries_dt)
-  if (has_welfare_vars) {
-    new_schema_mask <- vapply(
-      entries_dt$welfare_vars,
-      function(wv) length(wv) > 0L,
-      logical(1L)
-    )
+  # All entries must carry non-empty welfare_vars (new deflated-data schema).
+  if (!is.null(ppp)) {
+    effective_year <- ppp
   } else {
-    new_schema_mask <- rep(FALSE, nrow(entries_dt))
+    # ppp = NULL: determine uniform ppp_sort from all entries
+    ppp_sorts <- entries_dt$ppp_sort
+    ppp_sorts <- ppp_sorts[!is.na(ppp_sorts)]
+    if (length(ppp_sorts) == 0L) {
+      cli::cli_abort(
+        c(
+          "No default PPP available: all manifest entries have {.field ppp_sort = NA}.",
+          "i" = "Pass {.arg ppp} explicitly."
+        )
+      )
+    }
+    unique_sorts <- unique(ppp_sorts)
+    if (length(unique_sorts) > 1L) {
+      cli::cli_abort(
+        c(
+          "Surveys have different {.field ppp_sort} values: {.val {unique_sorts}}.",
+          "i" = "Pass {.arg ppp} explicitly to use a uniform PPP across all surveys."
+        )
+      )
+    }
+    effective_year <- unique_sorts[[1L]]
   }
 
-  # target_col: the physical welfare column name in the Parquet files.
-  # For legacy surveys (no welfare_vars), it stays "welfare".
-  # For new-schema surveys, it becomes e.g. "welfare_ppp_2017_01_02".
-  # all_welfare_vars: union of all physical welfare columns across new-schema
-  # entries — used to drop unwanted welfare_* cols after collect().
-  target_col       <- "welfare"   # default for legacy surveys
-  all_welfare_vars <- character(0L)
-
-  if (any(new_schema_mask)) {
-    if (!is.null(ppp)) {
-      effective_year <- ppp
-    } else {
-      # ppp = NULL: determine uniform ppp_sort from new-schema entries
-      if (!"ppp_sort" %in% names(entries_dt)) {
-        cli::cli_abort(
-          c(
-            "Cannot determine default PPP: {.field ppp_sort} column absent from {.arg entries_dt}.",
-            "i" = "Pass {.arg ppp} explicitly."
-          )
-        )
-      }
-      ppp_sorts <- entries_dt$ppp_sort[new_schema_mask]
-      ppp_sorts <- ppp_sorts[!is.na(ppp_sorts)]
-      if (length(ppp_sorts) == 0L) {
-        cli::cli_abort(
-          c(
-            "No default PPP available: all new-schema manifest entries have {.field ppp_sort = NA}.",
-            "i" = "Pass {.arg ppp} explicitly."
-          )
-        )
-      }
-      unique_sorts <- unique(ppp_sorts)
-      if (length(unique_sorts) > 1L) {
-        cli::cli_abort(
-          c(
-            "New-schema surveys have different {.field ppp_sort} values: {.val {unique_sorts}}.",
-            "i" = "Pass {.arg ppp} explicitly to use a uniform PPP across all surveys."
-          )
-        )
-      }
-      effective_year <- unique_sorts[[1L]]
-    }
-
-    # Validate all new-schema entries have a column matching this PPP year
-    bad_mask <- new_schema_mask & !vapply(
-      entries_dt$welfare_vars,
-      function(wv) length(.find_welfare_col(wv, effective_year)) > 0L,
-      logical(1L)
+  # Validate all entries have a column matching this PPP year
+  bad_mask <- !vapply(
+    entries_dt$welfare_vars,
+    function(wv) length(.find_welfare_col(wv, effective_year)) > 0L,
+    logical(1L)
+  )
+  if (any(bad_mask)) {
+    bad_ids <- entries_dt$pip_id[bad_mask]
+    cli::cli_abort(
+      c(
+        "PPP {.val {effective_year}} not available in all surveys.",
+        "i" = "Missing matching welfare column in: {.val {bad_ids}}"
+      )
     )
-    if (any(bad_mask)) {
-      bad_ids <- entries_dt$pip_id[bad_mask]
-      cli::cli_abort(
-        c(
-          "PPP {.val {effective_year}} not available in all surveys.",
-          "i" = "Missing matching welfare column in: {.val {bad_ids}}"
-        )
-      )
-    }
-
-    # Determine the physical target column name from the manifest welfare_vars.
-    # All surveys in a release share the same full column name for a given PPP
-    # year (same version suffix). Error if they diverge.
-    target_cols <- unique(vapply(
-      which(new_schema_mask),
-      function(i) .find_welfare_col(entries_dt$welfare_vars[[i]], effective_year)[[1L]],
-      character(1L)
-    ))
-    if (length(target_cols) > 1L) {
-      cli::cli_abort(
-        c(
-          "Surveys have different full column names for PPP year {.val {effective_year}}:",
-          "i" = "{.val {target_cols}}",
-          "i" = "This can occur when surveys come from different pipeline versions. Load surveys separately."
-        )
-      )
-    }
-    target_col       <- target_cols[[1L]]
-    all_welfare_vars <- unique(unlist(entries_dt$welfare_vars[new_schema_mask]))
   }
+
+  # Determine the physical target column name from the manifest welfare_vars.
+  # All surveys in a release share the same full column name for a given PPP
+  # year (same version suffix). Error if they diverge.
+  target_cols <- unique(vapply(
+    seq_len(nrow(entries_dt)),
+    function(i) .find_welfare_col(entries_dt$welfare_vars[[i]], effective_year)[[1L]],
+    character(1L)
+  ))
+  if (length(target_cols) > 1L) {
+    cli::cli_abort(
+      c(
+        "Surveys have different full column names for PPP year {.val {effective_year}}:",
+        "i" = "{.val {target_cols}}",
+        "i" = "This can occur when surveys come from different pipeline versions. Load surveys separately."
+      )
+    )
+  }
+  target_col       <- target_cols[[1L]]
+  all_welfare_vars <- unique(unlist(entries_dt$welfare_vars))
 
   # --- Open dataset, optionally prune columns, then collect -----------------
   # Column pruning (cols != NULL) translates logical "welfare" to target_col
@@ -619,55 +590,37 @@ load_surveys <- function(entries_dt, ppp = NULL, cols = NULL, release = NULL) {
   }
 
   # --- Post-collect: rename target_col -> "welfare", drop other welfare_vars -
-  # When cols was non-NULL and target_col != "welfare", target_col is the only
-  # welfare_ppp_* column in dt (others were excluded by the select above).
+  # When cols was non-NULL, target_col is the only welfare_ppp_* column in dt
+  # (others were excluded by the Arrow select above).
   # When cols was NULL, all_welfare_vars may include multiple columns — drop
   # everything except target_col, then rename.
   # target_col is always fetched (added unconditionally above), so the rename
   # is always safe regardless of what cols the caller requested.
-  #
-  # Guard: a mixed legacy + new-schema batch produces a unified Arrow schema
-  # that contains BOTH a "welfare" column (from legacy files) AND the PPP
-  # column (from new-schema files).  data.table::setnames() refuses to rename
-  # to a name that already exists — abort with a clear message rather than
-  # letting the rename crash with an opaque error.
-  if (target_col != "welfare" && "welfare" %in% names(dt)) {
+  welfare_data_cols <- intersect(all_welfare_vars, names(dt))
+  if (target_col %in% welfare_data_cols) {
+    data.table::setnames(dt, target_col, "welfare")
+    drop_cols <- setdiff(welfare_data_cols, target_col)
+    # Warn if caller explicitly requested a welfare-family column —
+    # those are always dropped after target_col is renamed to "welfare".
+    if (!is.null(cols) && length(drop_cols) > 0L) {
+      explicitly_requested <- intersect(drop_cols, cols)
+      if (length(explicitly_requested) > 0L)
+        cli::cli_warn(
+          c(
+            "Welfare-family column(s) {.val {explicitly_requested}} were dropped.",
+            "i" = "Physical welfare column names are not retrievable via {.arg cols}.",
+            "i" = "Use {.arg ppp} to select a welfare variant; pass {.val \"welfare\"} in {.arg cols} for the unified column."
+          )
+        )
+    }
+    if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
+  } else {
     cli::cli_abort(
       c(
-        "Mixed legacy/new-schema surveys in the same batch: cannot safely rename {.val {target_col}} to {.val \"welfare\"}.",
-        "i" = "Legacy surveys (no {.field welfare_vars}) store welfare in a plain {.val \"welfare\"} column.",
-        "i" = "New-schema surveys store welfare in {.val {target_col}}.",
-        "i" = "Load legacy and new-schema surveys separately, or pass a batch containing only one schema type."
+        "Expected welfare column {.val {target_col}} not found in loaded data.",
+        "i" = "Columns present: {.val {names(dt)}}"
       )
     )
-  }
-  if (target_col != "welfare") {
-    welfare_data_cols <- intersect(all_welfare_vars, names(dt))
-    if (target_col %in% welfare_data_cols) {
-      data.table::setnames(dt, target_col, "welfare")
-      drop_cols <- setdiff(welfare_data_cols, target_col)
-      # P1.9: warn if caller explicitly requested a welfare-family column —
-      # those are always dropped after target_col is renamed to "welfare".
-      if (!is.null(cols) && length(drop_cols) > 0L) {
-        explicitly_requested <- intersect(drop_cols, cols)
-        if (length(explicitly_requested) > 0L)
-          cli::cli_warn(
-            c(
-              "Welfare-family column(s) {.val {explicitly_requested}} were dropped.",
-              "i" = "Physical welfare column names are not retrievable via {.arg cols}.",
-              "i" = "Use {.arg ppp} to select a welfare variant; pass {.val \"welfare\"} in {.arg cols} for the unified column."
-            )
-          )
-      }
-      if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
-    } else {
-      cli::cli_abort(
-        c(
-          "Expected welfare column {.val {target_col}} not found in loaded data.",
-          "i" = "Columns present: {.val {names(dt)}}"
-        )
-      )
-    }
   }
 
   data.table::setattr(dt, "release", release)

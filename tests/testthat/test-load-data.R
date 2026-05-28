@@ -39,7 +39,7 @@ write_fixture_parquet <- function(arrow_root,
     version        = rep(version,        n_rows),
     pip_id         = rep(pip_id,         n_rows),
     survey_acronym = rep(survey_acronym, n_rows),
-    welfare        = seq(100, by = 50, length.out = n_rows),
+    welfare_ppp_2017_01_02 = seq(100, by = 50, length.out = n_rows),
     weight         = rep(1.0,           n_rows)
   )
 
@@ -136,7 +136,9 @@ make_fixtures <- function(env = parent.frame()) {
       version        = "v01_v02",
       survey_acronym = "ECH",
       module         = "ALL",
-      dimensions     = list("gender", "area")
+      dimensions     = list("gender", "area"),
+      welfare_vars   = list("welfare_ppp_2017_01_02"),
+      ppp_sort       = 2017L
     ),
     list(
       pip_id         = "BOL_2015_EH_CON_ALL",
@@ -147,7 +149,9 @@ make_fixtures <- function(env = parent.frame()) {
       version        = "v01_v01",
       survey_acronym = "EH",
       module         = "ALL",
-      dimensions     = list()
+      dimensions     = list(),
+      welfare_vars   = list("welfare_ppp_2017_01_02"),
+      ppp_sort       = 2017L
     ),
     list(
       pip_id         = "COL_2015_ECH_INC_ALL",
@@ -158,7 +162,9 @@ make_fixtures <- function(env = parent.frame()) {
       version        = "v02_v01",
       survey_acronym = "ECH",
       module         = "ALL",
-      dimensions     = list("age")
+      dimensions     = list("age"),
+      welfare_vars   = list("welfare_ppp_2017_01_02"),
+      ppp_sort       = 2017L
     )
   )
 
@@ -561,14 +567,16 @@ test_that("load_surveys() fetches exactly the requested surveys — COL/2010/INC
       survey_id      = "COL_2010_ECH_v01_M_v02_A_GMD_ALL",
       country_code   = "COL", year = 2010L, welfare_type = "INC",
       version        = "v01_v02", survey_acronym = "ECH",
-      module = "ALL", dimensions = list("gender", "area")
+      module = "ALL", dimensions = list("gender", "area"),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     ),
     list(
       pip_id         = "ARG_2004_EPH_INC_ALL",
       survey_id      = "ARG_2004_EPH_v03_M_v01_A_GMD_ALL",
       country_code   = "ARG", year = 2004L, welfare_type = "INC",
       version        = "v03_v01", survey_acronym = "EPH",
-      module = "ALL", dimensions = list()
+      module = "ALL", dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     )
     # Note: decoy COL_2004_ECH_INC_ALL is intentionally absent from manifest.
   )
@@ -633,14 +641,16 @@ test_that("load_surveys() errors when a manifest entry has no Parquet files on d
       survey_id      = "COL_2010_ECH_v01_M_v02_A_GMD_ALL",
       country_code   = "COL", year = 2010L, welfare_type = "INC",
       version        = "v01_v02", survey_acronym = "ECH",
-      module = "ALL", dimensions = list()
+      module = "ALL", dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     ),
     list(
       pip_id         = "BOL_2015_EH_CON_ALL",
       survey_id      = "BOL_2015_EH_v01_M_v01_A_GMD_ALL",
       country_code   = "BOL", year = 2015L, welfare_type = "CON",
       version        = "v01_v01", survey_acronym = "EH",
-      module = "ALL", dimensions = list()
+      module = "ALL", dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     )
     # BOL/2015/CON partition directory was never written to tmp_arrow
   )
@@ -806,16 +816,42 @@ test_that("load_survey_microdata() with ppp=NULL and ppp_sort=NA errors informat
   )
 })
 
-test_that("load_survey_microdata() legacy survey (welfare_vars empty) loads as-is", {
-  fx <- make_fixtures()
-  piptm::set_manifest_dir(fx$tmp_manifest)
-  piptm::set_arrow_root(fx$tmp_arrow)
+test_that("load_survey_microdata() errors on legacy survey (empty welfare_vars)", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  # Write a legacy-format Parquet with a single plain `welfare` column
+  dir_path <- file.path(tmp_arrow,
+    "country_code=COL", "surveyid_year=2010", "welfare_type=INC", "version=v01_v01")
+  dir.create(dir_path, recursive = TRUE)
+  arrow::write_parquet(
+    data.table::data.table(
+      country_code = "COL", surveyid_year = 2010L, welfare_type = "INC",
+      version = "v01_v01", pip_id = "COL_2010_ECH_INC_ALL",
+      survey_acronym = "ECH", welfare = c(100, 150, 200, 250, 300),
+      weight = rep(1.0, 5L)
+    ),
+    file.path(dir_path, "data.parquet")
+  )
+
+  # Manifest entry with no welfare_vars and no ppp_sort
+  write_fixture_manifest(tmp_manifest, "20260206", list(list(
+    pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S",
+    country_code = "COL", year = 2010L, welfare_type = "INC",
+    version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+    dimensions = list()
+    # No welfare_vars / ppp_sort → legacy survey → must now error
+  )), set_current = TRUE)
+
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
   withr::defer(reset_load_env())
 
-  # Legacy Parquet has single `welfare` column; manifest has welfare_vars=character(0)
-  dt <- piptm::load_survey_microdata("COL", 2010L, "INC")
-  expect_true("welfare" %in% names(dt))
-  expect_equal(nrow(dt), 5L)
+  # Legacy schema is no longer supported — must error at PPP resolution
+  expect_error(
+    piptm::load_survey_microdata("COL", 2010L, "INC"),
+    regexp = "No default PPP"
+  )
 })
 
 # ---------------------------------------------------------------------------
@@ -1233,66 +1269,4 @@ test_that("load_surveys() cols always includes weight even when not requested", 
   expect_false("version"        %in% names(dt))
 })
 
-# P2.4: mixed legacy + new-schema batch must abort with an informative error
-test_that("load_surveys() errors informatively on mixed legacy + new-schema batch", {
-  tmp_arrow    <- withr::local_tempdir()
-  tmp_manifest <- withr::local_tempdir()
 
-  # Legacy survey: single `welfare` column (no welfare_vars in manifest)
-  write_fixture_parquet(
-    arrow_root     = tmp_arrow,
-    country_code   = "COL",
-    year           = 2010L,
-    welfare_type   = "INC",
-    version        = "v01_v01",
-    pip_id         = "COL_2010_ECH_INC_ALL",
-    survey_acronym = "ECH"
-  )
-
-  # New-schema survey: welfare_ppp_* columns only (no `welfare` column)
-  dp <- file.path(tmp_arrow, "country_code=BOL", "surveyid_year=2015",
-                  "welfare_type=INC", "version=v01_v01")
-  dir.create(dp, recursive = TRUE)
-  arrow::write_parquet(
-    data.table::data.table(
-      country_code   = "BOL",
-      surveyid_year  = 2015L,
-      welfare_type   = "INC",
-      version        = "v01_v01",
-      pip_id         = "BOL_2015_EH_INC_ALL",
-      survey_acronym = "EH",
-      welfare_ppp_2017_01_02 = c(1.0, 2.0),
-      weight         = rep(1.0, 2L)
-    ),
-    file.path(dp, "data.parquet")
-  )
-
-  entries_list <- list(
-    list(
-      pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S",
-      country_code = "COL", year = 2010L, welfare_type = "INC",
-      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-      dimensions = list()
-      # No welfare_vars → legacy survey
-    ),
-    list(
-      pip_id = "BOL_2015_EH_INC_ALL", survey_id = "S",
-      country_code = "BOL", year = 2015L, welfare_type = "INC",
-      version = "v01_v01", survey_acronym = "EH", module = "ALL",
-      dimensions = list(),
-      welfare_vars = list("welfare_ppp_2017_01_02"),
-      ppp_sort = 2017L
-    )
-  )
-  write_fixture_manifest(tmp_manifest, "20260206", entries_list, set_current = TRUE)
-
-  piptm::set_manifest_dir(tmp_manifest)
-  piptm::set_arrow_root(tmp_arrow)
-  withr::defer(reset_load_env())
-
-  mf <- piptm::piptm_manifest()
-  expect_error(
-    piptm::load_surveys(mf, ppp = 2017L),
-    regexp = "[Mm]ixed|legacy.*new-schema|new-schema.*legacy"
-  )
-})

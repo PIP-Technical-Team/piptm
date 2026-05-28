@@ -69,15 +69,18 @@ make_tm_fixtures <- function(env = parent.frame()) {
     list(pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1", country_code = "COL",
          year = 2010L, welfare_type = "INC", version = "v01_v01",
          survey_acronym = "ECH", module = "ALL",
-         dimensions = list("gender", "area")),
+         dimensions = list("gender", "area"),
+         welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L),
     list(pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2", country_code = "BOL",
          year = 2000L, welfare_type = "INC", version = "v01_v01",
          survey_acronym = "ECH", module = "ALL",
-         dimensions = list()),
+         dimensions = list(),
+         welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L),
     list(pip_id = "COL_2015_ECH_INC_ALL", survey_id = "S3", country_code = "COL",
          year = 2015L, welfare_type = "INC", version = "v01_v01",
          survey_acronym = "ECH", module = "ALL",
-         dimensions = list("age"))
+         dimensions = list("age"),
+         welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L)
   )
 
   write_fixture_manifest_tm(tmp_manifest, "20260206", entries)
@@ -436,11 +439,13 @@ test_that("table_maker() fills missing dim with NA for partial match survey", {
     list(pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1",
          country_code = "COL", year = 2010L, welfare_type = "INC",
          version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-         dimensions = list("gender", "area")),
+         dimensions = list("gender", "area"),
+         welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L),
     list(pip_id = "PER_2010_ECH_INC_ALL", survey_id = "S2",
          country_code = "PER", year = 2010L, welfare_type = "INC",
          version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-         dimensions = list("gender"))  # partial: missing area
+         dimensions = list("gender"),  # partial: missing area
+         welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L)
   )
   write_fixture_manifest_tm(tmp_manifest, "20260206", entries)
   piptm::set_manifest_dir(tmp_manifest)
@@ -740,7 +745,7 @@ test_that("table_maker() result does not expose extra Parquet columns (column pr
     version        = "v01_v02",
     pip_id         = "COL_2010_ECH_INC_ALL",
     survey_acronym = "ECH",
-    welfare        = seq_len(n) * 1.0,
+    welfare_ppp_2017_01_02 = seq_len(n) * 1.0,
     weight         = rep(1.0, n),
     gender         = rep(c("male", "female"), length.out = n),
     # extra column not used in any computation — should not appear in output
@@ -757,7 +762,9 @@ test_that("table_maker() result does not expose extra Parquet columns (column pr
     version        = "v01_v02",
     survey_acronym = "ECH",
     module         = "ALL",
-    dimensions     = list("gender")
+    dimensions     = list("gender"),
+    welfare_vars   = list("welfare_ppp_2017_01_02"),
+    ppp_sort       = 2017L
   ))
 
   write_fixture_manifest_tm(tmp_manifest, "20260206", entries_list, set_current = TRUE)

@@ -105,7 +105,7 @@ if (!nzchar(.ep_plumber_path)) {
     version        = rep(version,         n_rows),
     pip_id         = rep(pip_id,          n_rows),
     survey_acronym = rep(survey_acronym,  n_rows),
-    welfare        = as.numeric(seq_len(n_rows)),
+    welfare_ppp_2017_01_02 = as.numeric(seq_len(n_rows)),
     weight         = rep(1.0, n_rows)
   )
 
@@ -180,19 +180,22 @@ if (!nzchar(.ep_plumber_path)) {
       pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1",
       country_code = "COL", year = 2010L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-      dimensions = list("gender", "area")
+      dimensions = list("gender", "area"),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     ),
     list(
       pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2",
       country_code = "BOL", year = 2000L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-      dimensions = list()
+      dimensions = list(),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     ),
     list(
       pip_id = "COL_2015_ECH_INC_ALL", survey_id = "S3",
       country_code = "COL", year = 2015L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
-      dimensions = list("gender")
+      dimensions = list("gender"),
+      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
     )
   )
 
