@@ -198,7 +198,7 @@ table_maker <- function(pip_id        = NULL,
                         measures,
                         poverty_lines = NULL,
                         by            = NULL,
-                        ppp           = NULL,
+                        ppp           = 2021L,
                         release       = NULL) {
 
   # ── 0. Resolve survey identifiers ──────────────────────────────────────────

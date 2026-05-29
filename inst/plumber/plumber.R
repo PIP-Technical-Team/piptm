@@ -118,15 +118,15 @@ function(req) {
 #* @param measures:character Measure names (repeatable)
 #* @param poverty_lines:numeric Poverty line values (optional, repeatable)
 #* @param by:character Disaggregation dimensions (optional, repeatable)
-#* @param ppp:integer PPP reference year (e.g. 2017; optional). Must be a
-#*   positive whole number. When omitted, the manifest ppp_sort default is
-#*   used. Non-integer or non-positive values return HTTP 400.
+#* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
+#*   positive whole number. When omitted, defaults to 2021. Non-integer or
+#*   non-positive values return HTTP 400.
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
 function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
-         ppp = NULL, release = NULL, res) {
+         ppp = 2021L, release = NULL, res) {
 
   check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp)
   if (!check$valid) return(api_error(check$errors, 400L, res))

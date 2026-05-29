@@ -105,7 +105,7 @@ if (!nzchar(.ep_plumber_path)) {
     version        = rep(version,         n_rows),
     pip_id         = rep(pip_id,          n_rows),
     survey_acronym = rep(survey_acronym,  n_rows),
-    welfare_ppp_2017_01_02 = as.numeric(seq_len(n_rows)),
+    welfare_ppp_2021_01_02 = as.numeric(seq_len(n_rows)),
     weight         = rep(1.0, n_rows)
   )
 
@@ -181,21 +181,21 @@ if (!nzchar(.ep_plumber_path)) {
       country_code = "COL", year = 2010L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list("gender", "area"),
-      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
+      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     ),
     list(
       pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2",
       country_code = "BOL", year = 2000L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list(),
-      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
+      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     ),
     list(
       pip_id = "COL_2015_ECH_INC_ALL", survey_id = "S3",
       country_code = "COL", year = 2015L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list("gender"),
-      welfare_vars = list("welfare_ppp_2017_01_02"), ppp_sort = 2017L
+      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     )
   )
 
@@ -638,7 +638,7 @@ test_that("GET /table with ppp=NULL omitted uses manifest default — returns 20
   res <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id   = "COL_2010_ECH_INC_ALL",
     measures = "mean"
-    # ppp omitted — must default to NULL → manifest ppp_sort
+    # ppp omitted — uses table_maker() default (2021L)
   )))
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
