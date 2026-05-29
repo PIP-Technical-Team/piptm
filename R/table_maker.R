@@ -154,8 +154,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   \item{`country_code`}{ISO3 country code.}
 #'   \item{`surveyid_year`}{Survey year.}
 #'   \item{`welfare_type`}{`"INC"` or `"CON"`.}
-#'   \item{`[by cols]`}{One column per element of `by` (if non-NULL);
-#'     `NA` when the dimension is absent for a survey (partial-match).}
+#'   \item{`[by cols]`}{One column per element of `by` (if non-NULL).
+#'     Surveys missing any requested dimension are excluded before loading;
+#'     every row in the result is guaranteed to have non-`NA` values for all
+#'     breakdown columns.}
 #'   \item{`poverty_line`}{Poverty threshold; `NA` for non-poverty measures.}
 #'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
 #'   \item{`value`}{Computed statistic.}
@@ -266,40 +268,36 @@ table_maker <- function(pip_id        = NULL,
       integer(1L)
     )
 
-    zero_idx <- overlap == 0L
-    if (any(zero_idx)) {
-      dropped_ids <- entries$pip_id[zero_idx]
+    # A survey must carry ALL requested dimensions; partial matches are
+    # excluded before loading so no NA-fill is ever needed downstream.
+    full_idx <- overlap == length(by_check)
+    dropped_idx <- !full_idx
+
+    if (any(dropped_idx)) {
+      dropped_entries <- entries[dropped_idx]
+      dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
+        have <- dropped_entries$dimensions[[i]]
+        miss <- setdiff(by_check, have)
+        if (length(miss) == length(by_check)) {
+          paste0(dropped_entries$pip_id[[i]], ": no requested dimensions")
+        } else {
+          paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
+        }
+      }, character(1L))
       cli_warn(
         c(
-          "Excluding {length(dropped_ids)} survey{?s} with none of the requested dimensions ({.val {by}}):",
-          "i" = "{.val {dropped_ids}}"
+          "Excluding {length(dropped_info)} survey{?s} that lack all requested dimensions ({.val {by}}):",
+          "i" = "{dropped_info}"
         )
       )
-      entries <- entries[!zero_idx]
-      overlap  <- overlap[!zero_idx]
+      entries <- entries[full_idx]
     }
 
     if (nrow(entries) == 0L) {
       cli_abort(
         c(
-          "All requested surveys were excluded: none have any of the requested dimensions ({.val {by}}).",
+          "All requested surveys were excluded: none have all of the requested dimensions ({.val {by}}).",
           "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
-        )
-      )
-    }
-
-    partial_idx <- overlap > 0L & overlap < length(by_check)
-    if (any(partial_idx)) {
-      partial_entries <- entries[partial_idx]
-      missing_info <- vapply(seq_len(nrow(partial_entries)), function(i) {
-        miss <- setdiff(by_check, partial_entries$dimensions[[i]])
-        paste0(partial_entries$pip_id[[i]], ": ", paste(miss, collapse = ", "))
-      }, character(1L))
-      cli_warn(
-        c(
-          "{sum(partial_idx)} survey{?s} {?is/are} missing some requested dimensions.",
-          "i" = "Results will have {.val NA} for missing dimensions.",
-          "i" = "{missing_info}"
         )
       )
     }
@@ -352,15 +350,10 @@ table_maker <- function(pip_id        = NULL,
     age_was_binned <- TRUE
   }
 
-  # ── 6. Batch NA-fill for missing dimension columns ───────────────────────────
-  # Add any `by` columns that are absent from some/all surveys so that
-  # compute_measures() always receives the full `by` vector. GRP naturally
-  # produces a single NA group for surveys where the dimension is missing.
-  if (!is.null(by)) {
-    for (d in setdiff(by, names(dt))) {
-      data.table::set(dt, j = d, value = NA_character_)
-    }
-  }
+  # ── 6. (Dimension NA-fill removed) ────────────────────────────────────────
+  # Surveys that do not carry all requested `by` dimensions are excluded in
+  # Step 3 above, so every row in `dt` is guaranteed to have all dimension
+  # columns present. No NA-fill is needed.
 
   # ── 7. Batch compute ────────────────────────────────────────────────────────
   # Single grouped call across all surveys (Approach B). compute_measures()

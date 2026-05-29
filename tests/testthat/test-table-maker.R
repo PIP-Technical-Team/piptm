@@ -420,11 +420,9 @@ test_that("table_maker() warns and fills NA for partial dimension match", {
   expect_true(all(res$pip_id == "COL_2010_ECH_INC_ALL"))
 })
 
-test_that("table_maker() fills missing dim with NA for partial match survey", {
-  # COL_2010 has gender+area; COL_2015 has age only
-  # Request by=c("gender") → COL_2015 has 0 overlap → dropped
-  # Request by=c("area") + "gender":
-  # Build a special fixture where S3 has gender but not area
+test_that("table_maker() drops partial-match survey (missing some dims) with warning", {
+  # COL_2010 has gender+area; PER_2010 has gender only (missing area)
+  # Under new behaviour PER should be excluded, not included with NA area.
   tmp_arrow    <- withr::local_tempdir()
   tmp_manifest <- withr::local_tempdir()
 
@@ -452,23 +450,22 @@ test_that("table_maker() fills missing dim with NA for partial match survey", {
   piptm::set_arrow_root(tmp_arrow)
   withr::defer(reset_piptm_env())
 
-  # PER has gender but not area → partial match warning
+  # PER has gender but not area → partial match → excluded with warning
   expect_warning(
     res <- piptm::table_maker(
       pip_id   = c("COL_2010_ECH_INC_ALL", "PER_2010_ECH_INC_ALL"),
       measures = "mean",
       by       = c("gender", "area")
     ),
-    regexp = "missing some requested dimensions"
+    regexp = "Excluding"
   )
 
-  # Both surveys in result
+  # Only COL (full match) survives
   expect_true("COL_2010_ECH_INC_ALL" %in% res$pip_id)
-  expect_true("PER_2010_ECH_INC_ALL" %in% res$pip_id)
+  expect_false("PER_2010_ECH_INC_ALL" %in% res$pip_id)
 
-  # PER rows have NA in area
-  per_rows <- res[pip_id == "PER_2010_ECH_INC_ALL"]
-  expect_true(all(is.na(per_rows$area)))
+  # No NA values in area column for COL rows
+  expect_false(any(is.na(res$area)))
 })
 
 test_that("table_maker() drops and warns for zero-overlap survey", {
