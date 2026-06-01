@@ -1,6 +1,7 @@
 ---
 date: 2026-04-29
 title: "Pipeline Comparison Benchmark Results"
+category: "performance-issues"
 status: completed
 tags: [performance, arrow, io, benchmark, pipeline]
 ---

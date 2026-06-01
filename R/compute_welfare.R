@@ -133,7 +133,7 @@ compute_welfare <- function(dt, by = NULL, measures = NULL, grp = NULL) {
       survey_of_cell <- collapse::GRP(grp$groups, by = "pip_id")
 
       if ("obs_share" %in% measures) {
-        nobs_cell   <- as.double(collapse::fnobs(welfare_v, g = grp))
+        nobs_cell <- if (!is.null(vals[["nobs"]])) vals[["nobs"]] else as.double(collapse::fnobs(welfare_v, g = grp))
         nobs_survey <- as.double(collapse::fnobs(welfare_v, g = grp_survey))
         vals[["obs_share"]] <- nobs_cell / nobs_survey[survey_of_cell$group.id]
       }

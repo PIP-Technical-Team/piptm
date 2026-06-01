@@ -1,6 +1,7 @@
 ---
 date: 2026-04-28
 title: "Orchestration Strategy Benchmark Results"
+category: "performance-issues"
 status: completed
 tags: [performance, orchestration, table-maker, benchmark]
 ---

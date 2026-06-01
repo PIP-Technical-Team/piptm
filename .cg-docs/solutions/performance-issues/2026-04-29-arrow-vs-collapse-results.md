@@ -1,6 +1,7 @@
 ---
 date: 2026-04-29
 title: "Arrow I/O Strategy Benchmark Results"
+category: "performance-issues"
 status: completed
 tags: [performance, arrow, io, benchmark]
 ---

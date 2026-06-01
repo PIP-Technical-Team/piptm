@@ -397,7 +397,7 @@ test_that("pop_share sums to 1 within a survey when grouped by gender", {
   res <- compute_welfare(dt, by = c("pip_id", "gender"), measures = "pop_share")
   expect_equal(sum(res$value), 1.0, tolerance = 1e-12)
   # male pop = 15, female pop = 5, total = 20
-  expect_equal(res$value[res[, pip_id == "SUR1" & gender == "male"]], 0.75, tolerance = 1e-12)
+  expect_equal(res[pip_id == "SUR1" & gender == "male", value], 0.75, tolerance = 1e-12)
 })
 
 test_that("shares work in multi-survey batch via compute_measures", {

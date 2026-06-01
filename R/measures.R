@@ -59,7 +59,7 @@ NULL
 #' the corresponding computation family (`"poverty"`, `"inequality"`, or
 #' `"welfare"`).  Useful for user discovery and validation.
 #'
-#' @return A named character vector of length 21.
+#' @return A named character vector.
 #'
 #' @family measures
 #'

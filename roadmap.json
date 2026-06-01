@@ -233,6 +233,22 @@
           "status": "done"
         }
       ]
+    },
+    {
+      "id": "phase-6-share-measures",
+      "title": "Phase 6 — Cell Share Measures",
+      "description": "Add obs_share (cell observation proportion) and pop_share (cell population proportion) to the welfare computation family. Per-survey denominators, integrated with the measure registry pattern.",
+      "status": "done",
+      "features": [
+        {
+          "id": "obs-share-pop-share",
+          "title": "obs_share and pop_share measures",
+          "description": "Register obs_share and pop_share in .MEASURE_REGISTRY under welfare family. Compute as cell/survey ratios using coarser pip_id-only GRP for denominators. Reuse existing nobs when available. 21 total measures.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
+          "plan": ".cg-docs/plans/2026-06-01-cell-share-measures.md"
+        }
+      ]
     }
   ]
 }
