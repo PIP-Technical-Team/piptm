@@ -137,7 +137,8 @@ resolve_release <- function(release) {
 #'       handler rather than the original input.}
 #'   }
 validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
-                                 by = NULL, ppp = NULL) {
+                                 by = NULL, ppp = NULL,
+                                 pop_share_threshold = NULL) {
   errors <- character()
 
   # ── pip_id ─────────────────────────────────────────────────────────────────
@@ -328,11 +329,41 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
     }
   }
 
+  # ── pop_share_threshold ─────────────────────────────────────────────────────
+
+  # Optional numeric in (0, 1). Empty string or NULL disables suppression.
+  # Query params arrive as character; coerce before checking.
+
+  coerced_threshold <- NULL
+  if (!is.null(pop_share_threshold) && !identical(pop_share_threshold, "")) {
+    coerced_threshold <- suppressWarnings(as.numeric(pop_share_threshold))
+    if (is.na(coerced_threshold)) {
+      errors <- c(
+        errors,
+        paste0(
+          "`pop_share_threshold` must be a numeric value in (0, 1); ",
+          "got: ", substr(as.character(pop_share_threshold), 1L, 40L), "."
+        )
+      )
+      coerced_threshold <- NULL
+    } else if (coerced_threshold <= 0 || coerced_threshold >= 1) {
+      errors <- c(
+        errors,
+        paste0(
+          "`pop_share_threshold` must be strictly between 0 and 1; ",
+          "got: ", coerced_threshold, "."
+        )
+      )
+      coerced_threshold <- NULL
+    }
+  }
+
   list(
-    valid         = length(errors) == 0L,
-    errors        = errors,
-    poverty_lines = coerced_pl,
-    ppp           = coerced_ppp
+    valid               = length(errors) == 0L,
+    errors              = errors,
+    poverty_lines       = coerced_pl,
+    ppp                 = coerced_ppp,
+    pop_share_threshold = coerced_threshold
   )
 }
 

@@ -782,3 +782,102 @@ test_that("table_maker() result does not expose extra Parquet columns (column pr
   expect_true("gender" %in% names(res))
   expect_true("value"  %in% names(res))
 })
+
+# ===========================================================================
+# pop_share_threshold suppression
+# ===========================================================================
+
+test_that("pop_share_threshold suppresses non-share measures for small cells", {
+  # S1 fixture: 10 rows, 5 male / 5 female, equal weight → 50/50 split.
+  # With threshold 0.6, both cells (0.5 each) are below → headcount suppressed.
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_warning(
+    res <- table_maker(
+      pip_id   = "COL_2010_ECH_INC_ALL",
+      measures = c("pop_share", "headcount"),
+      by       = "gender",
+      poverty_lines = 5,
+      pop_share_threshold = 0.6
+    ),
+    "Suppressing measures"
+  )
+
+  # pop_share rows retained
+  expect_equal(nrow(res[measure == "pop_share"]), 2L)
+  # headcount rows suppressed (both cells below 0.6)
+  expect_equal(nrow(res[measure == "headcount"]), 0L)
+})
+
+test_that("pop_share_threshold = NULL disables suppression", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  res <- table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = c("pop_share", "headcount"),
+    by       = "gender",
+    poverty_lines = 5,
+    pop_share_threshold = NULL
+  )
+
+  # All rows present: 2 pop_share + 2 headcount
+  expect_equal(nrow(res), 4L)
+})
+
+test_that("no suppression when pop_share not in measures", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  # Even with low threshold, if pop_share isn't requested, no suppression
+  res <- table_maker(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = c("headcount"),
+    by       = "gender",
+    poverty_lines = 5,
+    pop_share_threshold = 0.99
+  )
+
+  expect_equal(nrow(res[measure == "headcount"]), 2L)
+})
+
+test_that("obs_share rows are retained when cell is suppressed", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_warning(
+    res <- table_maker(
+      pip_id   = "COL_2010_ECH_INC_ALL",
+      measures = c("pop_share", "obs_share", "mean"),
+      by       = "gender",
+      pop_share_threshold = 0.6
+    ),
+    "Suppressing"
+  )
+
+  # Both share measures retained (2 each), mean suppressed
+  expect_equal(nrow(res[measure == "pop_share"]), 2L)
+  expect_equal(nrow(res[measure == "obs_share"]), 2L)
+  expect_equal(nrow(res[measure == "mean"]), 0L)
+})
+
+test_that("pop_share_threshold validation rejects invalid values", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_error(
+    table_maker(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      measures = c("pop_share", "mean"),
+      by = "gender",
+      pop_share_threshold = 1.5
+    ),
+    "pop_share_threshold"
+  )
+})

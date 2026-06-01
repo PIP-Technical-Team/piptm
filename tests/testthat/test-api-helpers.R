@@ -339,7 +339,7 @@ test_that("validate_table_input() return list has the expected 4-field shape", {
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean"
   )
-  expect_named(result, c("valid", "errors", "poverty_lines", "ppp"), ignore.order = FALSE)
+  expect_named(result, c("valid", "errors", "poverty_lines", "ppp", "pop_share_threshold"), ignore.order = FALSE)
 })
 
 # P1.1 digit-only guard: hex strings must be rejected (not silently accepted as 2047L).

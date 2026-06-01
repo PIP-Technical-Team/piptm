@@ -121,17 +121,21 @@ function(req) {
 #* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
 #*   positive whole number. When omitted, defaults to 2021. Non-integer or
 #*   non-positive values return HTTP 400.
+#* @param pop_share_threshold:numeric Population share threshold for cell
+#*   suppression (optional; default 0.01). Set to empty/null to disable.
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
 function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
-         ppp = 2021L, release = NULL, res) {
+         ppp = 2021L, pop_share_threshold = 0.01, release = NULL, res) {
 
-  check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp)
+  check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp,
+                                pop_share_threshold)
   if (!check$valid) return(api_error(check$errors, 400L, res))
-  poverty_lines <- check$poverty_lines
-  ppp           <- check$ppp
+  poverty_lines       <- check$poverty_lines
+  ppp                 <- check$ppp
+  pop_share_threshold <- check$pop_share_threshold
 
   out <- capture_with_warnings({
     rel  <- resolve_release(release)
@@ -141,7 +145,8 @@ function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
       poverty_lines = poverty_lines,
       by            = by,
       ppp           = ppp,
-      release       = rel
+      release       = rel,
+      pop_share_threshold = pop_share_threshold
     )
     list(data = data, rel = rel)
   })
