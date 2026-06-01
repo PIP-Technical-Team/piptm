@@ -11,16 +11,16 @@ test_that("pip_measures() returns a named character vector", {
   expect_named(m)
 })
 
-test_that("pip_measures() contains all 19 measure names", {
+test_that("pip_measures() contains all 21 measure names", {
   m <- pip_measures()
-  expect_length(m, 19L)
+  expect_length(m, 21L)
   expect_setequal(
     names(m),
     c(
       "headcount", "poverty_gap", "severity", "watts", "pop_poverty",
       "gini", "mld",
       "mean", "median", "sd", "var", "min", "max", "nobs",
-      "p10", "p25", "p75", "p90", "sum"
+      "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share"
     )
   )
 })

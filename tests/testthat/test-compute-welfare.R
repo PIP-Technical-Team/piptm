@@ -282,12 +282,12 @@ test_that("measures subset: only 'mean' and 'p90' returned", {
   expect_setequal(res[["measure"]], c("mean", "p90"))
 })
 
-test_that("measures = NULL computes all 12 measures", {
+test_that("measures = NULL computes all 14 measures", {
   res <- compute_welfare(make_five_dt())
   expect_setequal(
     res[["measure"]],
     c("mean", "median", "sd", "var", "min", "max", "nobs",
-      "p10", "p25", "p75", "p90", "sum")
+      "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share")
   )
 })
 
@@ -354,4 +354,64 @@ test_that("pre-computed grp produces same result as internally-built grp", {
     res_without[order(gender, measure), value],
     tolerance = 1e-9
   )
+})
+
+# ══════════════════════════════════════════════════════════════════════════════
+# obs_share and pop_share
+# ══════════════════════════════════════════════════════════════════════════════
+
+test_that("obs_share returns 1.0 when by is NULL", {
+  dt  <- make_five_dt()
+  res <- compute_welfare(dt, measures = "obs_share")
+  expect_equal(res$value, 1.0)
+})
+
+test_that("pop_share returns 1.0 when by is NULL", {
+  dt  <- make_five_dt()
+  res <- compute_welfare(dt, measures = "pop_share")
+  expect_equal(res$value, 1.0)
+})
+
+test_that("obs_share sums to 1 within a survey when grouped by gender", {
+  dt <- data.table(
+    pip_id  = "SUR1",
+    welfare = as.numeric(1:10),
+    weight  = rep(1.0, 10L),
+    gender  = factor(rep(c("male", "female"), each = 5L))
+  )
+  res <- compute_welfare(dt, by = c("pip_id", "gender"), measures = "obs_share")
+  expect_equal(sum(res$value), 1.0, tolerance = 1e-12)
+  # Each group has 5 of 10 obs
+
+  expect_equal(res$value, c(0.5, 0.5), tolerance = 1e-12)
+})
+
+test_that("pop_share sums to 1 within a survey when grouped by gender", {
+  dt <- data.table(
+    pip_id  = "SUR1",
+    welfare = as.numeric(1:10),
+    weight  = c(rep(3.0, 5L), rep(1.0, 5L)),
+    gender  = factor(rep(c("male", "female"), each = 5L))
+  )
+
+  res <- compute_welfare(dt, by = c("pip_id", "gender"), measures = "pop_share")
+  expect_equal(sum(res$value), 1.0, tolerance = 1e-12)
+  # male pop = 15, female pop = 5, total = 20
+  expect_equal(res$value[res[, pip_id == "SUR1" & gender == "male"]], 0.75, tolerance = 1e-12)
+})
+
+test_that("shares work in multi-survey batch via compute_measures", {
+  dt <- data.table(
+    pip_id  = rep(c("A", "B"), each = 6L),
+    welfare = as.numeric(rep(1:6, 2L)),
+    weight  = rep(1.0, 12L),
+    gender  = factor(rep(c("m", "f"), 6L))
+  )
+  res <- compute_measures(dt, measures = c("obs_share", "pop_share"), by = "gender")
+  # Each survey has 3m + 3f = 6, so each share = 0.5
+  expect_true(all(res[measure == "obs_share", value] == 0.5))
+  expect_true(all(res[measure == "pop_share", value] == 0.5))
+  # Shares sum to 1 per survey
+  shares_a <- res[pip_id == "A" & measure == "obs_share", sum(value)]
+  expect_equal(shares_a, 1.0)
 })

@@ -8,7 +8,8 @@ load_survey_microdata(
   country_code,
   year,
   welfare_type,
-  ppp = NULL,
+  ppp = 2021L,
+  cols = NULL,
   release = NULL
 )
 }
@@ -19,18 +20,28 @@ load_survey_microdata(
 
 \item{welfare_type}{Character scalar welfare type (\code{"INC"} or \code{"CON"}).}
 
-\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
-When non-NULL, selects the \verb{welfare_ppp_<ppp>} column and renames it to
-\code{welfare}. When \code{NULL} (default), the manifest's \code{ppp_sort} field is used
-as the default PPP for new-schema surveys; errors if \code{ppp_sort} is \code{NA}.
-Has no effect for legacy surveys whose manifest entry has no \code{welfare_vars}.}
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}). Defaults to
+\code{2021L}. Selects the \verb{welfare_ppp_<ppp>} column and renames it to
+\code{welfare}.}
+
+\item{cols}{Character vector of \strong{logical} column names to load, or
+\code{NULL} (default).  When non-\code{NULL}, only those columns are fetched from
+the Parquet file (the \code{select()} happens before \code{collect()}, so network
+bytes are skipped).  Use the logical name \code{"welfare"} regardless of the
+underlying PPP column name in the file — the translation is handled
+internally.  Do \strong{not} pass physical welfare column names (e.g.
+\code{"welfare_ppp_2017_01_02"}).  \code{"welfare"}, \code{"weight"}, and \code{"pip_id"} are
+always included automatically, even if not listed.  Columns absent from
+the survey's schema are silently omitted.  When \code{NULL}, all columns are
+loaded (default behaviour).}
 
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}).
 Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
 }
 \value{
 A \code{data.table} of survey microdata with a single \code{welfare} column
-and attribute \code{"dimensions"}.
+and attribute \code{"dimensions"}. The manifest entry must have a non-empty
+\code{welfare_vars} — the retired single-\code{welfare}-column schema is not supported.
 }
 \description{
 Looks up the manifest for \code{release} (defaulting to the current release),
@@ -53,6 +64,8 @@ manifest entry (e.g. \code{c("area", "gender", "age")}).
 set_manifest_dir("//server/manifests")
 set_arrow_root("//server/pip/arrow")
 dt <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L)
+dt_slim <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L,
+                                 cols = c("welfare", "weight", "gender"))
 attr(dt, "dimensions")
 }
 }

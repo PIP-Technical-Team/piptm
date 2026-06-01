@@ -17,7 +17,8 @@ The data.table is not modified.}
 disaggregation).}
 
 \item{measures}{A character vector of welfare measure names to compute —
-a subset of \code{c("mean", "median", "sd", "var", "min", "max", "nobs", "p10", "p25", "p75", "p90", "sum")}.  \code{NULL} (default) computes all twelve.}
+a subset of \code{c("mean", "median", "sd", "var", "min", "max", "nobs", "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share")}.
+\code{NULL} (default) computes all fourteen.}
 
 \item{grp}{An optional pre-computed \code{\link[collapse:GRP]{collapse::GRP()}} object built on \code{dt}
 grouped by \code{by}.  When provided, the internal \code{GRP()} call is skipped.
@@ -57,6 +58,8 @@ and \code{nobs} are unweighted (they operate on observed values / row counts).
    \code{p75} \tab \code{fnth(welfare, 0.75, w = weight, g = grp)} \tab Weighted 75th percentile \cr
    \code{p90} \tab \code{fnth(welfare, 0.90, w = weight, g = grp)} \tab Weighted 90th percentile \cr
    \code{sum} \tab \code{fsum(welfare, w = weight, g = grp)} \tab Weighted sum of welfare \cr
+   \code{obs_share} \tab \code{fnobs / survey_total_nobs} \tab Cell observation share \cr
+   \code{pop_share} \tab \code{fsum(weight) / survey_total_population} \tab Cell population share \cr
 }
 }
 \examples{

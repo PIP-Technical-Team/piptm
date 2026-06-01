@@ -31,6 +31,8 @@ NULL
 #' | `p75`    | `fnth(welfare, 0.75, w = weight, g = grp)`    | Weighted 75th percentile       |
 #' | `p90`    | `fnth(welfare, 0.90, w = weight, g = grp)`    | Weighted 90th percentile       |
 #' | `sum`    | `fsum(welfare, w = weight, g = grp)`          | Weighted sum of welfare        |
+#' | `obs_share` | `fnobs / survey_total_nobs`               | Cell observation share         |
+#' | `pop_share` | `fsum(weight) / survey_total_population`  | Cell population share          |
 #'
 #' @param dt A [data.table::data.table()] containing at minimum `welfare`
 #'   (numeric) and `weight` (numeric) columns, plus any columns named in `by`.
@@ -41,7 +43,8 @@ NULL
 #'   disaggregation).
 #' @param measures A character vector of welfare measure names to compute —
 #'   a subset of `c("mean", "median", "sd", "var", "min", "max", "nobs",
-#'   "p10", "p25", "p75", "p90", "sum")`.  `NULL` (default) computes all twelve.
+#'   "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share")`.
+#'   `NULL` (default) computes all fourteen.
 #' @param grp An optional pre-computed [collapse::GRP()] object built on `dt`
 #'   grouped by `by`.  When provided, the internal `GRP()` call is skipped.
 #'   Ignored when `by` is `NULL`.
@@ -71,7 +74,7 @@ compute_welfare <- function(dt, by = NULL, measures = NULL, grp = NULL) {
 
   all_welfare_measures <- c(
     "mean", "median", "sd", "var", "min", "max", "nobs",
-    "p10", "p25", "p75", "p90", "sum"
+    "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share"
   )
   if (is.null(measures)) measures <- all_welfare_measures
   measures <- unique(match.arg(measures, all_welfare_measures, several.ok = TRUE))
@@ -116,6 +119,35 @@ compute_welfare <- function(dt, by = NULL, measures = NULL, grp = NULL) {
   if ("p75"    %in% measures) vals[["p75"]]    <- collapse::fnth(welfare_v, 0.75, w = w, g = grp)
   if ("p90"    %in% measures) vals[["p90"]]    <- collapse::fnth(welfare_v, 0.90, w = w, g = grp)
   if ("sum"    %in% measures) vals[["sum"]]    <- collapse::fsum(welfare_v, w = w, g = grp)
+
+  # ── 5b. Share measures (cell / survey total) ────────────────────────────────
+  if ("obs_share" %in% measures || "pop_share" %in% measures) {
+    # Survey-level denominator: group only by pip_id (coarser than cell-level grp).
+    # For each cell-group, find which survey it belongs to and divide by that
+    # survey's total. When by includes pip_id + dimensions, we build a coarser
+    # GRP on pip_id alone, compute survey totals, then map them back to cells
+    # via the pip_id column in grp$groups.
+    if (!is.null(by) && "pip_id" %in% by && length(by) > 1L) {
+      grp_survey <- collapse::GRP(dt, by = "pip_id")
+      # Map each cell-group to its survey: GRP grp$groups by pip_id
+      survey_of_cell <- collapse::GRP(grp$groups, by = "pip_id")
+
+      if ("obs_share" %in% measures) {
+        nobs_cell   <- as.double(collapse::fnobs(welfare_v, g = grp))
+        nobs_survey <- as.double(collapse::fnobs(welfare_v, g = grp_survey))
+        vals[["obs_share"]] <- nobs_cell / nobs_survey[survey_of_cell$group.id]
+      }
+      if ("pop_share" %in% measures) {
+        pop_survey <- collapse::fsum(w, g = grp_survey)
+        vals[["pop_share"]] <- population / pop_survey[survey_of_cell$group.id]
+      }
+    } else {
+      # No disaggregation or single grouping key — share is trivially 1.0
+      n_groups <- if (!is.null(grp)) grp$N.groups else 1L
+      if ("obs_share" %in% measures) vals[["obs_share"]] <- rep(1.0, n_groups)
+      if ("pop_share" %in% measures) vals[["pop_share"]] <- rep(1.0, n_groups)
+    }
+  }
 
   # ── 6. Assemble wide result ─────────────────────────────────────────────────
   # Extract unique group rows in GRP order, then assign all measure columns

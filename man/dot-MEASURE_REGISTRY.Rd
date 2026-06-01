@@ -6,7 +6,7 @@
 \title{Internal measure registry: maps canonical measure names to computation
 families.}
 \format{
-An object of class \code{list} of length 19.
+An object of class \code{list} of length 21.
 }
 \usage{
 .MEASURE_REGISTRY

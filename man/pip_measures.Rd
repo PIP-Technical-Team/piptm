@@ -7,7 +7,7 @@
 pip_measures()
 }
 \value{
-A named character vector of length 18.
+A named character vector of length 21.
 }
 \description{
 Returns a named character vector of all canonical measure names recognised

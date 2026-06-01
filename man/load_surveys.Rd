@@ -4,29 +4,36 @@
 \alias{load_surveys}
 \title{Batch-load microdata for multiple surveys from the shared Arrow repository}
 \usage{
-load_surveys(entries_dt, ppp = NULL, cols = NULL, release = NULL)
+load_surveys(entries_dt, ppp = 2021L, cols = NULL, release = NULL)
 }
 \arguments{
 \item{entries_dt}{A \code{data.table} with at least the columns \code{country_code},
-\code{year}, \code{welfare_type}, and \code{version} (i.e. a subset of what
-\code{\link[=piptm_manifest]{piptm_manifest()}} returns). These four columns map directly to the Hive
-partition keys and are used to construct exact leaf directory paths.}
+\code{year}, \code{welfare_type}, \code{version}, and \code{welfare_vars} (i.e. a subset of
+what \code{\link[=piptm_manifest]{piptm_manifest()}} returns). The first four map directly to the Hive
+partition keys; \code{welfare_vars} drives welfare column selection.  Every
+entry must have a non-empty \code{welfare_vars} — the retired
+single-\code{welfare}-column schema is no longer supported.}
 
-\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
-Applied uniformly to all new-schema surveys in \code{entries_dt}.  When
-\code{NULL} (default), \code{ppp_sort} from each entry's manifest row is used; if
-entries have inconsistent \code{ppp_sort} values, an error is raised asking
-the caller to supply \code{ppp} explicitly.  Has no effect for legacy surveys.}
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}). Defaults to
+\code{2021L}. Applied to all surveys in \code{entries_dt}. Surveys that do not
+carry a \verb{welfare_ppp_<ppp>} column are skipped with a warning; the
+remaining surveys are returned. An error is raised only when no surveys
+remain after skipping.}
 
 \item{cols}{Character vector of \strong{logical} column names to load, or
 \code{NULL} (default).  When non-\code{NULL}, only those columns are fetched from
 the Parquet files (the \code{select()} happens before \code{collect()}, so network
 bytes are skipped).  Use the logical name \code{"welfare"} regardless of the
 underlying PPP column name in the file — the translation is handled
-internally.  \code{"pip_id"} is always included automatically for integrity
-checking.  Columns absent from a survey's schema are silently omitted
-(they will appear as \code{NA} if added back by the caller).
-When \code{NULL}, all columns are loaded (current default behaviour).}
+internally.  Do \strong{not} pass physical welfare column names (e.g.
+\code{"welfare_ppp_2017_01_02"}) — those are treated as explicitly-requested
+welfare-family columns, will trigger a warning, and are dropped; always
+use \code{"welfare"} as the logical name instead.  \code{"welfare"}, \code{"weight"},
+and \code{"pip_id"} are always included automatically, even if not listed
+(\code{pip_id} is required for the loaded-vs-requested integrity check and
+cannot be excluded).  Columns absent from a survey's schema are silently
+omitted (they will appear as \code{NA} if added back by the caller).  When
+\code{NULL}, all columns are loaded (current default behaviour).}
 
 \item{release}{Character scalar release ID. Used only for error messages and
 to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
@@ -34,6 +41,9 @@ to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_
 \value{
 A \code{data.table} of combined survey microdata with a single \code{welfare}
 column and attribute \code{"release"}. Contains all rows from matching surveys.
+All surveys must use the current deflated-data schema (non-empty
+\code{welfare_vars}). The retired single-\code{welfare}-column schema is not
+supported.
 }
 \description{
 Accepts a subset of a manifest \code{data.table} (as returned by
@@ -47,10 +57,9 @@ The returned \code{data.table} contains all surveys combined (row-bound). A
 \code{pip_id} column (already present in the Parquet files) identifies each row's
 survey. A \code{"release"} attribute records the release ID.
 
-For surveys written with the deflated-data schema (multiple \verb{welfare_ppp_*}
-columns), the \code{ppp} argument selects a single welfare column uniformly
-across all surveys and renames it to \code{welfare}. Legacy surveys (no
-\code{welfare_vars} in manifest entry) are loaded as-is.
+The \code{ppp} argument selects a single welfare column uniformly across all
+surveys and renames it to \code{welfare}. All surveys must carry the current
+deflated-data schema (non-empty \code{welfare_vars}).
 }
 \examples{
 \dontrun{

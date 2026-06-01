@@ -30,7 +30,9 @@ NULL
   p25         = "welfare",
   p75         = "welfare",
   p90         = "welfare",
-  sum         = "welfare"
+  sum         = "welfare",
+  obs_share   = "welfare",
+  pop_share   = "welfare"
 )
 
 #' Valid disaggregation dimensions
@@ -57,7 +59,7 @@ NULL
 #' the corresponding computation family (`"poverty"`, `"inequality"`, or
 #' `"welfare"`).  Useful for user discovery and validation.
 #'
-#' @return A named character vector of length 18.
+#' @return A named character vector of length 21.
 #'
 #' @family measures
 #'

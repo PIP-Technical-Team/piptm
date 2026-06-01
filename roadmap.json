@@ -60,7 +60,7 @@
         {
           "id": "dimension-disaggregation",
           "title": "Disaggregation across dimensions (gender, area, education, age)",
-          "description": "Support up to 4 dimensions including at most 1 education column. Age binning (0–14, 15–24, 25–64, 65+). NA-fill for partial-match surveys. Dimension pre-filter with warnings.",
+          "description": "Support up to 4 dimensions including at most 1 education column. Age binning (0–14, 15–24, 25–64, 65+). Dimension pre-filter with warnings. Surveys missing any requested dimension are excluded before loading (see dimension-partial-match-exclusion).",
           "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
           "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
@@ -152,6 +152,13 @@
           "brainstorm": ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
           "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
           "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+        },
+        {
+          "id": "dimension-partial-match-exclusion",
+          "title": "Dimension pre-filter: exclude partial-match surveys",
+          "description": "Refactored table_maker() Step 3 so surveys missing any requested breakdown dimension are excluded before loading (manifest check only), not loaded and NA-filled. Zero-overlap and partial-match surveys are now handled by the same drop path. Removed the Step 6 NA-fill loop. Warning message lists each excluded survey and which dimensions it lacked. Error raised when all surveys are excluded.",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-05-29-dimension-filter-skip-partial-surveys.md"
         },
         {
           "id": "documentation-api-dev",

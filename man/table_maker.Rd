@@ -12,7 +12,7 @@ table_maker(
   measures,
   poverty_lines = NULL,
   by = NULL,
-  ppp = NULL,
+  ppp = 2021L,
   release = NULL
 )
 }
@@ -56,8 +56,10 @@ A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long 
 \item{\code{country_code}}{ISO3 country code.}
 \item{\code{surveyid_year}}{Survey year.}
 \item{\code{welfare_type}}{\code{"INC"} or \code{"CON"}.}
-\item{\verb{[by cols]}}{One column per element of \code{by} (if non-NULL);
-\code{NA} when the dimension is absent for a survey (partial-match).}
+\item{\verb{[by cols]}}{One column per element of \code{by} (if non-NULL).
+Surveys missing any requested dimension are excluded before loading;
+every row in the result is guaranteed to have non-\code{NA} values for all
+breakdown columns.}
 \item{\code{poverty_line}}{Poverty threshold; \code{NA} for non-poverty measures.}
 \item{\code{measure}}{Measure name (e.g. \code{"headcount"}, \code{"gini"}).}
 \item{\code{value}}{Computed statistic.}
