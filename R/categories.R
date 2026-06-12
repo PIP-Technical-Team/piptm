@@ -148,10 +148,10 @@ pip_tablemaker_categories <- function() {
       varname = "educat4",
       label   = "Education level (4 groups)",
       subcategories = list(
-        list(value = "No education",                       label = "No education"),
-        list(value = "Primary only",                       label = "Primary only"),
+        list(value = "No education",                        label = "No education"),
+        list(value = "Primary (complete or incomplete)",  label = "Primary (complete or incomplete)"),
         list(value = "Secondary (complete or incomplete)", label = "Secondary (complete or incomplete)"),
-        list(value = "Tertiary",                           label = "Tertiary")
+        list(value = "Tertiary (complete or incomplete)",  label = "Tertiary (complete or incomplete)")
       )
     ),
     list(
@@ -173,9 +173,9 @@ pip_tablemaker_categories <- function() {
         list(value = "Primary incomplete",   label = "Primary incomplete"),
         list(value = "Primary complete",     label = "Primary complete"),
         list(value = "Secondary incomplete", label = "Secondary incomplete"),
-        list(value = "Secondary complete",   label = "Secondary complete"),
-        list(value = "Some tertiary",        label = "Some tertiary"),
-        list(value = "Tertiary complete",    label = "Tertiary complete")
+        list(value = "Secondary complete",                        label = "Secondary complete"),
+        list(value = "Higher than secondary but not university", label = "Higher than secondary but not university"),
+        list(value = "University incomplete or complete",        label = "University incomplete or complete")
       )
     ),
     # ── Household ────────────────────────────────────────────────────────────

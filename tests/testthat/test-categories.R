@@ -136,13 +136,14 @@ test_that("educat4 has 4 subcategories with correct values and labels", {
   values <- vapply(entry$subcategories, `[[`, character(1L), "value")
   labels <- vapply(entry$subcategories, `[[`, character(1L), "label")
   expect_equal(values[[1L]], "No education")
-  expect_equal(values[[2L]], "Primary only")
+  expect_equal(values[[2L]], "Primary (complete or incomplete)")
   expect_equal(values[[3L]], "Secondary (complete or incomplete)")
-  expect_equal(values[[4L]], "Tertiary")
+  expect_equal(values[[4L]], "Tertiary (complete or incomplete)")
   # labels are identical to values for Track 1
   expect_equal(labels[[1L]], "No education")
+  expect_equal(labels[[2L]], "Primary (complete or incomplete)")
   expect_equal(labels[[3L]], "Secondary (complete or incomplete)")
-  expect_equal(labels[[4L]], "Tertiary")
+  expect_equal(labels[[4L]], "Tertiary (complete or incomplete)")
 })
 
 test_that("educat5 has 5 subcategories, with remapped labels where applicable", {
@@ -167,7 +168,7 @@ test_that("educat7 has 7 subcategories", {
     c(
       "No education", "Primary incomplete", "Primary complete",
       "Secondary incomplete", "Secondary complete",
-      "Some tertiary", "Tertiary complete"
+      "Higher than secondary but not university", "University incomplete or complete"
     )
   )
 })
