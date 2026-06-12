@@ -76,7 +76,15 @@ test_that("pip_required_cols returns exactly 6 columns including version", {
 
 test_that("pip_required_cols does not include optional columns", {
   cols <- pip_required_cols()
-  for (opt in c("gender", "area", "educat4", "educat5", "educat7", "age")) {
+  for (opt in c(
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    "hsize",
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    "lstatus", "lstatus_year",
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
+  )) {
     expect_false(opt %in% cols, label = paste(opt, "not in required"))
   }
 })
@@ -90,7 +98,19 @@ test_that("pip_allowed_cols includes all required and optional base columns", {
   expected <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
     "pip_id", "weight",
-    "gender", "area", "educat4", "educat5", "educat7", "age"
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    # Household characteristics
+    "hsize",
+    # Infrastructure indicators
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    # Labour — lstatus family
+    "lstatus", "lstatus_year",
+    # Labour — empstat family
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    # Labour — industrycat10 family
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    # Labour — industrycat4 family
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
   )
   expect_setequal(cols, expected)
 })
@@ -103,14 +123,14 @@ test_that("pip_allowed_cols does not include welfare column", {
   expect_false("welfare" %in% pip_allowed_cols())
 })
 
-test_that("pip_allowed_cols returns 12 base columns total", {
-  expect_length(pip_allowed_cols(), 12L)
+test_that("pip_allowed_cols returns 30 base columns total", {
+  expect_length(pip_allowed_cols(), 30L)
 })
 
 test_that("pip_allowed_cols with welfare_vars appends welfare columns", {
   wv   <- c("welfare_lcu", "welfare_ppp_2017_01_02")
   cols <- pip_allowed_cols(welfare_vars = wv)
-  expect_length(cols, 14L)
+  expect_length(cols, 32L)
   expect_true("welfare_lcu"            %in% cols)
   expect_true("welfare_ppp_2017_01_02" %in% cols)
 })

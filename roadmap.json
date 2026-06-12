@@ -249,6 +249,30 @@
           "plan": ".cg-docs/plans/2026-06-01-cell-share-measures.md"
         }
       ]
+    },
+    {
+      "id": "phase-7-pop-share-threshold",
+      "title": "Phase 7 — Population Share Threshold-Based Suppression",
+      "description": "Implement configurable population share suppression rule that removes non-share measures from cells where pop_share falls below a threshold. Integrated into table_maker() API and plumber /table endpoint.",
+      "status": "done",
+      "features": [
+        {
+          "id": "pop-share-threshold-suppression",
+          "title": "pop_share_threshold parameter and cell suppression logic",
+          "description": "Add pop_share_threshold parameter to table_maker() (default 0.01). Validate threshold is NULL or numeric in (0, 1). In Step 10, extract pop_share rows, identify below-threshold cells, tag matching non-share rows with .suppress=TRUE, filter and emit warning. Anti-join pattern for efficient row matching.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
+          "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+          "review": ".cg-docs/reviews/2026-06-01-pop-share-threshold-suppression-review.md"
+        },
+        {
+          "id": "api-threshold-validation",
+          "title": "API validation and plumber endpoint integration",
+          "description": "Update validate_table_input() to validate pop_share_threshold parameter (coerce from character, reject invalid/out-of-bounds values, return NULL for empty/null). Update /table endpoint to accept and pass threshold to table_maker(). Plumber annotation documents the new parameter.",
+          "status": "done",
+          "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md"
+        }
+      ]
     }
   ]
 }

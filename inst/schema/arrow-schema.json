@@ -6,7 +6,15 @@
   "created": "2026-03-20",
   "updated": "2026-04-02",
   "partition_keys": ["country_code", "surveyid_year", "welfare_type", "version"],
-  "breakdown_dimensions": ["gender", "area", "educat4", "educat5", "educat7", "age"],
+  "breakdown_dimensions": [
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    "hsize",
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    "lstatus", "lstatus_year",
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
+  ],
   "required_columns": [
     "country_code",
     "surveyid_year",
@@ -17,12 +25,13 @@
     "weight"
   ],
   "optional_columns": [
-    "gender",
-    "area",
-    "educat4",
-    "educat5",
-    "educat7",
-    "age"
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    "hsize",
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    "lstatus", "lstatus_year",
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
   ],
   "columns": [
     {

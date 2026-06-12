@@ -72,7 +72,31 @@
     arrow::field("educat5",        dict_type),
     arrow::field("educat7",        dict_type),
     # age: continuous int32 — NOT a dictionary column (per schema rules)
-    arrow::field("age",            arrow::int32())
+    arrow::field("age",            arrow::int32()),
+    # Household characteristics
+    arrow::field("hsize",                arrow::int32()),
+    # Infrastructure indicators
+    arrow::field("imp_wat_rec",          arrow::int32()),
+    arrow::field("imp_san_rec",          arrow::int32()),
+    arrow::field("electricity",          arrow::int32()),
+    # Labour — lstatus family
+    arrow::field("lstatus",              arrow::int32()),
+    arrow::field("lstatus_year",         arrow::int32()),
+    # Labour — empstat family
+    arrow::field("empstat",              arrow::int32()),
+    arrow::field("empstat_2",            arrow::int32()),
+    arrow::field("empstat_year",         arrow::int32()),
+    arrow::field("empstat_2_year",       arrow::int32()),
+    # Labour — industrycat10 family
+    arrow::field("industrycat10",        arrow::int32()),
+    arrow::field("industrycat10_2",      arrow::int32()),
+    arrow::field("industrycat10_year",   arrow::int32()),
+    arrow::field("industrycat10_2_year", arrow::int32()),
+    # Labour — industrycat4 family
+    arrow::field("industrycat4",         arrow::int32()),
+    arrow::field("industrycat4_2",       arrow::int32()),
+    arrow::field("industrycat4_year",    arrow::int32()),
+    arrow::field("industrycat4_2_year",  arrow::int32())
   )
 }
 

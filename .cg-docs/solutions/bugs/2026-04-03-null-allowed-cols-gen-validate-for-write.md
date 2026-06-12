@@ -150,4 +150,6 @@ All five direct global references in `.validate_for_write()` and
 
 ## Related
 
-None.
+- `.cg-docs/solutions/data-quality/2026-06-11-arrow-schema-expansion-propagation-pattern.md` —
+  the pattern for safely expanding the schema with new columns, covering all 5
+  propagation points that must be updated atomically.

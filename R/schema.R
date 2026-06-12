@@ -37,7 +37,31 @@ pip_arrow_schema <- function() {
       educat5        = list(type = dict_type,         required = FALSE),
       educat7        = list(type = dict_type,         required = FALSE),
       # age: continuous int32 — NOT a dictionary column (per schema rules)
-      age            = list(type = arrow::int32(),    required = FALSE)
+      age            = list(type = arrow::int32(),    required = FALSE),
+      # Household characteristics
+      hsize          = list(type = arrow::int32(),    required = FALSE),
+      # Infrastructure indicators
+      imp_wat_rec    = list(type = arrow::int32(),    required = FALSE),
+      imp_san_rec    = list(type = arrow::int32(),    required = FALSE),
+      electricity    = list(type = arrow::int32(),    required = FALSE),
+      # Labour — lstatus family
+      lstatus        = list(type = arrow::int32(),    required = FALSE),
+      lstatus_year   = list(type = arrow::int32(),    required = FALSE),
+      # Labour — empstat family
+      empstat        = list(type = arrow::int32(),    required = FALSE),
+      empstat_2      = list(type = arrow::int32(),    required = FALSE),
+      empstat_year   = list(type = arrow::int32(),    required = FALSE),
+      empstat_2_year = list(type = arrow::int32(),    required = FALSE),
+      # Labour — industrycat10 family
+      industrycat10        = list(type = arrow::int32(),    required = FALSE),
+      industrycat10_2      = list(type = arrow::int32(),    required = FALSE),
+      industrycat10_year   = list(type = arrow::int32(),    required = FALSE),
+      industrycat10_2_year = list(type = arrow::int32(),    required = FALSE),
+      # Labour — industrycat4 family
+      industrycat4        = list(type = arrow::int32(),    required = FALSE),
+      industrycat4_2      = list(type = arrow::int32(),    required = FALSE),
+      industrycat4_year   = list(type = arrow::int32(),    required = FALSE),
+      industrycat4_2_year = list(type = arrow::int32(),    required = FALSE)
     ),
     levels = list(
       gender       = c("male", "female"),
@@ -87,6 +111,35 @@ pip_welfare_schema <- function(welfare_vars) {
 pip_required_cols <- function() {
   s <- pip_arrow_schema()
   names(Filter(function(f) isTRUE(f$required), s$fields))
+}
+
+#' Extract optional dimension column names from the canonical base schema
+#'
+#' Returns the names of all non-required fields in [pip_arrow_schema()].
+#' This is the single authoritative list of columns that are eligible to be
+#' written to Parquet as breakdown dimensions and recorded in the release
+#' manifest. Both `{pipdata}` and `{piptm}` derive their dimension lists from
+#' this function so they stay in sync automatically as the schema evolves.
+#'
+#' The current set (24 columns):
+#' * Core demographic: `gender`, `area`, `educat4`, `educat5`, `educat7`, `age`
+#' * Household: `hsize`
+#' * Infrastructure: `imp_wat_rec`, `imp_san_rec`, `electricity`
+#' * Labour — lstatus: `lstatus`, `lstatus_year`
+#' * Labour — empstat: `empstat`, `empstat_2`, `empstat_year`, `empstat_2_year`
+#' * Labour — industrycat10: `industrycat10`, `industrycat10_2`,
+#'   `industrycat10_year`, `industrycat10_2_year`
+#' * Labour — industrycat4: `industrycat4`, `industrycat4_2`,
+#'   `industrycat4_year`, `industrycat4_2_year`
+#'
+#' @return Character vector of optional field names in schema definition order.
+#' @export
+#' @family schema
+#' @examples
+#' pip_optional_dims()
+pip_optional_dims <- function() {
+  s <- pip_arrow_schema()
+  names(Filter(function(f) !isTRUE(f$required), s$fields))
 }
 
 #' Extract all allowed column names from the canonical schema

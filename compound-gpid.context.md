@@ -17,8 +17,16 @@ knowledge is discovered.
 - Location: UNC share `//pip-server/pip/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow`
   (replace `pip-server` with the actual internal server name — not committed to version control)
 - Partition path: `country_code=X / surveyid_year=Y / welfare_type=Z / version=V / <pip_id>-0.parquet`
-- 14 columns per file: `country_code`, `surveyid_year`, `welfare_type`, `version`, `pip_id`, `survey_acronym`, `welfare`, `weight`, `gender`, `area`, `educat4`, `educat5`, `educat7`, `age`
+- **Base columns**: 30 optional + required columns (see `piptm::pip_allowed_cols()`), plus
+  one or more `welfare_*` columns per file (e.g. `welfare_lcu`, `welfare_ppp_2017_01_02`).
+  Required (always present): `country_code`, `surveyid_year`, `welfare_type`, `version`,
+  `pip_id`, `weight`. Optional breakdown dimensions: `gender`, `area`, `educat4`, `educat5`,
+  `educat7`, `age`, `hsize`, `imp_wat_rec`, `imp_san_rec`, `electricity`, `lstatus`,
+  `lstatus_year`, `empstat`, `empstat_2`, `empstat_year`, `empstat_2_year`,
+  `industrycat10`, `industrycat10_2`, `industrycat10_year`, `industrycat10_2_year`,
+  `industrycat4`, `industrycat4_2`, `industrycat4_year`, `industrycat4_2_year`.
 - Dictionary-encoded columns (integer index, not plain string): `gender`, `area`, `educat4`, `educat5`, `educat7`
+- All other optional columns are `int32` (not dictionary-encoded).
 - Survey sizes range from ~7,500 to ~525,000 rows; median ~49,000 rows
 
 ### I/O characteristics (measured, 50-iteration resample, 15 surveys)
@@ -56,6 +64,25 @@ knowledge is discovered.
    an explicit error if more than one file is found. Do not remove this guard
    without re-establishing and testing the sort contract for the multi-file case.
    See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md`.
+
+### Schema expansion rule (established 2026-06-11)
+
+When adding new optional columns to the schema, **6 locations must be updated
+atomically** — missing any one causes false "extra column" errors:
+
+1. `piptm/R/schema.R` — `pip_arrow_schema()` fields list
+2. `piptm/R/validate_parquet.R` — `.vp_canonical_schema()` Arrow schema
+3. `pipdata/R/arrow_prep.R` — `validate_pre_write()` §4.8 `optional_dim_cols`
+4. `pipdata/R/arrow_prep.R` — `prepare_for_arrow()` `optional_dim_cols`
+5. `pipdata/R/arrow_generation.R` — `.validate_for_write()` `optional_dims`
+6. `pipdata/R/arrow_generation.R` — `write_survey_parquet()` `dim_cols`
+
+Pass-through `int32` columns (no standardisation needed) also require an
+explicit `as.integer()` cast in `prepare_for_arrow()` Step 3b, because survey
+microdata often stores them as `numeric` and Arrow's `as_arrow_table(schema)`
+rejects type mismatches.
+
+See `.cg-docs/solutions/data-quality/2026-06-11-arrow-schema-expansion-propagation-pattern.md`.
 
 ---
 
