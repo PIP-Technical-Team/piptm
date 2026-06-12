@@ -26,6 +26,7 @@ pip_allowed_cols(c("welfare_lcu", "welfare_ppp_2017_01_02"))  # 14 columns
 \seealso{
 Other schema: 
 \code{\link{pip_arrow_schema}()},
+\code{\link{pip_optional_dims}()},
 \code{\link{pip_required_cols}()},
 \code{\link{pip_welfare_schema}()}
 }

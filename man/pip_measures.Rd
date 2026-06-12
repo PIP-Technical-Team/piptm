@@ -7,7 +7,7 @@
 pip_measures()
 }
 \value{
-A named character vector of length 21.
+A named character vector.
 }
 \description{
 Returns a named character vector of all canonical measure names recognised
@@ -22,6 +22,7 @@ pip_measures()
 \seealso{
 Other measures: 
 \code{\link{pip_age_bins}()},
+\code{\link{pip_tablemaker_categories}()},
 \code{\link{pip_valid_dimensions}()}
 }
 \concept{measures}

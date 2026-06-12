@@ -255,6 +255,23 @@ function() {
   api_response(piptm::pip_valid_dimensions())
 }
 
+# ── GET /categories ──────────────────────────────────────────────────────────
+
+#* Return the full catalogue of categorical variables for the sample-base
+#* filter panel
+#*
+#* Static endpoint — always returns the complete universe of filterable
+#* categorical variables regardless of which surveys are selected.  The UI
+#* renders each variable as a filter with toggleable subcategory chips (all
+#* selected by default); multiple active filters are combined as intersections
+#* at query time.
+#*
+#* @serializer json list(na = "null")
+#* @get /categories
+function() {
+  api_response(piptm::pip_tablemaker_categories())
+}
+
 # ── GET /health ───────────────────────────────────────────────────────────────
 
 #* Server health check — returns status ok and the current release

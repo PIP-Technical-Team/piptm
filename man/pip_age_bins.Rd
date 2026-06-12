@@ -21,6 +21,7 @@ pip_age_bins()
 \seealso{
 Other measures: 
 \code{\link{pip_measures}()},
+\code{\link{pip_tablemaker_categories}()},
 \code{\link{pip_valid_dimensions}()}
 }
 \concept{measures}

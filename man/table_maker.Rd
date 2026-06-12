@@ -13,7 +13,8 @@ table_maker(
   poverty_lines = NULL,
   by = NULL,
   ppp = 2021L,
-  release = NULL
+  release = NULL,
+  pop_share_threshold = 0.01
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ When \code{NULL} (default), the manifest \code{ppp_sort} default is used.}
 
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}). Defaults
 to the current release as returned by \code{\link[=piptm_current_release]{piptm_current_release()}}.}
+
+\item{pop_share_threshold}{Numeric scalar in (0, 1) or \code{NULL}.  When
+non-NULL and \code{"pop_share"} is among the requested \code{measures}, cells whose
+population share falls below this threshold have all non-share measures
+suppressed (dropped from output).  \code{pop_share} and \code{obs_share} rows are
+always retained.  Default: \code{0.01} (1\%).}
 }
 \value{
 A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long format} with columns:

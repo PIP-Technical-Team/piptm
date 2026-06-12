@@ -33,6 +33,7 @@ s$levels$gender
 \seealso{
 Other schema: 
 \code{\link{pip_allowed_cols}()},
+\code{\link{pip_optional_dims}()},
 \code{\link{pip_required_cols}()},
 \code{\link{pip_welfare_schema}()}
 }

@@ -36,6 +36,7 @@ The router exposes eight endpoints:\tabular{lll}{
    \verb{/releases} \tab GET \tab List all loaded release IDs and current release \cr
    \verb{/measures} \tab GET \tab List measure names and computation families \cr
    \verb{/dimensions} \tab GET \tab List valid disaggregation dimension names \cr
+   \verb{/categories} \tab GET \tab Full catalogue of categorical variables for the sample-base filter panel \cr
    \verb{/health} \tab GET \tab Server health check \cr
 }
 

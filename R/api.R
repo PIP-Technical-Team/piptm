@@ -21,6 +21,7 @@
 #' | `/releases` | GET | List all loaded release IDs and current release |
 #' | `/measures` | GET | List measure names and computation families |
 #' | `/dimensions` | GET | List valid disaggregation dimension names |
+#' | `/categories` | GET | Full catalogue of categorical variables for the sample-base filter panel |
 #' | `/health` | GET | Server health check |
 #'
 #' All responses follow a structured envelope:

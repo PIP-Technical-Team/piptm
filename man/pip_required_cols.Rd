@@ -19,6 +19,7 @@ survey-specific and enumerated via \code{\link[=pip_welfare_schema]{pip_welfare_
 Other schema: 
 \code{\link{pip_allowed_cols}()},
 \code{\link{pip_arrow_schema}()},
+\code{\link{pip_optional_dims}()},
 \code{\link{pip_welfare_schema}()}
 }
 \concept{schema}
