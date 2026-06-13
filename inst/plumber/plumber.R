@@ -233,16 +233,17 @@ function() {
 
 # ── GET /measures ─────────────────────────────────────────────────────────────
 
-#* List all available measure names and their families
+#* Return the full catalogue of analysis variables for the Table Maker Step 2 UI
+#*
+#* Static endpoint — returns all analysis variables with their type, available
+#* statistics, and poverty line slider visibility.  Used by the UI to render
+#* the analysis variable dropdown and configure the statistics panel per
+#* variable.
 #*
 #* @serializer json list(na = "null")
 #* @get /measures
 function() {
-  m <- piptm::pip_measures()
-  api_response(data.table::data.table(
-    measure = names(m),
-    family  = unname(m)
-  ))
+  api_response(piptm::pip_tablemaker_measures())
 }
 
 # ── GET /dimensions ───────────────────────────────────────────────────────────

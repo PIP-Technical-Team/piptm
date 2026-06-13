@@ -23,7 +23,8 @@ NULL
 #'   contain at minimum `welfare`, `weight`, and `pip_id` columns, plus any
 #'   columns named in `by`.
 #' @param measures A non-empty character vector of measure names drawn from
-#'   [pip_measures()].  Validated by [.classify_measures()].
+#'   the internal registry (see [.classify_measures()]).  Validated by
+#'   [.classify_measures()].
 #' @param poverty_lines A positive numeric vector of poverty line values, or
 #'   `NULL`.  Required when any poverty-family measure is requested.
 #' @param by A character vector of grouping column names present in `dt`, or

@@ -12,7 +12,8 @@ contain at minimum \code{welfare}, \code{weight}, and \code{pip_id} columns, plu
 columns named in \code{by}.}
 
 \item{measures}{A non-empty character vector of measure names drawn from
-\code{\link[=pip_measures]{pip_measures()}}.  Validated by \code{\link[=.classify_measures]{.classify_measures()}}.}
+the internal registry (see \code{\link[=.classify_measures]{.classify_measures()}}).  Validated by
+\code{\link[=.classify_measures]{.classify_measures()}}.}
 
 \item{poverty_lines}{A positive numeric vector of poverty line values, or
 \code{NULL}.  Required when any poverty-family measure is requested.}

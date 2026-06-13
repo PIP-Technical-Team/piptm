@@ -41,12 +41,12 @@ make_multi_dt <- function(n_surveys = 3L, n_rows = 10L, dims = character(0L)) {
 }
 
 
-ALL_MEASURES <- names(pip_measures())
+ALL_MEASURES <- names(piptm:::.MEASURE_REGISTRY)
 ALL_PL       <- c(3.5, 6.5)
 
 # Derived counts — update automatically if the registry grows.
 n_all  <- length(ALL_MEASURES)             # 18: 5 pov + 2 ineq + 11 welfare
-n_pov  <- sum(pip_measures() == "poverty") # 5
+n_pov  <- sum(unlist(piptm:::.MEASURE_REGISTRY) == "poverty") # 5
 
 # ── 1. Multi-survey capability ──────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ test_that("inequality + welfare only → poverty_line column present and all NA"
 
 test_that("inequality + welfare, n_all-n_pov measures → n_all-n_pov rows aggregate", {
   # Build dynamically so the test stays correct if the registry grows.
-  ineq_welf <- ALL_MEASURES[pip_measures()[ALL_MEASURES] != "poverty"]
+  ineq_welf <- ALL_MEASURES[unlist(piptm:::.MEASURE_REGISTRY)[ALL_MEASURES] != "poverty"]
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = ineq_welf)
   expect_equal(nrow(res), n_all - n_pov)

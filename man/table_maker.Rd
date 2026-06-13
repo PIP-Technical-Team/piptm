@@ -31,7 +31,7 @@ params below must be supplied.}
 (triplet fallback, same length as \code{country_code}).}
 
 \item{measures}{Non-empty character vector of measure names drawn from
-\code{\link[=pip_measures]{pip_measures()}}.}
+the internal measure registry (validated by \code{\link[=.classify_measures]{.classify_measures()}}).}
 
 \item{poverty_lines}{Positive numeric vector of poverty line values, or
 \code{NULL}. Required when any poverty-family measure (\code{headcount},

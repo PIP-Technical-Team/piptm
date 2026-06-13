@@ -133,7 +133,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' @param welfare_type Character vector of welfare types — `"INC"` or `"CON"`
 #'   (triplet fallback, same length as `country_code`).
 #' @param measures Non-empty character vector of measure names drawn from
-#'   [pip_measures()].
+#'   the internal measure registry (validated by [.classify_measures()]).
 #' @param poverty_lines Positive numeric vector of poverty line values, or
 #'   `NULL`. Required when any poverty-family measure (`headcount`,
 #'   `poverty_gap`, `severity`, `watts`, `pop_poverty`) is requested.

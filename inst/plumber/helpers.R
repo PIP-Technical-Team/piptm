@@ -107,7 +107,7 @@ resolve_release <- function(release) {
 #' \itemize{
 #'   \item `pip_id` is a non-NULL character vector of length 1–15
 #'   \item `measures` is a non-NULL character vector with all elements in
-#'     [piptm::pip_measures()]
+#'   \'\' elements in [piptm:::.MEASURE_REGISTRY]
 #'   \item `poverty_lines`, if not `NULL`, coerces cleanly to numeric (no NAs
 #'     introduced), and all values are positive and finite
 #'   \item `by`, if not `NULL`, is a subset of [piptm::.VALID_DIMENSIONS]
@@ -174,7 +174,7 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   }
 
   # ── measures ───────────────────────────────────────────────────────────────
-  valid_measures <- names(piptm::pip_measures())
+  valid_measures <- names(piptm:::.MEASURE_REGISTRY)
   if (is.null(measures) || !is.character(measures) || length(measures) == 0L) {
     errors <- c(errors, "`measures` must be a non-empty character vector.")
   } else {

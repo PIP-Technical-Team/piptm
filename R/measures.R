@@ -52,25 +52,6 @@ NULL
 
 # ── Exported helpers ──────────────────────────────────────────────────────────
 
-#' List all valid measure names
-#'
-#' Returns a named character vector of all canonical measure names recognised
-#' by the computation engine.  Names are the measure identifiers; values are
-#' the corresponding computation family (`"poverty"`, `"inequality"`, or
-#' `"welfare"`).  Useful for user discovery and validation.
-#'
-#' @return A named character vector.
-#'
-#' @family measures
-#'
-#' @examples
-#' pip_measures()
-#'
-#' @export
-pip_measures <- function() {
-  unlist(.MEASURE_REGISTRY, use.names = TRUE)
-}
-
 #' Age bin labels used by the computation engine
 #'
 #' Returns the ordered character vector of age bin labels applied when
@@ -106,6 +87,210 @@ pip_age_bins <- function() {
 #' @export
 pip_valid_dimensions <- function() {
   .VALID_DIMENSIONS
+}
+
+#' Full catalogue of analysis variables for the Table Maker Step 2 UI
+#'
+#' @description
+#' Returns the static catalogue of all analysis variables available in the
+#' Table Maker UI Step 2 (analysis variable dropdown).  For each variable,
+#' the catalogue encodes its type, human-readable label, available statistics,
+#' and whether the poverty line slider should be rendered.
+#'
+#' The catalogue is fully static and always returns the complete universe of
+#' analysis variables regardless of which surveys were selected in Step 1.
+#' Whether a specific variable is computable for a given survey is handled by
+#' the backend at query time.
+#'
+#' @details
+#' Analysis variable types:
+#'
+#' \describe{
+#'   \item{`"welfare"`}{The welfare aggregate; computed via welfare family
+#'     statistics (mean, median, distributional quantiles, etc.)}
+#'   \item{`"poverty"`}{Poverty status relative to a poverty line; requires
+#'     the poverty line slider.}
+#'   \item{`"inequality"`}{Inequality of the welfare distribution (Gini, MLD).}
+#'   \item{`"continuous"`}{A continuous variable (currently: age); uses the
+#'     same statistics as the welfare type.}
+#'   \item{`"binary"`}{A binary indicator derived from a source column (e.g.
+#'     primary education completion from `educat7`, infrastructure access from
+#'     dedicated columns, employment from `lstatus`).  Available statistics are
+#'     population share and observation share only.}
+#' }
+#'
+#' `pop_share` and `obs_share` appear exclusively in the `binary` type stats
+#' list.  They are not meaningful in a welfare or continuous variable context.
+#'
+#' The values in this catalogue have been verified against the Colombia 2010
+#' survey data (COL_2010) and the GLD harmonisation codebook.  Re-verify
+#' against those sources if changes are needed.
+#'
+#' @return A list of 12 entries in canonical display order
+#'   (welfare \eqn{\to} poverty \eqn{\to} inequality \eqn{\to} age
+#'    \eqn{\to} education binaries \eqn{\to} infrastructure binaries
+#'    \eqn{\to} labour binary).
+#'   Each entry is a named list with five fields:
+#'   \describe{
+#'     \item{`varname`}{Character scalar: identifier used by the backend.}
+#'     \item{`label`}{Character scalar: human-readable name shown in the UI
+#'       dropdown.}
+#'     \item{`type`}{Character scalar: one of `"welfare"`, `"poverty"`,
+#'       `"inequality"`, `"continuous"`, `"binary"`.}
+#'     \item{`poverty_line_slider`}{Logical scalar: `TRUE` only for the
+#'       `"poverty"` type; tells the UI whether to render the poverty line
+#'       slider.}
+#'     \item{`available_stats`}{List of named lists, each with:
+#'       `measure` — character scalar backend measure identifier — and
+#'       `label` — character scalar human-readable label for the UI.}
+#'   }
+#'
+#' @family measures
+#'
+#' @examples
+#' m <- pip_tablemaker_measures()
+#' length(m)                              # 12 analysis variables
+#' m[[1L]]$varname                        # "welfare"
+#' m[[2L]]$poverty_line_slider            # TRUE  (poverty type only)
+#' m[[1L]]$available_stats[[1L]]$measure  # "mean"
+#'
+#' @export
+pip_tablemaker_measures <- function() {
+  # ── Stat-type lists (local; reused across entries of the same type) ─────────
+
+  welfare_stats <- list(
+    list(measure = "mean",   label = "Mean"),
+    list(measure = "median", label = "Median"),
+    list(measure = "sd",     label = "Standard deviation"),
+    list(measure = "var",    label = "Variance"),
+    list(measure = "min",    label = "Minimum"),
+    list(measure = "max",    label = "Maximum"),
+    list(measure = "sum",    label = "Sum"),
+    list(measure = "p10",    label = "10th percentile"),
+    list(measure = "p25",    label = "25th percentile"),
+    list(measure = "p75",    label = "75th percentile"),
+    list(measure = "p90",    label = "90th percentile")
+  )
+
+  poverty_stats <- list(
+    list(measure = "headcount",   label = "Poverty rate"),
+    list(measure = "poverty_gap", label = "Poverty gap"),
+    list(measure = "severity",    label = "Poverty severity"),
+    list(measure = "watts",       label = "Watts index"),
+    list(measure = "pop_poverty", label = "Poor population")
+  )
+
+  inequality_stats <- list(
+    list(measure = "gini", label = "Gini index"),
+    list(measure = "mld",  label = "Mean log deviation")
+  )
+
+  # Continuous variables share the same statistics as welfare — assign by
+  # reference to avoid duplication.
+  continuous_stats <- welfare_stats
+
+  # pop_share and obs_share appear exclusively here; they must not appear in
+  # any other stats list (not meaningful for welfare or continuous variables).
+  binary_stats <- list(
+    list(measure = "pop_share", label = "Share of population"),
+    list(measure = "obs_share", label = "Share of observations")
+  )
+
+  # ── Catalogue (12 entries in canonical display order) ──────────────────────
+  list(
+    # ── Welfare ──────────────────────────────────────────────────────────────
+    list(
+      varname             = "welfare",
+      label               = "Welfare",
+      type                = "welfare",
+      poverty_line_slider = FALSE,
+      available_stats     = welfare_stats
+    ),
+    # ── Poverty ──────────────────────────────────────────────────────────────
+    list(
+      varname             = "poverty",
+      label               = "Poverty status",
+      type                = "poverty",
+      poverty_line_slider = TRUE,
+      available_stats     = poverty_stats
+    ),
+    # ── Inequality ────────────────────────────────────────────────────────────
+    list(
+      varname             = "inequality",
+      label               = "Inequality",
+      type                = "inequality",
+      poverty_line_slider = FALSE,
+      available_stats     = inequality_stats
+    ),
+    # ── Continuous ────────────────────────────────────────────────────────────
+    list(
+      varname             = "age",
+      label               = "Age",
+      type                = "continuous",
+      poverty_line_slider = FALSE,
+      available_stats     = continuous_stats
+    ),
+    # ── Binary — education (source variable: educat7; verified vs COL_2010) ──
+    list(
+      varname             = "primary_completed",
+      label               = "Primary education completed",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    list(
+      varname             = "secondary_completed",
+      label               = "Secondary education completed",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    list(
+      varname             = "higher_than_secondary",
+      label               = "Higher than secondary education",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    list(
+      varname             = "university",
+      label               = "University education",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    # ── Binary — infrastructure (source variables: imp_wat_rec, imp_san_rec,
+    #                             electricity) ─────────────────────────────────
+    list(
+      varname             = "imp_wat_rec",
+      label               = "Access to improved water",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    list(
+      varname             = "imp_san_rec",
+      label               = "Access to improved sanitation",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    list(
+      varname             = "electricity",
+      label               = "Access to electricity",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    ),
+    # ── Binary — labour (source variable: lstatus) ────────────────────────────
+    list(
+      varname             = "employed",
+      label               = "Employed",
+      type                = "binary",
+      poverty_line_slider = FALSE,
+      available_stats     = binary_stats
+    )
+  )
 }
 
 # ── Internal validators ───────────────────────────────────────────────────────

@@ -45,6 +45,7 @@
     .piptm_env$arrow_root <- arrow_root_opt
   }
 
+
   # --- Manifest directory ---------------------------------------------------
   # --- collapse threading ----------------------------------------------------
   # Benchmark (benchmarks/orchestration-strategy.R, 2026-04-28) showed that

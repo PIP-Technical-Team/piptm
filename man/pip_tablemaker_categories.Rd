@@ -65,7 +65,7 @@ cats[[1L]]$subcategories[[1L]]$value # "male"
 \seealso{
 Other measures: 
 \code{\link{pip_age_bins}()},
-\code{\link{pip_measures}()},
+\code{\link{pip_tablemaker_measures}()},
 \code{\link{pip_valid_dimensions}()}
 }
 \concept{measures}

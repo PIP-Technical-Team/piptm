@@ -249,21 +249,31 @@ test_that("GET /releases data contains releases list and current", {
   expect_true(body$data$current %in% body$data$releases)
 })
 
-test_that("GET /measures returns 200 and all measure names", {
+test_that("GET /measures returns 200 with success status and 12 entries", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
-  body <- parse_api_res(.ep_router$call(make_api_req("GET", "/measures")))
+  res  <- .ep_router$call(make_api_req("GET", "/measures"))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
   expect_equal(body$status, "success")
-  expect_equal(length(body$data$measure), length(piptm::pip_measures()))
+  expect_equal(nrow(body$data), 12L)
 })
 
-test_that("GET /measures data has measure and family columns with valid families", {
+test_that("GET /measures data has required fields, valid types, and one poverty slider", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   body <- parse_api_res(.ep_router$call(make_api_req("GET", "/measures")))
-  expect_false(is.null(body$data$measure))
-  expect_false(is.null(body$data$family))
-  expect_true(all(body$data$family %in% c("poverty", "inequality", "welfare")))
+  expect_true(all(c("varname", "label", "type", "poverty_line_slider") %in%
+                    names(body$data)))
+  expect_true(all(body$data$type %in%
+                    c("welfare", "poverty", "inequality", "continuous", "binary")))
+  # poverty_line_slider may be a list-column when plumber boxes scalars; unlist
+  # to get an atomic logical vector before sum() and subsetting.
+  sliders <- unlist(body$data$poverty_line_slider)
+  types   <- unlist(body$data$type)
+  # poverty_line_slider is TRUE for exactly one entry (the poverty variable)
+  expect_equal(sum(sliders), 1L)
+  expect_true(sliders[types == "poverty"])
 })
 
 test_that("GET /dimensions returns 200 and includes all valid dimension names", {

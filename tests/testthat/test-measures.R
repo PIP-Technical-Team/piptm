@@ -2,54 +2,134 @@ library(testthat)
 library(data.table)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# pip_measures()
+# pip_tablemaker_measures()
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("pip_measures() returns a named character vector", {
-  m <- pip_measures()
-  expect_type(m, "character")
-  expect_named(m)
+test_that("pip_tablemaker_measures() returns a list of length 12", {
+  m <- pip_tablemaker_measures()
+  expect_type(m, "list")
+  expect_length(m, 12L)
 })
 
-test_that("pip_measures() contains all 21 measure names", {
-  m <- pip_measures()
-  expect_length(m, 21L)
-  expect_setequal(
-    names(m),
-    c(
-      "headcount", "poverty_gap", "severity", "watts", "pop_poverty",
-      "gini", "mld",
-      "mean", "median", "sd", "var", "min", "max", "nobs",
-      "p10", "p25", "p75", "p90", "sum", "obs_share", "pop_share"
-    )
-  )
+test_that("pip_tablemaker_measures() each entry has exactly 5 required fields", {
+  m              <- pip_tablemaker_measures()
+  required_names <- c("varname", "label", "type", "poverty_line_slider", "available_stats")
+  for (i in seq_along(m)) {
+    expect_setequal(names(m[[i]]), required_names)
+  }
 })
 
-test_that("pip_measures() values are valid family names", {
-  m <- pip_measures()
-  expect_true(all(m %in% c("poverty", "inequality", "welfare")))
+test_that("pip_tablemaker_measures() all varname values are unique character scalars", {
+  m        <- pip_tablemaker_measures()
+  varnames <- vapply(m, `[[`, character(1L), "varname")
+  expect_type(varnames, "character")
+  # all unique
+  expect_length(varnames, length(unique(varnames)))
 })
 
-test_that("pip_measures() maps poverty measures to 'poverty' family", {
-  m <- pip_measures()
-  expect_true(all(
-    m[c("headcount", "poverty_gap", "severity", "watts", "pop_poverty")] ==
-      "poverty"
+test_that("pip_tablemaker_measures() all type values are in the valid set", {
+  m           <- pip_tablemaker_measures()
+  types       <- vapply(m, `[[`, character(1L), "type")
+  valid_types <- c("welfare", "poverty", "inequality", "continuous", "binary")
+  expect_true(all(types %in% valid_types))
+})
+
+test_that("pip_tablemaker_measures() poverty_line_slider is logical and TRUE only for poverty", {
+  m       <- pip_tablemaker_measures()
+  sliders <- vapply(m, `[[`, logical(1L), "poverty_line_slider")
+  types   <- vapply(m, `[[`, character(1L), "type")
+  expect_type(sliders, "logical")
+  # Exactly one TRUE
+  expect_equal(sum(sliders), 1L)
+  # That one is the poverty entry
+  expect_true(sliders[types == "poverty"])
+  # All non-poverty entries are FALSE
+  expect_true(all(!sliders[types != "poverty"]))
+})
+
+test_that("pip_tablemaker_measures() available_stats is a non-empty list with measure and label fields", {
+  m <- pip_tablemaker_measures()
+  for (i in seq_along(m)) {
+    stats <- m[[i]]$available_stats
+    expect_type(stats, "list")
+    expect_gt(length(stats), 0L)
+    for (j in seq_along(stats)) {
+      expect_true(
+        is.character(stats[[j]]$measure) && length(stats[[j]]$measure) == 1L
+      )
+      expect_true(
+        is.character(stats[[j]]$label) && length(stats[[j]]$label) == 1L
+      )
+    }
+  }
+})
+
+test_that("pip_tablemaker_measures() pop_share and obs_share appear only in binary entries", {
+  m <- pip_tablemaker_measures()
+  for (i in seq_along(m)) {
+    ids  <- vapply(m[[i]]$available_stats, `[[`, character(1L), "measure")
+    type <- m[[i]]$type
+    if (type != "binary") {
+      expect_false("pop_share" %in% ids)
+      expect_false("obs_share" %in% ids)
+    } else {
+      expect_true("pop_share" %in% ids)
+      expect_true("obs_share" %in% ids)
+    }
+  }
+})
+
+test_that("pip_tablemaker_measures() welfare and continuous entries share the same 11 stats", {
+  m        <- pip_tablemaker_measures()
+  types    <- vapply(m, `[[`, character(1L), "type")
+  welf_ids <- sort(vapply(
+    m[[which(types == "welfare")]]$available_stats, `[[`, character(1L), "measure"
   ))
+  cont_ids <- sort(vapply(
+    m[[which(types == "continuous")]]$available_stats, `[[`, character(1L), "measure"
+  ))
+  expect_equal(welf_ids, cont_ids)
+  expect_length(welf_ids, 11L)
 })
 
-test_that("pip_measures() maps inequality measures to 'inequality' family", {
-  m <- pip_measures()
-  expect_true(all(m[c("gini", "mld")] == "inequality"))
-})
-
-test_that("pip_measures() maps welfare measures to 'welfare' family", {
-  m <- pip_measures()
-  welfare_names <- c(
-    "mean", "median", "sd", "var", "min", "max", "nobs",
-    "p10", "p25", "p75", "p90", "sum"
+test_that("pip_tablemaker_measures() poverty entry has exactly 5 stats", {
+  m       <- pip_tablemaker_measures()
+  types   <- vapply(m, `[[`, character(1L), "type")
+  pov     <- m[[which(types == "poverty")]]
+  pov_ids <- vapply(pov$available_stats, `[[`, character(1L), "measure")
+  expect_length(pov_ids, 5L)
+  expect_setequal(
+    pov_ids,
+    c("headcount", "poverty_gap", "severity", "watts", "pop_poverty")
   )
-  expect_true(all(m[welfare_names] == "welfare"))
+})
+
+test_that("pip_tablemaker_measures() inequality entry has exactly 2 stats", {
+  m        <- pip_tablemaker_measures()
+  types    <- vapply(m, `[[`, character(1L), "type")
+  ineq     <- m[[which(types == "inequality")]]
+  ineq_ids <- vapply(ineq$available_stats, `[[`, character(1L), "measure")
+  expect_length(ineq_ids, 2L)
+  expect_setequal(ineq_ids, c("gini", "mld"))
+})
+
+test_that("pip_tablemaker_measures() each binary entry has exactly 2 stats: pop_share and obs_share", {
+  m           <- pip_tablemaker_measures()
+  types       <- vapply(m, `[[`, character(1L), "type")
+  bin_entries <- m[types == "binary"]
+  for (i in seq_along(bin_entries)) {
+    ids <- vapply(bin_entries[[i]]$available_stats, `[[`, character(1L), "measure")
+    expect_length(ids, 2L)
+    expect_setequal(ids, c("pop_share", "obs_share"))
+  }
+})
+
+test_that("pip_tablemaker_measures() catalogue order: welfare, poverty, inequality, age", {
+  m <- pip_tablemaker_measures()
+  expect_equal(m[[1L]]$varname, "welfare")
+  expect_equal(m[[2L]]$varname, "poverty")
+  expect_equal(m[[3L]]$varname, "inequality")
+  expect_equal(m[[4L]]$varname, "age")
 })
 
 # ══════════════════════════════════════════════════════════════════════════════
