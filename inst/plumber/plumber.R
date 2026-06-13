@@ -17,6 +17,8 @@
 #   GET /releases
 #   GET /measures
 #   GET /dimensions
+#   GET /categories
+#   GET /covariates
 #   GET /health
 
 # ── 2a. Source helpers ────────────────────────────────────────────────────────
@@ -272,6 +274,30 @@ function() {
 function() {
   api_response(piptm::pip_tablemaker_categories())
 }
+
+# ── GET /covariates ───────────────────────────────────────────────────────────
+
+#* Return the full catalogue of layout covariates for the Decision 3 table
+#* slicing panel
+#*
+#* Static endpoint — always returns the complete universe of covariates
+#* available for the four layout slots (Columns, Rows, Super Columns,
+#* Super Rows) regardless of which surveys are selected.  Each entry carries
+#* the covariate varname, its UI label, and the number of categories it
+#* produces in the table layout.  The UI displays the category count next to
+#* the covariate name when it is assigned to a slot.
+#*
+#* The catalogue is derived from pip_tablemaker_categories() with the
+#* addition of pov_status (Poverty status), which is specific to Decision 3.
+#* Poverty status is subject to a mutual exclusivity rule with the Decision 2
+#* poverty analysis variable — the UI enforces this using the varname field.
+#*
+#* @serializer json list(na = "null")
+#* @get /covariates
+function() {
+  api_response(piptm::pip_tablemaker_covariates())
+}
+
 
 # ── GET /health ───────────────────────────────────────────────────────────────
 
