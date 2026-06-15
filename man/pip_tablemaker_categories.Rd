@@ -8,8 +8,8 @@ filter panel}
 pip_tablemaker_categories()
 }
 \value{
-A list of 24 entries in canonical display order
-(demographic → education → household → infrastructure → labour).
+A list of 25 entries in canonical display order
+(demographic → education → household → welfare → infrastructure → labour).
 Each entry is a named list with three fields:
 \describe{
 \item{\code{varname}}{Character scalar: column name as it exists at query
@@ -53,6 +53,12 @@ integer and \code{label} is \code{"No"} / \code{"Yes"}.
 standardised GMD codebook integers; subcategory \code{value} is an integer.
 All variants within a family (\verb{_2}, \verb{_year}, \verb{_2_year}) share the same
 subcategory list.
+\item \strong{Track 5 — Pre-calculated welfare quintile} (\code{wquintile}): integer 1–5
+where 1 = bottom 20\% and 5 = top 20\%. Quintiles are nationally
+representative and must be computed on the full weighted sample before
+any filtering is applied. Backend implementation is pending — the column
+may be stored in the Parquet files at ingestion time or derived at query
+time prior to filter application.
 }
 }
 \examples{

@@ -9,9 +9,9 @@ test_that("pip_tablemaker_categories() returns a list", {
   expect_type(cats, "list")
 })
 
-test_that("pip_tablemaker_categories() returns exactly 24 entries", {
+test_that("pip_tablemaker_categories() returns exactly 25 entries", {
   cats <- pip_tablemaker_categories()
-  expect_length(cats, 24L)
+  expect_length(cats, 25L)
 })
 
 test_that("every entry has exactly the fields varname, label, subcategories", {
@@ -80,13 +80,15 @@ test_that("all varnames are unique", {
 test_that("varnames appear in canonical display order", {
   cats     <- pip_tablemaker_categories()
   varnames <- vapply(cats, `[[`, character(1L), "varname")
-  expected <- c(
+    expected <- c(
     # demographic
     "gender", "area", "age_group",
     # education
     "educat4", "educat5", "educat7",
     # household
     "hsize_group",
+    # welfare
+    "wquintile",
     # infrastructure
     "imp_wat_rec", "imp_san_rec", "electricity",
     # labour — lstatus
@@ -98,6 +100,7 @@ test_that("varnames appear in canonical display order", {
     # labour — industrycat10
     "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year"
   )
+
   expect_equal(varnames, expected)
 })
 
@@ -384,6 +387,37 @@ test_that("Track 4 labour variables use integer subcategory values", {
     }
   }
 })
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Track 5 — Pre-calculated welfare quintile
+# ══════════════════════════════════════════════════════════════════════════════
+
+test_that("wquintile has 5 subcategories with correct integer values and labels", {
+  cats  <- pip_tablemaker_categories()
+  entry <- get_entry(cats, "wquintile")
+  expect_length(entry$subcategories, 5L)
+  values <- vapply(entry$subcategories, `[[`, integer(1L), "value")
+  labels <- vapply(entry$subcategories, `[[`, character(1L), "label")
+  expect_equal(values, 1L:5L)
+  expect_equal(
+    labels,
+    c("Q1 (bottom 20%)", "Q2", "Q3", "Q4", "Q5 (top 20%)")
+  )
+})
+
+test_that("wquintile has label 'Welfare quintile'", {
+  cats  <- pip_tablemaker_categories()
+  expect_equal(get_entry(cats, "wquintile")$label, "Welfare quintile")
+})
+
+test_that("wquintile uses integer subcategory values", {
+  cats  <- pip_tablemaker_categories()
+  entry <- get_entry(cats, "wquintile")
+  for (sub in entry$subcategories) {
+    expect_type(sub$value, "integer")
+  }
+})
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Labour variable labels

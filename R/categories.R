@@ -22,11 +22,12 @@ NULL
 #' @keywords internal
 .EMPSTAT_SUBCATS <- list(
   list(value = 1L, label = "Paid employee"),
-  list(value = 2L, label = "Employer"),
-  list(value = 3L, label = "Own-account worker"),
-  list(value = 4L, label = "Contributing family worker"),
-  list(value = 5L, label = "Other")
+  list(value = 2L, label = "Non-paid employee"),
+  list(value = 3L, label = "Employer"),
+  list(value = 4L, label = "Self-employed"),
+  list(value = 5L, label = "Other, workers not classifiable by status")
 )
+
 
 #' Subcategories for the industrycat4 (4-category industry) variable family
 #'
@@ -42,17 +43,30 @@ NULL
 #'
 #' @keywords internal
 .INDUSTRYCAT10_SUBCATS <- list(
-  list(value =  1L, label = "Agriculture, fishing, forestry"),
+  list(value =  1L, label = "Agriculture, hunting, fishing, etc."),
   list(value =  2L, label = "Mining"),
   list(value =  3L, label = "Manufacturing"),
-  list(value =  4L, label = "Utilities"),
+  list(value =  4L, label = "Public utility services"),
   list(value =  5L, label = "Construction"),
   list(value =  6L, label = "Commerce"),
-  list(value =  7L, label = "Transport and communications"),
-  list(value =  8L, label = "Finance and business services"),
+  list(value =  7L, label = "Transport"),
+  list(value =  8L, label = "Financial"),
   list(value =  9L, label = "Public administration"),
   list(value = 10L, label = "Other services")
 )
+
+
+#' Subcategories for the wquintile (welfare quintile) variable
+#'
+#' @keywords internal
+.WQUINTILE_SUBCATS <- list(
+  list(value = 1L, label = "Q1 (bottom 20%)"),
+  list(value = 2L, label = "Q2"),
+  list(value = 3L, label = "Q3"),
+  list(value = 4L, label = "Q4"),
+  list(value = 5L, label = "Q5 (top 20%)")
+)
+
 
 # ── Exported function ─────────────────────────────────────────────────────────
 
@@ -89,9 +103,15 @@ NULL
 #'   standardised GMD codebook integers; subcategory `value` is an integer.
 #'   All variants within a family (`_2`, `_year`, `_2_year`) share the same
 #'   subcategory list.
+#' * **Track 5 — Pre-calculated welfare quintile** (`wquintile`): integer 1–5
+#'   where 1 = bottom 20% and 5 = top 20%. Quintiles are nationally
+#'   representative and must be computed on the full weighted sample before
+#'   any filtering is applied. Backend implementation is pending — the column
+#'   may be stored in the Parquet files at ingestion time or derived at query
+#'   time prior to filter application.
 #'
-#' @return A list of 24 entries in canonical display order
-#'   (demographic → education → household → infrastructure → labour).
+#' @return A list of 25 entries in canonical display order
+#'   (demographic → education → household → welfare → infrastructure → labour).
 #'   Each entry is a named list with three fields:
 #'   \describe{
 #'     \item{`varname`}{Character scalar: column name as it exists at query
@@ -189,6 +209,14 @@ pip_tablemaker_categories <- function() {
         list(value = "7+",  label = "7 or more persons")
       )
     ),
+
+        # ── Welfare ──────────────────────────────────────────────────────────────
+    list(
+      varname       = "wquintile",
+      label         = "Welfare quintile",
+      subcategories = .WQUINTILE_SUBCATS
+    ),
+
     # ── Infrastructure ───────────────────────────────────────────────────────
     list(
       varname = "imp_wat_rec",

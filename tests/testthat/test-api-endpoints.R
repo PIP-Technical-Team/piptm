@@ -291,9 +291,10 @@ test_that("GET /dimensions returns 200 and includes all valid dimension names", 
 
 # ── /categories ───────────────────────────────────────────────────────────────
 
-
+# TODO
 # ── /covariates ───────────────────────────────────────────────────────────────
 
+#TODO
 
 # =============================================================================
 # Block 2: CORS headers + OPTIONS preflight
