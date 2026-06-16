@@ -82,6 +82,6 @@ compute_poverty(dt, poverty_lines = 3.5, measures = "headcount")
 Other compute: 
 \code{\link{compute_inequality}()},
 \code{\link{compute_measures}()},
-\code{\link{compute_welfare}()}
+\code{\link{compute_summary_stats}()}
 }
 \concept{compute}

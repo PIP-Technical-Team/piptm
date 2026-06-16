@@ -54,7 +54,5 @@ sapply(covariates, `[[`, "varname")
 \seealso{
 \code{\link[=pip_tablemaker_categories]{pip_tablemaker_categories()}} for the Decision 1 filter
 catalogue from which this list is derived.
-\code{\link[=pip_tablemaker_measures]{pip_tablemaker_measures()}} for the Decision 2 analysis variable
-catalogue.
 }
 \concept{tablemaker}

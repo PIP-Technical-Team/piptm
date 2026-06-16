@@ -4,7 +4,13 @@
 \alias{compute_measures}
 \title{Dispatch welfare, inequality, and poverty computations across one or more surveys}
 \usage{
-compute_measures(dt, measures, poverty_lines = NULL, by = NULL)
+compute_measures(
+  dt,
+  measures,
+  target_variable = NULL,
+  poverty_lines = NULL,
+  by = NULL
+)
 }
 \arguments{
 \item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} for \strong{one or more surveys}.  Must
@@ -38,7 +44,7 @@ Internal orchestrator that classifies requested measures into their
 computation families, builds a single compound \code{\link[collapse:GRP]{collapse::GRP()}} object
 keyed by \code{c("pip_id", by)} (shared across inequality and welfare family
 functions), and dispatches to \code{\link[=compute_poverty]{compute_poverty()}}, \code{\link[=compute_inequality]{compute_inequality()}},
-and \code{\link[=compute_welfare]{compute_welfare()}} as required.  Results are row-bound via
+and \code{\link[=compute_summary_stats]{compute_summary_stats()}} as required.  Results are row-bound via
 \code{\link[data.table:rbindlist]{data.table::rbindlist()}} with \code{fill = TRUE}, so poverty rows carry a
 \code{poverty_line} column while inequality and welfare rows receive \code{NA_real_}.
 }
@@ -51,7 +57,7 @@ of one and behaves identically to the previous single-survey contract.
 Other compute: 
 \code{\link{compute_inequality}()},
 \code{\link{compute_poverty}()},
-\code{\link{compute_welfare}()}
+\code{\link{compute_summary_stats}()}
 }
 \concept{compute}
 \keyword{internal}

@@ -10,11 +10,12 @@ table_maker(
   year = NULL,
   welfare_type = NULL,
   measures,
+  target_variable = NULL,
   poverty_lines = NULL,
   by = NULL,
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0.01
+  pop_share_threshold = 0
 )
 }
 \arguments{

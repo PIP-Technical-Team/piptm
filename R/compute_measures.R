@@ -11,7 +11,7 @@ NULL
 #' computation families, builds a single compound [collapse::GRP()] object
 #' keyed by `c("pip_id", by)` (shared across inequality and welfare family
 #' functions), and dispatches to [compute_poverty()], [compute_inequality()],
-#' and [compute_welfare()] as required.  Results are row-bound via
+#' and [compute_summary_stats()] as required.  Results are row-bound via
 #' [data.table::rbindlist()] with `fill = TRUE`, so poverty rows carry a
 #' `poverty_line` column while inequality and welfare rows receive `NA_real_`.
 #'
@@ -43,7 +43,7 @@ NULL
 #'
 #' @family compute
 #' @keywords internal
-compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
+compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines = NULL, by = NULL) {
 
   # ── 1. Guard: required columns present ─────────────────────────────────────
   required     <- c("pip_id", "welfare", "weight")
@@ -111,13 +111,14 @@ compute_measures <- function(dt, measures, poverty_lines = NULL, by = NULL) {
     )
   }
 
-  if ("welfare" %in% families) {
-    results$welfare <- compute_welfare(
-      dt,
-      by       = batch_by,
-      measures = classified$welfare,
-      grp      = grp
-    )
+  if ("binary" %in% families) {
+    # results$binary <- TODO compute_binary()
+    NULL
+  }
+
+   if ("summary_stats" %in% families) {
+    # results$binary <- TODO compute_summary_stats()
+    NULL
   }
 
   # ── 6. Merge — poverty rows have poverty_line; others receive NA_real_ ──────

@@ -40,8 +40,6 @@
 #'   }
 #' @seealso [pip_tablemaker_categories()] for the Decision 1 filter
 #'   catalogue from which this list is derived.
-#'   [pip_tablemaker_measures()] for the Decision 2 analysis variable
-#'   catalogue.
 #' @family tablemaker
 #' @export
 #' @examples

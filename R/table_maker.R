@@ -198,16 +198,17 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   by            = c("gender", "area")
 #' )
 #' }
-table_maker <- function(pip_id        = NULL,
-                        country_code  = NULL,
-                        year          = NULL,
-                        welfare_type  = NULL,
-                        measures,
+table_maker <- function(pip_id        = NULL, # this comes from URL
+                        country_code  = NULL, # not needed for now but included for future wrappers
+                        year          = NULL, # not needed for now but included for future wrappers
+                        welfare_type  = NULL, # not needed for now but included for future wrappers
+                        measures,             # statistics 
+                        target_variable = NULL,      # analysis variable (e.g. "welfare")
                         poverty_lines = NULL,
                         by            = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.01) {
+                        pop_share_threshold = 0.00) {
 
   # ── 0. Resolve survey identifiers ──────────────────────────────────────────
   # pip_id takes precedence. Triplets used only when pip_id is NULL.
@@ -365,7 +366,7 @@ table_maker <- function(pip_id        = NULL,
   # Single grouped call across all surveys (Approach B). compute_measures()
   # uses GRP(c("pip_id", by)) internally, paying the overhead once instead
   # of once per survey.
-  result <- compute_measures(dt, measures, poverty_lines, by)
+  result <- compute_measures(dt, measures, target_variable, poverty_lines, by)
 
   # ── 8. Attach survey metadata ────────────────────────────────────────────────
   # country_code, surveyid_year, welfare_type are attached via a keyed join
