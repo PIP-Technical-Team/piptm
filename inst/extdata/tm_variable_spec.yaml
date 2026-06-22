@@ -1,0 +1,249 @@
+schema_version: "1.0"
+
+variables:
+
+  # ── Special cases (not in pipdata YAML, hardcoded in build function) ────────
+
+  welfare:
+    ui_label: "Welfare"
+    roles:
+      - analysis_var
+    stat_groups:
+      - summary_statistics
+      - inequality
+
+  pov_status:
+    ui_label: "Poverty status"
+    roles:
+      - analysis_var
+      - covariate
+    stat_groups:
+      - poverty
+
+  weight:
+    ui_label: "Population"
+    roles:
+      - analysis_var
+    stat_groups:
+      - summary_statistics
+      - shares
+
+  # ── Continuous variables (from pipdata range_clamp) ─────────────────────────
+
+  age:
+    ui_label: "Age"
+    roles:
+      - analysis_var
+    stat_groups:
+      - summary_statistics
+
+  educy:
+    ui_label: "Years of education"
+    roles:
+      - analysis_var
+    stat_groups:
+      - summary_statistics
+
+  hsize:
+    ui_label: "Household size"
+    roles:
+      - analysis_var
+    stat_groups:
+      - summary_statistics
+
+  # ── Binary variables — access indicators (binary_map) ───────────────────────
+
+  imp_wat_rec:
+    ui_label: "Improved water source"
+    roles:
+      - analysis_var
+      - filter
+      - covariate
+    stat_groups:
+      - shares
+
+  imp_san_rec:
+    ui_label: "Improved sanitation"
+    roles:
+      - analysis_var
+      - filter
+      - covariate
+    stat_groups:
+      - shares
+
+  electricity:
+    ui_label: "Electricity access"
+    roles:
+      - analysis_var
+      - filter
+      - covariate
+    stat_groups:
+      - shares
+
+  # ── Categorical variables — demographics (binary_map / binned) ──────────────
+
+  gender:
+    ui_label: "Gender"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  area:
+    ui_label: "Area"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  age_group:
+    ui_label: "Age group"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  hsize_group:
+    ui_label: "Household size"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — education (haven_labels) ────────────────────────
+
+  educat4:
+    ui_label: "Education level (4 groups)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  educat5:
+    ui_label: "Education level (5 groups)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  educat7:
+    ui_label: "Education level (7 groups)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — welfare (quantile) ───────────────────────────────
+
+  wquintile:
+    ui_label: "Welfare quintile"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — labour status (haven_labels) ────────────────────
+
+  lstatus:
+    ui_label: "Labour status (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  lstatus_year:
+    ui_label: "Labour status (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — employment status (haven_labels) ────────────────
+
+  empstat:
+    ui_label: "Employment status, primary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  empstat_2:
+    ui_label: "Employment status, secondary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  empstat_year:
+    ui_label: "Employment status, primary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  empstat_2_year:
+    ui_label: "Employment status, secondary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — industry 4-category (haven_labels) ──────────────
+
+  industrycat4:
+    ui_label: "Industry (4 categories), primary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat4_2:
+    ui_label: "Industry (4 categories), secondary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat4_year:
+    ui_label: "Industry (4 categories), primary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat4_2_year:
+    ui_label: "Industry (4 categories), secondary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  # ── Categorical variables — industry 10-category (haven_labels) ─────────────
+
+  industrycat10:
+    ui_label: "Industry (10 categories), primary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat10_2:
+    ui_label: "Industry (10 categories), secondary job (7-day)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat10_year:
+    ui_label: "Industry (10 categories), primary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
+  industrycat10_2_year:
+    ui_label: "Industry (10 categories), secondary job (12-month)"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
