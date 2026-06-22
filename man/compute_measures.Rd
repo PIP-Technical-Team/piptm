@@ -57,6 +57,7 @@ of one and behaves identically to the previous single-survey contract.
 Other compute: 
 \code{\link{compute_inequality}()},
 \code{\link{compute_poverty}()},
+\code{\link{compute_shares}()},
 \code{\link{compute_summary_stats}()}
 }
 \concept{compute}

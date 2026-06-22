@@ -56,7 +56,7 @@ disaggregated across one or more dimensions.
 By default, statistics are computed on the \code{welfare} column. A different
 target variable can be supplied via \code{target_variable}.
 
-All weighted statistics use \code{weight} as frequency/probability weights via
+All weighted statistics use \code{weight} as weights via
 the \code{w} argument of the corresponding {collapse} function. \code{min}, \code{max},
 and \code{nobs} are unweighted. \code{nobs} counts non-missing observations of the
 target variable.
@@ -94,6 +94,7 @@ compute_summary_stats(
 Other compute: 
 \code{\link{compute_inequality}()},
 \code{\link{compute_measures}()},
-\code{\link{compute_poverty}()}
+\code{\link{compute_poverty}()},
+\code{\link{compute_shares}()}
 }
 \concept{compute}

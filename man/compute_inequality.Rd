@@ -84,6 +84,7 @@ compute_inequality(dt, measures = "gini")
 Other compute: 
 \code{\link{compute_measures}()},
 \code{\link{compute_poverty}()},
+\code{\link{compute_shares}()},
 \code{\link{compute_summary_stats}()}
 }
 \concept{compute}

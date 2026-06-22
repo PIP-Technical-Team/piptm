@@ -31,9 +31,11 @@ NULL
   p75         = "summary_stats",
   p90         = "summary_stats",
   sum         = "summary_stats",
-  # Binary stats family
-  obs_share   = "binary",
-  pop_share   = "binary"
+  # Shares  family
+    # Shares family
+  pop_share                 = "shares",
+  target_within_group_share = "shares",
+  target_survey_share       = "shares"
 )
 
 #' Valid disaggregation dimensions
@@ -129,7 +131,7 @@ pip_valid_dimensions <- function() {
   out      <- split(measures, families)
 
   # Return in canonical family order (only active families included)
-  canonical <- c("poverty", "inequality", "summary_stats", "binary")
+  canonical <- c("poverty", "inequality", "summary_stats", "shares")
   out[intersect(canonical, names(out))]
 }
 

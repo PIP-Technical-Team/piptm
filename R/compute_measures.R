@@ -111,15 +111,26 @@ compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines
     )
   }
 
-  if ("binary" %in% families) {
-    # results$binary <- TODO compute_binary()
-    NULL
+  if ("summary_stats" %in% families) {
+    results$summary_stats <- compute_summary_stats(
+      dt,
+      by       = batch_by,
+      measures = classified$summary_stats,
+      target_variable = target_variable,
+      grp      = grp
+    )
   }
 
-   if ("summary_stats" %in% families) {
-    # results$binary <- TODO compute_summary_stats()
-    NULL
+  if ("shares" %in% families) {
+    results$summary_stats <- compute_shares(
+      dt,
+      by       = batch_by,
+      measures = classified$summary_stats,
+      target_variable = target_variable,
+      grp      = grp
+    )
   }
+
 
   # ── 6. Merge — poverty rows have poverty_line; others receive NA_real_ ──────
   # rbindlist(fill=TRUE) only creates poverty_line when at least one source
