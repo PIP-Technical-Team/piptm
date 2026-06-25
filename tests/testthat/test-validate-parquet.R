@@ -4,7 +4,7 @@
 # Test coverage:
 #   - .vp_parse_partition_path(): version= extraction from 4-level path
 #   - validate_parquet_schema(): accepts file with version, rejects missing version
-#   - validate_parquet_data(): version path-matching check, educat4/5/7 factor check
+#   - validate_parquet_data(): version path-matching check, int32 categorical checks
 
 library(data.table)
 
@@ -31,26 +31,16 @@ make_valid_dt <- function(country_code  = "COL",
   )
 
   if ("gender" %in% dims) {
-    data.table::set(dt, j = "gender", value = factor(
-      rep(c("male", "female"), length.out = n_rows),
-      levels = c("male", "female")
-    ))
+    data.table::set(dt, j = "gender", value = rep(c(1L, 2L), length.out = n_rows))
   }
   if ("area" %in% dims) {
-    data.table::set(dt, j = "area", value = factor(
-      rep(c("urban", "rural"), length.out = n_rows),
-      levels = c("urban", "rural")
-    ))
+    data.table::set(dt, j = "area", value = rep(c(1L, 2L), length.out = n_rows))
   }
   if ("educat4" %in% dims) {
-    data.table::set(dt, j = "educat4", value = factor(
-      rep(c("Primary (complete or incomplete)", "No education"), length.out = n_rows)
-    ))
+    data.table::set(dt, j = "educat4", value = rep(c(2L, 5L), length.out = n_rows))
   }
   if ("educat5" %in% dims) {
-    data.table::set(dt, j = "educat5", value = factor(
-      rep(c("Primary incomplete", "Secondary complete"), length.out = n_rows)
-    ))
+    data.table::set(dt, j = "educat5", value = rep(c(2L, 4L), length.out = n_rows))
   }
   if ("age" %in% dims) {
     data.table::set(dt, j = "age", value = as.integer(seq(18L, by = 1L, length.out = n_rows)))
@@ -208,33 +198,30 @@ test_that("validate_parquet_data detects version mismatch between data and path"
   expect_true(any(grepl("version", res$errors)))
 })
 
-test_that("validate_parquet_data accepts educat4 with arbitrary survey-specific levels", {
+test_that("validate_parquet_data accepts integer-coded educat4", {
   tmp <- withr::local_tempdir()
   dt  <- make_valid_dt()
-  # Override with verbose GMD-style labels (not the old 4-level canonical set)
-  data.table::set(dt, j = "educat4", value = factor(
-    rep(c("Primary (complete or incomplete)", "No education"), length.out = 5L)
-  ))
+  data.table::set(dt, j = "educat4", value = rep(c(2L, 5L), length.out = 5L))
   f <- write_valid_parquet(tmp, dt)
 
   res <- validate_parquet_data(f)
   expect_true(res$valid, info = paste(res$errors, collapse = "; "))
 })
 
-test_that("validate_parquet_data rejects educat4 that is not a factor", {
+test_that("validate_parquet_data rejects educat4 that is not integer-coded", {
   tmp <- withr::local_tempdir()
   dt  <- make_valid_dt()
-  # Add educat4 as character, not factor — should fail
+  # Add educat4 as character — should fail
   data.table::set(dt, j = "educat4", value = c("Primary", "Secondary", "Primary", "No education", "Secondary"))
 
   dir_path <- file.path(tmp, "country_code=COL", "surveyid_year=2010", "welfare_type=INC", "version=v01_v02")
   dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
   f <- file.path(dir_path, "COL_2010-0.parquet")
-  # Arrow will encode as utf8 (not dictionary) — schema check will catch it
+  # Arrow will encode as utf8; schema expects int32
   arrow::write_parquet(dt, f)
 
   res_schema <- validate_parquet_schema(f)
-  # Should fail schema check: educat4 expected as dictionary, found as utf8
+  # Should fail schema check: educat4 expected as int32, found as utf8
   expect_false(res_schema$valid)
 })
 

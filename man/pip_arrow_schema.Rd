@@ -15,20 +15,24 @@ Returns the single source of truth for the schema contract between
 derive their type constraints and column lists from this function.
 }
 \details{
+Optional fields are controlled by the \code{piptm.optional_vars} R option,
+initialised in \code{.onLoad()}. When that option is \code{NULL}, no optional fields
+are included and the schema contains only the 6 required base columns.
+When set to a character vector of variable names, only those variables are
+eligible for inclusion as optional fields.
+
 The returned list has two top-level elements:
 \itemize{
 \item \verb{$fields}: named list of field specs, each with \verb{$type} (Arrow type
 object) and \verb{$required} (logical).
 \item \verb{$levels}: named list of allowed character vectors for fixed-level
-dictionary columns (\code{gender}, \code{area}, \code{welfare_type}). Education
-columns (\code{educat4}, \code{educat5}, \code{educat7}) have survey-specific levels
-and are not included here.
+dictionary columns. Populated from the variable registry when available.
 }
 }
 \examples{
 s <- pip_arrow_schema()
 s$fields$version$type
-s$levels$gender
+s$levels$welfare_type
 }
 \seealso{
 Other schema: 

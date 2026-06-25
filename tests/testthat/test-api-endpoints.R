@@ -291,10 +291,183 @@ test_that("GET /dimensions returns 200 and includes all valid dimension names", 
 
 # ── /categories ───────────────────────────────────────────────────────────────
 
-# TODO
+test_that("GET /analysis-variables returns success and pov_status has slider", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  # Inject a small synthetic registry for the current release
+  .inject_registry_for_test <- function(registry) {
+    env <- get('.piptm_env', envir = asNamespace('piptm'))
+    release <- piptm::piptm_current_release()
+    old <- env$registries
+    env$registries <- list()
+    env$registries[[release]] <- registry
+    list(env = env, old = old)
+  }
+
+  .make_registry_fixture <- function() {
+    list(
+      welfare = list(
+        varname = "welfare",
+        ui_label = "Welfare",
+        tm_type = "welfare",
+        roles = c("analysis_var"),
+        stat_groups = c("summary_statistics", "inequality"),
+        n_categories = NULL,
+        categories = NULL
+      ),
+      pov_status = list(
+        varname = "pov_status",
+        ui_label = "Poverty status",
+        tm_type = "poverty",
+        roles = c("analysis_var", "covariate"),
+        stat_groups = c("poverty"),
+        n_categories = 2L,
+        categories = NULL
+      ),
+      age_group = list(
+        varname = "age_group",
+        ui_label = "Age group",
+        tm_type = "categorical",
+        roles = c("filter", "covariate"),
+        stat_groups = character(0L),
+        n_categories = 4L,
+        categories = list(
+          list(code = "0-14", label = "0 to 14"),
+          list(code = "15-24", label = "15 to 24"),
+          list(code = "25-64", label = "25 to 64"),
+          list(code = "65+", label = "65 and above")
+        )
+      )
+    )
+  }
+
+  reg <- .make_registry_fixture()
+  state <- .inject_registry_for_test(reg)
+  withr::defer({ state$env$registries <- state$old })
+
+  res <- .ep_router$call(make_api_req("GET", "/analysis-variables"))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res, simplify = FALSE)
+  status_val <- unlist(body$status)
+  expect_equal(status_val, "success")
+
+  data <- body$data
+  get_varname <- function(entry) {
+    v <- entry$varname
+    if (is.list(v)) v <- unlist(v)
+    as.character(v[[1]])
+  }
+  varnames <- vapply(data, get_varname, character(1))
+  expect_true("pov_status" %in% varnames)
+
+  pov <- data[[which(varnames == "pov_status")]]
+  pls <- pov$poverty_line_slider
+  if (is.list(pls)) pls <- unlist(pls)
+  expect_true(isTRUE(pls))
+})
+
+# ── /categories ───────────────────────────────────────────────────────────────
+
+test_that("GET /categories returns filters with subcategories", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  .make_registry_fixture <- function() {
+    list(
+      age_group = list(
+        varname = "age_group",
+        ui_label = "Age group",
+        tm_type = "categorical",
+        roles = c("filter"),
+        stat_groups = character(0L),
+        n_categories = 4L,
+        categories = list(
+          list(code = "0-14", label = "0 to 14"),
+          list(code = "15-24", label = "15 to 24"),
+          list(code = "25-64", label = "25 to 64"),
+          list(code = "65+", label = "65 and above")
+        )
+      )
+    )
+  }
+
+  reg <- .make_registry_fixture()
+  env <- get('.piptm_env', envir = asNamespace('piptm'))
+  old <- env$registries
+  env$registries <- list()
+  env$registries[[piptm::piptm_current_release()]] <- reg
+  withr::defer({ env$registries <- old })
+
+  res <- .ep_router$call(make_api_req("GET", "/categories"))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res, simplify = FALSE)
+  status_val <- unlist(body$status)
+  expect_equal(status_val, "success")
+
+  data <- body$data
+  get_varname <- function(entry) {
+    v <- entry$varname
+    if (is.list(v)) v <- unlist(v)
+    as.character(v[[1]])
+  }
+  varnames <- vapply(data, get_varname, character(1))
+  expect_true("age_group" %in% varnames)
+
+  age <- data[[which(varnames == "age_group")]]
+  subs <- age$subcategories
+  expect_true(length(subs) == 4)
+  codes <- vapply(subs, function(x) as.character(x$code[[1]]), character(1))
+  expect_true(all(c("0-14", "15-24", "25-64", "65+") %in% codes))
+})
+
 # ── /covariates ───────────────────────────────────────────────────────────────
 
-#TODO
+test_that("GET /covariates returns pov_status with n_categories=2 and mutex flag", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  reg <- list(
+    pov_status = list(
+      varname = "pov_status",
+      ui_label = "Poverty status",
+      tm_type = "poverty",
+      roles = c("covariate"),
+      stat_groups = c("poverty"),
+      n_categories = 2L,
+      categories = NULL
+    )
+  )
+
+  env <- get('.piptm_env', envir = asNamespace('piptm'))
+  old <- env$registries
+  env$registries <- list()
+  env$registries[[piptm::piptm_current_release()]] <- reg
+  withr::defer({ env$registries <- old })
+
+  res <- .ep_router$call(make_api_req("GET", "/covariates"))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res, simplify = FALSE)
+  status_val <- unlist(body$status)
+  expect_equal(status_val, "success")
+
+  data <- body$data
+  get_varname <- function(entry) {
+    v <- entry$varname
+    if (is.list(v)) v <- unlist(v)
+    as.character(v[[1]])
+  }
+  varnames <- vapply(data, get_varname, character(1))
+  expect_true("pov_status" %in% varnames)
+
+  pov <- data[[which(varnames == "pov_status")]]
+  ncat <- pov$n_categories
+  if (is.list(ncat)) ncat <- unlist(ncat)
+  expect_true(identical(as.integer(ncat), 2L))
+  mutex <- pov$pov_status_mutex
+  if (is.list(mutex)) mutex <- unlist(mutex)
+  expect_true(isTRUE(mutex))
+})
 
 # =============================================================================
 # Block 2: CORS headers + OPTIONS preflight

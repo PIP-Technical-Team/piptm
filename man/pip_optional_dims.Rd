@@ -17,18 +17,9 @@ manifest. Both \code{{pipdata}} and \code{{piptm}} derive their dimension lists 
 this function so they stay in sync automatically as the schema evolves.
 }
 \details{
-The current set (24 columns):
-\itemize{
-\item Core demographic: \code{gender}, \code{area}, \code{educat4}, \code{educat5}, \code{educat7}, \code{age}
-\item Household: \code{hsize}
-\item Infrastructure: \code{imp_wat_rec}, \code{imp_san_rec}, \code{electricity}
-\item Labour — lstatus: \code{lstatus}, \code{lstatus_year}
-\item Labour — empstat: \code{empstat}, \code{empstat_2}, \code{empstat_year}, \code{empstat_2_year}
-\item Labour — industrycat10: \code{industrycat10}, \code{industrycat10_2},
-\code{industrycat10_year}, \code{industrycat10_2_year}
-\item Labour — industrycat4: \code{industrycat4}, \code{industrycat4_2},
-\code{industrycat4_year}, \code{industrycat4_2_year}
-}
+The set of optional dimensions is controlled by the \code{piptm.optional_vars}
+R option (initialised in \code{.onLoad()}). When that option is \code{NULL}, this
+function returns an empty character vector.
 }
 \examples{
 pip_optional_dims()

@@ -28,6 +28,7 @@ Suggests:
     rprojroot,
     testthat (>= 3.0.0),
     withr,
+    yaml,
     knitr,
     plumber (>= 1.1.0),
     rmarkdown

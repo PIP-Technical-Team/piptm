@@ -8,14 +8,13 @@ compute_summary_stats(
   dt,
   by = NULL,
   measures = NULL,
-  target_variable = NULL,
+  target_variable = "welfare",
   grp = NULL
 )
 }
 \arguments{
 \item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} containing at minimum \code{weight}
-(numeric) and the target variable. When \code{target_variable} is \code{NULL},
-\code{dt} must contain a numeric \code{welfare} column. This must be a
+(numeric) and the target variable. This must be a
 \strong{single-survey slice} — rows for exactly one \code{pip_id}.
 The data.table is not modified.}
 
@@ -28,9 +27,8 @@ a subset of:
 \code{c("mean", "median", "sd", "var", "min", "max", "nobs", "p10", "p25", "p75", "p90", "sum")}.
 \code{NULL} (default) computes all twelve measures.}
 
-\item{target_variable}{Optional character scalar naming the variable on
-which statistics should be computed. When \code{NULL} (default), statistics
-are computed on \code{welfare}.}
+\item{target_variable}{Character scalar naming the variable on which
+statistics should be computed. Defaults to \code{"welfare"}.}
 
 \item{grp}{An optional pre-computed \code{\link[collapse:GRP]{collapse::GRP()}} object built from
 the same \code{dt} and grouped by \code{by}. When provided, the internal

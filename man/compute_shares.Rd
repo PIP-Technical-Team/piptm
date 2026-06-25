@@ -4,66 +4,36 @@
 \alias{compute_shares}
 \title{Compute population shares for a single survey (pip_id-scoped)}
 \usage{
-compute_shares(
-  dt,
-  by = NULL,
-  measures = NULL,
-  target_variable = NULL,
-  grp = NULL
-)
+compute_shares(dt, by = NULL, target_variable = NULL, grp = NULL)
 }
 \arguments{
 \item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} containing at minimum a numeric
-\code{weight} column and, when \code{target_variable} is supplied, the
-\code{target_variable} column (binary 0/1, validated elsewhere).}
+\code{weight} column and, when \code{target_variable} is supplied, the column named
+by \code{target_variable} (binary 0/1, validated upstream).}
 
 \item{by}{Character vector of grouping column names, or \code{NULL} for the
-aggregate (one row per survey). \code{pip_id} is not required in \code{by} because
-\code{dt} should already contain a single survey.}
+aggregate (one row per measure).}
 
-\item{measures}{Unused (kept for compatibility). Population-based shares
-are computed according to \code{target_variable}.}
-
-\item{target_variable}{Optional (character) name of a binary variable in
-\code{dt}. When provided two measures per subgroup are returned: the
-within-group target share and the survey-level target share.}
+\item{target_variable}{Optional character name of a binary (0/1) column in
+\code{dt}. When \code{NULL} (default), subgroup population shares are returned.
+When provided, within-group and survey-level target shares are returned.}
 
 \item{grp}{Optional pre-computed \code{\link[collapse:GRP]{collapse::GRP()}} built from \code{dt} grouped
-by \code{by}. If supplied it must match \code{by}.}
+by \code{by}. If supplied it must match \code{by}. Ignored when \code{by = NULL}.}
 }
 \value{
-A \code{\link[data.table:data.table]{data.table::data.table()}} in long format with columns:
-\describe{
-\item{\verb{[by cols]}}{Grouping columns (if \code{by} provided).}
-\item{\code{population}}{(numeric) Weighted population of the subgroup.}
-\item{\code{measure}}{(character) One of \code{pop_share}, \code{target_within_group_share},
-or \code{target_survey_share}.}
-\item{\code{value}}{(numeric) The computed share (0–1; \code{NA} if denominator is 0).}
-}
+A \code{\link[data.table:data.table]{data.table::data.table()}} in long format. See
+\code{\link[=.shares_population]{.shares_population()}} or \code{\link[=.shares_target]{.shares_target()}} for the full column
+description depending on the mode used.
 }
 \description{
-Computes weight-based population shares scoped to a single survey (\code{pip_id}).
-Denominators are always survey-specific; shares are never pooled across
-surveys. The function supports two modes determined by \code{target_variable}:
+Dispatches to \code{\link[=.shares_population]{.shares_population()}} or \code{\link[=.shares_target]{.shares_target()}} depending on
+whether \code{target_variable} is \code{NULL}. All denominators are scoped to the
+survey in \code{dt}; shares are never pooled across surveys.
 }
 \details{
-\itemize{
-\item When \code{target_variable = NULL} the function returns the population share of
-each subgroup defined by \code{by}, using the survey total weighted population
-as denominator: \code{pop_share = weighted_pop_in_subgroup / total_weighted_pop_in_survey}.
-\item When \code{target_variable} is not \code{NULL} the function assumes the variable is
-binary (0/1) and returns two measures for each subgroup:
-\itemize{
-\item \code{target_within_group_share}: weighted_pop(target == 1 in subgroup) /
-weighted_pop(subgroup)
-\item \code{target_survey_share}: weighted_pop(target == 1 in subgroup) /
-weighted_pop(survey)
-}
-}
-
-The input \code{dt} is expected to contain data for a single \code{pip_id} (one
-survey). If \code{by = NULL} a single row per survey is returned; if \code{by} is
-provided the result has one row per subgroup within the survey.
+See \code{\link[=.shares_population]{.shares_population()}} and \code{\link[=.shares_target]{.shares_target()}} for full details on each
+mode.
 }
 \seealso{
 Other compute: 

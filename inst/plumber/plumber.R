@@ -220,6 +220,28 @@ function(release = NULL, res) {
   )
 }
 
+# ── GET /surveys-ui ───────────────────────────────────────────────────────────
+
+#* Return UI-friendly survey catalogue (pip_id, country label, dimensions, etc.)
+#*
+#* @param release:character Release ID (optional; defaults to current release)
+#* @serializer json list(na = "null")
+#* @get /surveys-ui
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_surveys_ui(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  api_response(
+    out$result$data,
+    warnings = out$warnings,
+    meta = list(release = out$result$rel)
+  )
+}
+
 # ── GET /releases ─────────────────────────────────────────────────────────────
 
 #* List all loaded release IDs and identify the current release
@@ -238,9 +260,28 @@ function() {
 # TODO read from measure registry 
 
 
-# ── GET /analysis variables ─────────────────────────────────────────────────────────────
+# ── GET /analysis-variables ─────────────────────────────────────────────────────────────
 
-# TODO
+#* Return the catalogue of analysis variables for Decision 2
+#*
+#* Filters the variable registry to entries with role "analysis_var" and
+#* returns varname, label, type, poverty_line_slider, and stat_groups for
+#* each. The UI uses this to populate the analysis variable dropdown and
+#* to know which statistics are valid for each variable.
+#*
+#* @param release:character Release ID (optional; defaults to current)
+#* @serializer json list(na = "null")
+#* @get /analysis-variables
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_analysis_variables(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+  api_response(out$result$data, warnings = out$warnings,
+               meta = list(release = out$result$rel))
+}
 
 # ── GET /dimensions ───────────────────────────────────────────────────────────
 
@@ -263,10 +304,18 @@ function() {
 #* selected by default); multiple active filters are combined as intersections
 #* at query time.
 #*
+#* @param release:character Release ID (optional; defaults to current)
 #* @serializer json list(na = "null")
 #* @get /categories
-function() {
-  api_response(piptm::pip_tablemaker_categories())
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_filter_categories(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+  api_response(out$result$data, warnings = out$warnings,
+               meta = list(release = out$result$rel))
 }
 
 # ── GET /covariates ───────────────────────────────────────────────────────────
@@ -286,10 +335,18 @@ function() {
 #* Poverty status is subject to a mutual exclusivity rule with the Decision 2
 #* poverty analysis variable — the UI enforces this using the varname field.
 #*
+#* @param release:character Release ID (optional; defaults to current)
 #* @serializer json list(na = "null")
 #* @get /covariates
-function() {
-  api_response(piptm::pip_tablemaker_covariates())
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_layout_covariates(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+  api_response(out$result$data, warnings = out$warnings,
+               meta = list(release = out$result$rel))
 }
 
 

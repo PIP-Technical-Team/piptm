@@ -4,11 +4,12 @@
 # configuration at load time. Never exported — access via accessor functions
 # in manifest.R.
 #
-# Configuration is driven by two environment variables that each team member
+# Configuration is driven by three environment variables that each team member
 # sets once in their ~/.Renviron (run usethis::edit_r_environ() to open it):
 #
 #   PIPTM_ARROW_ROOT=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow
 #   PIPTM_MANIFEST_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests
+#   PIPTM_REGISTRY_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/registry
 #
 # When either variable is unset (e.g. CI, new developer, different drive
 # letter), the corresponding slot stays NULL and the package starts in
@@ -25,28 +26,62 @@
 
 .onLoad <- function(libname, pkgname) {
 
-  # Initialise all slots to NULL so accessors never see an unbound name
+  # --- Package options -------------------------------------------------------
+  # Defines the curated allowlist of optional breakdown dimensions admitted
+  # into the variable registry and Arrow schema. This is the single place a
+  # piptm maintainer edits to add or remove optional variables.
+  #
+  # The "only set if not already set" guard means a developer can temporarily
+  # override this at runtime via options(piptm.optional_vars = c(...)) without
+  # touching package source. Setting it to NULL at runtime admits no optional
+  # variables (required fields only).
+  op_piptm <- list(
+    piptm.optional_vars = c(
+      "gender", "area", 
+      "educat4", "educat5", "educat7", 
+      "age", "age_group1", "age_group2",
+      "hsize", "hsize_group",
+      "wquintile",
+      "imp_wat_rec", "imp_san_rec", "electricity",
+      "lstatus", 
+      "empstat", 
+      "industrycat10", 
+      "industrycat4",
+
+      # Derived
+      "female","male",
+      "urban","rural",
+      "youth", "prime_work_age", "elderly",
+      "employed", "unemployed", "in_labor_force",
+      "self_emp", "paid_emp", "inf_emp", "employer",
+      "emp_agri","emp_indu","emp_serv","emp_others"
+    )
+  )
+  toset <- !(names(op_piptm) %in% names(options()))
+  if (any(toset)) options(op_piptm[toset])
+
+  # --- Initialise package environment ----------------------------------------
+  # All slots set to NULL so accessors never see an unbound name.
   .piptm_env$manifest_dir    <- NULL
   .piptm_env$arrow_root      <- NULL
   .piptm_env$manifests       <- list()
   .piptm_env$current_release <- NULL
+  .piptm_env$registry_dir    <- NULL
+  .piptm_env$registries      <- list()
 
   # --- Read paths from environment variables ---------------------------------
-  # Each team member sets PIPTM_ARROW_ROOT and PIPTM_MANIFEST_DIR in their
-  # ~/.Renviron. When unset (CI, new developer), the slots stay NULL and
-  # the package starts in dev / testing mode — configure at runtime via
-  # set_arrow_root() / set_manifest_dir().
+  # Each team member sets these in their ~/.Renviron. When unset (CI, new
+  # developer), slots stay NULL and the package starts in dev / testing mode.
   arrow_root_opt   <- Sys.getenv("PIPTM_ARROW_ROOT",   unset = "")
   manifest_dir_opt <- Sys.getenv("PIPTM_MANIFEST_DIR", unset = "")
+  registry_dir_opt <- Sys.getenv("PIPTM_REGISTRY_DIR", unset = "")
 
-  # --- Arrow root -----------------------------------------------------------
+  # --- Arrow root ------------------------------------------------------------
   # Only assign if the resolved path actually exists on this machine.
   if (nzchar(arrow_root_opt) && dir.exists(arrow_root_opt)) {
     .piptm_env$arrow_root <- arrow_root_opt
   }
 
-
-  # --- Manifest directory ---------------------------------------------------
   # --- collapse threading ----------------------------------------------------
   # Benchmark (benchmarks/orchestration-strategy.R, 2026-04-28) showed that
   # nthreads = 4 is optimal for typical 15-survey workloads (0.12s vs 0.13s
@@ -60,21 +95,35 @@
   },
   error = function(e) NULL)
 
-  if (!nzchar(manifest_dir_opt)) {
-    # Dev / testing mode — manifests loaded on demand via set_manifest_dir()
-    return(invisible(NULL))
+  # --- Manifest directory ----------------------------------------------------
+  if (nzchar(manifest_dir_opt) && dir.exists(manifest_dir_opt)) {
+    tryCatch(
+      .load_manifests(manifest_dir_opt),
+      error = function(e) {
+        packageStartupMessage(
+          "[piptm] Failed to load manifests from pipdata.manifest_root: ",
+          conditionMessage(e),
+          "\n  Call piptm::set_manifest_dir() to retry after fixing the path."
+        )
+      }
+    )
   }
 
-  tryCatch(
-    .load_manifests(manifest_dir_opt),
-    error = function(e) {
-      packageStartupMessage(
-        "[piptm] Failed to load manifests from pipdata.manifest_root: ",
-        conditionMessage(e),
-        "\n  Call piptm::set_manifest_dir() to retry after fixing the path."
-      )
-    }
-  )
+  # --- Variable registry -----------------------------------------------------
+  # Only load when configured and present. Missing directory is not fatal.
+  if (nzchar(registry_dir_opt) && dir.exists(registry_dir_opt)) {
+    .piptm_env$registry_dir <- registry_dir_opt
+
+    tryCatch(
+      piptm_load_registry(registry_dir_opt),
+      error = function(e) {
+        packageStartupMessage(
+          "[piptm] Failed to load variable registries from: ", registry_dir_opt,
+          "\n  ", conditionMessage(e)
+        )
+      }
+    )
+  }
 
   # --- Current release (from pipfun::get_wrk_release()) ---------------------
   # Overrides whatever .load_manifests() resolved from current_release.json,

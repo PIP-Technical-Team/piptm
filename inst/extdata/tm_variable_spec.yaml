@@ -102,6 +102,15 @@ variables:
       - filter
       - covariate
     stat_groups: []
+    categories:
+      - code: "0-14"
+        label: "0 to 14"
+      - code: "15-24"
+        label: "15 to 24"
+      - code: "25-64"
+        label: "25 to 64"
+      - code: "65+"
+        label: "65 and above"
 
   hsize_group:
     ui_label: "Household size"
@@ -109,6 +118,15 @@ variables:
       - filter
       - covariate
     stat_groups: []
+    categories:
+      - code: "1"
+        label: "1 person"
+      - code: "2-3"
+        label: "2 to 3 persons"
+      - code: "4-6"
+        label: "4 to 6 persons"
+      - code: "7+"
+        label: "7 or more persons"
 
   # ── Categorical variables — education (haven_labels) ────────────────────────
 
@@ -141,6 +159,17 @@ variables:
       - filter
       - covariate
     stat_groups: []
+    categories:
+      - code: "1"
+        label: "Q1 (bottom 20%)"
+      - code: "2"
+        label: "Q2"
+      - code: "3"
+        label: "Q3"
+      - code: "4"
+        label: "Q4"
+      - code: "5"
+        label: "Q5 (top 20%)"
 
   # ── Categorical variables — labour status (haven_labels) ────────────────────
 

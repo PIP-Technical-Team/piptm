@@ -320,6 +320,93 @@ piptm_manifest <- function(release = NULL) {
   manifests[[release]]
 }
 
+#' Build a UI-friendly surveys catalogue
+#'
+#' Returns one row per manifest entry enriched with UI-friendly labels and
+#' dimension metadata (varname + UI label). Country names are mapped from
+#' ISO3 codes when the `countrycode` package is available; otherwise the
+#' ISO3 code is repeated as the label.
+#'
+#' @param release Character scalar release ID (optional; defaults to current)
+#' @return A list of named lists suitable for JSON serialization.
+#' @export
+piptm_surveys_ui <- function(release = NULL) {
+  mf <- piptm_manifest(release)
+
+  # Prefer auxiliary metadata for country names (pipload::load_aux_data("metadata")).
+  # Fallbacks: `countrycode` package, then the ISO3 code itself.
+  if (nrow(mf) == 0L) {
+    country_labels <- character(0L)
+  } else {
+    country_labels <- rep(NA_character_, nrow(mf))
+
+    # 1) pipload metadata
+    md <- NULL
+    if (requireNamespace("pipload", quietly = TRUE)) {
+      md <- tryCatch(
+        pipload::load_aux_data("metadata"),
+        error = function(e) NULL
+      )
+    }
+
+    if (!is.null(md) && all(c("country_code", "country_name") %in% names(md))) {
+      md_dt <- data.table::as.data.table(md)
+      uniq <- unique(md_dt[, .(country_code, country_name)])
+      map <- setNames(as.character(uniq$country_name), as.character(uniq$country_code))
+      country_labels <- map[as.character(mf$country_code)]
+      missing <- is.na(country_labels)
+      country_labels[missing] <- as.character(mf$country_code[missing])
+
+    } else {
+      # Fallback: use ISO3 code as label when auxiliary metadata is absent
+      country_labels <- as.character(mf$country_code)
+    }
+  }
+
+  # map welfare_type to UI label
+  welfare_label <- if (nrow(mf) > 0L) {
+    vapply(mf$welfare_type, function(x) {
+      if (identical(toupper(x), "INC")) return("Income")
+      if (identical(toupper(x), "CON")) return("Consumption")
+      as.character(x)
+    }, character(1L))
+  } else character(0L)
+
+  # Load variable registry for labels (best-effort)
+  registry <- tryCatch(piptm_variable_registry(release), error = function(e) NULL)
+
+  # Order rows for UI: alphabetical by `pip_id` (case-insensitive)
+  if (nrow(mf) > 0L) {
+    ord <- order(toupper(as.character(mf$pip_id)), na.last = TRUE)
+    mf <- mf[ord]
+    country_labels <- country_labels[ord]
+    welfare_label <- welfare_label[ord]
+  }
+
+  out <- lapply(seq_len(nrow(mf)), function(i) {
+    dims <- mf$dimensions[[i]]
+    # For Stage-1 the UI only needs varnames (no labels). Return a simple
+    # character vector of available dimension varnames for each survey.
+    dims_list <- character(0)
+    if (!is.null(dims) && length(dims) > 0L) {
+      dims_list <- as.character(dims)
+    }
+
+    list(
+      pip_id = as.character(mf$pip_id[i]),
+      country_code = as.character(mf$country_code[i]),
+      country_label = as.character(country_labels[i]),
+      year = as.integer(mf$year[i]),
+      welfare_type = as.character(mf$welfare_type[i]),
+      welfare_label = as.character(welfare_label[i]),
+      version = as.character(mf$version[i]),
+      dimensions = dims_list
+    )
+  })
+
+  out
+}
+
 # ---------------------------------------------------------------------------
 # Runtime configuration overrides
 # ---------------------------------------------------------------------------
