@@ -39,7 +39,7 @@
     piptm.optional_vars = c(
       "gender", "area", 
       "educat4", "educat5", "educat7", 
-      "age", "age_group1", "age_group2",
+      "age", "age_group", "age_group2",
       "hsize", "hsize_group",
       "wquintile",
       "imp_wat_rec", "imp_san_rec", "electricity",

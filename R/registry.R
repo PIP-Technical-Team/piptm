@@ -218,12 +218,14 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   }
 
   # --- Load pipdata recode spec ---------------------------------------------
-  pip_dict <- pipload::pip_read(
-    id      = "recode_spec",
-    format  = "qs2",
-    alias   = "pip_inv",
-    verbose = verbose
-  )
+  pip_dict <- pip_dict # TEMPORARY 
+    
+  #   pipload::pip_read(
+  #   id      = "recode_spec",
+  #   format  = "qs2",
+  #   alias   = "pip_inv",
+  #   verbose = verbose
+  # )
 
   pip_vars <- pip_dict$variables
   if (is.null(pip_vars)) pip_vars <- list()

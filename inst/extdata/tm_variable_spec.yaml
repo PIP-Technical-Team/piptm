@@ -112,6 +112,13 @@ variables:
       - code: "65+"
         label: "65 and above"
 
+  age_group2:
+    ui_label: "Age group 2"
+    roles:
+      - filter
+      - covariate
+    stat_groups: []
+
   hsize_group:
     ui_label: "Household size"
     roles:
@@ -127,6 +134,61 @@ variables:
         label: "4 to 6 persons"
       - code: "7+"
         label: "7 or more persons"
+
+  # ── Binary variables — gender derived (binary_from_categorical) ──────────────
+
+  female:
+    ui_label: "Female"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  male:
+    ui_label: "Male"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  # ── Binary variables — area derived (binary_from_categorical) ───────────────
+
+  urban:
+    ui_label: "Urban"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  rural:
+    ui_label: "Rural"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  # ── Binary variables — age derived (binary_from_continuous) ─────────────────
+
+  youth:
+    ui_label: "Youth (15-24)"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  prime_work_age:
+    ui_label: "Prime working age (25-54)"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  elderly:
+    ui_label: "Elderly (65+)"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
 
   # ── Categorical variables — education (haven_labels) ────────────────────────
 
@@ -187,6 +249,29 @@ variables:
       - covariate
     stat_groups: []
 
+  # ── Binary variables — labour status derived (binary_from_categorical) ───────
+
+  employed:
+    ui_label: "Employed"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  unemployed:
+    ui_label: "Unemployed"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  in_labor_force:
+    ui_label: "Labor force participation"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
   # ── Categorical variables — employment status (haven_labels) ────────────────
 
   empstat:
@@ -217,6 +302,36 @@ variables:
       - covariate
     stat_groups: []
 
+  # ── Binary variables — employment status derived (binary_from_categorical) ───
+
+  self_emp:
+    ui_label: "Self-employment"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  paid_emp:
+    ui_label: "Wage employment"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  inf_emp:
+    ui_label: "Informal employment"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  employer:
+    ui_label: "Employer"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
   # ── Categorical variables — industry 4-category (haven_labels) ──────────────
 
   industrycat4:
@@ -246,6 +361,36 @@ variables:
       - filter
       - covariate
     stat_groups: []
+
+  # ── Binary variables — industry sector derived (binary_from_categorical) ─────
+
+  emp_agri:
+    ui_label: "Employment in agriculture sector"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  emp_indu:
+    ui_label: "Employment in industry sectors"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  emp_serv:
+    ui_label: "Employment in services sectors"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
+
+  emp_others:
+    ui_label: "Employment in other sectors"
+    roles:
+      - analysis_var
+    stat_groups:
+      - shares
 
   # ── Categorical variables — industry 10-category (haven_labels) ─────────────
 
