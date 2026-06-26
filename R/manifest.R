@@ -333,35 +333,7 @@ piptm_manifest <- function(release = NULL) {
 piptm_surveys_ui <- function(release = NULL) {
   mf <- piptm_manifest(release)
 
-  # Prefer auxiliary metadata for country names (pipload::load_aux_data("metadata")).
-  # Fallbacks: `countrycode` package, then the ISO3 code itself.
-  if (nrow(mf) == 0L) {
-    country_labels <- character(0L)
-  } else {
-    country_labels <- rep(NA_character_, nrow(mf))
-
-    # 1) pipload metadata
-    md <- NULL
-    if (requireNamespace("pipload", quietly = TRUE)) {
-      md <- tryCatch(
-        pipload::load_aux_data("metadata"),
-        error = function(e) NULL
-      )
-    }
-
-    if (!is.null(md) && all(c("country_code", "country_name") %in% names(md))) {
-      md_dt <- data.table::as.data.table(md)
-      uniq <- unique(md_dt[, .(country_code, country_name)])
-      map <- setNames(as.character(uniq$country_name), as.character(uniq$country_code))
-      country_labels <- map[as.character(mf$country_code)]
-      missing <- is.na(country_labels)
-      country_labels[missing] <- as.character(mf$country_code[missing])
-
-    } else {
-      # Fallback: use ISO3 code as label when auxiliary metadata is absent
-      country_labels <- as.character(mf$country_code)
-    }
-  }
+  country_labels <- if (nrow(mf) == 0L) character(0L) else as.character(mf$country_name) #NB: ADD COUNTRY NAME TO MANIFEST, NOT YET THERE!!!
 
   # map welfare_type to UI label
   welfare_label <- if (nrow(mf) > 0L) {

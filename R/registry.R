@@ -425,17 +425,27 @@ piptm_filter_categories <- function(release = NULL) {
 
   out <- lapply(reg, function(entry) {
     if (!"filter" %in% entry$roles) return(NULL)
+
     subcats <- entry$categories
     if (is.null(subcats)) subcats <- list()
+
+    subcats <- lapply(subcats, function(cat) {
+      list(
+        code  = as.character(cat$code),
+        label = as.character(cat$label)
+      )
+    })
+
     list(
-      varname       = entry$varname,
-      label         = entry$ui_label,
+      varname       = as.character(entry$varname),
+      label         = as.character(entry$ui_label),
       subcategories = subcats
     )
   })
 
-  Filter(Negate(is.null), out)
+  unname(Filter(Negate(is.null), out))
 }
+
 
 
 #' List layout covariates for the UI (Decision 3)
