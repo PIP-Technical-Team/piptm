@@ -398,16 +398,16 @@ piptm_analysis_variables <- function(release = NULL) {
 
   out <- lapply(reg, function(entry) {
     if (!"analysis_var" %in% entry$roles) return(NULL)
+
     list(
-      varname             = entry$varname,
-      label               = entry$ui_label,
-      type                = entry$tm_type,
-      poverty_line_slider = identical(entry$tm_type, "poverty"),
-      stat_groups         = if (is.null(entry$stat_groups)) character(0L) else entry$stat_groups
+      varname     = as.character(entry$varname),
+      label       = as.character(entry$ui_label),
+      type        = as.character(entry$tm_type),
+      stat_groups = if (is.null(entry$stat_groups)) character(0L) else as.character(unlist(entry$stat_groups))
     )
   })
 
-  Filter(Negate(is.null), out)
+  unname(Filter(Negate(is.null), out))
 }
 
 
@@ -462,14 +462,13 @@ piptm_layout_covariates <- function(release = NULL) {
 
   out <- lapply(reg, function(entry) {
     if (!"covariate" %in% entry$roles) return(NULL)
+
     list(
-      varname             = entry$varname,
-      label               = entry$ui_label,
-      n_categories        = if (is.null(entry$n_categories)) NULL else entry$n_categories,
-      pov_status_mutex    = identical(entry$varname, "pov_status"),
-      poverty_line_slider = identical(entry$tm_type, "poverty")
+      varname      = as.character(entry$varname),
+      label        = as.character(entry$ui_label),
+      n_categories = if (is.null(entry$n_categories)) NULL else as.integer(entry$n_categories)
     )
   })
 
-  Filter(Negate(is.null), out)
+  unname(Filter(Negate(is.null), out))
 }
