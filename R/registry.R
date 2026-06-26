@@ -229,7 +229,6 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   }
 
   # --- Load pipdata recode spec ---------------------------------------------
-  #pip_dict <- pip_dict # TEMPORARY 
     
   pip_dict <- pipload::pip_read(
     id      = "recode_spec",
@@ -296,8 +295,32 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   names(registry) <- varnames_to_build
   registry        <- Filter(Negate(is.null), registry)
 
+    # --- Load measure spec and embed into registry ----------------------------
+  measure_spec_path <- system.file("extdata", "tm_measure_spec.yaml", package = "piptm")
+  if (!nzchar(measure_spec_path) || !file.exists(measure_spec_path)) {
+    cli::cli_warn(
+      c(
+        "!" = "Could not find {.file inst/extdata/tm_measure_spec.yaml}.",
+        "i" = "Registry will be written without measure_spec."
+      )
+    )
+  } else {
+    measure_spec <- yaml::read_yaml(measure_spec_path)
+    if (!is.null(measure_spec$stat_groups) && length(measure_spec$stat_groups) > 0L) {
+      registry[["measure_spec"]] <- measure_spec$stat_groups
+    } else {
+      cli::cli_warn(
+        c(
+          "!" = "{.file tm_measure_spec.yaml} has no {.field stat_groups} entries.",
+          "i" = "Registry will be written without measure_spec."
+        )
+      )
+    }
+  }
+
   # --- Write JSON -----------------------------------------------------------
   out_path <- file.path(registry_dir, paste0(release, ".json"))
+ 
   out_json <- jsonlite::toJSON(
     registry,
     auto_unbox = FALSE,
@@ -484,4 +507,49 @@ piptm_layout_covariates <- function(release = NULL) {
   })
 
   unname(Filter(Negate(is.null), out))
+}
+
+
+#' List stat groups and their measures for the UI
+#'
+#' Returns the measure specification embedded in the release registry,
+#' structured as an array of stat groups each with their measures. Derived
+#' from `tm_measure_spec.yaml` at registry build time.
+#'
+#' @param release Optional release ID; defaults to `piptm_current_release()`.
+#' @return A list of named lists suitable for JSON serialization.
+#' @export
+piptm_stat_groups <- function(release = NULL) {
+  reg <- piptm_variable_registry(release)
+
+  measure_spec <- reg[["measure_spec"]]
+  if (is.null(measure_spec) || length(measure_spec) == 0L) {
+    cli::cli_abort(
+      c(
+        "No measure_spec found in registry for release {.val {release}}.",
+        "i" = "Re-run {.fn build_variable_registry} to embed the measure spec."
+      )
+    )
+  }
+
+  out <- lapply(names(measure_spec), function(group_key) {
+    group       <- measure_spec[[group_key]]
+    group_label <- as.character(group$label)
+    measures    <- group$measures
+
+    measures_out <- lapply(names(measures), function(measure_key) {
+      list(
+        measure = as.character(measure_key),
+        label   = as.character(measures[[measure_key]]$label)
+      )
+    })
+
+    list(
+      group       = as.character(group_key),
+      group_label = group_label,
+      measures    = measures_out
+    )
+  })
+
+  out
 }

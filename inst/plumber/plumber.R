@@ -362,3 +362,63 @@ function() {
     release = piptm::piptm_current_release()
   ))
 }
+
+
+#' GET /statistics
+#'
+#' Returns the full list of statistical measure groups and their measures
+#'
+#' The measure specification is embedded in the release registry at build time
+#' (via [piptm::build_variable_registry()]) from the
+#' `inst/extdata/tm_measure_spec.yaml` file. Adding or modifying measures
+#' requires updating that file and rebuilding the registry.
+#'
+#' @section Response shape:
+#' ```json
+#' {
+#'   "status": ["success"],
+#'   "data": [
+#'     {
+#'       "group": ["summary_statistics"],
+#'       "group_label": ["Summary Statistics"],
+#'       "measures": [
+#'         { "measure": ["mean"], "label": ["Mean"] },
+#'         ...
+#'       ]
+#'     },
+#'     ...
+#'   ],
+#'   "warnings": [],
+#'   "errors": [],
+#'   "meta": { "release": ["20260401_TEST"] }
+#' }
+#' ```
+#'
+#' @param release Optional. Character scalar release identifier
+#'   (e.g. `"20260401_TEST"`). When `NULL` (default), the current active
+#'   release is resolved automatically via `piptm::piptm_current_release()`.
+#' @param res Plumber response object — injected automatically by the router.
+#'
+#' @return A JSON response via [api_response()], or an error response via
+#'   [api_error()] with HTTP 422 when the release cannot be resolved or the
+#'   measure spec is absent from the registry.
+#'
+#' @seealso [piptm::piptm_stat_groups()], [piptm::build_variable_registry()]
+#'
+#' @examples
+#' \dontrun{
+#' # Plumber route registration
+#' pr$handle("GET", "/statistics", function(release = NULL, res) { ... })
+#' }
+
+#* @get /statistics
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel  <- resolve_release(release)
+    data <- piptm::piptm_stat_groups(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+  api_response(out$result$data, warnings = out$warnings,
+               meta = list(release = out$result$rel))
+}
