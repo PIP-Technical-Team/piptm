@@ -20,13 +20,6 @@ variables:
     stat_groups:
       - poverty
 
-  weight:
-    ui_label: "Population"
-    roles:
-      - analysis_var
-    stat_groups:
-      - summary_statistics
-      - shares
 
   # ── Continuous variables (from pipdata range_clamp) ─────────────────────────
 

@@ -114,23 +114,34 @@ NULL
   recode_type <- as.character(pip_var$recode_type)
 
   tm_type <- NULL
-  if (identical(pip_type, "numeric")) {
+
+if (pip_type == "numeric") {
+  if (recode_type == "range_clamp") {
     tm_type <- "continuous"
-  } else if (identical(pip_type, "factor")) {
-    if (identical(recode_type, "binary_map")) {
-      tm_type <- "binary"
-    } else {
-      tm_type <- "categorical"
-    }
-  } else {
-    cli::cli_abort(
-      c(
-        "Unknown pipdata type {.val {pip_type}} for variable {.val {varname}}.",
-        "i" = "Expected one of {.val {c('numeric', 'factor')}}."
-      )
-    )
+  } else if (recode_type == "indicator") {
+    tm_type <- "binary"
   }
 
+} else if (pip_type == "factor") {
+  if (recode_type == "binary_map") {
+    tm_type <- "binary"
+  } else if (recode_type == "haven_labels" | recode_type == "binned_from_continuous") {
+    tm_type <- "categorical"
+  }
+}
+
+if (is.null(tm_type)) {
+  cli::cli_abort(
+    c(
+      "Invalid combination of {.val {pip_type}} and {.val {recode_type}} for variable {.val {varname}}.",
+      "i" = "Valid combinations are:",
+      "*" = "{.val {'numeric'}} + {.val {'range_clamp'}} -> {.val {'continuous'}}",
+      "*" = "{.val {'numeric'}} + {.val {'indicator'}} -> {.val {'binary'}}",
+      "*" = "{.val {'factor'}} + {.val {'binary_map'}} -> {.val {'binary'}}",
+      "*" = "{.val {'factor'}} + {.val {'haven_labels'}} -> {.val {'categorical'}}"
+    )
+  )
+}
   categories   <- NULL
   n_categories <- NULL
   if (!identical(tm_type, "continuous")) {
@@ -218,14 +229,14 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   }
 
   # --- Load pipdata recode spec ---------------------------------------------
-  pip_dict <- pip_dict # TEMPORARY 
+  #pip_dict <- pip_dict # TEMPORARY 
     
-  #   pipload::pip_read(
-  #   id      = "recode_spec",
-  #   format  = "qs2",
-  #   alias   = "pip_inv",
-  #   verbose = verbose
-  # )
+  pip_dict <- pipload::pip_read(
+    id      = "recode_spec",
+    format  = "qs2",
+    alias   = "pip_inv",
+    verbose = verbose
+  )
 
   pip_vars <- pip_dict$variables
   if (is.null(pip_vars)) pip_vars <- list()

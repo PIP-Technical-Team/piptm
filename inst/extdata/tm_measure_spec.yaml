@@ -1,0 +1,63 @@
+schema_version: "1.0"
+
+stat_groups:
+
+  summary_statistics:
+    label: "Summary Statistics"
+    measures:
+      mean:
+        label: "Mean"
+      median:
+        label: "Median"
+      sd:
+        label: "Standard deviation"
+      var:
+        label: "Variance"
+      min:
+        label: "Minimum"
+      max:
+        label: "Maximum"
+      nobs:
+        label: "Number of observations"
+      p10:
+        label: "10th percentile"
+      p25:
+        label: "25th percentile"
+      p75:
+        label: "75th percentile"
+      p90:
+        label: "90th percentile"
+      sum:
+        label: "Sum"
+
+  poverty:
+    label: "Poverty"
+    measures:
+      headcount:
+        label: "Poverty headcount"
+      poverty_gap:
+        label: "Poverty gap index"
+      severity:
+        label: "Poverty severity index"
+      watts:
+        label: "Watts index"
+      pop_poverty:
+        label: "Population in poverty"
+
+  inequality:
+    label: "Inequality"
+    measures:
+      gini:
+        label: "Gini index"
+      mld:
+        label: "Mean log deviation"
+
+  shares:
+    label: "Shares"
+    measures:
+      pop_share:
+        label: "Population share"
+      target_within_group_share:
+        label: "Target share within cell"
+      target_survey_share:
+        label: "Target share in sample base"
