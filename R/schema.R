@@ -70,17 +70,17 @@ pip_arrow_schema <- function() {
   }
 
   # --- Build optional fields from allowlist ----------------------------------
-  # For each var in optional_vars:
-  #   - Always added as int32 optional field.
-  #   - If a registry entry exists with categories, levels are populated.
-  special_names  <- c("welfare", "pov_status", "weight")
-  required_names <- names(fields)
+  # Continuous vars declared as float64 — everything else defaults to int32.
+  continuous_vars <- c("age", "hsize")
+  special_names   <- c("welfare", "pov_status", "weight")
+  required_names  <- names(fields)
 
   for (varname in optional_vars) {
     # Skip vars that clash with required or special names
     if (varname %in% c(required_names, special_names)) next
 
-    fields[[varname]] <- list(type = arrow::int32(), required = FALSE)
+    arrow_type        <- if (varname %in% continuous_vars) arrow::float64() else arrow::int32()
+    fields[[varname]] <- list(type = arrow_type, required = FALSE)
 
     if (!is.null(registry)) {
       reg_entry <- registry[[varname]]
@@ -95,6 +95,7 @@ pip_arrow_schema <- function() {
 
   list(fields = fields, levels = levels)
 }
+
 
 
 #' Build welfare field specs for a set of welfare column names

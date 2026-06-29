@@ -113,26 +113,36 @@
     # Convert list-of-lists to data.table.
     # 'dimensions' is a list column (each element = character vector).
     dt <- data.table::data.table(
-      pip_id          = vapply(entries, `[[`, character(1L), "pip_id"),
-      survey_id       = vapply(entries, `[[`, character(1L), "survey_id"),
-      country_code    = vapply(entries, `[[`, character(1L), "country_code"),
-      year            = vapply(entries, function(e) as.integer(e$year), integer(1L)),
-      welfare_type    = vapply(entries, `[[`, character(1L), "welfare_type"),
-      version         = vapply(entries, `[[`, character(1L), "version"),
-      survey_acronym  = vapply(entries, `[[`, character(1L), "survey_acronym"),
-      module          = vapply(entries, `[[`, character(1L), "module"),
-      # TODO: reporting_level is a placeholder ("national") until inventory column is available
-      reporting_level = vapply(entries, function(e) {
-        rl <- e$reporting_level
-        if (is.null(rl)) NA_character_ else as.character(rl)
-      }, character(1L))
-    )
+  pip_id         = vapply(entries, `[[`, character(1L), "pip_id"),
+  survey_id      = vapply(entries, `[[`, character(1L), "survey_id"),
+  country_code   = vapply(entries, `[[`, character(1L), "country_code"),
+  country_name   = vapply(entries, function(e) {
+    cn <- e$country_name
+    if (is.null(cn)) NA_character_ else as.character(cn)
+  }, character(1L)),
+  region_name    = vapply(entries, function(e) {
+    rn <- e$region_name
+    if (is.null(rn)) NA_character_ else as.character(rn)
+  }, character(1L)),
+  region_code    = vapply(entries, function(e) {
+    rc <- e$region_code
+    if (is.null(rc)) NA_character_ else as.character(rc)
+  }, character(1L)),
+  year           = vapply(entries, function(e) as.integer(e$year), integer(1L)),
+  welfare_type   = vapply(entries, `[[`, character(1L), "welfare_type"),
+  version        = vapply(entries, `[[`, character(1L), "version"),
+  survey_acronym = vapply(entries, `[[`, character(1L), "survey_acronym"),
+  module         = vapply(entries, `[[`, character(1L), "module")
+)
+
     # dimensions is a list column — each entry is a character vector.
     # Use data.table::set() to avoid CEDTA errors before NAMESPACE is generated.
     dims_col <- lapply(entries, function(e) {
       d <- e$dimensions
       if (is.null(d)) character(0L) else as.character(unlist(d))
     })
+
+
     data.table::set(dt, j = "dimensions", value = dims_col)
 
     # welfare_vars: list column — each element is a character vector of the
@@ -432,3 +442,5 @@ set_arrow_root <- function(path) {
   .piptm_env$arrow_root <- path
   invisible(path)
 }
+
+
