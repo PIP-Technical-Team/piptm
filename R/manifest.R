@@ -105,67 +105,74 @@
 
     entries <- parsed$entries
     if (is.null(entries) || length(entries) == 0L) {
-      # Empty manifest — store an empty data.table with the correct schema
       manifests[[release_id]] <- .empty_manifest_dt()
       next
     }
 
-    # Convert list-of-lists to data.table.
-    # 'dimensions' is a list column (each element = character vector).
+    # --- Scalar columns -------------------------------------------------------
     dt <- data.table::data.table(
-  pip_id         = vapply(entries, `[[`, character(1L), "pip_id"),
-  survey_id      = vapply(entries, `[[`, character(1L), "survey_id"),
-  country_code   = vapply(entries, `[[`, character(1L), "country_code"),
-  country_name   = vapply(entries, function(e) {
-    cn <- e$country_name
-    if (is.null(cn)) NA_character_ else as.character(cn)
-  }, character(1L)),
-  region_name    = vapply(entries, function(e) {
-    rn <- e$region_name
-    if (is.null(rn)) NA_character_ else as.character(rn)
-  }, character(1L)),
-  region_code    = vapply(entries, function(e) {
-    rc <- e$region_code
-    if (is.null(rc)) NA_character_ else as.character(rc)
-  }, character(1L)),
-  year           = vapply(entries, function(e) as.integer(e$year), integer(1L)),
-  welfare_type   = vapply(entries, `[[`, character(1L), "welfare_type"),
-  version        = vapply(entries, `[[`, character(1L), "version"),
-  survey_acronym = vapply(entries, `[[`, character(1L), "survey_acronym"),
-  module         = vapply(entries, `[[`, character(1L), "module")
-)
+      pip_id         = vapply(entries, `[[`, character(1L), "pip_id"),
+      survey_id      = vapply(entries, `[[`, character(1L), "survey_id"),
+      country_code   = vapply(entries, `[[`, character(1L), "country_code"),
+      country_name   = vapply(entries, function(e) {
+        cn <- e$country_name
+        if (is.null(cn)) NA_character_ else as.character(cn)
+      }, character(1L)),
+      region_name    = vapply(entries, function(e) {
+        rn <- e$region_name
+        if (is.null(rn)) NA_character_ else as.character(rn)
+      }, character(1L)),
+      region_code    = vapply(entries, function(e) {
+        rc <- e$region_code
+        if (is.null(rc)) NA_character_ else as.character(rc)
+      }, character(1L)),
+      year           = vapply(entries, function(e) as.integer(e$year), integer(1L)),
+      welfare_type   = vapply(entries, `[[`, character(1L), "welfare_type"),
+      version        = vapply(entries, `[[`, character(1L), "version"),
+      survey_acronym = vapply(entries, `[[`, character(1L), "survey_acronym"),
+      module         = vapply(entries, `[[`, character(1L), "module"),
+      n_obs          = vapply(entries, function(e) {
+        n <- e$n_obs
+        if (is.null(n) || (length(n) == 1L && is.na(n))) NA_integer_
+        else as.integer(n)
+      }, integer(1L))
+    )
 
-    # dimensions is a list column — each entry is a character vector.
-    # Use data.table::set() to avoid CEDTA errors before NAMESPACE is generated.
+    # --- dimensions: list column — each element is a character vector ---------
     dims_col <- lapply(entries, function(e) {
       d <- e$dimensions
       if (is.null(d)) character(0L) else as.character(unlist(d))
     })
-
-
     data.table::set(dt, j = "dimensions", value = dims_col)
 
-    # welfare_vars: list column — each element is a character vector of the
-    # welfare column names written in this survey's Parquet file.
-    # Absent in legacy manifests — falls back to character(0).
+    # --- welfare_vars: list column --------------------------------------------
     welfare_vars_col <- lapply(entries, function(e) {
       wv <- e$welfare_vars
       if (is.null(wv)) character(0L) else as.character(unlist(wv))
     })
     data.table::set(dt, j = "welfare_vars", value = welfare_vars_col)
 
-    # ppp_sort: integer scalar per survey — the "preferred" PPP year used to
-    # identify the default welfare column.  Absent in legacy manifests —
-    # falls back to NA_integer_.
+    # --- ppp_sort: integer scalar per survey ----------------------------------
     ppp_sort_col <- vapply(entries, function(e) {
       ps <- e$ppp_sort
-      if (is.null(ps) || (length(ps) == 1L && is.na(ps))) {
-        NA_integer_
-      } else {
-        suppressWarnings(as.integer(ps))
-      }
+      if (is.null(ps) || (length(ps) == 1L && is.na(ps))) NA_integer_
+      else suppressWarnings(as.integer(ps))
     }, integer(1L))
     data.table::set(dt, j = "ppp_sort", value = ppp_sort_col)
+
+    # --- dimensions_n_obs: list column ----------------------------------------
+    # Each element is a named integer vector — dimension name → non-NA count.
+    # Absent in legacy manifests — falls back to empty named integer vector.
+    dimensions_n_obs_col <- lapply(entries, function(e) {
+      dnobs <- e$dimensions_n_obs
+      if (is.null(dnobs) || length(dnobs) == 0L) {
+        return(setNames(integer(0), character(0)))
+      }
+      vals  <- as.integer(unlist(dnobs, use.names = FALSE))
+      nms   <- names(dnobs)
+      setNames(vals, nms)
+    })
+    data.table::set(dt, j = "dimensions_n_obs", value = dimensions_n_obs_col)
 
     manifests[[release_id]] <- dt[]
   }
@@ -184,18 +191,16 @@
     }
   }
 
-  # If no pointer file, default to the most recent release by name
   if (is.null(.piptm_env$current_release) && length(manifests) > 0L) {
     .piptm_env$current_release <- sort(names(manifests), decreasing = TRUE)[[1L]]
   }
 
   n <- length(manifests)
-  cli::cli_inform(
-    "Loaded {n} manifest{?s} from {.path {manifest_dir}}."
-  )
+  cli::cli_inform("Loaded {n} manifest{?s} from {.path {manifest_dir}}.")
 
   invisible(n)
 }
+
 
 #' Build an empty manifest data.table with the canonical column schema
 #'
