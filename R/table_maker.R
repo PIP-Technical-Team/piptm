@@ -98,45 +98,21 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' manifest lookup → survey loading → pre-processing → per-survey computation
 #' → long-format output.
 #'
-#' **Two equivalent input patterns are supported:**
+#' Requests are survey-first: callers provide one or more `pip_id` values plus
+#' an explicit `analysis_var` that determines routing.
 #'
-#' *Pattern 1 — pip_id (primary, used by the API layer):*
-#' ```r
-#' table_maker(
-#'   pip_id   = c("COL_2010_GEIH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
-#'   measures = c("headcount", "gini"),
-#'   poverty_lines = 2.15
-#' )
-#' ```
-#'
-#' *Pattern 2 — triplet fallback (ad-hoc R console use):*
-#' ```r
-#' table_maker(
-#'   country_code = c("COL", "BOL"),
-#'   year         = c(2010L, 2000L),
-#'   welfare_type = c("INC", "INC"),
-#'   measures     = c("headcount", "gini"),
-#'   poverty_lines = 2.15
-#' )
-#' ```
-#'
-#' When triplets are provided, [pip_lookup()] resolves them to `pip_id`s
-#' internally.  If both `pip_id` and triplets are supplied, `pip_id` takes
-#' precedence and the triplets are silently ignored.
+#' `pov_status` is treated as a derived variable (never loaded from Parquet).
+#' When `"pov_status"` appears in `by`, it is computed as
+#' `as.integer(welfare < poverty_line)` after survey loading.
 #'
 #' @param pip_id Character vector of survey identifiers (manifest primary key,
-#'   e.g. `"COL_2010_GEIH_INC_ALL"`). Either this **or** the three triplet
-#'   params below must be supplied.
-#' @param country_code Character vector of ISO3 country codes (triplet fallback).
-#' @param year Integer vector of survey years (triplet fallback, same length as
-#'   `country_code`).
-#' @param welfare_type Character vector of welfare types — `"INC"` or `"CON"`
-#'   (triplet fallback, same length as `country_code`).
+#'   e.g. `"COL_2010_GEIH_INC_ALL"`). Must be provided and non-empty.
+#' @param analysis_var Character scalar analysis variable name.
 #' @param measures Non-empty character vector of measure names drawn from
 #'   the internal measure registry (validated by [.classify_measures()]).
-#' @param poverty_lines Positive numeric vector of poverty line values, or
-#'   `NULL`. Required when any poverty-family measure (`headcount`,
-#'   `poverty_gap`, `severity`, `watts`, `pop_poverty`) is requested.
+#' @param poverty_line Positive numeric scalar poverty line, or `NULL`.
+#'   Required when any poverty-family measure is requested or when
+#'   `"pov_status"` is included in `by`.
 #' @param by Character vector of disaggregation dimension names, or `NULL` for
 #'   aggregate results.  Valid values: `"gender"`, `"area"`, `"educat4"`,
 #'   `"educat5"`, `"educat7"`, `"age"`.  At most 4 dimensions; at most one
@@ -167,7 +143,8 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'     Surveys missing any requested dimension are excluded before loading;
 #'     every row in the result is guaranteed to have non-`NA` values for all
 #'     breakdown columns.}
-#'   \item{`poverty_line`}{Poverty threshold; `NA` for non-poverty measures.}
+#'   \item{`poverty_line`}{Poverty threshold; populated for poverty-family
+#'     rows and `NA` for non-poverty rows.}
 #'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
 #'   \item{`value`}{Computed statistic.}
 #'   \item{`population`}{Total weighted population in the group.  For surveys
@@ -184,59 +161,53 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' set_manifest_dir("//server/manifests")
 #' set_arrow_root("//server/pip/arrow")
 #'
-#' # Via pip_id
+#' # Welfare analysis
 #' result <- table_maker(
 #'   pip_id        = "COL_2010_GEIH_INC_ALL",
+#'   analysis_var  = "welfare",
 #'   measures      = c("headcount", "gini", "mean"),
-#'   poverty_lines = c(2.15, 3.65),
+#'   poverty_line  = 2.15,
 #'   by            = c("gender", "area")
 #' )
 #'
-#' # Via triplets
+#' # Poverty-status analysis
 #' result <- table_maker(
-#'   country_code  = "COL",
-#'   year          = 2010L,
-#'   welfare_type  = "INC",
-#'   measures      = c("headcount", "gini", "mean"),
-#'   poverty_lines = c(2.15, 3.65),
-#'   by            = c("gender", "area")
+#'   pip_id        = "COL_2010_GEIH_INC_ALL",
+#'   analysis_var  = "pov_status",
+#'   measures      = c("headcount", "poverty_gap"),
+#'   poverty_line  = 2.15
 #' )
 #' }
-table_maker <- function(pip_id        = NULL, # this comes from URL
-                        country_code  = NULL, # not needed for now but included for future wrappers
-                        year          = NULL, # not needed for now but included for future wrappers
-                        welfare_type  = NULL, # not needed for now but included for future wrappers
-                        measures,             # statistics 
-                        target_variable = NULL,      # analysis variable (e.g. "welfare")
-                        poverty_lines = NULL,
+table_maker <- function(pip_id        = NULL,
+                        analysis_var,
+                        measures,
+                        poverty_line  = NULL,
                         by            = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.00) {
+                        pop_share_threshold = 0.01) {
 
   # ── 0. Resolve survey identifiers ──────────────────────────────────────────
-  # pip_id takes precedence. Triplets used only when pip_id is NULL.
   if (is.null(pip_id)) {
-    if (is.null(country_code) || is.null(year) || is.null(welfare_type)) {
-      cli_abort(
-        c(
-          "Provide either {.arg pip_id} or all of {.arg country_code}, {.arg year}, and {.arg welfare_type}.",
-          "i" = "Use {.fn pip_lookup} to translate triplets to pip_ids manually."
-        )
-      )
-    }
-    pip_id <- pip_lookup(country_code, year, welfare_type, release)
+    cli_abort("{.arg pip_id} must be provided.")
   }
 
   if (length(pip_id) == 0L) {
     cli_abort("No surveys to process: {.arg pip_id} is empty after resolution.")
   }
 
+  target_variable <- if (analysis_var == "pov_status") NULL else analysis_var
+
   # ── 1. Validate computation parameters ─────────────────────────────────────
   families <- .classify_measures(measures)
-  .validate_poverty_lines(poverty_lines, names(families))
-  .validate_by(by)
+  .validate_poverty_lines(poverty_line, names(families))
+  by_validate <- by
+  if (!is.null(by_validate)) {
+    by_validate <- setdiff(by_validate, "pov_status")
+    if (length(by_validate) == 0L) by_validate <- NULL
+  }
+  .validate_by(by_validate)
 
   # ── 1b. Validate and normalize sample-base filters ─────────────────────────
   normalized_filter_base <- NULL
@@ -368,46 +339,52 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
   if (!is.null(by)) {
     # The manifest stores the pre-binning dimension name "age" (not "age_group"),
     # so we can intersect directly against `by` without any remapping.
-    by_check <- by
+    by_check <- by[!by %in% "pov_status"]
 
-    overlap <- vapply(
-      entries$dimensions,
-      function(d) length(intersect(by_check, d)),
-      integer(1L)
-    )
-
-    # A survey must carry ALL requested dimensions; partial matches are
-    # excluded before loading so no NA-fill is ever needed downstream.
-    full_idx <- overlap == length(by_check)
-    dropped_idx <- !full_idx
-
-    if (any(dropped_idx)) {
-      dropped_entries <- entries[dropped_idx]
-      dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
-        have <- dropped_entries$dimensions[[i]]
-        miss <- setdiff(by_check, have)
-        if (length(miss) == length(by_check)) {
-          paste0(dropped_entries$pip_id[[i]], ": no requested dimensions")
-        } else {
-          paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
-        }
-      }, character(1L))
-      cli_warn(
-        c(
-          "Excluding {length(dropped_info)} survey{?s} that lack all requested dimensions ({.val {by}}):",
-          "i" = "{dropped_info}"
-        )
-      )
-      entries <- entries[full_idx]
+    if (length(by_check) == 0L) {
+      by_check <- NULL
     }
 
-    if (nrow(entries) == 0L) {
-      cli_abort(
-        c(
-          "All requested surveys were excluded: none have all of the requested dimensions ({.val {by}}).",
-          "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
-        )
+    if (!is.null(by_check)) {
+      overlap <- vapply(
+        entries$dimensions,
+        function(d) length(intersect(by_check, d)),
+        integer(1L)
       )
+
+      # A survey must carry ALL requested dimensions; partial matches are
+      # excluded before loading so no NA-fill is ever needed downstream.
+      full_idx <- overlap == length(by_check)
+      dropped_idx <- !full_idx
+
+      if (any(dropped_idx)) {
+        dropped_entries <- entries[dropped_idx]
+        dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
+          have <- dropped_entries$dimensions[[i]]
+          miss <- setdiff(by_check, have)
+          if (length(miss) == length(by_check)) {
+            paste0(dropped_entries$pip_id[[i]], ": no requested dimensions")
+          } else {
+            paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
+          }
+        }, character(1L))
+        cli_warn(
+          c(
+            "Excluding {length(dropped_info)} survey{?s} that lack all requested dimensions ({.val {by_check}}):",
+            "i" = "{dropped_info}"
+          )
+        )
+        entries <- entries[full_idx]
+      }
+
+      if (nrow(entries) == 0L) {
+        cli_abort(
+          c(
+            "All requested surveys were excluded: none have all of the requested dimensions ({.val {by_check}}).",
+            "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
+          )
+        )
+      }
     }
   }
 
@@ -416,10 +393,16 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
   # "welfare" is the logical name; load_surveys() translates it to the physical
   # PPP column internally. country_code / surveyid_year / welfare_type are
   # needed for the metadata join in Step 8.
+  needs_welfare <- is.null(analysis_var) ||
+    analysis_var %in% c("welfare", "pov_status") ||
+    (!is.null(by) && "pov_status" %in% by)
+
   needed_cols <- unique(c(
     "pip_id", "country_code", "surveyid_year", "welfare_type",
-    "welfare", "weight",
-    by,
+    "weight",
+    if (needs_welfare) "welfare",
+    if (!is.null(analysis_var) && !analysis_var %in% c("welfare", "pov_status")) analysis_var,
+    by[!by %in% "pov_status"],
     filter_vars   # NULL is silently dropped by c()
   ))
   dt <- load_surveys(entries,
@@ -463,6 +446,19 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
     age_was_binned <- TRUE
   }
 
+  if (!is.null(by) && "pov_status" %in% by) {
+    if (is.null(poverty_line) || !is.numeric(poverty_line) ||
+        length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
+      cli_abort(
+        c(
+          "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
+          "i" = "Provide a single positive numeric scalar."
+        )
+      )
+    }
+    dt[, pov_status := as.integer(welfare < poverty_line)]
+  }
+
   # ── 6. (Dimension NA-fill removed) ────────────────────────────────────────
   # Surveys that do not carry all requested `by` dimensions are excluded in
   # Step 3 above, so every row in `dt` is guaranteed to have all dimension
@@ -472,7 +468,13 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
   # Single grouped call across all surveys (Approach B). compute_measures()
   # uses GRP(c("pip_id", by)) internally, paying the overhead once instead
   # of once per survey.
-  result <- compute_measures(dt, measures, target_variable, poverty_lines, by)
+  result <- compute_measures(
+    dt,
+    measures = measures,
+    analysis_var = analysis_var,
+    poverty_line = poverty_line,
+    by = by
+  )
 
   # ── 8. Attach survey metadata ────────────────────────────────────────────────
   # country_code, surveyid_year, welfare_type are attached via a keyed join

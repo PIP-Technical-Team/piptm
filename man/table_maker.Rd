@@ -6,42 +6,38 @@
 \usage{
 table_maker(
   pip_id = NULL,
-  country_code = NULL,
-  year = NULL,
-  welfare_type = NULL,
+  analysis_var,
   measures,
-  target_variable = NULL,
-  poverty_lines = NULL,
+  poverty_line = NULL,
   by = NULL,
+  filter_base = NULL,
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0
+  pop_share_threshold = 0.01
 )
 }
 \arguments{
 \item{pip_id}{Character vector of survey identifiers (manifest primary key,
-e.g. \code{"COL_2010_GEIH_INC_ALL"}). Either this \strong{or} the three triplet
-params below must be supplied.}
+e.g. \code{"COL_2010_GEIH_INC_ALL"}). Must be provided and non-empty.}
 
-\item{country_code}{Character vector of ISO3 country codes (triplet fallback).}
-
-\item{year}{Integer vector of survey years (triplet fallback, same length as
-\code{country_code}).}
-
-\item{welfare_type}{Character vector of welfare types — \code{"INC"} or \code{"CON"}
-(triplet fallback, same length as \code{country_code}).}
+\item{analysis_var}{Character scalar analysis variable name.}
 
 \item{measures}{Non-empty character vector of measure names drawn from
 the internal measure registry (validated by \code{\link[=.classify_measures]{.classify_measures()}}).}
 
-\item{poverty_lines}{Positive numeric vector of poverty line values, or
-\code{NULL}. Required when any poverty-family measure (\code{headcount},
-\code{poverty_gap}, \code{severity}, \code{watts}, \code{pop_poverty}) is requested.}
+\item{poverty_line}{Positive numeric scalar poverty line, or \code{NULL}.
+Required when any poverty-family measure is requested or when
+\code{"pov_status"} is included in \code{by}.}
 
 \item{by}{Character vector of disaggregation dimension names, or \code{NULL} for
 aggregate results.  Valid values: \code{"gender"}, \code{"area"}, \code{"educat4"},
 \code{"educat5"}, \code{"educat7"}, \code{"age"}.  At most 4 dimensions; at most one
 education column.}
+
+\item{filter_base}{Named list of sample-base filters, or \code{NULL}.
+Each name is a variable and each value is an integer vector of allowed
+codes (AND across variables, IN within variable). Example:
+\code{list(age_group = c(1L, 2L), gender = 0L)}.}
 
 \item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
 Passed through to \code{\link[=load_surveys]{load_surveys()}}. Selects which \verb{welfare_ppp_*} column
@@ -68,7 +64,8 @@ A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long 
 Surveys missing any requested dimension are excluded before loading;
 every row in the result is guaranteed to have non-\code{NA} values for all
 breakdown columns.}
-\item{\code{poverty_line}}{Poverty threshold; \code{NA} for non-poverty measures.}
+\item{\code{poverty_line}}{Poverty threshold; populated for poverty-family
+rows and \code{NA} for non-poverty rows.}
 \item{\code{measure}}{Measure name (e.g. \code{"headcount"}, \code{"gini"}).}
 \item{\code{value}}{Computed statistic.}
 \item{\code{population}}{Total weighted population in the group.  For surveys
@@ -84,53 +81,33 @@ manifest lookup → survey loading → pre-processing → per-survey computation
 → long-format output.
 }
 \details{
-\strong{Two equivalent input patterns are supported:}
+Requests are survey-first: callers provide one or more \code{pip_id} values plus
+an explicit \code{analysis_var} that determines routing.
 
-\emph{Pattern 1 — pip_id (primary, used by the API layer):}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{table_maker(
-  pip_id   = c("COL_2010_GEIH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
-  measures = c("headcount", "gini"),
-  poverty_lines = 2.15
-)
-}\if{html}{\out{</div>}}
-
-\emph{Pattern 2 — triplet fallback (ad-hoc R console use):}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{table_maker(
-  country_code = c("COL", "BOL"),
-  year         = c(2010L, 2000L),
-  welfare_type = c("INC", "INC"),
-  measures     = c("headcount", "gini"),
-  poverty_lines = 2.15
-)
-}\if{html}{\out{</div>}}
-
-When triplets are provided, \code{\link[=pip_lookup]{pip_lookup()}} resolves them to \code{pip_id}s
-internally.  If both \code{pip_id} and triplets are supplied, \code{pip_id} takes
-precedence and the triplets are silently ignored.
+\code{pov_status} is treated as a derived variable (never loaded from Parquet).
+When \code{"pov_status"} appears in \code{by}, it is computed as
+\code{as.integer(welfare < poverty_line)} after survey loading.
 }
 \examples{
 \dontrun{
 set_manifest_dir("//server/manifests")
 set_arrow_root("//server/pip/arrow")
 
-# Via pip_id
+# Welfare analysis
 result <- table_maker(
   pip_id        = "COL_2010_GEIH_INC_ALL",
+  analysis_var  = "welfare",
   measures      = c("headcount", "gini", "mean"),
-  poverty_lines = c(2.15, 3.65),
+  poverty_line  = 2.15,
   by            = c("gender", "area")
 )
 
-# Via triplets
+# Poverty-status analysis
 result <- table_maker(
-  country_code  = "COL",
-  year          = 2010L,
-  welfare_type  = "INC",
-  measures      = c("headcount", "gini", "mean"),
-  poverty_lines = c(2.15, 3.65),
-  by            = c("gender", "area")
+  pip_id        = "COL_2010_GEIH_INC_ALL",
+  analysis_var  = "pov_status",
+  measures      = c("headcount", "poverty_gap"),
+  poverty_line  = 2.15
 )
 }
 }

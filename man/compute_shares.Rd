@@ -4,7 +4,7 @@
 \alias{compute_shares}
 \title{Compute population shares for a single survey (pip_id-scoped)}
 \usage{
-compute_shares(dt, by = NULL, target_variable = NULL, grp = NULL)
+compute_shares(dt, by = NULL, measures, target_variable = NULL, grp = NULL)
 }
 \arguments{
 \item{dt}{A \code{\link[data.table:data.table]{data.table::data.table()}} containing at minimum a numeric
@@ -13,6 +13,9 @@ by \code{target_variable} (binary 0/1, validated upstream).}
 
 \item{by}{Character vector of grouping column names, or \code{NULL} for the
 aggregate (one row per measure).}
+
+\item{measures}{Character vector of share measure names to compute. Must be
+a subset of \code{c("pop_share", "target_within_group_share", "target_survey_share")}.}
 
 \item{target_variable}{Optional character name of a binary (0/1) column in
 \code{dt}. When \code{NULL} (default), subgroup population shares are returned.

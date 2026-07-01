@@ -101,15 +101,18 @@ resolve_release <- function(release) {
 #'
 #' Checks all user-supplied parameters for the `/table` endpoint.  Returns a
 #' list so the handler can act on the validation result and use the coerced
-#' `poverty_lines` and `ppp` values without re-coercing.
+#' `poverty_line` and `ppp` values without re-coercing.
 #'
 #' Checks performed:
 #' \itemize{
 #'   \item `pip_id` is a non-NULL character vector of length 1–15
 #'   \item `measures` is a non-NULL character vector with all elements in
 #'   \'\' elements in [piptm:::.MEASURE_REGISTRY]
-#'   \item `poverty_lines`, if not `NULL`, coerces cleanly to numeric (no NAs
-#'     introduced), and all values are positive and finite
+#'   \item `analysis_var` is a single non-empty character value
+#'   \item `poverty_line`, if not `NULL`, coerces cleanly to a single numeric
+#'     value and is positive and finite
+#'   \item `poverty_line` is required when `analysis_var == "pov_status"` or
+#'     when `"pov_status"` is included in `by`
 #'   \item `by`, if not `NULL`, is a subset of [piptm::.VALID_DIMENSIONS]
 #'   \item `ppp`, if not `NULL`, is a single value coercible to a positive
 #'     integer (PPP reference year, e.g. `2017`)
@@ -117,10 +120,10 @@ resolve_release <- function(release) {
 #'
 #' Note: `release` validation is handled separately by [resolve_release()].
 #'
+#' @param analysis_var Character scalar analysis variable name.
 #' @param pip_id       Character vector of survey identifiers.
 #' @param measures     Character vector of measure names.
-#' @param poverty_lines Numeric (or coercible) vector of poverty lines, or
-#'   `NULL`.
+#' @param poverty_line Numeric (or coercible) scalar poverty line, or `NULL`.
 #' @param by           Character vector of disaggregation dimensions, or
 #'   `NULL`.
 #' @param ppp          Integer scalar PPP reference year (e.g. `2017`), or
@@ -131,15 +134,34 @@ resolve_release <- function(release) {
 #'   \describe{
 #'     \item{`valid`}{`TRUE` when all checks pass; `FALSE` otherwise.}
 #'     \item{`errors`}{Character vector of error messages (empty when valid).}
-#'     \item{`poverty_lines`}{The coerced numeric vector, or `NULL`.  Use this
+#'     \item{`poverty_line`}{The coerced numeric scalar, or `NULL`.  Use this
 #'       in the handler rather than the original input.}
 #'     \item{`ppp`}{The coerced integer scalar, or `NULL`.  Use this in the
 #'       handler rather than the original input.}
 #'   }
-validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
+validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_line = NULL,
                                  by = NULL, ppp = NULL,
                                  pop_share_threshold = NULL) {
   errors <- character()
+
+  # ── analysis_var ───────────────────────────────────────────────────────────
+  if (is.null(analysis_var) || !is.character(analysis_var) ||
+      length(analysis_var) != 1L || !nzchar(trimws(analysis_var))) {
+    errors <- c(errors, "`analysis_var` must be a single non-empty character value.")
+  } else {
+    allowed_analysis_vars <- unique(c("welfare", "pov_status", piptm::pip_optional_dims()))
+    if (!analysis_var %in% allowed_analysis_vars) {
+      errors <- c(
+        errors,
+        paste0(
+          "Unknown `analysis_var`: ", analysis_var,
+          ". Valid analysis variables: ",
+          paste(allowed_analysis_vars, collapse = ", "),
+          "."
+        )
+      )
+    }
+  }
 
   # ── pip_id ─────────────────────────────────────────────────────────────────
   if (is.null(pip_id) || !is.character(pip_id) || length(pip_id) == 0L) {
@@ -193,20 +215,14 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
     }
   }
 
-  # ── poverty_lines ──────────────────────────────────────────────────────────
+  # ── poverty_line ───────────────────────────────────────────────────────────
   coerced_pl <- NULL
-  if (!is.null(poverty_lines)) {
-    coerced_pl <- suppressWarnings(as.numeric(poverty_lines))
-    if (anyNA(coerced_pl)) {
-      # Reject any NA unconditionally — whether introduced by coercion or
-      # present in the original input.
+  if (!is.null(poverty_line)) {
+    coerced_pl <- suppressWarnings(as.numeric(poverty_line))
+    if (length(coerced_pl) != 1L || is.na(coerced_pl)) {
       errors <- c(
         errors,
-        paste0(
-          "`poverty_lines` contains NA or non-numeric values; problematic: ",
-          paste(poverty_lines[is.na(coerced_pl)], collapse = ", "),
-          "."
-        )
+        "`poverty_line` must be a single positive numeric value when provided."
       )
       coerced_pl <- NULL
     } else {
@@ -214,12 +230,7 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
       if (any(bad)) {
         errors <- c(
           errors,
-          paste0(
-            "`poverty_lines` must contain only positive finite values; ",
-            "problematic values: ",
-            paste(coerced_pl[bad], collapse = ", "),
-            "."
-          )
+          "`poverty_line` must be positive and finite."
         )
         coerced_pl <- NULL
       }
@@ -229,7 +240,8 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   # ── by ──────────────────────────────────────────────────────────────────────────────
   if (!is.null(by)) {
     valid_dims <- piptm::pip_valid_dimensions()
-    unknown_dims <- setdiff(by, valid_dims)
+    by_check <- setdiff(by, "pov_status")
+    unknown_dims <- setdiff(by_check, valid_dims)
     if (length(unknown_dims) > 0L) {
       errors <- c(
         errors,
@@ -242,6 +254,15 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
         )
       )
     }
+  }
+
+  # ── cross-validation: poverty_line required for pov_status usage ─────────
+  if ((identical(analysis_var, "pov_status") || (!is.null(by) && "pov_status" %in% by)) &&
+      is.null(coerced_pl)) {
+    errors <- c(
+      errors,
+      "`poverty_line` is required when analysis_var is 'pov_status' or when 'pov_status' is used as a disaggregation dimension."
+    )
   }
 
   # ── ppp ────────────────────────────────────────────────────────────────────
@@ -361,7 +382,7 @@ validate_table_input <- function(pip_id, measures, poverty_lines = NULL,
   list(
     valid               = length(errors) == 0L,
     errors              = errors,
-    poverty_lines       = coerced_pl,
+    poverty_line        = coerced_pl,
     ppp                 = coerced_ppp,
     pop_share_threshold = coerced_threshold
   )

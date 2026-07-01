@@ -19,18 +19,18 @@ NULL
   gini        = "inequality",
   mld         = "inequality",
   # Summary stats family
-  mean        = "summary_statistics",
-  median      = "summary_statistics",
-  sd          = "summary_statistics",
-  var         = "summary_statistics",
-  min         = "summary_statistics",
-  max         = "summary_statistics",
-  nobs        = "summary_statistics",
-  p10         = "summary_statistics",
-  p25         = "summary_statistics",
-  p75         = "summary_statistics",
-  p90         = "summary_statistics",
-  sum         = "summary_statistics",
+  mean        = "summary_stats",
+  median      = "summary_stats",
+  sd          = "summary_stats",
+  var         = "summary_stats",
+  min         = "summary_stats",
+  max         = "summary_stats",
+  nobs        = "summary_stats",
+  p10         = "summary_stats",
+  p25         = "summary_stats",
+  p75         = "summary_stats",
+  p90         = "summary_stats",
+  sum         = "summary_stats",
   # Shares  family
     # Shares family
   pop_share                 = "shares",
@@ -101,7 +101,7 @@ pip_valid_dimensions <- function() {
 #' Validates that every element of `measures` exists in `.MEASURE_REGISTRY`
 #' and returns a named list of character vectors grouped by family.  Only
 #' families with at least one requested measure appear in the result.  The
-#' output list is always ordered: `poverty` → `inequality` → `welfare`.
+#' output list is always ordered: `poverty` → `inequality` → `summary_stats` → `shares`.
 #'
 #' @param measures A non-empty character vector of measure names.
 #'

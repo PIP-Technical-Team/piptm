@@ -25,8 +25,11 @@ NULL
 #' @param measures A non-empty character vector of measure names drawn from
 #'   the internal registry (see [.classify_measures()]).  Validated by
 #'   [.classify_measures()].
-#' @param poverty_lines A positive numeric vector of poverty line values, or
-#'   `NULL`.  Required when any poverty-family measure is requested.
+#' @param analysis_var Character scalar analysis variable name. `"pov_status"`
+#'   routes poverty-family computation using `welfare` as the underlying
+#'   variable.
+#' @param poverty_line A positive numeric scalar poverty line value, or
+#'   `NULL`. Required when any poverty-family measure is requested.
 #' @param by A character vector of grouping column names present in `dt`, or
 #'   `NULL` for the aggregate (no disaggregation).  Passed unchanged to all
 #'   three family functions.
@@ -43,10 +46,14 @@ NULL
 #'
 #' @family compute
 #' @keywords internal
-compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines = NULL, by = NULL) {
+compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = NULL, by = NULL) {
 
   # ── 1. Guard: required columns present ─────────────────────────────────────
-  required     <- c("pip_id", "welfare", "weight")
+  required <- unique(c(
+    "pip_id", "weight",
+    if (is.null(analysis_var) || analysis_var %in% c("welfare", "pov_status")) "welfare",
+    if (!is.null(analysis_var) && !analysis_var %in% c("welfare", "pov_status")) analysis_var
+  ))
   missing_cols <- setdiff(required, names(dt))
   if (length(missing_cols)) {
     cli_abort(
@@ -75,8 +82,14 @@ compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines
   families   <- names(classified)
 
   # ── 3. Validate inputs ──────────────────────────────────────────────────────
-  .validate_poverty_lines(poverty_lines, families)
+  .validate_poverty_lines(poverty_line, families)
   .validate_by(by)
+
+  target_variable <- if (is.null(analysis_var) || analysis_var == "pov_status") {
+    NULL
+  } else {
+    analysis_var
+  }
 
   # ── 4. Build compound grouping: pip_id × by ─────────────────────────────────
   # pip_id is always the first grouping key so every output row identifies its
@@ -95,7 +108,7 @@ compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines
   if ("poverty" %in% families) {
     results$poverty <- compute_poverty(
       dt,
-      poverty_lines = poverty_lines,
+      poverty_lines = poverty_line,
       by            = batch_by,
       measures      = classified$poverty
       # grp intentionally omitted — poverty builds its own after cross-join
@@ -112,20 +125,21 @@ compute_measures <- function(dt, measures, target_variable = NULL, poverty_lines
   }
 
   if ("summary_stats" %in% families) {
+    summary_target <- if (is.null(target_variable)) "welfare" else target_variable
     results$summary_stats <- compute_summary_stats(
       dt,
       by       = batch_by,
       measures = classified$summary_stats,
-      target_variable = target_variable,
+      target_variable = summary_target,
       grp      = grp
     )
   }
 
   if ("shares" %in% families) {
-    results$summary_stats <- compute_shares(
+    results$shares <- compute_shares(
       dt,
       by       = batch_by,
-      measures = classified$summary_stats,
+      measures = classified$shares,
       target_variable = target_variable,
       grp      = grp
     )

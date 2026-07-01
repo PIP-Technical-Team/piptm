@@ -7,8 +7,8 @@
 compute_measures(
   dt,
   measures,
-  target_variable = NULL,
-  poverty_lines = NULL,
+  analysis_var = NULL,
+  poverty_line = NULL,
   by = NULL
 )
 }
@@ -21,8 +21,12 @@ columns named in \code{by}.}
 the internal registry (see \code{\link[=.classify_measures]{.classify_measures()}}).  Validated by
 \code{\link[=.classify_measures]{.classify_measures()}}.}
 
-\item{poverty_lines}{A positive numeric vector of poverty line values, or
-\code{NULL}.  Required when any poverty-family measure is requested.}
+\item{analysis_var}{Character scalar analysis variable name. \code{"pov_status"}
+routes poverty-family computation using \code{welfare} as the underlying
+variable.}
+
+\item{poverty_line}{A positive numeric scalar poverty line value, or
+\code{NULL}. Required when any poverty-family measure is requested.}
 
 \item{by}{A character vector of grouping column names present in \code{dt}, or
 \code{NULL} for the aggregate (no disaggregation).  Passed unchanged to all

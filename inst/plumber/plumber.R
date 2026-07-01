@@ -116,9 +116,10 @@ function(req) {
 
 #* Compute poverty, inequality, and welfare measures for one or more surveys
 #*
+#* @param analysis_var:character Analysis variable name (required)
 #* @param pip_id:character Survey identifiers (max 15, repeatable)
 #* @param measures:character Measure names (repeatable)
-#* @param poverty_lines:numeric Poverty line values (optional, repeatable)
+#* @param poverty_line:numeric Single poverty line value (required when analysis_var is "pov_status")
 #* @param by:character Disaggregation dimensions (optional, repeatable)
 #* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
 #*   positive whole number. When omitted, defaults to 2021. Non-integer or
@@ -131,14 +132,21 @@ function(req) {
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
-function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
+function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
          ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
          release = NULL, res) {
 
-  check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp,
-                                pop_share_threshold)
+  check <- validate_table_input(
+    analysis_var = analysis_var,
+    pip_id = pip_id,
+    measures = measures,
+    poverty_line = poverty_line,
+    by = by,
+    ppp = ppp,
+    pop_share_threshold = pop_share_threshold
+  )
   if (!check$valid) return(api_error(check$errors, 400L, res))
-  poverty_lines       <- check$poverty_lines
+  poverty_line        <- check$poverty_line
   ppp                 <- check$ppp
   pop_share_threshold <- check$pop_share_threshold
 
@@ -152,8 +160,9 @@ function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
     rel  <- resolve_release(release)
     data <- piptm::table_maker(
       pip_id        = pip_id,
+      analysis_var  = analysis_var,
       measures      = measures,
-      poverty_lines = poverty_lines,
+      poverty_line  = poverty_line,
       by            = by,
       ppp           = ppp,
       filter_base   = parsed_filter_base,
