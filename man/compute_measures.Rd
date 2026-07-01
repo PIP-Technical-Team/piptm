@@ -9,7 +9,8 @@ compute_measures(
   measures,
   analysis_var = NULL,
   poverty_line = NULL,
-  by = NULL
+  by = NULL,
+  release = NULL
 )
 }
 \arguments{

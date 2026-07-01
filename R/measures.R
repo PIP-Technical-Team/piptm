@@ -38,21 +38,6 @@ NULL
   target_survey_share       = "shares"
 )
 
-#' Valid disaggregation dimensions
-#'
-#' @keywords internal
-.VALID_DIMENSIONS <- c("gender", "area", "educat4", "educat5", "educat7", "age")
-
-#' Education dimension columns — at most one may be requested per call
-#'
-#' @keywords internal
-.EDUCATION_DIMS <- c("educat4", "educat5", "educat7")
-
-#' Age bin levels in ascending order
-#'
-#' @keywords internal
-.AGE_BIN_LEVELS <- c("0-14", "15-24", "25-64", "65+")
-
 # ── Exported helpers ──────────────────────────────────────────────────────────
 
 #' Age bin labels used by the computation engine
@@ -158,7 +143,7 @@ pip_valid_dimensions <- function() {
 #' @return `by` invisibly (validated, unchanged).
 #'
 #' @keywords internal
-.validate_by <- function(by, dimensions = NULL) {
+.validate_by <- function(by, dimensions = NULL, release = NULL) {
   if (is.null(by)) return(invisible(NULL))
 
   if (!is.character(by) || length(by) == 0L) {
@@ -168,9 +153,18 @@ pip_valid_dimensions <- function() {
     )
   }
 
-  unknown_dims <- setdiff(by, .VALID_DIMENSIONS)
+  covariates <- piptm_layout_covariates(release = release)
+  valid_dims <- unique(vapply(covariates, `[[`, character(1), "varname"))
+
+  if (length(valid_dims) == 0L) {
+    cli_abort(
+      "Could not derive valid dimensions from {.fn piptm_layout_covariates}.",
+      call = NULL
+    )
+  }
+
+  unknown_dims <- setdiff(by, valid_dims)
   if (length(unknown_dims) > 0L) {
-    valid_dims <- .VALID_DIMENSIONS
     cli_abort(
       c(
         "Unknown dimension{?s}: {.val {unknown_dims}}.",
@@ -180,16 +174,6 @@ pip_valid_dimensions <- function() {
     )
   }
 
-  edu_requested <- intersect(by, .EDUCATION_DIMS)
-  if (length(edu_requested) > 1L) {
-    cli_abort(
-      c(
-        "At most one education dimension may be requested; \\
-         got {length(edu_requested)}: {.val {edu_requested}}."
-      ),
-      call = NULL
-    )
-  }
 
   if (length(by) > 4L) {
     cli_abort(

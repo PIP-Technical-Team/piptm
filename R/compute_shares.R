@@ -95,9 +95,12 @@ NULL
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 
-  s$groups_dt[, pop_share := ifelse(
-    s$denom_survey == 0, NA_real_, s$cell_wpop / s$denom_survey
-  )]
+  pop_share <- if (s$denom_survey == 0) {
+    rep(NA_real_, length(s$cell_wpop))
+  } else {
+    s$cell_wpop / s$denom_survey
+  }
+  s$groups_dt[, pop_share := pop_share]
 
   result <- melt(
     s$groups_dt,
@@ -151,8 +154,12 @@ NULL
   tvec          <- as.integer(!is.na(dt[[target_variable]]) & dt[[target_variable]] == 1L)
   targ_in_group <- collapse::fsum(s$w * tvec, g = s$grp)
 
-  within_share <- ifelse(s$cell_wpop    == 0, NA_real_, targ_in_group / s$cell_wpop)
-  survey_share <- ifelse(s$denom_survey == 0, NA_real_, targ_in_group / s$denom_survey)
+  within_share <- ifelse(s$cell_wpop == 0, NA_real_, targ_in_group / s$cell_wpop)
+  survey_share <- if (s$denom_survey == 0) {
+    rep(NA_real_, length(targ_in_group))
+  } else {
+    targ_in_group / s$denom_survey
+  }
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 

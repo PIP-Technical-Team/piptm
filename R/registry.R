@@ -407,6 +407,17 @@ piptm_variable_registry <- function(release = NULL) {
   registries <- .piptm_env$registries
   if (is.null(registries)) registries <- list()
 
+  candidates <- unique(c(
+    release,
+    if (!grepl("_TEST$", release)) paste0(release, "_TEST") else character(0L),
+    sub("_TEST$", "", release)
+  ))
+  resolved_release <- candidates[candidates %in% names(registries)][1L]
+
+  if (!is.na(resolved_release) && nzchar(resolved_release)) {
+    release <- resolved_release
+  }
+
   if (!release %in% names(registries)) {
     cli::cli_abort(
       c(

@@ -207,7 +207,7 @@ table_maker <- function(pip_id        = NULL,
     by_validate <- setdiff(by_validate, "pov_status")
     if (length(by_validate) == 0L) by_validate <- NULL
   }
-  .validate_by(by_validate)
+  .validate_by(by_validate, release = release)
 
   # ── 1b. Validate and normalize sample-base filters ─────────────────────────
   normalized_filter_base <- NULL
@@ -473,7 +473,8 @@ table_maker <- function(pip_id        = NULL,
     measures = measures,
     analysis_var = analysis_var,
     poverty_line = poverty_line,
-    by = by
+    by = by,
+    release = release
   )
 
   # ── 8. Attach survey metadata ────────────────────────────────────────────────

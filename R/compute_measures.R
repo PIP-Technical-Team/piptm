@@ -46,7 +46,7 @@ NULL
 #'
 #' @family compute
 #' @keywords internal
-compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = NULL, by = NULL) {
+compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = NULL, by = NULL, release = NULL) {
 
   # ── 1. Guard: required columns present ─────────────────────────────────────
   required <- unique(c(
@@ -83,7 +83,7 @@ compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = N
 
   # ── 3. Validate inputs ──────────────────────────────────────────────────────
   .validate_poverty_lines(poverty_line, families)
-  .validate_by(by)
+  .validate_by(by, release = release)
 
   target_variable <- if (is.null(analysis_var) || analysis_var == "pov_status") {
     NULL
@@ -152,5 +152,11 @@ compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = N
   # materialises via fill, so we guarantee its presence explicitly.
   result <- data.table::rbindlist(results, fill = TRUE)
   if (!"poverty_line" %in% names(result)) result[, poverty_line := NA_real_]
+
+  if (!is.null(by) && "pov_status" %in% by && !is.null(poverty_line)) {
+    poverty_line_scalar <- as.numeric(poverty_line[[1L]])
+    result[is.na(poverty_line), poverty_line := poverty_line_scalar]
+  }
+
   result
 }
