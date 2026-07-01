@@ -723,6 +723,53 @@ test_that("table_maker() ppp=2011 computes on welfare_ppp_2011_01_01 column", {
 # Column pruning — table_maker() passes only needed cols to load_surveys()
 # ---------------------------------------------------------------------------
 
+test_that("table_maker() filter_base errors on invalid variable names", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_error(
+    piptm::table_maker(
+      pip_id       = "COL_2010_ECH_INC_ALL",
+      measures     = "mean",
+      filter_base  = list(not_a_real_dim = 1L)
+    ),
+    regexp = "Invalid .*filter_base.*variable"
+  )
+})
+
+test_that("table_maker() filter_base excludes surveys missing required dimensions", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_warning(
+    res <- piptm::table_maker(
+      pip_id      = c("COL_2010_ECH_INC_ALL", "COL_2015_ECH_INC_ALL"),
+      measures    = "mean",
+      filter_base = list(age = 20L)
+    ),
+    regexp = "Excluding .*filter_base"
+  )
+
+  expect_true(all(res$pip_id == "COL_2015_ECH_INC_ALL"))
+})
+
+test_that("table_maker() filter_base all-excluded case aborts loudly", {
+  fx <- make_tm_fixtures()
+  activate_tm_fixtures(fx)
+  withr::defer(reset_piptm_env())
+
+  expect_error(
+    piptm::table_maker(
+      pip_id      = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+      measures    = "mean",
+      filter_base = list(age = 20L)
+    ),
+    regexp = "All requested surveys were excluded: none have all required .*filter_base.* dimensions"
+  )
+})
+
 test_that("table_maker() result does not expose extra Parquet columns (column pruning)", {
   # Build a fixture with an extra column that should never reach the output.
   tmp_arrow    <- withr::local_tempdir()

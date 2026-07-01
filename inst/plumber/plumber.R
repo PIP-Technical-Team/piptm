@@ -123,6 +123,8 @@ function(req) {
 #* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
 #*   positive whole number. When omitted, defaults to 2021. Non-integer or
 #*   non-positive values return HTTP 400.
+#* @param filter_base:character JSON-encoded sample-base filter object
+#*   (optional), e.g. {"gender":[0],"age_group":[1,2]}
 #* @param pop_share_threshold:numeric Population share threshold for cell
 #*   suppression (optional; default 0.01). Set to empty/null to disable.
 #* @param release:character Release ID (optional; defaults to current release)
@@ -130,7 +132,8 @@ function(req) {
 #* @get /table
 #* @post /table
 function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
-         ppp = 2021L, pop_share_threshold = 0.01, release = NULL, res) {
+         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
+         release = NULL, res) {
 
   check <- validate_table_input(pip_id, measures, poverty_lines, by, ppp,
                                 pop_share_threshold)
@@ -140,6 +143,12 @@ function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
   pop_share_threshold <- check$pop_share_threshold
 
   out <- capture_with_warnings({
+    parsed_filter_base <- if (is.null(filter_base)) {
+      NULL
+    } else {
+      jsonlite::fromJSON(filter_base)
+    }
+
     rel  <- resolve_release(release)
     data <- piptm::table_maker(
       pip_id        = pip_id,
@@ -147,6 +156,7 @@ function(pip_id = NULL, measures = NULL, poverty_lines = NULL, by = NULL,
       poverty_lines = poverty_lines,
       by            = by,
       ppp           = ppp,
+      filter_base   = parsed_filter_base,
       release       = rel,
       pop_share_threshold = pop_share_threshold
     )
@@ -209,6 +219,63 @@ function(release = NULL, res) {
   out <- capture_with_warnings({
     rel  <- resolve_release(release)
     data <- piptm::piptm_manifest(rel)
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  api_response(
+    out$result$data,
+    warnings = out$warnings,
+    meta = list(release = out$result$rel)
+  )
+}
+
+# ── GET /countries ────────────────────────────────────────────────────────────
+
+#* Return unique country metadata from the release manifest
+#*
+#* @param release:character Release ID (optional; defaults to current release)
+#* @serializer json list(na = "null")
+#* @get /countries
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel <- resolve_release(release)
+    manifest <- piptm::piptm_manifest(rel)
+
+    data <- unique(
+      manifest[!is.na(country_code), .(country_code, country_name)]
+    )
+    data.table::setorder(data, country_code)
+
+    list(data = data, rel = rel)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  api_response(
+    out$result$data,
+    warnings = out$warnings,
+    meta = list(release = out$result$rel)
+  )
+}
+
+# ── GET /regions ──────────────────────────────────────────────────────────────
+
+#* Return region metadata with member country codes from the release manifest
+#*
+#* @param release:character Release ID (optional; defaults to current release)
+#* @serializer json list(na = "null")
+#* @get /regions
+function(release = NULL, res) {
+  out <- capture_with_warnings({
+    rel <- resolve_release(release)
+    manifest <- piptm::piptm_manifest(rel)
+
+    data <- manifest[!is.na(region_code), .(
+      countries = list(sort(unique(country_code[!is.na(country_code)])))
+    ), by = .(region_code, region_name)]
+
+    data.table::setorder(data, region_code)
+
     list(data = data, rel = rel)
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))

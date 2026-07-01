@@ -1358,4 +1358,82 @@ test_that("load_surveys() cols always includes weight even when not requested", 
   expect_false("version"        %in% names(dt))
 })
 
+test_that("load_surveys() applies filter_base before collect (single variable)", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  col_age <- mf[mf$country_code == "COL" & mf$year == 2015L]
+
+  dt <- piptm::load_surveys(
+    col_age,
+    cols = c("pip_id", "welfare", "age"),
+    filter_base = list(age = c(20L, 25L))
+  )
+
+  expect_equal(nrow(dt), 2L)
+  expect_true(all(dt$age %in% c(20L, 25L)))
+})
+
+test_that("load_surveys() filter_base supports AND semantics across variables", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  col_age <- mf[mf$country_code == "COL" & mf$year == 2015L]
+
+  dt <- piptm::load_surveys(
+    col_age,
+    cols = c("pip_id", "welfare", "age", "surveyid_year"),
+    filter_base = list(age = c(20L, 25L, 30L), surveyid_year = 2015L)
+  )
+
+  expect_true(nrow(dt) > 0L)
+  expect_true(all(dt$age %in% c(20L, 25L, 30L)))
+  expect_true(all(dt$surveyid_year == 2015L))
+})
+
+test_that("load_surveys() drops filter-only columns after collect when cols is non-NULL", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  col_age <- mf[mf$country_code == "COL" & mf$year == 2015L]
+
+  dt <- piptm::load_surveys(
+    col_age,
+    cols = c("pip_id", "welfare"),
+    filter_base = list(age = c(20L, 25L))
+  )
+
+  expect_false("age" %in% names(dt))
+  expect_true(all(c("pip_id", "welfare") %in% names(dt)))
+  expect_equal(nrow(dt), 2L)
+})
+
+test_that("load_surveys() keeps filter columns that were explicitly requested in cols", {
+  fx <- make_fixtures()
+  piptm::set_manifest_dir(fx$tmp_manifest)
+  piptm::set_arrow_root(fx$tmp_arrow)
+  withr::defer(reset_load_env())
+
+  mf <- piptm::piptm_manifest()
+  col_age <- mf[mf$country_code == "COL" & mf$year == 2015L]
+
+  dt <- piptm::load_surveys(
+    col_age,
+    cols = c("pip_id", "welfare", "age"),
+    filter_base = list(age = c(20L, 25L))
+  )
+
+  expect_true("age" %in% names(dt))
+  expect_true(all(dt$age %in% c(20L, 25L)))
+})
+
 

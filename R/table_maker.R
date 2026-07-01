@@ -141,6 +141,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   aggregate results.  Valid values: `"gender"`, `"area"`, `"educat4"`,
 #'   `"educat5"`, `"educat7"`, `"age"`.  At most 4 dimensions; at most one
 #'   education column.
+#' @param filter_base Named list of sample-base filters, or `NULL`.
+#'   Each name is a variable and each value is an integer vector of allowed
+#'   codes (AND across variables, IN within variable). Example:
+#'   `list(age_group = c(1L, 2L), gender = 0L)`.
 #' @param ppp          Integer scalar PPP year (e.g. `2017L`), or `NULL`.
 #'   Passed through to [load_surveys()]. Selects which `welfare_ppp_*` column
 #'   to use as `welfare` for surveys written with the deflated-data schema.
@@ -206,6 +210,7 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
                         target_variable = NULL,      # analysis variable (e.g. "welfare")
                         poverty_lines = NULL,
                         by            = NULL,
+                        filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
                         pop_share_threshold = 0.00) {
@@ -233,6 +238,59 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
   .validate_poverty_lines(poverty_lines, names(families))
   .validate_by(by)
 
+  # ── 1b. Validate and normalize sample-base filters ─────────────────────────
+  normalized_filter_base <- NULL
+  filter_vars <- character(0L)
+  if (!is.null(filter_base)) {
+    if (is.data.frame(filter_base)) {
+      filter_base <- as.list(filter_base)
+    }
+
+    if (!is.list(filter_base)) {
+      cli_abort("{.arg filter_base} must be NULL or a named list.")
+    }
+    if (length(filter_base) == 0L) {
+      cli_abort("{.arg filter_base} must be NULL or a non-empty named list.")
+    }
+
+    filter_vars <- names(filter_base)
+    if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
+      cli_abort("{.arg filter_base} must have non-empty variable names.")
+    }
+
+    invalid_vars <- setdiff(filter_vars, pip_optional_dims())
+    if (length(invalid_vars) > 0L) {
+      cli_abort(
+        c(
+          "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
+          "i" = "Allowed optional dimensions: {.val {pip_optional_dims()}}"
+        )
+      )
+    }
+
+    normalized_filter_base <- setNames(
+      lapply(filter_vars, function(varname) {
+        vals <- unlist(filter_base[[varname]], use.names = FALSE)
+        if (length(vals) == 0L) {
+          cli_abort(
+            "{.arg filter_base} variable {.val {varname}} must include at least one value."
+          )
+        }
+        suppressWarnings(vals_int <- as.integer(vals))
+        if (anyNA(vals_int)) {
+          cli_abort(
+            c(
+              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+              "i" = "Values must be integer codes stored in Parquet."
+            )
+          )
+        }
+        unique(vals_int)
+      }),
+      filter_vars
+    )
+  }
+
   # ── 2. Manifest lookup ──────────────────────────────────────────────────────
   mf      <- piptm_manifest(release)
   .ids    <- pip_id  # local copy avoids data.table column-name ambiguity
@@ -256,6 +314,49 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
         "i" = "{.val {missing_ids}}"
       )
     )
+  }
+
+  # ── 2b. Filter-base manifest pre-filter (before loading) ──────────────────
+  if (!is.null(normalized_filter_base)) {
+    overlap_fb <- vapply(
+      entries$dimensions,
+      function(d) length(intersect(filter_vars, d)),
+      integer(1L)
+    )
+
+    full_filter_idx <- overlap_fb == length(filter_vars)
+    dropped_filter_idx <- !full_filter_idx
+
+    if (any(dropped_filter_idx)) {
+      dropped_entries <- entries[dropped_filter_idx]
+      dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
+        have <- dropped_entries$dimensions[[i]]
+        miss <- setdiff(filter_vars, have)
+        if (length(miss) == length(filter_vars)) {
+          paste0(dropped_entries$pip_id[[i]], ": no filter_base dimensions")
+        } else {
+          paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
+        }
+      }, character(1L))
+
+      cli_warn(
+        c(
+          "Excluding {length(dropped_info)} survey{?s} that lack all required {.arg filter_base} dimensions ({.val {filter_vars}}):",
+          "i" = "{dropped_info}"
+        )
+      )
+
+      entries <- entries[full_filter_idx]
+    }
+
+    if (nrow(entries) == 0L) {
+      cli_abort(
+        c(
+          "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}}).",
+          "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
+        )
+      )
+    }
   }
 
   # ── 3. Dimension pre-filter (before loading) ────────────────────────────────
@@ -318,9 +419,14 @@ table_maker <- function(pip_id        = NULL, # this comes from URL
   needed_cols <- unique(c(
     "pip_id", "country_code", "surveyid_year", "welfare_type",
     "welfare", "weight",
-    by   # NULL is silently dropped by c()
+    by,
+    filter_vars   # NULL is silently dropped by c()
   ))
-  dt <- load_surveys(entries, ppp = ppp, cols = needed_cols, release = release)
+  dt <- load_surveys(entries,
+                     ppp = ppp,
+                     cols = needed_cols,
+                     filter_base = normalized_filter_base,
+                     release = release)
 
   if (nrow(dt) == 0L) {
     cli_abort(
