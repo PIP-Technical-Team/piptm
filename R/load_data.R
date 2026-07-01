@@ -373,6 +373,12 @@ load_survey_microdata <- function(country_code,
 #'   cannot be excluded).  Columns absent from a survey's schema are silently
 #'   omitted (they will appear as `NA` if added back by the caller).  When
 #'   `NULL`, all columns are loaded (current default behaviour).
+#' @param filter_base Named list of sample-base filters, or `NULL`.
+#'   Each name is a variable and each value is an integer vector of allowed
+#'   codes (AND across variables, IN within variable). Filters are applied on
+#'   the Arrow dataset before `collect()`. When `cols` is non-`NULL`, filter
+#'   columns are auto-included for filtering and dropped post-collect when they
+#'   were not explicitly requested in `cols`.
 #' @param release Character scalar release ID. Used only for error messages and
 #'   to attach as an attribute on the result. Defaults to [piptm_current_release()].
 #'
@@ -391,7 +397,8 @@ load_survey_microdata <- function(country_code,
 #' colombia <- piptm_manifest()[country_code == "COL"]
 #' dt <- load_surveys(colombia, ppp = 2017L)
 #' }
-load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL, release = NULL) {
+load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL,
+                         filter_base = NULL, release = NULL) {
 
   stopifnot(
     data.table::is.data.table(entries_dt),
@@ -401,6 +408,44 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL, release = NULL) {
 
   if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
     cli::cli_abort("{.arg cols} must be NULL or a non-empty character vector.")
+
+  normalized_filter_base <- NULL
+  filter_vars <- character(0L)
+  if (!is.null(filter_base)) {
+    if (is.data.frame(filter_base)) {
+      filter_base <- as.list(filter_base)
+    }
+    if (!is.list(filter_base) || length(filter_base) == 0L) {
+      cli::cli_abort("{.arg filter_base} must be NULL or a non-empty named list.")
+    }
+
+    filter_vars <- names(filter_base)
+    if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
+      cli::cli_abort("{.arg filter_base} must have non-empty variable names.")
+    }
+
+    normalized_filter_base <- setNames(
+      lapply(filter_vars, function(varname) {
+        vals <- unlist(filter_base[[varname]], use.names = FALSE)
+        if (length(vals) == 0L) {
+          cli::cli_abort(
+            "{.arg filter_base} variable {.val {varname}} must include at least one value."
+          )
+        }
+        suppressWarnings(vals_int <- as.integer(vals))
+        if (anyNA(vals_int)) {
+          cli::cli_abort(
+            c(
+              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+              "i" = "Values must be integer codes stored in Parquet."
+            )
+          )
+        }
+        unique(vals_int)
+      }),
+      filter_vars
+    )
+  }
 
   if (nrow(entries_dt) == 0L) {
     cli::cli_abort(
@@ -503,6 +548,7 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL, release = NULL) {
   # the "area" column): those columns are omitted here and NA-filled downstream
   # by table_maker().
   ds <- arrow::open_dataset(parquet_files, format = "parquet")
+  original_cols <- cols
 
   if (!is.null(cols)) {
     # Translate logical "welfare" → physical column name. Always ensure
@@ -510,6 +556,7 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL, release = NULL) {
     # regardless of what the caller requested.
     physical_cols <- cols
     physical_cols[physical_cols == "welfare"] <- target_col
+    physical_cols <- union(physical_cols, filter_vars)
     physical_cols <- union(physical_cols, c("pip_id", target_col, "weight"))
     # Only select columns that actually exist in the unified schema.
     safe_cols <- intersect(physical_cols, ds$schema$names)
@@ -528,9 +575,22 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL, release = NULL) {
     ds <- dplyr::select(ds, dplyr::all_of(safe_cols))
   }
 
+  if (!is.null(normalized_filter_base)) {
+    for (varname in names(normalized_filter_base)) {
+      allowed_vals <- normalized_filter_base[[varname]]
+      ds <- dplyr::filter(ds, .data[[varname]] %in% allowed_vals)
+    }
+  }
+
   dt <- ds |>
     dplyr::collect() |>
     data.table::as.data.table()
+
+  if (!is.null(normalized_filter_base) && !is.null(original_cols)) {
+    filter_only_cols <- setdiff(names(normalized_filter_base), original_cols)
+    filter_only_cols <- intersect(filter_only_cols, names(dt))
+    if (length(filter_only_cols) > 0L) dt[, (filter_only_cols) := NULL]
+  }
 
   if (nrow(dt) == 0L) {
     cli::cli_abort(

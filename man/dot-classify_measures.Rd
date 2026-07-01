@@ -16,6 +16,6 @@ A named list of character vectors, one per active family.
 Validates that every element of \code{measures} exists in \code{.MEASURE_REGISTRY}
 and returns a named list of character vectors grouped by family.  Only
 families with at least one requested measure appear in the result.  The
-output list is always ordered: \code{poverty} → \code{inequality} → \code{welfare}.
+output list is always ordered: \code{poverty} → \code{inequality} → \code{summary_stats} → \code{shares}.
 }
 \keyword{internal}

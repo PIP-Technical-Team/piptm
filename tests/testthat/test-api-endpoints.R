@@ -178,21 +178,27 @@ if (!nzchar(.ep_plumber_path)) {
   entries <- list(
     list(
       pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1",
-      country_code = "COL", year = 2010L, welfare_type = "INC",
+      country_code = "COL", country_name = "Colombia",
+      region_code = "LCN", region_name = "Latin America & Caribbean",
+      year = 2010L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list("gender", "area"),
       welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     ),
     list(
       pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2",
-      country_code = "BOL", year = 2000L, welfare_type = "INC",
+      country_code = "BOL", country_name = "Bolivia",
+      region_code = "ECA", region_name = "Europe & Central Asia",
+      year = 2000L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list(),
       welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     ),
     list(
       pip_id = "COL_2015_ECH_INC_ALL", survey_id = "S3",
-      country_code = "COL", year = 2015L, welfare_type = "INC",
+      country_code = "COL", country_name = "Colombia",
+      region_code = "LCN", region_name = "Latin America & Caribbean",
+      year = 2015L, welfare_type = "INC",
       version = "v01_v01", survey_acronym = "ECH", module = "ALL",
       dimensions = list("gender"),
       welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
@@ -825,6 +831,39 @@ test_that("GET /table with ppp='-1' returns 400 (negative ppp)", {
   expect_equal(body$status, "error")
 })
 
+test_that("GET /table with malformed filter_base JSON returns 422", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2010_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = "{bad_json}"
+  )))
+  expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+})
+
+test_that("GET /table with valid filter_base JSON is accepted by endpoint", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  filter_json <- jsonlite::toJSON(list(age = c(15L, 20L)), auto_unbox = TRUE)
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2015_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = filter_json
+  )))
+
+  expect_true(res$status %in% c(200L, 422L))
+  body <- parse_api_res(res)
+  expect_true(body$status %in% c("success", "error"))
+  expect_false(res$status == 400L)
+})
+
 test_that("GET /table with ppp=NULL omitted uses manifest default — returns 200", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
@@ -942,6 +981,73 @@ test_that("GET /surveys with bogus release returns 422", {
   body <- parse_api_res(.ep_router$call(make_api_req("GET", "/surveys",
     query = list(release = "BOGUS_RELEASE_DOES_NOT_EXIST")
   )))
+  expect_equal(body$status, "error")
+})
+
+# =============================================================================
+# Block 8b: /countries and /regions with fixtures
+# =============================================================================
+
+test_that("GET /countries returns unique country pairs sorted by code", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("GET", "/countries"))
+  expect_equal(res$status, 200L)
+
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  expect_equal(as.character(body$meta$release), fx$release)
+  expect_equal(as.character(body$data$country_code), c("BOL", "COL"))
+  expect_equal(as.character(body$data$country_name), c("Bolivia", "Colombia"))
+})
+
+test_that("GET /countries with bogus release returns 422", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/countries", query = list(
+    release = "BOGUS_RELEASE_DOES_NOT_EXIST"
+  )))
+
+  expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+})
+
+test_that("GET /regions returns grouped regions with sorted country arrays", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("GET", "/regions"))
+  expect_equal(res$status, 200L)
+
+  body <- parse_api_res(res, simplify = FALSE)
+  status_val <- unlist(body$status)
+  expect_equal(status_val, "success")
+  expect_equal(as.character(unlist(body$meta$release)), fx$release)
+
+  regions <- body$data
+  region_codes <- vapply(regions, function(x) as.character(unlist(x$region_code))[1], character(1))
+  expect_equal(region_codes, c("ECA", "LCN"))
+
+  region_countries <- lapply(regions, function(x) as.character(unlist(x$countries)))
+  expect_equal(region_countries[[1]], c("BOL"))
+  expect_equal(region_countries[[2]], c("COL"))
+})
+
+test_that("GET /regions with bogus release returns 422", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/regions", query = list(
+    release = "BOGUS_RELEASE_DOES_NOT_EXIST"
+  )))
+
+  expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
   expect_equal(body$status, "error")
 })
 

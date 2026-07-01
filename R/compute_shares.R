@@ -1,5 +1,5 @@
 #' @importFrom collapse fsum GRP
-#' @importFrom data.table melt as.data.table data.table
+#' @importFrom data.table melt as.data.table data.table rbindlist
 #' @importFrom cli cli_abort
 NULL
 
@@ -95,9 +95,12 @@ NULL
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 
-  s$groups_dt[, pop_share := ifelse(
-    s$denom_survey == 0, NA_real_, s$cell_wpop / s$denom_survey
-  )]
+  pop_share <- if (s$denom_survey == 0) {
+    rep(NA_real_, length(s$cell_wpop))
+  } else {
+    s$cell_wpop / s$denom_survey
+  }
+  s$groups_dt[, pop_share := pop_share]
 
   result <- melt(
     s$groups_dt,
@@ -151,8 +154,12 @@ NULL
   tvec          <- as.integer(!is.na(dt[[target_variable]]) & dt[[target_variable]] == 1L)
   targ_in_group <- collapse::fsum(s$w * tvec, g = s$grp)
 
-  within_share <- ifelse(s$cell_wpop    == 0, NA_real_, targ_in_group / s$cell_wpop)
-  survey_share <- ifelse(s$denom_survey == 0, NA_real_, targ_in_group / s$denom_survey)
+  within_share <- ifelse(s$cell_wpop == 0, NA_real_, targ_in_group / s$cell_wpop)
+  survey_share <- if (s$denom_survey == 0) {
+    rep(NA_real_, length(targ_in_group))
+  } else {
+    targ_in_group / s$denom_survey
+  }
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 
@@ -188,6 +195,9 @@ NULL
 #'   by `target_variable` (binary 0/1, validated upstream).
 #' @param by Character vector of grouping column names, or `NULL` for the
 #'   aggregate (one row per measure).
+#' @param measures Character vector of share measure names to compute. Must be
+#'   a subset of `c("pop_share", "target_within_group_share",
+#'   "target_survey_share")`.
 #' @param target_variable Optional character name of a binary (0/1) column in
 #'   `dt`. When `NULL` (default), subgroup population shares are returned.
 #'   When provided, within-group and survey-level target shares are returned.
@@ -200,11 +210,47 @@ NULL
 #'
 #' @family compute
 #' @keywords internal
-compute_shares <- function(dt, by = NULL, target_variable = NULL, grp = NULL) {
+compute_shares <- function(dt, by = NULL, measures, target_variable = NULL, grp = NULL) {
 
-  if (is.null(target_variable || target_variable == "welfare")) {
-    .shares_population(dt, by = by, grp = grp)
-  } else {
-    .shares_target(dt, by = by, target_variable = target_variable, grp = grp)
+  allowed_measures <- c("pop_share", "target_within_group_share", "target_survey_share")
+
+  if (!is.character(measures) || length(measures) == 0L) {
+    cli_abort("{.arg measures} must be a non-empty character vector.")
   }
+
+  measures <- unique(measures)
+  unknown <- setdiff(measures, allowed_measures)
+  if (length(unknown) > 0L) {
+    cli_abort(
+      c(
+        "Unknown shares measure{?s}: {.val {unknown}}.",
+        "i" = "Valid shares measures: {.val {allowed_measures}}."
+      )
+    )
+  }
+
+  target_measures <- c("target_within_group_share", "target_survey_share")
+  needs_target <- any(measures %in% target_measures)
+
+  if (needs_target && (is.null(target_variable) || target_variable == "welfare")) {
+    cli_abort(
+      c(
+        "{.arg target_variable} is required for target share measures.",
+        "i" = "Provide a binary analysis variable when requesting {.val {intersect(measures, target_measures)}}."
+      )
+    )
+  }
+
+  out <- list()
+
+  if ("pop_share" %in% measures) {
+    out$pop_share <- .shares_population(dt, by = by, grp = grp)
+  }
+
+  if (needs_target) {
+    target_res <- .shares_target(dt, by = by, target_variable = target_variable, grp = grp)
+    out$target <- target_res[measure %in% measures]
+  }
+
+  data.table::rbindlist(out, fill = TRUE)
 }

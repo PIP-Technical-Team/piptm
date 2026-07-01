@@ -4,7 +4,7 @@
 \alias{.validate_by}
 \title{Validate the \code{by} disaggregation argument}
 \usage{
-.validate_by(by, dimensions = NULL)
+.validate_by(by, dimensions = NULL, release = NULL)
 }
 \arguments{
 \item{by}{Character vector of requested dimension names, or \code{NULL}.}

@@ -150,16 +150,16 @@ test_that("pip_age_bins() returns the four expected labels in order", {
 test_that(".classify_measures() groups a mixed request by family", {
   out <- piptm:::.classify_measures(c("headcount", "gini", "mean"))
   expect_type(out, "list")
-  expect_named(out, c("poverty", "inequality", "welfare"), ignore.order = FALSE)
+  expect_named(out, c("poverty", "inequality", "summary_stats"), ignore.order = FALSE)
   expect_equal(out$poverty,    "headcount")
   expect_equal(out$inequality, "gini")
-  expect_equal(out$welfare,    "mean")
+  expect_equal(out$summary_stats, "mean")
 })
 
 test_that(".classify_measures() returns only active families", {
   out <- piptm:::.classify_measures(c("mean", "sd"))
-  expect_named(out, "welfare")
-  expect_setequal(out$welfare, c("mean", "sd"))
+  expect_named(out, "summary_stats")
+  expect_setequal(out$summary_stats, c("mean", "sd"))
 })
 
 test_that(".classify_measures() handles all poverty measures", {
@@ -176,10 +176,10 @@ test_that(".classify_measures() handles all inequality measures", {
   expect_setequal(out$inequality, c("gini", "mld"))
 })
 
-test_that(".classify_measures() output is ordered poverty → inequality → welfare", {
+test_that(".classify_measures() output is ordered poverty → inequality → summary_stats", {
   # Request in reverse order; output must follow canonical order
   out <- piptm:::.classify_measures(c("mean", "gini", "headcount"))
-  expect_equal(names(out), c("poverty", "inequality", "welfare"))
+  expect_equal(names(out), c("poverty", "inequality", "summary_stats"))
 })
 
 test_that(".classify_measures() errors on a single unknown measure name", {

@@ -1,0 +1,8 @@
+{
+  "plan": ".cg-docs/plans/2026-07-01-table-endpoint-computation-refactor.md",
+  "executionReport": ".cg-docs/work-reports/2026-07-01-table-endpoint-computation-refactor.md",
+  "phase": 5,
+  "step": 11,
+  "status": "completed",
+  "nextCommand": "/cg-review .cg-docs/plans/2026-07-01-table-endpoint-computation-refactor.md"
+}

@@ -4,7 +4,13 @@
 \alias{load_surveys}
 \title{Batch-load microdata for multiple surveys from the shared Arrow repository}
 \usage{
-load_surveys(entries_dt, ppp = 2021L, cols = NULL, release = NULL)
+load_surveys(
+  entries_dt,
+  ppp = 2021L,
+  cols = NULL,
+  filter_base = NULL,
+  release = NULL
+)
 }
 \arguments{
 \item{entries_dt}{A \code{data.table} with at least the columns \code{country_code},
@@ -34,6 +40,13 @@ and \code{"pip_id"} are always included automatically, even if not listed
 cannot be excluded).  Columns absent from a survey's schema are silently
 omitted (they will appear as \code{NA} if added back by the caller).  When
 \code{NULL}, all columns are loaded (current default behaviour).}
+
+\item{filter_base}{Named list of sample-base filters, or \code{NULL}.
+Each name is a variable and each value is an integer vector of allowed
+codes (AND across variables, IN within variable). Filters are applied on
+the Arrow dataset before \code{collect()}. When \code{cols} is non-\code{NULL}, filter
+columns are auto-included for filtering and dropped post-collect when they
+were not explicitly requested in \code{cols}.}
 
 \item{release}{Character scalar release ID. Used only for error messages and
 to attach as an attribute on the result. Defaults to \code{\link[=piptm_current_release]{piptm_current_release()}}.}
