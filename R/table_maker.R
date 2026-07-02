@@ -1,5 +1,6 @@
 #' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
 #' @importFrom cli cli_abort cli_warn
+#' @importFrom collapse GRP
 NULL
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
@@ -128,10 +129,15 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' @param release Character scalar release ID (e.g. `"20260206"`). Defaults
 #'   to the current release as returned by [piptm_current_release()].
 #' @param pop_share_threshold Numeric scalar in (0, 1) or `NULL`.  When
-#'   non-NULL and `"pop_share"` is among the requested `measures`, cells whose
-#'   population share falls below this threshold have all non-share measures
-#'   suppressed (dropped from output). `pop_share` rows are always retained.
-#'   Default: `0.01` (1%).
+#'   non-NULL, cells whose population share falls below this threshold have all
+#'   non-share measures suppressed (dropped from output), regardless of whether
+#'   `"pop_share"` was requested.  If `"pop_share"` is not among the requested
+#'   `measures`, it is computed internally and used solely for threshold
+#'   evaluation — it does not appear in the output.  Share-family measures
+#'   (`pop_share`, `target_within_group_share`, `target_survey_share`) are
+#'   always retained so callers can inspect the distribution of suppressed
+#'   groups.  Has no effect when `by = NULL` (aggregate mode: each cell is a
+#'   full survey with pop_share = 1.0).  Default: `0.01` (1%).
 #'
 #' @return A [data.table::data.table()] in **long format** with columns:
 #' \describe{
@@ -489,12 +495,16 @@ table_maker <- function(pip_id        = NULL,
   data.table::setcolorder(result, col_order)
 
   # ── 10. Pop-share threshold suppression ─────────────────────────────────────
-  # When pop_share is requested and threshold is set, drop non-share measures
-  # for cells whose pop_share falls below the threshold.
-  if (!is.null(pop_share_threshold) && "pop_share" %in% measures) {
-    # Validate threshold
+  # The threshold is a data-quality safeguard: cells whose population share
+  # falls below `pop_share_threshold` have all non-share measures suppressed
+  # (dropped from output).  Activation is unconditional — if "pop_share" was
+  # not requested by the caller it is computed internally for evaluation only
+  # and never appended to the output.
+  if (!is.null(pop_share_threshold)) {
+    # Validate threshold unconditionally — not contingent on requested measures.
     if (!is.numeric(pop_share_threshold) || length(pop_share_threshold) != 1L ||
-        !is.finite(pop_share_threshold) || pop_share_threshold <= 0 || pop_share_threshold >= 1) {
+        !is.finite(pop_share_threshold) || pop_share_threshold <= 0 ||
+        pop_share_threshold >= 1) {
       cli_abort(
         c(
           "{.arg pop_share_threshold} must be a single numeric value in (0, 1), or {.code NULL} to disable.",
@@ -503,37 +513,56 @@ table_maker <- function(pip_id        = NULL,
       )
     }
 
-    # Identify cell keys (pip_id + dimension columns)
-    cell_keys <- c("pip_id", dim_cols)
+    # Suppression is only meaningful when `by` is non-NULL.  With by = NULL
+    # every "cell" is a full survey (pop_share = 1.0 always), so the threshold
+    # can never trigger.
+    if (length(dim_cols) > 0L) {
+      caller_requested_pop_share <- "pop_share" %in% measures
 
-    # Extract pop_share rows and find below-threshold cells
-    pop_rows <- result[measure == "pop_share"]
-    suppressed <- pop_rows[value < pop_share_threshold]
+      # Obtain pop_share per cell.  If pop_share was not requested by the
+      # caller, compute it internally using the same batch grouping as
+      # compute_measures(); used only for threshold evaluation, never output.
+      if (caller_requested_pop_share) {
+        pop_rows <- result[measure == "pop_share"]
+      } else {
+        batch_by_ps <- c("pip_id", dim_cols)
+        grp_ps      <- collapse::GRP(dt, by = batch_by_ps)
+        pop_rows    <- compute_shares(dt, by = batch_by_ps,
+                                      measures = "pop_share", grp = grp_ps)
+      }
 
-    if (nrow(suppressed) > 0L) {
-      # Build warning message
-      sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
-        dims <- paste(
-          vapply(cell_keys, function(k) paste0(k, "=", suppressed[[k]][[i]]), character(1L)),
-          collapse = ", "
+      cell_keys  <- c("pip_id", dim_cols)
+      suppressed <- pop_rows[value < pop_share_threshold]
+
+      if (nrow(suppressed) > 0L) {
+        # Retain ALL shares-family measures for below-threshold cells so
+        # callers can inspect the population distribution of suppressed groups.
+        share_measures <- names(Filter(function(f) f == "shares",
+                                       .MEASURE_REGISTRY))
+
+        sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
+          dims <- paste(
+            vapply(cell_keys, function(k)
+              paste0(k, "=", suppressed[[k]][[i]]), character(1L)),
+            collapse = ", "
+          )
+          paste0(dims, " (pop_share=", round(suppressed[["value"]][[i]], 4L), ")")
+        }, character(1L))
+
+        cli_warn(
+          c(
+            "Suppressing non-share measures for {nrow(suppressed)} cell{?s} with pop_share < {pop_share_threshold}:",
+            "i" = "{sup_labels}"
+          )
         )
-        paste0(dims, " (pop_share=", round(suppressed[["value"]][[i]], 4L), ")")
-      }, character(1L))
 
-      cli_warn(
-        c(
-          "Suppressing measures for {nrow(suppressed)} cell{?s} with pop_share below {pop_share_threshold}:",
-          "i" = "{sup_labels}"
-        )
-      )
-
-      # Anti-join: drop rows for suppressed cells where measure is not a share
-      share_measures <- "pop_share"
-      sup_keys <- suppressed[, ..cell_keys]
-      result[, .suppress := FALSE]
-      idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
-      result[idx, .suppress := !(measure %chin% share_measures)]
-      result <- result[(.suppress) == FALSE][, .suppress := NULL]
+        # Anti-join: for suppressed cells, drop all non-share measure rows.
+        sup_keys <- suppressed[, ..cell_keys]
+        result[, .suppress := FALSE]
+        idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
+        result[idx, .suppress := !(measure %chin% share_measures)]
+        result <- result[(.suppress) == FALSE][, .suppress := NULL]
+      }
     }
   }
 
