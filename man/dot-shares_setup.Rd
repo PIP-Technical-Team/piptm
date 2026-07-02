@@ -20,7 +20,9 @@
 A named list with elements:
 \describe{
 \item{\code{w}}{Numeric weight vector.}
-\item{\code{denom_survey}}{Scalar total weighted population of the survey.}
+\item{\code{denom_survey}}{Numeric denominator aligned to each output cell.
+For batched data grouped by \code{pip_id}, this is the weighted survey total
+of the corresponding \code{pip_id}; otherwise it is the global total.}
 \item{\code{grp}}{A \code{\link[collapse:GRP]{collapse::GRP()}} object, or \code{NULL} when \code{by = NULL}.}
 \item{\code{cell_wpop}}{Numeric vector of per-cell weighted populations
 (length = number of groups), or scalar survey total when \code{by = NULL}.}

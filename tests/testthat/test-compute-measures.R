@@ -6,7 +6,8 @@ make_single_dt <- function(n = 10L, dims = character(0L)) {
   dt <- data.table(
     pip_id  = "TST_2020_CON",
     welfare = seq(1, by = 1, length.out = n),
-    weight  = rep(1.0, n)
+    weight  = rep(1.0, n),
+    female  = rep(c(1L, 0L), length.out = n)
   )
   if ("gender" %in% dims) {
     dt[, gender := factor(
@@ -28,7 +29,8 @@ make_multi_dt <- function(n_surveys = 3L, n_rows = 10L, dims = character(0L)) {
     sdt <- data.table(
       pip_id  = sprintf("TST_2020_S%d", i),
       welfare = seq(i, by = 1, length.out = n_rows),
-      weight  = rep(1.0, n_rows)
+      weight  = rep(1.0, n_rows),
+      female  = rep(c(1L, 0L), length.out = n_rows)
     )
     if ("gender" %in% dims) {
       sdt[, gender := factor(
@@ -73,7 +75,7 @@ test_that("multi-survey values match per-survey lapply approach", {
   ref <- rbindlist(lapply(unique(dt$pip_id), function(pid) {
     sdt <- dt[pip_id == pid]
     res <- rbindlist(list(
-      compute_welfare(sdt,  by = NULL, measures = "mean"),
+      compute_summary_stats(sdt, by = NULL, measures = "mean", target_variable = "welfare"),
       compute_inequality(sdt, by = NULL, measures = "gini"),
       compute_poverty(sdt,  poverty_lines = pl, by = NULL, measures = "headcount")
     ), fill = TRUE)
@@ -82,7 +84,7 @@ test_that("multi-survey values match per-survey lapply approach", {
   }), fill = TRUE)
 
   # New multi-survey call
-  result <- compute_measures(dt, measures = meas, poverty_lines = pl)
+  result <- compute_measures(dt, measures = meas, poverty_line = pl)
 
   # Compare values after normalising to common sort order
   ref[is.na(poverty_line), poverty_line := NA_real_]
@@ -101,19 +103,19 @@ test_that("multi-survey values match per-survey lapply approach", {
 
 test_that("all 18 measures, 1 poverty line, no by → n_all rows", {
   dt  <- make_single_dt(10L)
-  res <- compute_measures(dt, measures = ALL_MEASURES, poverty_lines = 5.5)
+  res <- compute_measures(dt, measures = ALL_MEASURES, analysis_var = "female", poverty_line = 5.5)
   expect_equal(nrow(res), n_all)
 })
 
 test_that("all 18 measures, 1 poverty line → 18 unique measure names", {
   dt  <- make_single_dt(10L)
-  res <- compute_measures(dt, measures = ALL_MEASURES, poverty_lines = 5.5)
+  res <- compute_measures(dt, measures = ALL_MEASURES, analysis_var = "female", poverty_line = 5.5)
   expect_setequal(res$measure, ALL_MEASURES)
 })
 
 test_that("all 18 measures, 2 poverty lines → poverty rows duplicated per line", {
   dt  <- make_single_dt(10L)
-  res <- compute_measures(dt, measures = ALL_MEASURES, poverty_lines = ALL_PL)
+  res <- compute_measures(dt, measures = ALL_MEASURES, analysis_var = "female", poverty_line = ALL_PL)
   # n_pov measures × 2 lines = 2*n_pov; remaining n_all-n_pov measures = 1 row each
   expect_equal(nrow(res), n_all + n_pov)
 })
@@ -123,7 +125,7 @@ test_that("all 18 measures, 2 poverty lines → poverty rows duplicated per line
 test_that("only poverty measures → no inequality or welfare rows", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = c("headcount", "poverty_gap"),
-                          poverty_lines = 5.0)
+                          poverty_line = 5.0)
   expect_true(all(res$measure %in% c("headcount", "poverty_gap")))
   expect_false(any(res$measure %in% c("gini", "mld", "mean")))
 })
@@ -131,7 +133,7 @@ test_that("only poverty measures → no inequality or welfare rows", {
 test_that("only poverty measures → all rows have non-NA poverty_line", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = c("headcount", "severity"),
-                          poverty_lines = 3.0)
+                          poverty_line = 3.0)
   expect_true(all(!is.na(res$poverty_line)))
 })
 
@@ -148,10 +150,10 @@ test_that("inequality + welfare only → poverty_line column present and all NA"
 
 test_that("inequality + welfare, n_all-n_pov measures → n_all-n_pov rows aggregate", {
   # Build dynamically so the test stays correct if the registry grows.
-  ineq_welf <- ALL_MEASURES[unlist(piptm:::.MEASURE_REGISTRY)[ALL_MEASURES] != "poverty"]
+  ineq_welf <- ALL_MEASURES[unlist(piptm:::.MEASURE_REGISTRY)[ALL_MEASURES] %in% c("inequality", "summary_stats")]
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = ineq_welf)
-  expect_equal(nrow(res), n_all - n_pov)
+  expect_equal(nrow(res), length(ineq_welf))
 })
 
 # ── 5. Mixed poverty + inequality + welfare ──────────────────────────────────
@@ -160,7 +162,7 @@ test_that("mixed request → poverty rows have poverty_line, others NA", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt,
                           measures      = c("headcount", "gini", "mean"),
-                          poverty_lines = 4.0)
+                          poverty_line = 4.0)
   poverty_rows  <- res[measure == "headcount"]
   non_pov_rows  <- res[measure %in% c("gini", "mean")]
   expect_true(all(!is.na(poverty_rows$poverty_line)))
@@ -172,7 +174,7 @@ test_that("mixed request → poverty rows have poverty_line, others NA", {
 test_that("by = NULL → 1 row per measure per poverty line (no group cols)", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = c("headcount", "gini", "mean"),
-                          poverty_lines = 3.5)
+                          poverty_line = 3.5)
   # 1 PL × 1 HC + 1 gini + 1 mean = 3 rows
   expect_equal(nrow(res), 3L)
   # No by columns beyond fixed schema
@@ -186,7 +188,7 @@ test_that("by = 'gender' (2 groups) → row count per measure × group", {
   dt  <- make_single_dt(10L, dims = "gender")
   res <- compute_measures(dt,
                           measures      = c("headcount", "gini", "mean"),
-                          poverty_lines = 3.5,
+                          poverty_line = 3.5,
                           by            = "gender")
   # headcount: 1 PL × 2 groups = 2; gini: 2; mean: 2 → 6 rows
   expect_equal(nrow(res), 6L)
@@ -199,7 +201,7 @@ test_that("poverty line count × poverty measure count is correct", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt,
                           measures      = c("headcount", "severity", "mean"),
-                          poverty_lines = c(2.0, 4.0, 6.0))
+                          poverty_line = c(2.0, 4.0, 6.0))
   pov_rows   <- res[measure %in% c("headcount", "severity")]
   welf_rows  <- res[measure == "mean"]
   # 2 poverty measures × 3 PL = 6 poverty rows
@@ -213,7 +215,7 @@ test_that("poverty line count × poverty measure count is correct", {
 test_that("output has required columns: measure, value, population", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = c("mean", "gini"),
-                          poverty_lines = NULL)
+                          poverty_line = NULL)
   expect_true(all(c("measure", "value", "population") %in% names(res)))
 })
 
@@ -233,25 +235,25 @@ test_that("value and population columns are numeric", {
 test_that("poverty_line column is numeric (not integer)", {
   dt  <- make_single_dt(10L)
   res <- compute_measures(dt, measures = c("headcount", "mean"),
-                          poverty_lines = 3.5)
+                          poverty_line = 3.5)
   expect_type(res$poverty_line, "double")
 })
 
 # ── 10. Poverty measures without poverty_lines → error ──────────────────────
 
-test_that("poverty measures without poverty_lines errors", {
+test_that("poverty measures without poverty_line errors", {
   dt <- make_single_dt(10L)
   expect_error(
-    compute_measures(dt, measures = "headcount", poverty_lines = NULL),
+    compute_measures(dt, measures = "headcount", poverty_line = NULL),
     class = "rlang_error"
   )
 })
 
 # ── 11. Numerical correctness — dispatch must not corrupt values ─────────────
 
-test_that("welfare mean via compute_measures matches compute_welfare directly", {
+test_that("welfare mean via compute_measures matches compute_summary_stats directly", {
   dt     <- make_single_dt(10L)
-  direct <- compute_welfare(dt, measures = "mean")$value
+  direct <- compute_summary_stats(dt, measures = "mean", target_variable = "welfare")$value
   via_cm <- compute_measures(dt, measures = "mean")$value
   expect_equal(via_cm, direct)
 })
@@ -266,7 +268,7 @@ test_that("gini via compute_measures matches compute_inequality directly", {
 test_that("headcount via compute_measures matches compute_poverty directly", {
   dt     <- make_single_dt(10L)
   direct <- compute_poverty(dt, poverty_lines = 5.5, measures = "headcount")$value
-  via_cm <- compute_measures(dt, measures = "headcount", poverty_lines = 5.5)$value
+  via_cm <- compute_measures(dt, measures = "headcount", poverty_line = 5.5)$value
   expect_equal(via_cm, direct)
 })
 
