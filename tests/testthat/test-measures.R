@@ -64,17 +64,15 @@ test_that("pip_tablemaker_measures() available_stats is a non-empty list with me
   }
 })
 
-test_that("pip_tablemaker_measures() pop_share and obs_share appear only in binary entries", {
+test_that("pip_tablemaker_measures() pop_share appears only in binary entries", {
   m <- pip_tablemaker_measures()
   for (i in seq_along(m)) {
     ids  <- vapply(m[[i]]$available_stats, `[[`, character(1L), "measure")
     type <- m[[i]]$type
     if (type != "binary") {
       expect_false("pop_share" %in% ids)
-      expect_false("obs_share" %in% ids)
     } else {
       expect_true("pop_share" %in% ids)
-      expect_true("obs_share" %in% ids)
     }
   }
 })
@@ -113,14 +111,14 @@ test_that("pip_tablemaker_measures() inequality entry has exactly 2 stats", {
   expect_setequal(ineq_ids, c("gini", "mld"))
 })
 
-test_that("pip_tablemaker_measures() each binary entry has exactly 2 stats: pop_share and obs_share", {
+test_that("pip_tablemaker_measures() each binary entry has exactly 1 stat: pop_share", {
   m           <- pip_tablemaker_measures()
   types       <- vapply(m, `[[`, character(1L), "type")
   bin_entries <- m[types == "binary"]
   for (i in seq_along(bin_entries)) {
     ids <- vapply(bin_entries[[i]]$available_stats, `[[`, character(1L), "measure")
-    expect_length(ids, 2L)
-    expect_setequal(ids, c("pop_share", "obs_share"))
+    expect_length(ids, 1L)
+    expect_setequal(ids, "pop_share")
   }
 })
 

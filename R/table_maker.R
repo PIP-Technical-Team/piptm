@@ -130,8 +130,8 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' @param pop_share_threshold Numeric scalar in (0, 1) or `NULL`.  When
 #'   non-NULL and `"pop_share"` is among the requested `measures`, cells whose
 #'   population share falls below this threshold have all non-share measures
-#'   suppressed (dropped from output).  `pop_share` and `obs_share` rows are
-#'   always retained.  Default: `0.01` (1%).
+#'   suppressed (dropped from output). `pop_share` rows are always retained.
+#'   Default: `0.01` (1%).
 #'
 #' @return A [data.table::data.table()] in **long format** with columns:
 #' \describe{
@@ -528,7 +528,7 @@ table_maker <- function(pip_id        = NULL,
       )
 
       # Anti-join: drop rows for suppressed cells where measure is not a share
-      share_measures <- c("pop_share", "obs_share")
+      share_measures <- "pop_share"
       sup_keys <- suppressed[, ..cell_keys]
       result[, .suppress := FALSE]
       idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
