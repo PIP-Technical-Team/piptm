@@ -30,9 +30,9 @@ Required when any poverty-family measure is requested or when
 \code{"pov_status"} is included in \code{by}.}
 
 \item{by}{Character vector of disaggregation dimension names, or \code{NULL} for
-aggregate results.  Valid values: \code{"gender"}, \code{"area"}, \code{"educat4"},
-\code{"educat5"}, \code{"educat7"}, \code{"age"}.  At most 4 dimensions; at most one
-education column.}
+aggregate results. Values must be valid covariates from
+\code{\link[=piptm_layout_covariates]{piptm_layout_covariates()}} for the selected release. At most 4
+dimensions are allowed.}
 
 \item{filter_base}{Named list of sample-base filters, or \code{NULL}.
 Each name is a variable and each value is an integer vector of allowed

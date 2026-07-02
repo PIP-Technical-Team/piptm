@@ -114,9 +114,9 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   Required when any poverty-family measure is requested or when
 #'   `"pov_status"` is included in `by`.
 #' @param by Character vector of disaggregation dimension names, or `NULL` for
-#'   aggregate results.  Valid values: `"gender"`, `"area"`, `"educat4"`,
-#'   `"educat5"`, `"educat7"`, `"age"`.  At most 4 dimensions; at most one
-#'   education column.
+#'   aggregate results. Values must be valid covariates from
+#'   [piptm_layout_covariates()] for the selected release. At most 4
+#'   dimensions are allowed.
 #' @param filter_base Named list of sample-base filters, or `NULL`.
 #'   Each name is a variable and each value is an integer vector of allowed
 #'   codes (AND across variables, IN within variable). Example:
@@ -196,8 +196,6 @@ table_maker <- function(pip_id        = NULL,
   if (length(pip_id) == 0L) {
     cli_abort("No surveys to process: {.arg pip_id} is empty after resolution.")
   }
-
-  target_variable <- if (analysis_var == "pov_status") NULL else analysis_var
 
   # ── 1. Validate computation parameters ─────────────────────────────────────
   families <- .classify_measures(measures)
@@ -337,8 +335,6 @@ table_maker <- function(pip_id        = NULL,
   # Drop: 0 overlap — warn with pip_id list
   # Partial: keep but warn — missing dims filled with NA in per-survey loop
   if (!is.null(by)) {
-    # The manifest stores the pre-binning dimension name "age" (not "age_group"),
-    # so we can intersect directly against `by` without any remapping.
     by_check <- by[!by %in% "pov_status"]
 
     if (length(by_check) == 0L) {
@@ -434,18 +430,7 @@ table_maker <- function(pip_id        = NULL,
     )
   }
 
-  # ── 5. Age binning ──────────────────────────────────────────────────────────
-  # .bin_age adds an `age_group` column; we replace the raw `age` column with
-  # the binned factor so that compute_measures() can group by "age" as usual.
-  # After rbindlist we rename "age" -> "age_group" in the result.
-  age_was_binned <- FALSE
-  if (!is.null(by) && "age" %in% by) {
-    .bin_age(dt)
-    dt[, age := age_group]   # overwrite raw ages with binned factor
-    dt[, age_group := NULL]  # drop the helper column
-    age_was_binned <- TRUE
-  }
-
+  # ── 5. Derived covariates ───────────────────────────────────────────────────
   if (!is.null(by) && "pov_status" %in% by) {
     if (is.null(poverty_line) || !is.numeric(poverty_line) ||
         length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
@@ -495,11 +480,6 @@ table_maker <- function(pip_id        = NULL,
   result <- meta[result, on = "pip_id"]
 
   # ── 9. Reorder columns ──────────────────────────────────────────────────────
-  # When age was binned, rename the "age" column to "age_group" in the output.
-  if (age_was_binned) {
-    data.table::setnames(result, "age", "age_group")
-    by <- c(setdiff(by, "age"), "age_group")
-  }
   meta_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
   dim_cols  <- if (!is.null(by)) by else character(0L)
   tail_cols <- c("poverty_line", "measure", "value", "population")
