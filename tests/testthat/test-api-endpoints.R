@@ -28,6 +28,10 @@ library(jsonlite)
 #   → QUERY_STRING = "pip_id=A&pip_id=B&measures=mean"
 make_api_req <- function(method = "GET", path = "/",
                          query = list(), body = NULL) {
+  if (identical(path, "/table") && is.null(query$analysis_var)) {
+    query$analysis_var <- "welfare"
+  }
+
   qs <- if (length(query) > 0L) {
     parts <- unlist(lapply(names(query), function(k) {
       paste0(k, "=", as.character(query[[k]]))
@@ -255,31 +259,25 @@ test_that("GET /releases data contains releases list and current", {
   expect_true(body$data$current %in% body$data$releases)
 })
 
-test_that("GET /measures returns 200 with success status and 12 entries", {
+test_that("GET /statistics returns 200 with success status and groups", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
-  res  <- .ep_router$call(make_api_req("GET", "/measures"))
+  res  <- .ep_router$call(make_api_req("GET", "/statistics"))
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
-  expect_equal(nrow(body$data), 12L)
+  expect_true(length(body$data) > 0L)
 })
 
-test_that("GET /measures data has required fields, valid types, and one poverty slider", {
+test_that("GET /statistics returns groups with nested measures", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
-  body <- parse_api_res(.ep_router$call(make_api_req("GET", "/measures")))
-  expect_true(all(c("varname", "label", "type", "poverty_line_slider") %in%
-                    names(body$data)))
-  expect_true(all(body$data$type %in%
-                    c("welfare", "poverty", "inequality", "continuous", "binary")))
-  # poverty_line_slider may be a list-column when plumber boxes scalars; unlist
-  # to get an atomic logical vector before sum() and subsetting.
-  sliders <- unlist(body$data$poverty_line_slider)
-  types   <- unlist(body$data$type)
-  # poverty_line_slider is TRUE for exactly one entry (the poverty variable)
-  expect_equal(sum(sliders), 1L)
-  expect_true(sliders[types == "poverty"])
+  body <- parse_api_res(.ep_router$call(make_api_req("GET", "/statistics")), simplify = FALSE)
+  expect_equal(unlist(body$status), "success")
+  expect_true(length(body$data) > 0L)
+  first_group <- body$data[[1L]]
+  expect_true(all(c("group", "group_label", "measures") %in% names(first_group)))
+  expect_true(length(first_group$measures) > 0L)
 })
 
 test_that("GET /dimensions returns 200 and includes all valid dimension names", {
@@ -297,7 +295,7 @@ test_that("GET /dimensions returns 200 and includes all valid dimension names", 
 
 # ── /categories ───────────────────────────────────────────────────────────────
 
-test_that("GET /analysis-variables returns success and pov_status has slider", {
+test_that("GET /analysis-variables returns success and expected pov_status fields", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
@@ -368,9 +366,10 @@ test_that("GET /analysis-variables returns success and pov_status has slider", {
   expect_true("pov_status" %in% varnames)
 
   pov <- data[[which(varnames == "pov_status")]]
-  pls <- pov$poverty_line_slider
-  if (is.list(pls)) pls <- unlist(pls)
-  expect_true(isTRUE(pls))
+  pov_type <- pov$type
+  if (is.list(pov_type)) pov_type <- unlist(pov_type)
+  expect_identical(as.character(pov_type[[1L]]), "poverty")
+  expect_true("stat_groups" %in% names(pov))
 })
 
 # ── /categories ───────────────────────────────────────────────────────────────
@@ -429,7 +428,7 @@ test_that("GET /categories returns filters with subcategories", {
 
 # ── /covariates ───────────────────────────────────────────────────────────────
 
-test_that("GET /covariates returns pov_status with n_categories=2 and mutex flag", {
+test_that("GET /covariates returns pov_status with n_categories=2", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
@@ -470,9 +469,7 @@ test_that("GET /covariates returns pov_status with n_categories=2 and mutex flag
   ncat <- pov$n_categories
   if (is.list(ncat)) ncat <- unlist(ncat)
   expect_true(identical(as.integer(ncat), 2L))
-  mutex <- pov$pov_status_mutex
-  if (is.list(mutex)) mutex <- unlist(mutex)
-  expect_true(isTRUE(mutex))
+  expect_false("pov_status_mutex" %in% names(pov))
 })
 
 # =============================================================================
@@ -578,18 +575,18 @@ test_that("GET /table with an unknown measure returns 400", {
   expect_true(any(grepl("not_a_real_measure", unlist(body$errors))))
 })
 
-test_that("GET /table with poverty_lines='abc' returns 400", {
+test_that("GET /table with poverty_line='abc' returns 400", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   res <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id        = "COL_2010_ECH_INC_ALL",
     measures      = "mean",
-    poverty_lines = "abc"
+    poverty_line = "abc"
   )))
   expect_equal(res$status, 400L)
   body <- parse_api_res(res)
   expect_equal(body$status, "error")
-  expect_true(any(grepl("abc", unlist(body$errors))))
+  expect_true(any(grepl("poverty_line", unlist(body$errors), ignore.case = TRUE)))
 })
 
 test_that("GET /table with negative poverty_line returns 400", {
@@ -597,8 +594,9 @@ test_that("GET /table with negative poverty_line returns 400", {
   skip_if(is.null(.ep_router), "Router could not be created")
   res <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id        = "COL_2010_ECH_INC_ALL",
+    analysis_var  = "pov_status",
     measures      = "headcount",
-    poverty_lines = "-1"
+    poverty_line  = "-1"
   )))
   expect_equal(res$status, 400L)
   body <- parse_api_res(res)
@@ -763,14 +761,15 @@ test_that("POST /table with JSON body returns 200", {
   expect_equal(body$status, "success")
 })
 
-test_that("GET /table with poverty measure + valid poverty_lines returns 200", {
+test_that("GET /table with poverty measure + valid poverty_line returns 200", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
   res <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id        = "COL_2010_ECH_INC_ALL",
+    analysis_var  = "pov_status",
     measures      = "headcount",
-    poverty_lines = "2.15"
+    poverty_line  = "2.15"
   )))
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)

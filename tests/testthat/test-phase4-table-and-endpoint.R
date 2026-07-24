@@ -117,6 +117,7 @@ if (!nzchar(.phase4_plumber_path)) {
 
 test_that("phase4: table_maker welfare analysis by gender/area works", {
   .make_phase4_fixtures()
+  activate_test_registry("20260206_PHASE4")
 
   out <- piptm::table_maker(
     pip_id = "COL_2010_ECH_INC_ALL",
@@ -159,6 +160,7 @@ test_that("phase4: table_maker requires poverty_line when by includes pov_status
 
 test_that("phase4: table_maker continuous analysis_var works", {
   .make_phase4_fixtures()
+  activate_test_registry("20260206_PHASE4")
 
   out <- piptm::table_maker(
     pip_id = "COL_2010_ECH_INC_ALL",
@@ -175,6 +177,7 @@ test_that("phase4: GET /table validates and computes with analysis_var", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.phase4_router), "Router could not be created")
   .make_phase4_fixtures()
+  activate_test_registry("20260206_PHASE4")
 
   res <- .phase4_router$call(.make_phase4_req("GET", "/table", query = list(
     analysis_var = "welfare",

@@ -64,13 +64,12 @@ test_that("build helper gives special-case pov_status n_categories=2", {
   expect_null(entry$categories)
 })
 
-test_that("zzz.R initializes registries slot", {
-  zzz_path <- testthat::test_path("..", "..", "R", "zzz.R")
-  expect_true(file.exists(zzz_path))
-
-  zzz <- readLines(zzz_path, warn = FALSE)
-  merged <- paste(zzz, collapse = "\n")
-  expect_match(merged, "\\.piptm_env\\$registries\\s*<-\\s*list\\(\\)")
+test_that("package load initializes registries slot", {
+  ns <- asNamespace("piptm")
+  expect_true(exists(".piptm_env", where = ns, inherits = FALSE))
+  env <- get(".piptm_env", envir = ns)
+  expect_true("registries" %in% names(env))
+  expect_type(env$registries, "list")
 })
 
 test_that("registry view accessors exist and error on missing release", {

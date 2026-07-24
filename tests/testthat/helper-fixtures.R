@@ -95,3 +95,115 @@ write_fixture_manifest_tm <- function(manifest_dir, release, entries,
   }
   invisible(fname)
 }
+
+# ---------------------------------------------------------------------------
+# activate_test_registry()
+# ---------------------------------------------------------------------------
+
+#' Activate a minimal variable registry for tests
+#'
+#' Seeds `.piptm_env$registries[[release]]` with analysis variables and
+#' common covariates used across tests (`gender`, `area`, `age`, `wquintile`).
+#' Also sets `.piptm_env$current_release` to `release`.
+#'
+#' @param release Character scalar release ID. If `NULL`, uses current release
+#'   when available, otherwise falls back to `"TEST_RELEASE"`.
+#' @param .local_envir Environment used by `withr::defer()` for restoration.
+#'
+#' @return Invisibly returns the activated release ID.
+activate_test_registry <- function(release = NULL, .local_envir = parent.frame()) {
+  env <- get(".piptm_env", envir = asNamespace("piptm"))
+
+  if (is.null(release)) {
+    if (!is.null(env$current_release) && nzchar(env$current_release)) {
+      release <- env$current_release
+    } else {
+      release <- "TEST_RELEASE"
+    }
+  }
+
+  old_reg <- env$registries
+  old_rel <- env$current_release
+
+  registry <- list(
+    welfare = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "welfare",
+      roles = c("analysis_var"),
+      stat_groups = c("summary_statistics", "inequality"),
+      n_categories = NULL,
+      categories = NULL
+    ),
+    pov_status = list(
+      varname = "pov_status",
+      ui_label = "Poverty status",
+      tm_type = "poverty",
+      roles = c("analysis_var", "covariate"),
+      stat_groups = c("poverty"),
+      n_categories = 2L,
+      categories = NULL
+    ),
+    gender = list(
+      varname = "gender",
+      ui_label = "Gender",
+      tm_type = "categorical",
+      roles = c("covariate", "filter"),
+      stat_groups = character(0L),
+      n_categories = 2L,
+      categories = list(
+        list(code = "male", label = "Male"),
+        list(code = "female", label = "Female")
+      )
+    ),
+    area = list(
+      varname = "area",
+      ui_label = "Area",
+      tm_type = "categorical",
+      roles = c("covariate", "filter"),
+      stat_groups = character(0L),
+      n_categories = 2L,
+      categories = list(
+        list(code = "urban", label = "Urban"),
+        list(code = "rural", label = "Rural")
+      )
+    ),
+    age = list(
+      varname = "age",
+      ui_label = "Age",
+      tm_type = "continuous",
+      roles = c("covariate", "filter"),
+      stat_groups = character(0L),
+      n_categories = NULL,
+      categories = NULL
+    ),
+    wquintile = list(
+      varname = "wquintile",
+      ui_label = "Welfare quintile",
+      tm_type = "categorical",
+      roles = c("covariate", "filter"),
+      stat_groups = character(0L),
+      n_categories = 5L,
+      categories = list(
+        list(code = "1", label = "Q1"),
+        list(code = "2", label = "Q2"),
+        list(code = "3", label = "Q3"),
+        list(code = "4", label = "Q4"),
+        list(code = "5", label = "Q5")
+      )
+    )
+  )
+
+  if (is.null(env$registries)) {
+    env$registries <- list()
+  }
+  env$registries[[release]] <- registry
+  env$current_release <- release
+
+  withr::defer({
+    env$registries <- old_reg
+    env$current_release <- old_rel
+  }, envir = .local_envir)
+
+  invisible(release)
+}

@@ -185,6 +185,7 @@ test_that("by = NULL → 1 row per measure per poverty line (no group cols)", {
 # ── 7. by = "gender" — grouped row counts ───────────────────────────────────
 
 test_that("by = 'gender' (2 groups) → row count per measure × group", {
+  activate_test_registry()
   dt  <- make_single_dt(10L, dims = "gender")
   res <- compute_measures(dt,
                           measures      = c("headcount", "gini", "mean"),

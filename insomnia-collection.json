@@ -35,6 +35,12 @@
       "parentId": null
     },
     {
+      "_id": "fld_catalogue_errors",
+      "_type": "request_group",
+      "name": "Catalogue - Error Cases",
+      "parentId": null
+    },
+    {
       "_id": "req_health",
       "_type": "request",
       "name": "GET /health",
@@ -531,6 +537,532 @@
         }
       ],
       "parentId": "fld_query_errors"
+    },
+
+    {
+      "_id": "req_table_by_pov_status",
+      "_type": "request",
+      "name": "GET /table - by pov_status",
+      "description": "Valid use of pov_status as disaggregation dimension with poverty_line.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "pov_status", "disabled": false },
+        { "name": "poverty_line", "value": "{{ _.poverty_line }}", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_binary_shares",
+      "_type": "request",
+      "name": "GET /table - binary analysis shares",
+      "description": "Shares path with binary analysis variable.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "gender", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "pop_share,target_survey_share", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_continuous_age",
+      "_type": "request",
+      "name": "GET /table - continuous analysis",
+      "description": "Summary stats path with continuous analysis variable.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "age", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean,median", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_multi_pip_id",
+      "_type": "request",
+      "name": "GET /table - multiple pip_id",
+      "description": "Vectorized pip_id query parameter (repeatable).",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_2 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_empty_threshold",
+      "_type": "request",
+      "name": "GET /table - empty pop_share_threshold",
+      "description": "Explicit empty threshold should disable suppression.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "pop_share_threshold", "value": "", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_query_variants"
+    },
+
+    {
+      "_id": "req_err_missing_analysis_var",
+      "_type": "request",
+      "name": "ERR - missing analysis_var",
+      "description": "Expects 400. analysis_var is required.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_missing_pip_id",
+      "_type": "request",
+      "name": "ERR - missing pip_id",
+      "description": "Expects 400. pip_id is required.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_missing_measures",
+      "_type": "request",
+      "name": "ERR - missing measures",
+      "description": "Expects 400. measures is required.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_unknown_analysis_var",
+      "_type": "request",
+      "name": "ERR - unknown analysis_var",
+      "description": "Expects 400. analysis_var must be in allowlist.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "unknown_var", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_unknown_measure",
+      "_type": "request",
+      "name": "ERR - unknown measure",
+      "description": "Expects 400. Unknown measures are rejected.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean,not_a_measure", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_invalid_by",
+      "_type": "request",
+      "name": "ERR - invalid by dimension",
+      "description": "Expects 400. Unknown by dimensions are rejected.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "not_a_dimension", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_by_pov_status_no_pl",
+      "_type": "request",
+      "name": "ERR - by pov_status missing poverty_line",
+      "description": "Expects 400. poverty_line required when by includes pov_status.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "pov_status", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_poverty_line_text",
+      "_type": "request",
+      "name": "ERR - poverty_line non-numeric",
+      "description": "Expects 400. poverty_line must be numeric.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "poverty_line", "value": "abc", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_poverty_line_nonpos",
+      "_type": "request",
+      "name": "ERR - poverty_line non-positive",
+      "description": "Expects 400. poverty_line must be > 0.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "poverty_line", "value": "0", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_pip_id_format",
+      "_type": "request",
+      "name": "ERR - invalid pip_id format",
+      "description": "Expects 400. pip_id must match canonical uppercase pattern.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "col_2008_geih_inc_all", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_too_many_pip_id",
+      "_type": "request",
+      "name": "ERR - too many pip_id values",
+      "description": "Expects 400. More than 15 pip_id values are rejected.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2000_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2001_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2002_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2003_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2004_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2005_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2006_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2007_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2008_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2009_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2010_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2011_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2012_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2013_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2014_FAKE_INC_ALL", "disabled": false },
+        { "name": "pip_id", "value": "AAA_2015_FAKE_INC_ALL", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_ppp_zero",
+      "_type": "request",
+      "name": "ERR - ppp zero",
+      "description": "Expects 400. ppp must be positive.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "0", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_ppp_negative",
+      "_type": "request",
+      "name": "ERR - ppp negative",
+      "description": "Expects 400. ppp must be positive.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "-1", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_ppp_repeated",
+      "_type": "request",
+      "name": "ERR - repeated ppp values",
+      "description": "Expects 400. ppp must be a scalar.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "2017", "disabled": false },
+        { "name": "ppp", "value": "2021", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_threshold_text",
+      "_type": "request",
+      "name": "ERR - pop_share_threshold non-numeric",
+      "description": "Expects 400. pop_share_threshold must be numeric in (0,1).",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "pop_share_threshold", "value": "abc", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_threshold_oob",
+      "_type": "request",
+      "name": "ERR - pop_share_threshold out of range",
+      "description": "Expects 400. pop_share_threshold must be strictly between 0 and 1.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "pop_share_threshold", "value": "1", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_filter_base_json",
+      "_type": "request",
+      "name": "ERR - malformed filter_base JSON",
+      "description": "Expects 422. filter_base JSON parsing fails in handler.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "filter_base", "value": "{\"gender\":[1]", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_table_unknown_release",
+      "_type": "request",
+      "name": "ERR - table unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_table_post_missing_analysis_var",
+      "_type": "request",
+      "name": "POST /table - missing analysis_var",
+      "description": "Expects 400. analysis_var required in POST body.",
+      "url": "{{ _.base_url }}/table",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pip_id\": [\"{{ _.pip_id }}\"],\n  \"measures\": [\"mean\"]\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_table_post_malformed_json",
+      "_type": "request",
+      "name": "POST /table - malformed JSON",
+      "description": "Expects 400. Invalid JSON body should fail request parsing.",
+      "url": "{{ _.base_url }}/table",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"analysis_var\": \"welfare\",\n  \"pip_id\": [\"{{ _.pip_id }}\"],\n  \"measures\": [\"mean\"\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_query_errors"
+    },
+
+    {
+      "_id": "req_err_release_surveys",
+      "_type": "request",
+      "name": "ERR - /surveys unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/surveys",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_surveys_ui",
+      "_type": "request",
+      "name": "ERR - /surveys-ui unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/surveys-ui",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_countries",
+      "_type": "request",
+      "name": "ERR - /countries unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/countries",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_regions",
+      "_type": "request",
+      "name": "ERR - /regions unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/regions",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_statistics",
+      "_type": "request",
+      "name": "ERR - /statistics unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/statistics",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_analysis_variables",
+      "_type": "request",
+      "name": "ERR - /analysis-variables unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/analysis-variables",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_categories",
+      "_type": "request",
+      "name": "ERR - /categories unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/categories",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
+    },
+    {
+      "_id": "req_err_release_covariates",
+      "_type": "request",
+      "name": "ERR - /covariates unknown release",
+      "description": "Expects 422. resolve_release rejects unknown release.",
+      "url": "{{ _.base_url }}/covariates",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
+      ],
+      "parentId": "fld_catalogue_errors"
     }
 
 
