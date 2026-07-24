@@ -1,0 +1,538 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-23T13:52:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "name": "Health & Info",
+      "parentId": null
+    },
+    {
+      "_id": "fld_catalogue",
+      "_type": "request_group",
+      "name": "Catalogue",
+      "parentId": null
+    },
+    {
+      "_id": "fld_query_happy",
+      "_type": "request_group",
+      "name": "Query - Happy Paths",
+      "parentId": null
+    },
+    {
+      "_id": "fld_query_variants",
+      "_type": "request_group",
+      "name": "Query - Parameter Variants",
+      "parentId": null
+    },
+    {
+      "_id": "fld_query_errors",
+      "_type": "request_group",
+      "name": "Query - Error Cases",
+      "parentId": null
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "name": "GET /health",
+      "description": "Confirms the API is up. Always run this first.",
+      "url": "{{ _.base_url }}/health",
+      "method": "GET",
+      "headers": [],
+      "parameters": [],
+      "parentId": "fld_health"
+    },
+    {
+      "_id": "req_releases",
+      "_type": "request",
+      "name": "GET /releases",
+      "description": "Lists all loaded releases and flags the current one.",
+      "url": "{{ _.base_url }}/releases",
+      "method": "GET",
+      "headers": [],
+      "parameters": [],
+      "parentId": "fld_health"
+    },
+    {
+      "_id": "req_surveys",
+      "_type": "request",
+      "name": "GET /surveys",
+      "description": "Full survey manifest. Grab pip_id values from here for /table and /lookup.",
+      "url": "{{ _.base_url }}/surveys",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_surveys_ui",
+      "_type": "request",
+      "name": "GET /surveys-ui",
+      "url": "{{ _.base_url }}/surveys-ui",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_countries",
+      "_type": "request",
+      "name": "GET /countries",
+      "url": "{{ _.base_url }}/countries",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_regions",
+      "_type": "request",
+      "name": "GET /regions",
+      "url": "{{ _.base_url }}/regions",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_dimensions",
+      "_type": "request",
+      "name": "GET /dimensions",
+      "url": "{{ _.base_url }}/dimensions",
+      "method": "GET",
+      "headers": [],
+      "parameters": [],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_statistics",
+      "_type": "request",
+      "name": "GET /statistics",
+      "url": "{{ _.base_url }}/statistics",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_analysis_variables",
+      "_type": "request",
+      "name": "GET /analysis-variables",
+      "url": "{{ _.base_url }}/analysis-variables",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_categories",
+      "_type": "request",
+      "name": "GET /categories",
+      "url": "{{ _.base_url }}/categories",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+    {
+      "_id": "req_covariates",
+      "_type": "request",
+      "name": "GET /covariates",
+      "url": "{{ _.base_url }}/covariates",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_catalogue"
+    },
+
+    {
+      "_id": "req_table_get_basic",
+      "_type": "request",
+      "name": "GET /table - basic (mean + gini)",
+      "description": "Basic table request with mean and gini measures",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean,gini",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        },
+        {
+          "name": "pop_share_threshold",
+          "value": "{{ _.pop_share_threshold }}",
+          "disabled": false
+        },
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_happy"
+    },
+    {
+      "_id": "req_table_post_basic",
+      "_type": "request",
+      "name": "POST /table - basic",
+      "description": "Same as GET but body-encoded. Useful for many pip_ids.",
+      "url": "{{ _.base_url }}/table",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"analysis_var\": \"welfare\",\n  \"pip_id\": [\"{{ _.pip_id }}\"],\n  \"measures\": [\"mean\", \"gini\"],\n  \"ppp\": {{ _.ppp }},\n  \"pop_share_threshold\": {{ _.pop_share_threshold }},\n  \"release\": \"{{ _.release }}\"\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_query_happy"
+    },
+    {
+      "_id": "req_table_pov_status",
+      "_type": "request",
+      "name": "GET /table - poverty status",
+      "description": "analysis_var=pov_status requires poverty_line",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "pov_status",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "headcount",
+          "disabled": false
+        },
+        {
+          "name": "poverty_line",
+          "value": "{{ _.poverty_line }}",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        },
+        {
+          "name": "pop_share_threshold",
+          "value": "{{ _.pop_share_threshold }}",
+          "disabled": false
+        },
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_by_gender",
+      "_type": "request",
+      "name": "GET /table - by gender",
+      "description": "Tests the 'by' disaggregation parameter",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "by",
+          "value": "gender",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        },
+        {
+          "name": "pop_share_threshold",
+          "value": "{{ _.pop_share_threshold }}",
+          "disabled": false
+        },
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_filter",
+      "_type": "request",
+      "name": "GET /table - with filter_base",
+      "description": "Tests sample-base filtering. Adjust filter_base keys/values from /categories.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "filter_base",
+          "value": "{\"gender\":[1]}",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        },
+        {
+          "name": "pop_share_threshold",
+          "value": "{{ _.pop_share_threshold }}",
+          "disabled": false
+        },
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_table_no_suppress",
+      "_type": "request",
+      "name": "GET /table - suppression disabled",
+      "description": "Omitting pop_share_threshold disables cell suppression",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        },
+        {
+          "name": "release",
+          "value": "{{ _.release }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_variants"
+    },
+    {
+      "_id": "req_err_no_povline",
+      "_type": "request",
+      "name": "ERR - pov_status missing poverty_line",
+      "description": "Expects 400. poverty_line is required when analysis_var=pov_status",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "pov_status",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "headcount",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_ppp",
+      "_type": "request",
+      "name": "ERR - non-integer ppp",
+      "description": "Expects 400. ppp must be a positive whole number",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "{{ _.pip_id }}",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "abc",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_errors"
+    },
+    {
+      "_id": "req_err_bad_pip_id",
+      "_type": "request",
+      "name": "ERR - nonexistent pip_id",
+      "description": "Expects 400 with meaningful error, not 500",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        {
+          "name": "analysis_var",
+          "value": "welfare",
+          "disabled": false
+        },
+        {
+          "name": "pip_id",
+          "value": "DOESNOTEXIST_9999_FAKE_CON_URBAN",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "ppp",
+          "value": "{{ _.ppp }}",
+          "disabled": false
+        }
+      ],
+      "parentId": "fld_query_errors"
+    }
+
+
+  ]
+}
