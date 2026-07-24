@@ -19,8 +19,4 @@ renamed without notice).
 pip_valid_dimensions()
 
 }
-\seealso{
-Other measures: 
-\code{\link{pip_age_bins}()}
-}
 \concept{measures}

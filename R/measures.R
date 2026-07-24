@@ -1,5 +1,4 @@
 #' @importFrom cli cli_abort cli_warn
-#' @importFrom data.table fcase setattr
 NULL
 
 # ── Measure Registry ──────────────────────────────────────────────────────────
@@ -39,24 +38,6 @@ NULL
 )
 
 # ── Exported helpers ──────────────────────────────────────────────────────────
-
-#' Age bin labels used by the computation engine
-#'
-#' Returns the ordered character vector of age bin labels applied when
-#' `"age"` is included as a disaggregation dimension.  The bins are:
-#' 0–14, 15–24, 25–64, 65+.
-#'
-#' @return A character vector of four age bin labels in ascending order.
-#'
-#' @family measures
-#'
-#' @examples
-#' pip_age_bins()
-#'
-#' @export
-pip_age_bins <- function() {
-  .AGE_BIN_LEVELS
-}
 
 #' Valid disaggregation dimension names
 #'
@@ -125,10 +106,8 @@ pip_valid_dimensions <- function() {
 #' Checks that:
 #' \itemize{
 #'   \item `by` is `NULL` or a non-empty character vector
-#'   \item All elements are in the allowed set: `gender`, `area`, `educat4`,
-#'     `educat5`, `educat7`, `age`
-#'   \item At most one education column (`educat4`, `educat5`, `educat7`) is
-#'     requested
+#'   \item All elements are valid covariates returned by
+#'     [piptm_layout_covariates()] for the selected release
 #'   \item At most 4 dimensions are requested
 #' }
 #'
@@ -251,48 +230,4 @@ pip_valid_dimensions <- function() {
   }
 
   invisible(poverty_lines)
-}
-
-# ── Age binning ───────────────────────────────────────────────────────────────
-
-#' Bin the `age` column into four age groups (modifies `dt` in place)
-#'
-#' Creates an ordered factor column `age_group` using
-#' [data.table::fcase()] and then removes the original `age` column.
-#' Rows with `NA` age receive `NA` in `age_group` and are retained in the
-#' data (they appear as an NA group in cross-tabulations).
-#'
-#' Bin boundaries:
-#' \itemize{
-#'   \item 0–14
-#'   \item 15–24
-#'   \item 25–64
-#'   \item 65+
-#' }
-#'
-#' @param dt A [data.table::data.table()] containing an integer `age` column.
-#'   Modified **in place** by reference.
-#'
-#' @return `dt` invisibly (modified in place).
-#'
-#' @keywords internal
-.bin_age <- function(dt) {
-  age       <- NULL  # suppress R CMD check NOTE for NSE column reference
-  age_group <- NULL  # suppress R CMD check NOTE for NSE column reference
-
-  dt[, age_group := factor(
-    fcase(
-      age >= 0L  & age <= 14L, "0-14",
-      age >= 15L & age <= 24L, "15-24",
-      age >= 25L & age <= 64L, "25-64",
-      age >= 65L,              "65+",
-      default = NA_character_
-    ),
-    levels  = .AGE_BIN_LEVELS,
-    ordered = TRUE
-  )]
-
-  dt[, age := NULL]
-
-  invisible(dt)
 }

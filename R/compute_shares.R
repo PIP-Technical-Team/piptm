@@ -22,7 +22,9 @@ NULL
 #' @return A named list with elements:
 #' \describe{
 #'   \item{`w`}{Numeric weight vector.}
-#'   \item{`denom_survey`}{Scalar total weighted population of the survey.}
+#'   \item{`denom_survey`}{Numeric denominator aligned to each output cell.
+#'     For batched data grouped by `pip_id`, this is the weighted survey total
+#'     of the corresponding `pip_id`; otherwise it is the global total.}
 #'   \item{`grp`}{A [collapse::GRP()] object, or `NULL` when `by = NULL`.}
 #'   \item{`cell_wpop`}{Numeric vector of per-cell weighted populations
 #'     (length = number of groups), or scalar survey total when `by = NULL`.}
@@ -41,18 +43,30 @@ NULL
     cli_abort(c("Required column{?s} missing from {.arg dt}: {.col {missing_cols}}."))
   }
 
-  w            <- dt[["weight"]]
-  denom_survey <- collapse::fsum(w)
+  w <- dt[["weight"]]
+  denom_total <- collapse::fsum(w)
 
   if (!is.null(by)) {
     if (is.null(grp)) grp <- collapse::GRP(dt, by = by)
     cell_wpop <- collapse::fsum(w, g = grp)
     groups_dt <- as.data.table(grp$groups)
     groups_dt[, population := cell_wpop]
+
+    if ("pip_id" %in% by) {
+      if (length(by) == 1L) {
+        denom_survey <- cell_wpop
+      } else {
+        denom_lookup <- groups_dt[, .(denom_survey = collapse::fsum(population)), by = .(pip_id)]
+        denom_survey <- denom_lookup$denom_survey[match(groups_dt$pip_id, denom_lookup$pip_id)]
+      }
+    } else {
+      denom_survey <- rep(denom_total, length(cell_wpop))
+    }
   } else {
     grp       <- NULL
-    cell_wpop <- denom_survey
-    groups_dt <- data.table::data.table(population = denom_survey)
+    cell_wpop <- denom_total
+    denom_survey <- denom_total
+    groups_dt <- data.table::data.table(population = denom_total)
   }
 
   list(
@@ -95,11 +109,7 @@ NULL
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 
-  pop_share <- if (s$denom_survey == 0) {
-    rep(NA_real_, length(s$cell_wpop))
-  } else {
-    s$cell_wpop / s$denom_survey
-  }
+  pop_share <- ifelse(s$denom_survey == 0, NA_real_, s$cell_wpop / s$denom_survey)
   s$groups_dt[, pop_share := pop_share]
 
   result <- melt(
@@ -155,11 +165,7 @@ NULL
   targ_in_group <- collapse::fsum(s$w * tvec, g = s$grp)
 
   within_share <- ifelse(s$cell_wpop == 0, NA_real_, targ_in_group / s$cell_wpop)
-  survey_share <- if (s$denom_survey == 0) {
-    rep(NA_real_, length(targ_in_group))
-  } else {
-    targ_in_group / s$denom_survey
-  }
+  survey_share <- ifelse(s$denom_survey == 0, NA_real_, targ_in_group / s$denom_survey)
 
   id_vars <- if (!is.null(by)) c(by, "population") else "population"
 

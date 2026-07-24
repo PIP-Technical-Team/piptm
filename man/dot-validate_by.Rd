@@ -19,10 +19,8 @@ survey, or \code{NULL} to skip availability checking.}
 Checks that:
 \itemize{
 \item \code{by} is \code{NULL} or a non-empty character vector
-\item All elements are in the allowed set: \code{gender}, \code{area}, \code{educat4},
-\code{educat5}, \code{educat7}, \code{age}
-\item At most one education column (\code{educat4}, \code{educat5}, \code{educat7}) is
-requested
+\item All elements are valid covariates returned by
+\code{\link[=piptm_layout_covariates]{piptm_layout_covariates()}} for the selected release
 \item At most 4 dimensions are requested
 }
 }

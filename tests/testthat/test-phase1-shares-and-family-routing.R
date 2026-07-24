@@ -73,3 +73,28 @@ test_that("compute_shares computes each share measure with correct denominator",
   expect_equal(survey$value, c(0.6, 0.2), tolerance = 1e-12)
   expect_equal(sum(survey$value), 0.8, tolerance = 1e-12)
 })
+
+test_that("compute_measures shares use survey-specific denominators in batched mode", {
+  dt <- data.table(
+    pip_id = c("S1", "S1", "S1", "S2", "S2"),
+    welfare = c(1, 2, 3, 1, 2),
+    weight = c(2, 1, 1, 3, 1),
+    area = c("urban", "urban", "rural", "urban", "rural"),
+    female = c(1L, 0L, 1L, 1L, 0L)
+  )
+
+  res <- compute_measures(
+    dt,
+    measures = c("pop_share", "target_survey_share"),
+    analysis_var = "female",
+    by = "area"
+  )
+
+  pop <- res[measure == "pop_share"]
+  pop_sum <- pop[, .(total = sum(value)), by = .(pip_id)]
+  expect_equal(pop_sum[order(pip_id)]$total, c(1, 1), tolerance = 1e-12)
+
+  survey <- res[measure == "target_survey_share"]
+  survey_sum <- survey[, .(total = sum(value)), by = .(pip_id)]
+  expect_equal(survey_sum[order(pip_id)]$total, c(0.75, 0.75), tolerance = 1e-12)
+})
