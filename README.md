@@ -1,82 +1,165 @@
 # piptm
-Computational backend for the Poverty and Inequality Platform (PIP) Table Maker tool
+
+Computation engine and API backend for the PIP Table Maker.
+
+`piptm` loads harmonized survey microdata from Arrow/Parquet partitions,
+resolves release-specific manifests, and computes poverty, inequality,
+welfare, and share statistics through `table_maker()`.
+
+## Current scope
+
+- R API for table computation: `table_maker()`
+- Survey ID resolver: `pip_lookup()`
+- Plumber HTTP API for UI/integration workflows
+- Release-aware metadata endpoints for UI selectors and constraints
 
 ## Setup
 
-`piptm` reads the shared Arrow repository path and manifest directory from
-two environment variables. Set them once in your `~/.Renviron` (run
-`usethis::edit_r_environ()` to open the file):
+`piptm` reads data locations from environment variables:
 
-```
+```text
 PIPTM_ARROW_ROOT=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow
 PIPTM_MANIFEST_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests
+PIPTM_REGISTRY_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/registry
 ```
 
-Restart R after saving. The package will load the manifest and configure
-the Arrow root automatically on `library(piptm)`.
+Set them in `~/.Renviron` (for example with `usethis::edit_r_environ()`),
+then restart R.
 
-If the variables are not set (e.g. a machine without the network drive
-mounted), the package starts in dev/testing mode — configure paths manually:
+If you do not set environment variables, configure paths explicitly:
 
 ```r
 piptm::set_arrow_root("path/to/arrow")
 piptm::set_manifest_dir("path/to/manifests")
 ```
 
+For the variable registry, set `PIPTM_REGISTRY_DIR` before loading `{piptm}`
+(or reload the package after setting it). There is currently no exported
+`set_registry_dir()` helper.
+
+```r
+Sys.setenv(PIPTM_REGISTRY_DIR = "path/to/registry")
+devtools::load_all()
+```
+
+## R usage
+
+### `table_maker()`
+
+Core inputs:
+
+- `pip_id`: one or more canonical survey IDs
+- `analysis_var`: analysis variable (for example `welfare`, `pov_status`, or allowed optional dimensions)
+- `measures`: one or more registered measures
+- `by`: optional disaggregation dimensions
+- `poverty_line`: required when `analysis_var = "pov_status"` or `by` includes `pov_status`
+- `ppp`: PPP year (defaults to `2021L`)
+- `pop_share_threshold`: suppression threshold in `(0, 1)` (default `0.01`; set `NULL` to disable)
+- `release`: optional release ID (defaults to current release)
+
+Example:
+
+```r
+res <- piptm::table_maker(
+  pip_id = c("COL_2019_GEIH_INC_ALL"),
+  analysis_var = "welfare",
+  measures = c("mean", "gini"),
+  by = c("gender", "area"),
+  ppp = 2021L,
+  release = NULL,
+  pop_share_threshold = 0.01
+)
+res
+```
+
+### `pip_lookup()`
+
+Resolve `(country_code, year, welfare_type)` triplets to canonical `pip_id`:
+
+```r
+ids <- piptm::pip_lookup(
+  country_code = c("COL", "BOL"),
+  year = c(2019L, 2018L),
+  welfare_type = c("INC", "CON"),
+  release = NULL
+)
+ids
+```
+
 ## Running the API
 
-`{piptm}` ships a Plumber-based HTTP API that exposes `table_maker()` and
-supporting discovery functions. You need `plumber` installed:
+Install plumber if needed:
 
 ```r
 install.packages("plumber")
 ```
 
-### Start with one function call
+Run from R:
 
 ```r
-library(piptm)
-piptm::run_api()           # listens on 0.0.0.0:8080
-piptm::run_api(port = 9000, host = "127.0.0.1")  # custom port / localhost only
+piptm::run_api()
 ```
 
-### Start from the command line
+Run from command line:
 
-```bash
+```powershell
 Rscript inst/plumber/run.R
 ```
 
-Override port and host via environment variables:
+Override host/port:
 
-```bash
-PIPTM_API_PORT=9000 PIPTM_API_HOST=127.0.0.1 Rscript inst/plumber/run.R
+```powershell
+$env:PIPTM_API_PORT = "9000"
+$env:PIPTM_API_HOST = "127.0.0.1"
+Rscript inst/plumber/run.R
 ```
 
-### Endpoints
+## API endpoints (current)
 
-| Endpoint | Methods | Description |
+| Endpoint | Method(s) | Purpose |
 |---|---|---|
-| `GET /health` | GET | Server health check |
-| `GET /releases` | GET | List all release IDs and the current release |
-| `GET /measures` | GET | Measure names and computation families |
-| `GET /dimensions` | GET | Valid disaggregation dimension names |
-| `GET /surveys` | GET | Full manifest rows for a release |
-| `GET /lookup` | GET | Resolve country/year/welfare triplets to pip_ids |
-| `GET\|POST /table` | GET, POST | Compute poverty / inequality / welfare measures |
+| `/health` | GET | Health check + current release |
+| `/releases` | GET | Available releases + current |
+| `/surveys` | GET | Full manifest rows for a release |
+| `/surveys-ui` | GET | UI-friendly survey catalogue |
+| `/countries` | GET | Country list from manifest |
+| `/regions` | GET | Region list with member countries |
+| `/dimensions` | GET | Valid disaggregation dimensions |
+| `/analysis-variables` | GET | Analysis variable catalogue |
+| `/statistics` | GET | Measure-group catalogue |
+| `/categories` | GET | Filter categories for sample-base UI |
+| `/covariates` | GET | Layout covariates for table slicing |
+| `/lookup` | GET | Resolve triplets to `pip_id` |
+| `/table` | GET, POST | Compute table output |
 
-All responses share a structured envelope:
+All endpoints return a common envelope:
 
 ```json
 {
-  "status":   "success",
-  "data":     ...,
+  "status": "success",
+  "data": {},
   "warnings": [],
-  "errors":   [],
-  "meta":     { "release": "20260401_TEST", "n_surveys": 3 }
+  "errors": [],
+  "meta": {}
 }
 ```
 
-### Known limitations (v1)
+Error status conventions:
 
-- Single-threaded: ≤3 s target for 15 surveys; larger batches may be slower.
-- No authentication, rate limiting, or multi-worker support.
+- `400`: request validation failures
+- `422`: domain/processing failures (including unknown release)
+- `500`: uncaught internal errors
+
+## Insomnia collection
+
+Request templates for these endpoints live in:
+
+- `insomnia-collection.json`
+
+Use this file to import and test endpoints without manual request creation.
+
+## Limitations (current)
+
+- API server is single-process/single-worker.
+- No auth or rate limiting.
+- Performance depends on network access to Arrow and manifest stores.

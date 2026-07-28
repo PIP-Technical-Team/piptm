@@ -5,40 +5,63 @@
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
+      "_id": "wrk_5b547f22c74f4d2c9be1d265d051b22a",
+      "_type": "workspace",
+      "name": "tablemaker-test",
+      "description": "piptm Plumber API test collection",
+      "scope": "collection",
+      "parentId": null
+    },
+    {
+      "_id": "env_280670db5b776f8df030db935104fe7019dcaf81",
+      "_type": "environment",
+      "name": "Base Environment",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a",
+      "data": {
+        "base_url": "http://127.0.0.1:8000",
+        "release": "",
+        "pip_id": "COL_2019_GEIH_INC_ALL",
+        "pip_id_2": "BRA_2021_PNAD_INC_ALL",
+        "poverty_line": 2.15,
+        "ppp": 2021,
+        "pop_share_threshold": 0.01
+      }
+    },
+    {
       "_id": "fld_health",
       "_type": "request_group",
       "name": "Health & Info",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "fld_catalogue",
       "_type": "request_group",
       "name": "Catalogue",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "fld_query_happy",
       "_type": "request_group",
       "name": "Query - Happy Paths",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "fld_query_variants",
       "_type": "request_group",
       "name": "Query - Parameter Variants",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "fld_query_errors",
       "_type": "request_group",
       "name": "Query - Error Cases",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "fld_catalogue_errors",
       "_type": "request_group",
       "name": "Catalogue - Error Cases",
-      "parentId": null
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
       "_id": "req_health",
