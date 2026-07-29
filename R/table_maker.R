@@ -233,12 +233,16 @@ table_maker <- function(pip_id        = NULL,
       cli_abort("{.arg filter_base} must have non-empty variable names.")
     }
 
-    invalid_vars <- setdiff(filter_vars, pip_optional_dims())
+    allowed_filter_vars <- unique(
+      vapply(piptm_filter_categories(), `[[`, character(1), "varname")
+    )
+
+    invalid_vars <- setdiff(filter_vars, allowed_filter_vars)
     if (length(invalid_vars) > 0L) {
       cli_abort(
         c(
           "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
-          "i" = "Allowed optional dimensions: {.val {pip_optional_dims()}}"
+          "i" = "Allowed variables: {.val {allowed_filter_vars}}"
         )
       )
     }
@@ -449,11 +453,6 @@ table_maker <- function(pip_id        = NULL,
     }
     dt[, pov_status := as.integer(welfare < poverty_line)]
   }
-
-  # ── 6. (Dimension NA-fill removed) ────────────────────────────────────────
-  # Surveys that do not carry all requested `by` dimensions are excluded in
-  # Step 3 above, so every row in `dt` is guaranteed to have all dimension
-  # columns present. No NA-fill is needed.
 
   # ── 7. Batch compute ────────────────────────────────────────────────────────
   # Single grouped call across all surveys (Approach B). compute_measures()

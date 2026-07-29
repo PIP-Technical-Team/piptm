@@ -15,6 +15,18 @@ if (!nzchar(helpers_path)) {
 }
 source(helpers_path)
 
+.vti <- function(...) {
+  args <- list(...)
+  if (is.null(args$analysis_var)) {
+    args$analysis_var <- "welfare"
+  }
+  if (!is.null(args$poverty_lines) && is.null(args$poverty_line)) {
+    args$poverty_line <- args$poverty_lines
+  }
+  args$poverty_lines <- NULL
+  do.call(validate_table_input, args)
+}
+
 # ── api_response() ─────────────────────────────────────────────────────────────
 
 test_that("api_response() returns the correct envelope shape", {
@@ -87,38 +99,40 @@ test_that("resolve_release() aborts on an unknown release", {
 # ── validate_table_input() ─────────────────────────────────────────────────────
 
 test_that("validate_table_input() passes with minimal valid inputs", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean"
   )
   expect_true(result$valid)
   expect_length(result$errors, 0L)
-  expect_null(result$poverty_lines)
+  expect_null(result$poverty_line)
 })
 
-test_that("validate_table_input() passes with poverty measures and valid poverty_lines", {
-  result <- validate_table_input(
+test_that("validate_table_input() passes with poverty measure and valid poverty_line", {
+  result <- .vti(
     pip_id        = "ARM_2012_ILCS_CON_ALL",
+    analysis_var  = "pov_status",
     measures      = c("headcount", "mean"),
-    poverty_lines = c(2.15, 3.65)
+    poverty_line  = 2.15
   )
   expect_true(result$valid)
-  expect_identical(result$poverty_lines, c(2.15, 3.65))
+  expect_identical(result$poverty_line, 2.15)
 })
 
-test_that("validate_table_input() coerces character poverty_lines to numeric", {
-  result <- validate_table_input(
+test_that("validate_table_input() coerces character poverty_line to numeric", {
+  result <- .vti(
     pip_id        = "ARM_2012_ILCS_CON_ALL",
+    analysis_var  = "pov_status",
     measures      = "headcount",
-    poverty_lines = c("2.15", "3.65")
+    poverty_line  = "2.15"
   )
   expect_true(result$valid)
-  expect_equal(result$poverty_lines, c(2.15, 3.65))
+  expect_equal(result$poverty_line, 2.15)
 })
 
 test_that("validate_table_input() rejects more than 15 pip_ids", {
   ids    <- paste0("SUR_", 1:16, "_ABC_INC_ALL")
-  result <- validate_table_input(pip_id = ids, measures = "mean")
+  result <- .vti(pip_id = ids, measures = "mean")
 
   expect_false(result$valid)
   expect_true(any(grepl("15", result$errors)))
@@ -127,7 +141,7 @@ test_that("validate_table_input() rejects more than 15 pip_ids", {
 # P1.9 — boundary: exactly 15 pip_ids must pass the length check
 test_that("validate_table_input() accepts exactly 15 pip_ids (boundary)", {
   ids    <- paste0("ARM_2012_ILCS_CON_ALL_", seq_len(15L))
-  result <- validate_table_input(pip_id = ids, measures = "mean")
+  result <- .vti(pip_id = ids, measures = "mean")
 
   # Length check passes; other errors (e.g. format) may exist but not length
   expect_false(any(grepl("15", result$errors)))
@@ -142,7 +156,7 @@ test_that("validate_table_input() rejects pip_ids that fail the allowlist patter
     ""                        # empty string
   )
   for (bad in bad_ids) {
-    result <- validate_table_input(pip_id = bad, measures = "mean")
+    result <- .vti(pip_id = bad, measures = "mean")
     expect_false(result$valid, info = paste("Should reject:", bad))
     expect_true(
       any(grepl("pip_id", result$errors, ignore.case = TRUE)),
@@ -152,7 +166,7 @@ test_that("validate_table_input() rejects pip_ids that fail the allowlist patter
 })
 
 test_that("validate_table_input() rejects unknown measure names", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = c("mean", "nonexistent_measure")
   )
@@ -160,28 +174,30 @@ test_that("validate_table_input() rejects unknown measure names", {
   expect_true(any(grepl("nonexistent_measure", result$errors)))
 })
 
-test_that("validate_table_input() rejects non-numeric poverty_lines string", {
-  result <- validate_table_input(
+test_that("validate_table_input() rejects non-numeric poverty_line string", {
+  result <- .vti(
     pip_id        = "ARM_2012_ILCS_CON_ALL",
+    analysis_var  = "pov_status",
     measures      = "headcount",
-    poverty_lines = "abc"
+    poverty_line  = "abc"
   )
   expect_false(result$valid)
-  expect_true(any(grepl("abc", result$errors)))
+  expect_true(any(grepl("poverty_line", result$errors, ignore.case = TRUE)))
 })
 
-test_that("validate_table_input() rejects non-positive poverty_lines", {
-  result <- validate_table_input(
+test_that("validate_table_input() rejects non-positive poverty_line", {
+  result <- .vti(
     pip_id        = "ARM_2012_ILCS_CON_ALL",
+    analysis_var  = "pov_status",
     measures      = "headcount",
-    poverty_lines = c(2.15, -1.0)
+    poverty_line  = -1.0
   )
   expect_false(result$valid)
   expect_true(any(grepl("positive", result$errors)))
 })
 
 test_that("validate_table_input() rejects unknown dimension in `by`", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     by       = c("gender", "not_a_dim")
@@ -191,7 +207,7 @@ test_that("validate_table_input() rejects unknown dimension in `by`", {
 })
 
 test_that("validate_table_input() accepts valid `by` dimensions", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     by       = c("gender", "area")
@@ -200,12 +216,12 @@ test_that("validate_table_input() accepts valid `by` dimensions", {
 })
 
 test_that("validate_table_input() rejects NULL pip_id", {
-  result <- validate_table_input(pip_id = NULL, measures = "mean")
+  result <- .vti(pip_id = NULL, measures = "mean")
   expect_false(result$valid)
 })
 
 test_that("validate_table_input() rejects NULL measures", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = NULL
   )
@@ -215,7 +231,7 @@ test_that("validate_table_input() rejects NULL measures", {
 # ── validate_table_input() — ppp param ────────────────────────────────────────
 
 test_that("validate_table_input() accepts ppp = NULL (default)", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = NULL
@@ -225,7 +241,7 @@ test_that("validate_table_input() accepts ppp = NULL (default)", {
 })
 
 test_that("validate_table_input() coerces character ppp to integer", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = "2017"
@@ -235,7 +251,7 @@ test_that("validate_table_input() coerces character ppp to integer", {
 })
 
 test_that("validate_table_input() accepts integer ppp", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = 2011L
@@ -245,7 +261,7 @@ test_that("validate_table_input() accepts integer ppp", {
 })
 
 test_that("validate_table_input() rejects non-numeric ppp string", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = "abc"
@@ -255,7 +271,7 @@ test_that("validate_table_input() rejects non-numeric ppp string", {
 })
 
 test_that("validate_table_input() rejects negative ppp", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = -2017L
@@ -265,7 +281,7 @@ test_that("validate_table_input() rejects negative ppp", {
 })
 
 test_that("validate_table_input() rejects ppp = 0", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = 0L
@@ -275,7 +291,7 @@ test_that("validate_table_input() rejects ppp = 0", {
 })
 
 test_that("validate_table_input() rejects ppp with length > 1", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = c(2011L, 2017L)
@@ -286,7 +302,7 @@ test_that("validate_table_input() rejects ppp with length > 1", {
 
 # P1.5 — NA input
 test_that("validate_table_input() rejects NA ppp", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = NA
@@ -298,7 +314,7 @@ test_that("validate_table_input() rejects NA ppp", {
 
 # P1.6 — empty character vector
 test_that("validate_table_input() rejects character(0) ppp", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = character(0L)
@@ -310,7 +326,7 @@ test_that("validate_table_input() rejects character(0) ppp", {
 
 # P1.7 — error accumulation: invalid ppp + invalid pip_id
 test_that("validate_table_input() accumulates errors from multiple params including ppp", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = NULL,
     measures = "mean",
     ppp      = "abc"
@@ -323,7 +339,7 @@ test_that("validate_table_input() accumulates errors from multiple params includ
 # P2.2 — decimal string: documents current (pre-P1.1-fix) behaviour.
 # P1.1 digit-only guard: decimal strings must be rejected (not silently truncated).
 test_that("validate_table_input() rejects decimal string ppp '2017.5'", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = "2017.5"
@@ -335,16 +351,16 @@ test_that("validate_table_input() rejects decimal string ppp '2017.5'", {
 
 # P2.3 — return list shape contract
 test_that("validate_table_input() return list has the expected 4-field shape", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean"
   )
-  expect_named(result, c("valid", "errors", "poverty_lines", "ppp", "pop_share_threshold"), ignore.order = FALSE)
+  expect_named(result, c("valid", "errors", "poverty_line", "ppp", "pop_share_threshold"), ignore.order = FALSE)
 })
 
 # P1.1 digit-only guard: hex strings must be rejected (not silently accepted as 2047L).
 test_that("validate_table_input() rejects hex string ppp '0x7FF'", {
-  result <- validate_table_input(
+  result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     ppp      = "0x7FF"

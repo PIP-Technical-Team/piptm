@@ -14,11 +14,15 @@
 #   GET|POST /table
 #   GET /lookup
 #   GET /surveys
+#   GET /countries
+#   GET /regions
+#   GET /surveys-ui
 #   GET /releases
-#   GET /measures
+#   GET /analysis-variables
 #   GET /dimensions
 #   GET /categories
 #   GET /covariates
+#   GET /statistics
 #   GET /health
 
 # ── 2a. Source helpers ────────────────────────────────────────────────────────
@@ -117,10 +121,10 @@ function(req) {
 #* Compute poverty, inequality, and welfare measures for one or more surveys
 #*
 #* @param analysis_var:character Analysis variable name (required)
-#* @param pip_id:character Survey identifiers (max 15, repeatable)
-#* @param measures:character Measure names (repeatable)
+#* @param pip_id:[character] Survey identifiers (max 15, repeatable)
+#* @param measures:[character] Measure names (repeatable)
 #* @param poverty_line:numeric Single poverty line value (required when analysis_var is "pov_status")
-#* @param by:character Disaggregation dimensions (optional, repeatable)
+#* @param by:[character] Disaggregation dimensions (optional, repeatable)
 #* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
 #*   positive whole number. When omitted, defaults to 2021. Non-integer or
 #*   non-positive values return HTTP 400.
@@ -190,9 +194,9 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 
 #* Resolve country/year/welfare_type triplets to pip_ids
 #*
-#* @param country_code:character ISO3 country codes (repeatable)
-#* @param year:integer Survey years (repeatable)
-#* @param welfare_type:character Welfare type: INC or CON (repeatable)
+#* @param country_code:[character] ISO3 country codes (repeatable)
+#* @param year:[integer] Survey years (repeatable)
+#* @param welfare_type:[character] Welfare type: INC or CON (repeatable)
 #* @param release:character Release ID (optional; defaults to current release)
 #* @serializer json list(na = "null")
 #* @get /lookup
@@ -331,12 +335,7 @@ function() {
   ))
 }
 
-# ── GET /measures ─────────────────────────────────────────────────────────────
-
-# TODO read from measure registry 
-
-
-# ── GET /analysis-variables ─────────────────────────────────────────────────────────────
+# ── GET /analysis-variables ───────────────────────────────────────────────────
 
 #* Return the catalogue of analysis variables for Decision 2
 #*
@@ -439,54 +438,16 @@ function() {
   ))
 }
 
+# ── GET /statistics ───────────────────────────────────────────────────────────
 
-#' GET /statistics
-#'
-#' Returns the full list of statistical measure groups and their measures
-#'
-#' The measure specification is embedded in the release registry at build time
-#' (via [piptm::build_variable_registry()]) from the
-#' `inst/extdata/tm_measure_spec.yaml` file. Adding or modifying measures
-#' requires updating that file and rebuilding the registry.
-#'
-#' @section Response shape:
-#' ```json
-#' {
-#'   "status": ["success"],
-#'   "data": [
-#'     {
-#'       "group": ["summary_statistics"],
-#'       "group_label": ["Summary Statistics"],
-#'       "measures": [
-#'         { "measure": ["mean"], "label": ["Mean"] },
-#'         ...
-#'       ]
-#'     },
-#'     ...
-#'   ],
-#'   "warnings": [],
-#'   "errors": [],
-#'   "meta": { "release": ["20260401_TEST"] }
-#' }
-#' ```
-#'
-#' @param release Optional. Character scalar release identifier
-#'   (e.g. `"20260401_TEST"`). When `NULL` (default), the current active
-#'   release is resolved automatically via `piptm::piptm_current_release()`.
-#' @param res Plumber response object — injected automatically by the router.
-#'
-#' @return A JSON response via [api_response()], or an error response via
-#'   [api_error()] with HTTP 422 when the release cannot be resolved or the
-#'   measure spec is absent from the registry.
-#'
-#' @seealso [piptm::piptm_stat_groups()], [piptm::build_variable_registry()]
-#'
-#' @examples
-#' \dontrun{
-#' # Plumber route registration
-#' pr$handle("GET", "/statistics", function(release = NULL, res) { ... })
-#' }
-
+#* Return the full list of statistical measure groups and their measures
+#*
+#* The measure specification is embedded in the release registry at build time
+#* from inst/extdata/tm_measure_spec.yaml. Adding or modifying measures
+#* requires updating that file and rebuilding the registry.
+#*
+#* @param release:character Release ID (optional; defaults to current release)
+#* @serializer json list(na = "null")
 #* @get /statistics
 function(release = NULL, res) {
   out <- capture_with_warnings({

@@ -19,6 +19,7 @@ test_that(".classify_measures maps summary measures to summary_stats family", {
 })
 
 test_that("compute_measures keeps summary_stats and shares outputs together", {
+  activate_test_registry("20260206")
   dt <- make_phase1_dt()
 
   res <- compute_measures(
@@ -75,6 +76,7 @@ test_that("compute_shares computes each share measure with correct denominator",
 })
 
 test_that("compute_measures shares use survey-specific denominators in batched mode", {
+  activate_test_registry("20260206")
   dt <- data.table(
     pip_id = c("S1", "S1", "S1", "S2", "S2"),
     welfare = c(1, 2, 3, 1, 2),

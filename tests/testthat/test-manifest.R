@@ -88,9 +88,10 @@ test_that(".load_manifests() parses a valid manifest into data.table in env", {
   expect_s3_class(dt, "data.table")
   expect_equal(nrow(dt), 1L)
   expect_named(dt,
-    c("pip_id", "survey_id", "country_code", "year", "welfare_type",
-      "version", "survey_acronym", "module", "reporting_level",
-      "dimensions", "welfare_vars", "ppp_sort"),
+    c("pip_id", "survey_id", "country_code", "country_name", "region_name",
+      "region_code", "year", "welfare_type", "version", "survey_acronym",
+      "module", "n_obs", "dimensions", "welfare_vars", "ppp_sort",
+      "dimensions_n_obs"),
     ignore.order = FALSE
   )
   expect_identical(dt$pip_id,        "COL_2010_ECH_INC_ALL")

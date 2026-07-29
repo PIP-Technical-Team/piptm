@@ -37,6 +37,7 @@ test_that("phase3: compute_measures() routes pov_status to poverty family", {
 })
 
 test_that("phase3: compute_measures() uses analysis_var for shares", {
+  activate_test_registry("20260206")
   dt <- data.table(
     pip_id = rep("X", 4),
     welfare = c(1, 2, 3, 4),

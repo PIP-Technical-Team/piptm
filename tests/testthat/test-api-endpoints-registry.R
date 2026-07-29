@@ -103,7 +103,7 @@ parse_api_res <- function(res, simplify = TRUE) {
   )
 }
 
-test_that("GET /analysis-variables returns success and pov_status has slider", {
+test_that("GET /analysis-variables returns success and expected pov_status fields", {
   skip_if(is.null(.ep_router), "Router could not be created")
   reg <- .make_registry_fixture()
   state <- .inject_registry(reg)
@@ -125,10 +125,10 @@ test_that("GET /analysis-variables returns success and pov_status has slider", {
   expect_true("pov_status" %in% varnames)
 
   pov <- data[[which(varnames == "pov_status")]]
-  # poverty_line_slider may be boxed as list/array
-  pls <- pov$poverty_line_slider
-  if (is.list(pls)) pls <- unlist(pls)
-  expect_true(isTRUE(pls))
+  pov_type <- pov$type
+  if (is.list(pov_type)) pov_type <- unlist(pov_type)
+  expect_identical(as.character(pov_type[[1L]]), "poverty")
+  expect_true("stat_groups" %in% names(pov))
 })
 
 test_that("GET /categories returns filters with subcategories", {
@@ -160,7 +160,7 @@ test_that("GET /categories returns filters with subcategories", {
   expect_true(all(c("0-14", "15-24", "25-64", "65+") %in% codes))
 })
 
-test_that("GET /covariates returns pov_status with n_categories=2 and mutex flag", {
+test_that("GET /covariates returns pov_status with n_categories=2", {
   skip_if(is.null(.ep_router), "Router could not be created")
   reg <- .make_registry_fixture()
   state <- .inject_registry(reg)
@@ -185,7 +185,5 @@ test_that("GET /covariates returns pov_status with n_categories=2 and mutex flag
   ncat <- pov$n_categories
   if (is.list(ncat)) ncat <- unlist(ncat)
   expect_true(identical(as.integer(ncat), 2L))
-  mutex <- pov$pov_status_mutex
-  if (is.list(mutex)) mutex <- unlist(mutex)
-  expect_true(isTRUE(mutex))
+  expect_false("pov_status_mutex" %in% names(pov))
 })

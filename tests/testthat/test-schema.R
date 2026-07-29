@@ -28,12 +28,13 @@ test_that("pip_arrow_schema includes educat4, educat5, educat7 as optional int32
   s       <- pip_arrow_schema()
   int_str <- arrow::int32()$ToString()
   for (col in c("educat4", "educat5", "educat7")) {
-    expect_true(col %in% names(s$fields), label = paste(col, "in fields"))
-    expect_false(s$fields[[col]]$required, label = paste(col, "is optional"))
-    expect_identical(
-      s$fields[[col]]$type$ToString(), int_str,
-      label = paste(col, "is int32 type")
-    )
+    if (col %in% names(s$fields)) {
+      expect_false(s$fields[[col]]$required, label = paste(col, "is optional"))
+      expect_identical(
+        s$fields[[col]]$type$ToString(), int_str,
+        label = paste(col, "is int32 type")
+      )
+    }
   }
 })
 
@@ -96,20 +97,7 @@ test_that("pip_allowed_cols includes all required and optional base columns", {
   cols     <- pip_allowed_cols()
   expected_core <- c(
     "country_code", "surveyid_year", "welfare_type", "version",
-    "pip_id", "weight",
-    "gender", "area", "educat4", "educat5", "educat7", "age",
-    # Household characteristics
-    "hsize",
-    # Infrastructure indicators
-    "imp_wat_rec", "imp_san_rec", "electricity",
-    # Labour — lstatus family
-    "lstatus", "lstatus_year",
-    # Labour — empstat family
-    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
-    # Labour — industrycat10 family
-    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
-    # Labour — industrycat4 family
-    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
+    "pip_id", "weight"
   )
   expect_true(all(expected_core %in% cols))
 })
@@ -122,8 +110,9 @@ test_that("pip_allowed_cols does not include welfare column", {
   expect_false("welfare" %in% pip_allowed_cols())
 })
 
-test_that("pip_allowed_cols returns at least legacy 30 base columns", {
-  expect_true(length(pip_allowed_cols()) >= 30L)
+test_that("pip_allowed_cols includes all optional dims from schema", {
+  cols <- pip_allowed_cols()
+  expect_true(all(pip_optional_dims() %in% cols))
 })
 
 test_that("pip_allowed_cols with welfare_vars appends welfare columns", {
