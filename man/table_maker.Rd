@@ -48,10 +48,15 @@ When \code{NULL} (default), the manifest \code{ppp_sort} default is used.}
 to the current release as returned by \code{\link[=piptm_current_release]{piptm_current_release()}}.}
 
 \item{pop_share_threshold}{Numeric scalar in (0, 1) or \code{NULL}.  When
-non-NULL and \code{"pop_share"} is among the requested \code{measures}, cells whose
-population share falls below this threshold have all non-share measures
-suppressed (dropped from output). \code{pop_share} rows are always retained.
-Default: \code{0.01} (1\%).}
+non-NULL, cells whose population share falls below this threshold have all
+non-share measures suppressed (dropped from output), regardless of whether
+\code{"pop_share"} was requested.  If \code{"pop_share"} is not among the requested
+\code{measures}, it is computed internally and used solely for threshold
+evaluation — it does not appear in the output.  Share-family measures
+(\code{pop_share}, \code{target_within_group_share}, \code{target_survey_share}) are
+always retained so callers can inspect the distribution of suppressed
+groups.  Has no effect when \code{by = NULL} (aggregate mode: each cell is a
+full survey with pop_share = 1.0).  Default: \code{0.01} (1\%).}
 }
 \value{
 A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long format} with columns:

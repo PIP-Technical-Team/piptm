@@ -118,21 +118,21 @@ function(req) {
 
 # ── GET|POST /table ───────────────────────────────────────────────────────────
 
-#* Compute poverty, inequality, and welfare measures for one or more surveys
+#* Compute poverty, inequality, and welfare measures for one or more surveys.
 #*
-#* @param analysis_var:character Analysis variable name (required)
-#* @param pip_id:[character] Survey identifiers (max 15, repeatable)
-#* @param measures:[character] Measure names (repeatable)
-#* @param poverty_line:numeric Single poverty line value (required when analysis_var is "pov_status")
-#* @param by:[character] Disaggregation dimensions (optional, repeatable)
-#* @param ppp:integer PPP reference year (e.g. 2021; optional). Must be a
-#*   positive whole number. When omitted, defaults to 2021. Non-integer or
-#*   non-positive values return HTTP 400.
+#* @param analysis_var:character Analysis variable name (required).
+#* @param pip_id:[character] Survey identifiers (required, repeatable; max 15).
+#* @param measures:[character] Measure names (required, repeatable).
+#* @param poverty_line:numeric Poverty line value (required when
+#*   `analysis_var = "pov_status"`).
+#* @param by:[character] Disaggregation dimensions (optional, repeatable).
+#* @param ppp:integer PPP reference year (optional; default `2021`). Must be a
+#*   positive integer; invalid values return HTTP 400.
 #* @param filter_base:character JSON-encoded sample-base filter object
-#*   (optional), e.g. {"gender":[0],"age_group":[1,2]}
-#* @param pop_share_threshold:numeric Population share threshold for cell
-#*   suppression (optional; default 0.01). Set to empty/null to disable.
-#* @param release:character Release ID (optional; defaults to current release)
+#*   (optional), for example `{"gender":[0],"age_group":[1,2]}`.
+#* @param pop_share_threshold:numeric Optional cell-suppression threshold
+#*   (default `0.01`). Use null/empty to disable suppression.
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
@@ -192,12 +192,12 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 
 # ── GET /lookup ───────────────────────────────────────────────────────────────
 
-#* Resolve country/year/welfare_type triplets to pip_ids
+#* Resolve `country_code`/`year`/`welfare_type` combinations to `pip_id` values.
 #*
-#* @param country_code:[character] ISO3 country codes (repeatable)
-#* @param year:[integer] Survey years (repeatable)
-#* @param welfare_type:[character] Welfare type: INC or CON (repeatable)
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param country_code:[character] ISO3 country codes (repeatable).
+#* @param year:[integer] Survey years (repeatable).
+#* @param welfare_type:[character] Welfare type (`INC` or `CON`, repeatable).
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /lookup
 function(country_code = NULL, year = NULL, welfare_type = NULL, release = NULL, res) {
@@ -221,11 +221,11 @@ function(country_code = NULL, year = NULL, welfare_type = NULL, release = NULL, 
 
 # ── GET /surveys ──────────────────────────────────────────────────────────────
 
-#* Return the full survey manifest for a release
+#* Return the full survey manifest for a release.
 #*
-#* The `dimensions` field in each row is serialised as a JSON array.
+#* The `dimensions` field is serialized as a JSON array in each row.
 #*
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /surveys
 function(release = NULL, res) {
@@ -245,9 +245,9 @@ function(release = NULL, res) {
 
 # ── GET /countries ────────────────────────────────────────────────────────────
 
-#* Return unique country metadata from the release manifest
+#* Return unique country metadata from the release manifest.
 #*
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /countries
 function(release = NULL, res) {
@@ -273,9 +273,9 @@ function(release = NULL, res) {
 
 # ── GET /regions ──────────────────────────────────────────────────────────────
 
-#* Return region metadata with member country codes from the release manifest
+#* Return region metadata and member country codes from the release manifest.
 #*
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /regions
 function(release = NULL, res) {
@@ -302,9 +302,9 @@ function(release = NULL, res) {
 
 # ── GET /surveys-ui ───────────────────────────────────────────────────────────
 
-#* Return UI-friendly survey catalogue (pip_id, country label, dimensions, etc.)
+#* Return a UI-ready survey catalog (`pip_id`, labels, and dimensions).
 #*
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /surveys-ui
 function(release = NULL, res) {
@@ -324,7 +324,7 @@ function(release = NULL, res) {
 
 # ── GET /releases ─────────────────────────────────────────────────────────────
 
-#* List all loaded release IDs and identify the current release
+#* List loaded releases and identify the current release.
 #*
 #* @serializer json list(na = "null")
 #* @get /releases
@@ -337,14 +337,12 @@ function() {
 
 # ── GET /analysis-variables ───────────────────────────────────────────────────
 
-#* Return the catalogue of analysis variables for Decision 2
+#* Return analysis variables for Decision 2.
 #*
-#* Filters the variable registry to entries with role "analysis_var" and
-#* returns varname, label, type, poverty_line_slider, and stat_groups for
-#* each. The UI uses this to populate the analysis variable dropdown and
-#* to know which statistics are valid for each variable.
+#* Includes `varname`, `label`, `type`, `poverty_line_slider`, and
+#* `stat_groups` for registry entries with role `analysis_var`.
 #*
-#* @param release:character Release ID (optional; defaults to current)
+#* @param release:character Release ID (optional; defaults to current).
 #* @serializer json list(na = "null")
 #* @get /analysis-variables
 function(release = NULL, res) {
@@ -360,7 +358,7 @@ function(release = NULL, res) {
 
 # ── GET /dimensions ───────────────────────────────────────────────────────────
 
-#* List all valid disaggregation dimension names
+#* List all valid disaggregation dimensions.
 #*
 #* @serializer json list(na = "null")
 #* @get /dimensions
@@ -370,64 +368,156 @@ function() {
 
 # ── GET /categories ──────────────────────────────────────────────────────────
 
-#* Return the full catalogue of categorical variables for the sample-base
-#* filter panel
+#* Return categorical variables for the sample-base filter panel.
 #*
-#* Static endpoint — always returns the complete universe of filterable
-#* categorical variables regardless of which surveys are selected.  The UI
-#* renders each variable as a filter with toggleable subcategory chips (all
-#* selected by default); multiple active filters are combined as intersections
-#* at query time.
+#* Behavior:
+#* - If `pip_id` is omitted, returns the full category catalog.
+#* - If `pip_id` is provided, returns only variables present in all matched
+#*   surveys (intersection over manifest `dimensions`).
 #*
-#* @param release:character Release ID (optional; defaults to current)
+#* @param pip_id:[character] Optional survey identifiers (repeatable).
+#* @param release:character Release ID (optional; defaults to current).
 #* @serializer json list(na = "null")
 #* @get /categories
-function(release = NULL, res) {
+function(pip_id = NULL, release = NULL, res) {
   out <- capture_with_warnings({
     rel  <- resolve_release(release)
     data <- piptm::piptm_filter_categories(rel)
-    list(data = data, rel = rel)
+
+    if (is.null(pip_id) || length(pip_id) == 0L) {
+      result <- list(
+        data = data,
+        rel = rel,
+        filtered = FALSE,
+        n_surveys = NA_integer_
+      )
+    } else {
+      mf <- piptm::piptm_manifest(rel)
+      requested_ids <- unique(as.character(unlist(pip_id, use.names = FALSE)))
+      matched <- mf[pip_id %chin% requested_ids]
+
+      if (nrow(matched) == 0L) {
+        result <- list(
+          data = list(),
+          rel = rel,
+          filtered = TRUE,
+          n_surveys = 0L
+        )
+      } else {
+        dims_list <- lapply(
+          matched$dimensions,
+          function(x) as.character(unlist(x, use.names = FALSE))
+        )
+        common_dims <- if (length(dims_list) == 0L) {
+          character(0L)
+        } else {
+          Reduce(intersect, dims_list)
+        }
+
+        filtered_data <- if (length(common_dims) == 0L) {
+          list()
+        } else {
+          Filter(function(x) isTRUE(x$varname %in% common_dims), data)
+        }
+
+        result <- list(
+          data = filtered_data,
+          rel = rel,
+          filtered = TRUE,
+          n_surveys = nrow(matched)
+        )
+      }
+    }
+
+    result
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
   api_response(out$result$data, warnings = out$warnings,
-               meta = list(release = out$result$rel))
+               meta = list(
+                 release = out$result$rel,
+                 filtered = out$result$filtered,
+                 n_surveys = out$result$n_surveys
+               ))
 }
 
 # ── GET /covariates ───────────────────────────────────────────────────────────
 
-#* Return the full catalogue of layout covariates for the Decision 3 table
-#* slicing panel
+#* Return layout covariates for the Decision 3 slicing panel.
 #*
-#* Static endpoint — always returns the complete universe of covariates
-#* available for the four layout slots (Columns, Rows, Super Columns,
-#* Super Rows) regardless of which surveys are selected.  Each entry carries
-#* the covariate varname, its UI label, and the number of categories it
-#* produces in the table layout.  The UI displays the category count next to
-#* the covariate name when it is assigned to a slot.
+#* Behavior:
+#* - If `pip_id` is omitted, returns the full covariate catalog.
+#* - If `pip_id` is provided, returns only covariates present in all matched
+#*   surveys (intersection over manifest `dimensions`).
 #*
-#* The catalogue is derived from pip_tablemaker_categories() with the
-#* addition of pov_status (Poverty status), which is specific to Decision 3.
-#* Poverty status is subject to a mutual exclusivity rule with the Decision 2
-#* poverty analysis variable — the UI enforces this using the varname field.
-#*
-#* @param release:character Release ID (optional; defaults to current)
+#* @param pip_id:[character] Optional survey identifiers (repeatable).
+#* @param release:character Release ID (optional; defaults to current).
 #* @serializer json list(na = "null")
 #* @get /covariates
-function(release = NULL, res) {
+function(pip_id = NULL, release = NULL, res) {
   out <- capture_with_warnings({
     rel  <- resolve_release(release)
     data <- piptm::piptm_layout_covariates(rel)
-    list(data = data, rel = rel)
+
+    if (is.null(pip_id) || length(pip_id) == 0L) {
+      result <- list(
+        data = data,
+        rel = rel,
+        filtered = FALSE,
+        n_surveys = NA_integer_
+      )
+    } else {
+      mf <- piptm::piptm_manifest(rel)
+      requested_ids <- unique(as.character(unlist(pip_id, use.names = FALSE)))
+      matched <- mf[pip_id %chin% requested_ids]
+
+      if (nrow(matched) == 0L) {
+        result <- list(
+          data = list(),
+          rel = rel,
+          filtered = TRUE,
+          n_surveys = 0L
+        )
+      } else {
+        dims_list <- lapply(
+          matched$dimensions,
+          function(x) as.character(unlist(x, use.names = FALSE))
+        )
+        common_dims <- if (length(dims_list) == 0L) {
+          character(0L)
+        } else {
+          Reduce(intersect, dims_list)
+        }
+
+        filtered_data <- if (length(common_dims) == 0L) {
+          list()
+        } else {
+          Filter(function(x) isTRUE(x$varname %in% common_dims), data)
+        }
+
+        result <- list(
+          data = filtered_data,
+          rel = rel,
+          filtered = TRUE,
+          n_surveys = nrow(matched)
+        )
+      }
+    }
+
+    result
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
   api_response(out$result$data, warnings = out$warnings,
-               meta = list(release = out$result$rel))
+               meta = list(
+                 release = out$result$rel,
+                 filtered = out$result$filtered,
+                 n_surveys = out$result$n_surveys
+               ))
 }
 
 
 # ── GET /health ───────────────────────────────────────────────────────────────
 
-#* Server health check — returns status ok and the current release
+#* Server health check; returns `status = "ok"` and current release.
 #*
 #* @serializer json list(na = "null")
 #* @get /health
@@ -440,13 +530,12 @@ function() {
 
 # ── GET /statistics ───────────────────────────────────────────────────────────
 
-#* Return the full list of statistical measure groups and their measures
+#* Return statistical measure groups and their measures.
 #*
-#* The measure specification is embedded in the release registry at build time
-#* from inst/extdata/tm_measure_spec.yaml. Adding or modifying measures
-#* requires updating that file and rebuilding the registry.
+#* Measure definitions are loaded from the release registry built from
+#* `inst/extdata/tm_measure_spec.yaml`.
 #*
-#* @param release:character Release ID (optional; defaults to current release)
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
 #* @get /statistics
 function(release = NULL, res) {
