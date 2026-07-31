@@ -49,9 +49,11 @@ parse_api_res <- function(res, simplify = TRUE) {
 }
 
 # Helper to inject a synthetic registry for the current release
-.inject_registry <- function(registry) {
+.inject_registry <- function(registry, release = NULL) {
   env <- get('.piptm_env', envir = asNamespace('piptm'))
-  release <- piptm::piptm_current_release()
+  if (is.null(release)) {
+    release <- piptm::piptm_current_release()
+  }
   if (is.null(release) || !nzchar(release)) {
     stop("No current release is set. Tests require a configured working release (e.g. 20260401_TEST).")
   }
@@ -63,6 +65,21 @@ parse_api_res <- function(res, simplify = TRUE) {
 
 .restore_registry <- function(state) {
   state$env$registries <- state$old
+}
+
+.inject_manifest <- function(release, manifest_dt) {
+  env <- get('.piptm_env', envir = asNamespace('piptm'))
+  old_manifests <- env$manifests
+  old_release <- env$current_release
+  env$manifests <- list()
+  env$manifests[[release]] <- manifest_dt
+  env$current_release <- release
+  list(env = env, old_manifests = old_manifests, old_release = old_release)
+}
+
+.restore_manifest <- function(state) {
+  state$env$manifests <- state$old_manifests
+  state$env$current_release <- state$old_release
 }
 
 # Build a minimal registry matching expected shapes
@@ -186,4 +203,124 @@ test_that("GET /covariates returns pov_status with n_categories=2", {
   if (is.list(ncat)) ncat <- unlist(ncat)
   expect_true(identical(as.integer(ncat), 2L))
   expect_false("pov_status_mutex" %in% names(pov))
+})
+
+test_that("GET /categories with pip_id filter returns intersection only", {
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  release <- "20260731_REGISTRY_TEST"
+  reg <- list(
+    age_group = list(
+      varname = "age_group",
+      ui_label = "Age group",
+      tm_type = "categorical",
+      roles = c("filter", "covariate"),
+      stat_groups = character(0L),
+      n_categories = 4L,
+      categories = list(
+        list(code = "1", label = "A"),
+        list(code = "2", label = "B")
+      )
+    ),
+    gender = list(
+      varname = "gender",
+      ui_label = "Gender",
+      tm_type = "categorical",
+      roles = c("filter", "covariate"),
+      stat_groups = character(0L),
+      n_categories = 2L,
+      categories = list(
+        list(code = "0", label = "female"),
+        list(code = "1", label = "male")
+      )
+    )
+  )
+
+  mf <- data.table::data.table(
+    pip_id = c("A", "B"),
+    dimensions = list(c("age_group", "gender"), c("age_group"))
+  )
+
+  reg_state <- .inject_registry(reg, release = release)
+  on.exit(.restore_registry(reg_state), add = TRUE)
+  mf_state <- .inject_manifest(release, mf)
+  on.exit(.restore_manifest(mf_state), add = TRUE)
+
+  res <- .ep_router$call(make_api_req("GET", "/categories", query = list(
+    pip_id = c("A", "B")
+  )))
+
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res, simplify = FALSE)
+  varnames <- vapply(body$data, function(entry) as.character(unlist(entry$varname))[1L], character(1L))
+  expect_equal(varnames, "age_group")
+})
+
+test_that("GET /covariates with pip_id filter returns intersection only", {
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  release <- "20260731_REGISTRY_TEST"
+  reg <- list(
+    age_group = list(
+      varname = "age_group",
+      ui_label = "Age group",
+      tm_type = "categorical",
+      roles = c("covariate"),
+      stat_groups = character(0L),
+      n_categories = 4L,
+      categories = NULL
+    ),
+    gender = list(
+      varname = "gender",
+      ui_label = "Gender",
+      tm_type = "categorical",
+      roles = c("covariate"),
+      stat_groups = character(0L),
+      n_categories = 2L,
+      categories = NULL
+    )
+  )
+
+  mf <- data.table::data.table(
+    pip_id = c("A", "B"),
+    dimensions = list(c("age_group", "gender"), c("age_group"))
+  )
+
+  reg_state <- .inject_registry(reg, release = release)
+  on.exit(.restore_registry(reg_state), add = TRUE)
+  mf_state <- .inject_manifest(release, mf)
+  on.exit(.restore_manifest(mf_state), add = TRUE)
+
+  res <- .ep_router$call(make_api_req("GET", "/covariates", query = list(
+    pip_id = c("A", "B")
+  )))
+
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res, simplify = FALSE)
+  varnames <- vapply(body$data, function(entry) as.character(unlist(entry$varname))[1L], character(1L))
+  expect_equal(varnames, "age_group")
+})
+
+test_that("GET /categories with unmatched pip_id returns empty data", {
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  release <- "20260731_REGISTRY_TEST"
+  reg <- .make_registry_fixture()
+  mf <- data.table::data.table(
+    pip_id = c("A"),
+    dimensions = list(c("age_group"))
+  )
+
+  reg_state <- .inject_registry(reg, release = release)
+  on.exit(.restore_registry(reg_state), add = TRUE)
+  mf_state <- .inject_manifest(release, mf)
+  on.exit(.restore_manifest(mf_state), add = TRUE)
+
+  res <- .ep_router$call(make_api_req("GET", "/categories", query = list(
+    pip_id = "ZZZ"
+  )))
+
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(length(body$data), 0L)
 })

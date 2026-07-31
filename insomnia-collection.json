@@ -22,6 +22,7 @@
         "release": "",
         "pip_id": "COL_2019_GEIH_INC_ALL",
         "pip_id_2": "BRA_2021_PNAD_INC_ALL",
+        "session_id": "",
         "poverty_line": 2.15,
         "ppp": 2021,
         "pop_share_threshold": 0.01
@@ -61,6 +62,12 @@
       "_id": "fld_catalogue_errors",
       "_type": "request_group",
       "name": "Catalogue - Error Cases",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+    {
+      "_id": "fld_session",
+      "_type": "request_group",
+      "name": "Session Storage",
       "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
@@ -224,7 +231,114 @@
       ],
       "parentId": "fld_catalogue"
     },
-
+    {
+      "_id": "req_session_create",
+      "_type": "request",
+      "name": "POST /session/surveys - create session",
+      "description": "Creates a new session with pip_id values and returns session_id for recovery.",
+      "url": "{{ _.base_url }}/session/surveys",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pip_id\": [\"{{ _.pip_id }}\", \"{{ _.pip_id_2 }}\"]\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Success envelope', () => pm.expect(pm.response.json().status).to.eql('success'));\npm.test('Has session_id', () => {\n  const body = pm.response.json();\n  pm.expect(body.data).to.have.property('session_id');\n  pm.expect(body.data.session_id).to.be.a('string').and.have.lengthOf(12);\n  // Save session_id for subsequent tests\n  pm.environment.set('session_id', body.data.session_id);\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"
+    },
+    {
+      "_id": "req_session_retrieve",
+      "_type": "request",
+      "name": "GET /session/<id>/surveys - retrieve session",
+      "description": "Retrieves stored pip_id values by session_id. Run POST request first to set session_id env var.",
+      "url": "{{ _.base_url }}/session/{{ _.session_id }}/surveys",
+      "method": "GET",
+      "headers": [],
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Success envelope', () => pm.expect(pm.response.json().status).to.eql('success'));\npm.test('Has pip_id array', () => {\n  const body = pm.response.json();\n  pm.expect(body.data).to.have.property('pip_id');\n  pm.expect(body.data.pip_id).to.be.an('array');\n});\npm.test('pip_id values match', () => {\n  const body = pm.response.json();\n  // Check it returns the same pip_id values we stored\n  pm.expect(body.data.pip_id).to.include(pm.environment.get('pip_id'));\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"
+    },
+    {
+      "_id": "req_session_create_empty",
+      "_type": "request",
+      "name": "POST /session/surveys - missing pip_id (400)",
+      "description": "Expects 400. pip_id is required and cannot be empty.",
+      "url": "{{ _.base_url }}/session/surveys",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 400', () => pm.response.to.have.status(400));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions pip_id', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.includes('pip_id'))).to.be.true;\n});"
+    },
+    {
+      "_id": "req_session_create_invalid_format",
+      "_type": "request",
+      "name": "POST /session/surveys - invalid pip_id format (400)",
+      "description": "Expects 400. pip_id must match pattern CCC_YYYY_*.",
+      "url": "{{ _.base_url }}/session/surveys",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pip_id\": [\"invalid_format\"]\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 400', () => pm.response.to.have.status(400));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions format', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.toLowerCase().includes('format') || e.message.toLowerCase().includes('pattern'))).to.be.true;\n});"
+    },
+    {
+      "_id": "req_session_retrieve_unknown",
+      "_type": "request",
+      "name": "GET /session/<id>/surveys - unknown session (404)",
+      "description": "Expects 404. Nonexistent or expired session returns not found.",
+      "url": "{{ _.base_url }}/session/nonexistent123/surveys",
+      "method": "GET",
+      "headers": [],
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 404', () => pm.response.to.have.status(404));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions session', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.toLowerCase().includes('session') || e.message.toLowerCase().includes('not found'))).to.be.true;\n});"
+    },
+    {
+      "_id": "req_session_roundtrip",
+      "_type": "request",
+      "name": "POST /session/surveys - roundtrip test (5 surveys)",
+      "description": "Full workflow test: create session with 5 surveys, verify stored correctly.",
+      "url": "{{ _.base_url }}/session/surveys",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pip_id\": [\n    \"{{ _.pip_id }}\",\n    \"{{ _.pip_id_2 }}\",\n    \"{{ _.pip_id_3 }}\",\n    \"{{ _.pip_id_4 }}\",\n    \"{{ _.pip_id_5 }}\"\n  ]\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_session",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Session created', () => {\n  const body = pm.response.json();\n  pm.expect(body.data.session_id).to.be.a('string').and.have.lengthOf(12);\n  pm.environment.set('roundtrip_session_id', body.data.session_id);\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));\n\n// To complete roundtrip, run GET /session/<roundtrip_session_id>/surveys next\n// and verify all 5 pip_id values are returned"
+    },
     {
       "_id": "req_table_get_basic",
       "_type": "request",
@@ -246,7 +360,12 @@
         },
         {
           "name": "measures",
-          "value": "mean,gini",
+          "value": "mean",
+          "disabled": false
+        },
+        {
+          "name": "measures",
+          "value": "gini",
           "disabled": false
         },
         {
@@ -592,7 +711,8 @@
       "parameters": [
         { "name": "analysis_var", "value": "gender", "disabled": false },
         { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
-        { "name": "measures", "value": "pop_share,target_survey_share", "disabled": false },
+        { "name": "measures", "value": "pop_share", "disabled": false },
+        { "name": "measures", "value": "target_survey_share", "disabled": false },
         { "name": "by", "value": "area", "disabled": false },
         { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
         { "name": "release", "value": "{{ _.release }}", "disabled": false }
@@ -610,7 +730,8 @@
       "parameters": [
         { "name": "analysis_var", "value": "age", "disabled": false },
         { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
-        { "name": "measures", "value": "mean,median", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "measures", "value": "median", "disabled": false },
         { "name": "by", "value": "gender", "disabled": false },
         { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
         { "name": "release", "value": "{{ _.release }}", "disabled": false }
@@ -722,7 +843,8 @@
       "parameters": [
         { "name": "analysis_var", "value": "welfare", "disabled": false },
         { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
-        { "name": "measures", "value": "mean,not_a_measure", "disabled": false }
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "measures", "value": "not_a_measure", "disabled": false }
       ],
       "parentId": "fld_query_errors"
     },
@@ -1086,8 +1208,477 @@
         { "name": "release", "value": "NOT_A_RELEASE", "disabled": false }
       ],
       "parentId": "fld_catalogue_errors"
-    }
+    },
 
+    {
+      "_id": "fld_real_prod_happy",
+      "_type": "request_group",
+      "name": "Real Production - Happy Paths",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+    {
+      "_id": "fld_real_prod_dimensions",
+      "_type": "request_group",
+      "name": "Real Production - Dimension Mismatches",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+    {
+      "_id": "fld_real_prod_analysis_vars",
+      "_type": "request_group",
+      "name": "Real Production - Analysis Variable Types",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+    {
+      "_id": "fld_real_prod_performance",
+      "_type": "request_group",
+      "name": "Real Production - Performance Benchmarks",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+    {
+      "_id": "fld_real_prod_edge",
+      "_type": "request_group",
+      "name": "Real Production - Edge Cases",
+      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
+    },
+
+    {
+      "_id": "req_real_single_survey",
+      "_type": "request",
+      "name": "GET /table - single survey with gender+area",
+      "description": "Happy path: real production survey with common dimension breakdown. Validates response structure and data quality.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "measures", "value": "gini", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "pop_share_threshold", "value": "{{ _.pop_share_threshold }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_happy",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Success envelope', () => pm.expect(pm.response.json().status).to.eql('success'));\npm.test('Has data', () => pm.expect(pm.response.json().data).to.be.an('array').and.not.be.empty);\npm.test('Response time < 2s', () => pm.expect(pm.response.responseTime).to.be.below(2000));\npm.test('Gini in [0,1]', () => {\n  const data = pm.response.json().data;\n  data.forEach(row => {\n    if (row.gini != null) pm.expect(row.gini).to.be.within(0, 1);\n  });\n});"
+    },
+    {
+      "_id": "req_real_5_surveys",
+      "_type": "request",
+      "name": "GET /table - 5 surveys batch",
+      "description": "Medium batch: 5 real surveys to test orchestration and consistent envelope.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_2 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_3 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_4 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_5 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_happy",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));\npm.test('All 5 surveys returned', () => {\n  const data = pm.response.json().data;\n  const unique_surveys = [...new Set(data.map(r => r.pip_id))];\n  pm.expect(unique_surveys.length).to.eql(5);\n});"
+    },
+    {
+      "_id": "req_real_15_surveys",
+      "_type": "request",
+      "name": "GET /table - 15 surveys batch (max limit)",
+      "description": "Max batch: all 15 surveys at once. Critical performance test for UI scenarios.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_2 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_3 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_4 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_5 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_6 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_7 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_8 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_9 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_10 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_11 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_12 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_13 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_14 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_15 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_happy",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 15s', () => pm.expect(pm.response.responseTime).to.be.below(15000));\npm.test('All 15 surveys returned', () => {\n  const data = pm.response.json().data;\n  const unique_surveys = [...new Set(data.map(r => r.pip_id))];\n  pm.expect(unique_surveys.length).to.eql(15);\n});\npm.test('Meta shows n_surveys=15', () => {\n  pm.expect(pm.response.json().meta.n_surveys).to.eql(15);\n});"
+    },
+    {
+      "_id": "req_real_post_filter",
+      "_type": "request",
+      "name": "POST /table - 10 surveys with filter_base",
+      "description": "POST body with real filter_base scenario: education + area filtering.",
+      "url": "{{ _.base_url }}/table",
+      "method": "POST",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"analysis_var\": \"welfare\",\n  \"pip_id\": [\"{{ _.pip_id }}\", \"{{ _.pip_id_2 }}\", \"{{ _.pip_id_3 }}\", \"{{ _.pip_id_4 }}\", \"{{ _.pip_id_5 }}\", \"{{ _.pip_id_6 }}\", \"{{ _.pip_id_7 }}\", \"{{ _.pip_id_8 }}\", \"{{ _.pip_id_9 }}\", \"{{ _.pip_id_10 }}\"],\n  \"measures\": [\"mean\", \"median\"],\n  \"filter_base\": {\"educat4\": [2, 3]},\n  \"ppp\": {{ _.ppp }},\n  \"release\": \"{{ _.release }}\"\n}"
+      },
+      "parameters": [],
+      "parentId": "fld_real_prod_happy",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 10s', () => pm.expect(pm.response.responseTime).to.be.below(10000));\npm.test('Data returned', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+    },
+    {
+      "_id": "req_real_poverty_analysis",
+      "_type": "request",
+      "name": "GET /table - poverty analysis with poverty_line",
+      "description": "Poverty measures with real poverty line value.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "measures", "value": "poverty_gap", "disabled": false },
+        { "name": "measures", "value": "severity", "disabled": false },
+        { "name": "poverty_line", "value": "{{ _.poverty_line }}", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_happy",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Headcount in [0,1]', () => {\n  const data = pm.response.json().data;\n  data.forEach(row => {\n    if (row.headcount != null) pm.expect(row.headcount).to.be.within(0, 1);\n  });\n});"
+    },
+
+    {
+      "_id": "req_dim_missing_area",
+      "_type": "request",
+      "name": "GET /table - request area for ALB (missing area)",
+      "description": "ALB_2016_HBS_CON_ALL lacks 'area' dimension. Should handle gracefully (422 or empty result).",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_6 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_dimensions",
+      "tests": "pm.test('Status is 200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));\npm.test('Error or empty data', () => {\n  const body = pm.response.json();\n  if (body.status === 'error') {\n    pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n  } else {\n    // If 200, data may be empty or have NAs\n    pm.expect(body.data).to.be.an('array');\n  }\n});"
+    },
+    {
+      "_id": "req_dim_mixed_surveys",
+      "_type": "request",
+      "name": "GET /table - mixed surveys (some have area, some don't)",
+      "description": "Mix pip_id and pip_id_6 (ALB without area). Tests heterogeneous dimension handling.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_6 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_dimensions",
+      "tests": "pm.test('Status is 200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));\npm.test('Response has structure', () => {\n  const body = pm.response.json();\n  pm.expect(body).to.have.property('status');\n});"
+    },
+    {
+      "_id": "req_dim_nonexistent",
+      "_type": "request",
+      "name": "GET /table - request dimension not in any survey",
+      "description": "Request a valid dimension name but not present in the selected surveys.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_9 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "imp_wat_rec", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_dimensions",
+      "tests": "pm.test('Status is 200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));"
+    },
+
+    {
+      "_id": "req_analysis_binary_shares",
+      "_type": "request",
+      "name": "GET /table - binary analysis_var shares",
+      "description": "Use gender as analysis_var with share measures.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "gender", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "pop_share", "disabled": false },
+        { "name": "measures", "value": "target_survey_share", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_analysis_vars",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Shares sum to ~1', () => {\n  const data = pm.response.json().data;\n  if (data.length > 0 && data[0].pop_share != null) {\n    const total = data.reduce((sum, r) => sum + (r.pop_share || 0), 0);\n    pm.expect(total).to.be.closeTo(1, 0.01);\n  }\n});"
+    },
+    {
+      "_id": "req_analysis_continuous_age",
+      "_type": "request",
+      "name": "GET /table - continuous covariate (age summary stats)",
+      "description": "Use age as analysis_var with summary statistics.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "age", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "measures", "value": "median", "disabled": false },
+        { "name": "measures", "value": "sd", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_analysis_vars",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Mean age > 0', () => {\n  const data = pm.response.json().data;\n  data.forEach(row => {\n    if (row.mean != null) pm.expect(row.mean).to.be.above(0);\n  });\n});"
+    },
+    {
+      "_id": "req_analysis_pov_multi_lines",
+      "_type": "request",
+      "name": "GET /table - pov_status with multiple poverty lines",
+      "description": "Run same survey with 3 different poverty lines to test consistency.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "poverty_line", "value": "2.15", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_analysis_vars",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\n// Note: Run this 3x with poverty_line = 2.15, 3.2, 6.85 to compare trends"
+    },
+
+    {
+      "_id": "req_perf_1_survey_baseline",
+      "_type": "request",
+      "name": "PERF - 1 survey baseline",
+      "description": "Performance baseline: single survey, no disaggregation.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_performance",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 1s', () => pm.expect(pm.response.responseTime).to.be.below(1000));\nconsole.log('Baseline time:', pm.response.responseTime, 'ms');"
+    },
+    {
+      "_id": "req_perf_5_surveys_2_dims",
+      "_type": "request",
+      "name": "PERF - 5 surveys with 2 dimensions",
+      "description": "Medium complexity: 5 surveys × 2 dimensions.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_2 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_3 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_4 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_5 }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "measures", "value": "gini", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_performance",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 6s', () => pm.expect(pm.response.responseTime).to.be.below(6000));\nconsole.log('5 surveys × 2 dims:', pm.response.responseTime, 'ms');"
+    },
+    {
+      "_id": "req_perf_15_surveys_4_dims",
+      "_type": "request",
+      "name": "PERF - 15 surveys with 4 dimensions (worst case)",
+      "description": "Maximum complexity: 15 surveys × 4 dimensions. Critical SLA test.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_2 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_3 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_4 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_5 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_7 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_8 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_9 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_10 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_11 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_12 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_13 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_14 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id_15 }}", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "by", "value": "educat4", "disabled": false },
+        { "name": "by", "value": "age", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_performance",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Response time < 30s', () => pm.expect(pm.response.responseTime).to.be.below(30000));\nconsole.log('15 surveys × 4 dims:', pm.response.responseTime, 'ms');\npm.test('Data returned', () => pm.expect(pm.response.json().data.length).to.be.above(0));"
+    },
+
+    {
+      "_id": "req_edge_tiny_poverty_line",
+      "_type": "request",
+      "name": "EDGE - very small poverty_line (0.01)",
+      "description": "Boundary case: near-zero poverty line.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "poverty_line", "value": "0.01", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Headcount near 0', () => {\n  const data = pm.response.json().data;\n  if (data[0] && data[0].headcount != null) {\n    pm.expect(data[0].headcount).to.be.below(0.05);\n  }\n});"
+    },
+    {
+      "_id": "req_edge_huge_poverty_line",
+      "_type": "request",
+      "name": "EDGE - very large poverty_line (100)",
+      "description": "Boundary case: poverty line above all welfare values.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "pov_status", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "headcount", "disabled": false },
+        { "name": "poverty_line", "value": "100", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Headcount near 1', () => {\n  const data = pm.response.json().data;\n  if (data[0] && data[0].headcount != null) {\n    pm.expect(data[0].headcount).to.be.above(0.95);\n  }\n});"
+    },
+    {
+      "_id": "req_edge_threshold_boundary",
+      "_type": "request",
+      "name": "EDGE - pop_share_threshold at boundary (0.01)",
+      "description": "Test suppression at exact threshold value.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "by", "value": "educat4", "disabled": false },
+        { "name": "pop_share_threshold", "value": "0.01", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Some cells suppressed', () => {\n  const data = pm.response.json().data;\n  const suppressed = data.filter(r => r.mean == null);\n  console.log('Suppressed cells:', suppressed.length, '/', data.length);\n});"
+    },
+    {
+      "_id": "req_edge_all_suppressed",
+      "_type": "request",
+      "name": "EDGE - all cells suppressed scenario",
+      "description": "High threshold to trigger suppression of all cells.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "by", "value": "gender", "disabled": false },
+        { "name": "by", "value": "area", "disabled": false },
+        { "name": "by", "value": "educat4", "disabled": false },
+        { "name": "by", "value": "age", "disabled": false },
+        { "name": "pop_share_threshold", "value": "0.5", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Most/all cells suppressed', () => {\n  const data = pm.response.json().data;\n  const suppressed = data.filter(r => r.mean == null).length;\n  console.log('Suppressed:', suppressed, '/', data.length);\n  pm.expect(suppressed).to.be.above(data.length * 0.8);\n});"
+    },
+    {
+      "_id": "req_edge_filter_multi_categories",
+      "_type": "request",
+      "name": "EDGE - filter_base with multiple categories",
+      "description": "Complex filter: multiple variables with multiple subcategories.",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "filter_base", "value": "{\"educat4\":[2,3],\"age\":[25,30,35,40,45,50]}", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status is 200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));\npm.test('Has response structure', () => {\n  pm.expect(pm.response.json()).to.have.property('status');\n});"
+    },
+    {
+      "_id": "req_edge_filter_empty",
+      "_type": "request",
+      "name": "EDGE - filter_base excluding all subcategories",
+      "description": "Edge case: filter that excludes all observations (should return empty or error).",
+      "url": "{{ _.base_url }}/table",
+      "method": "GET",
+      "headers": [],
+      "parameters": [
+        { "name": "analysis_var", "value": "welfare", "disabled": false },
+        { "name": "pip_id", "value": "{{ _.pip_id }}", "disabled": false },
+        { "name": "measures", "value": "mean", "disabled": false },
+        { "name": "filter_base", "value": "{\"gender\":[]}", "disabled": false },
+        { "name": "ppp", "value": "{{ _.ppp }}", "disabled": false },
+        { "name": "release", "value": "{{ _.release }}", "disabled": false }
+      ],
+      "parentId": "fld_real_prod_edge",
+      "tests": "pm.test('Status is 200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));\npm.test('Empty filter handled', () => {\n  const body = pm.response.json();\n  if (body.status === 'error') {\n    pm.expect(body.errors).to.be.an('array');\n  } else {\n    pm.expect(body.data).to.be.an('array');\n  }\n});"
+    }
 
   ]
 }
