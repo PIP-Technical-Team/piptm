@@ -75,11 +75,11 @@ parse_api_res <- function(res, simplify = TRUE) {
 # Created once per test session; the router itself is stateless — all data
 # state lives in piptm::.piptm_env, which each test block mutates via fixtures.
 
-.ep_plumber_path <- system.file("plumber", "plumber.R", package = "piptm")
-if (!nzchar(.ep_plumber_path)) {
-  .ep_plumber_path <- file.path(
-    rprojroot::find_package_root_file(), "inst", "plumber", "plumber.R"
-  )
+.ep_plumber_path <- file.path(
+  rprojroot::find_package_root_file(), "inst", "plumber", "plumber.R"
+)
+if (!file.exists(.ep_plumber_path)) {
+  .ep_plumber_path <- system.file("plumber", "plumber.R", package = "piptm")
 }
 
 .ep_router <- if (requireNamespace("plumber", quietly = TRUE)) {
@@ -470,6 +470,66 @@ test_that("GET /covariates returns pov_status with n_categories=2", {
   if (is.list(ncat)) ncat <- unlist(ncat)
   expect_true(identical(as.integer(ncat), 2L))
   expect_false("pov_status_mutex" %in% names(pov))
+})
+
+# ── /session endpoints ───────────────────────────────────────────────────────
+
+test_that("POST /session/surveys creates a session and returns session_id", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
+  )))
+
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  expect_true("session_id" %in% names(body$data))
+  expect_true(nzchar(as.character(body$data$session_id)))
+})
+
+test_that("GET /session/<id>/surveys returns stored pip_id", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  create_res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
+  )))
+  create_body <- parse_api_res(create_res)
+  sid <- as.character(create_body$data$session_id)
+
+  res <- .ep_router$call(make_api_req("GET", paste0("/session/", sid, "/surveys")))
+
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  expect_equal(
+    as.character(body$data$pip_id),
+    c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
+  )
+})
+
+test_that("POST /session/surveys rejects missing pip_id with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list()))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(length(body$errors) > 0L)
+})
+
+test_that("GET /session/<id>/surveys returns 404 for unknown session", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/session/nonexistent123/surveys"))
+  expect_equal(res$status, 404L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(length(body$errors) > 0L)
 })
 
 # =============================================================================

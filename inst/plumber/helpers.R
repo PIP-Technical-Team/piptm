@@ -19,6 +19,9 @@
 
 # Maximum number of surveys accepted per /table request.
 .MAX_SURVEYS_PER_REQUEST <- 15L
+.SESSION_TTL_SECONDS <- 3600L
+.SESSION_STORE <- new.env(parent = emptyenv())
+.PIP_ID_PATTERN <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
 
 #' Build a structured success response envelope
 #'
@@ -59,6 +62,102 @@ api_error <- function(errors, status_code, res) {
     errors   = errors,
     meta     = list()
   )
+}
+
+#' Validate and normalize pip_id values for session storage
+#'
+#' @param pip_id Character vector of survey identifiers.
+#'
+#' @return A named list with fields `valid`, `errors`, and normalized `pip_id`.
+validate_session_pip_id <- function(pip_id) {
+  errors <- character()
+
+  if (is.null(pip_id) || length(pip_id) == 0L) {
+    errors <- c(errors, "`pip_id` must be a non-empty character vector.")
+    return(list(valid = FALSE, errors = errors, pip_id = NULL))
+  }
+
+  pip_id <- as.character(unlist(pip_id, use.names = FALSE))
+  pip_id <- trimws(pip_id)
+  pip_id <- pip_id[nzchar(pip_id)]
+
+  if (length(pip_id) == 0L) {
+    errors <- c(errors, "`pip_id` must contain at least one non-empty value.")
+    return(list(valid = FALSE, errors = errors, pip_id = NULL))
+  }
+
+  bad_ids <- pip_id[!grepl(.PIP_ID_PATTERN, pip_id)]
+  if (length(bad_ids) > 0L) {
+    errors <- c(
+      errors,
+      paste0(
+        "`pip_id` value(s) contain invalid characters or format: ",
+        paste(unique(bad_ids), collapse = ", "),
+        ". Expected pattern: ISO3_YYYY_<survey-info> (uppercase letters, ",
+        "digits, hyphens, underscores; max 50 characters)."
+      )
+    )
+  }
+
+  list(
+    valid = length(errors) == 0L,
+    errors = errors,
+    pip_id = unique(pip_id)
+  )
+}
+
+#' Create and store a session containing pip_id values
+#'
+#' @param pip_id Character vector of validated survey identifiers.
+#'
+#' @return Character scalar session ID.
+create_session <- function(pip_id) {
+  session_id <- NULL
+  tries <- 0L
+
+  while (is.null(session_id) && tries < 20L) {
+    candidate <- paste0(sample(c(letters, 0:9), size = 12L, replace = TRUE), collapse = "")
+    if (!exists(candidate, envir = .SESSION_STORE, inherits = FALSE)) {
+      session_id <- candidate
+    }
+    tries <- tries + 1L
+  }
+
+  if (is.null(session_id)) {
+    cli::cli_abort("Could not allocate a unique session ID. Please retry.")
+  }
+
+  .SESSION_STORE[[session_id]] <- list(
+    pip_id = pip_id,
+    created_at = Sys.time()
+  )
+
+  session_id
+}
+
+#' Fetch a non-expired session's pip_id values
+#'
+#' @param session_id Character scalar session identifier.
+#'
+#' @return Character vector of pip_id values, or `NULL` when missing/expired.
+get_session_surveys <- function(session_id) {
+  if (!is.character(session_id) || length(session_id) != 1L || !nzchar(session_id)) {
+    return(NULL)
+  }
+
+  if (!exists(session_id, envir = .SESSION_STORE, inherits = FALSE)) {
+    return(NULL)
+  }
+
+  entry <- .SESSION_STORE[[session_id]]
+  age_sec <- as.numeric(difftime(Sys.time(), entry$created_at, units = "secs"))
+
+  if (is.na(age_sec) || age_sec > .SESSION_TTL_SECONDS) {
+    rm(list = session_id, envir = .SESSION_STORE)
+    return(NULL)
+  }
+
+  as.character(entry$pip_id)
 }
 
 # ── Release resolver ──────────────────────────────────────────────────────────
@@ -180,8 +279,7 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     # pattern (ISO3 _ year _ survey-acronym _ welfare-type _ area-code).
     # This prevents path-traversal, shell-injection, and garbage input from
     # reaching the filesystem or computation layer.
-    pip_id_pattern <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
-    bad_ids <- pip_id[!grepl(pip_id_pattern, pip_id)]
+    bad_ids <- pip_id[!grepl(.PIP_ID_PATTERN, pip_id)]
     if (length(bad_ids) > 0L) {
       errors <- c(
         errors,

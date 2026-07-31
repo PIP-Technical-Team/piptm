@@ -22,6 +22,8 @@
 #   GET /dimensions
 #   GET /categories
 #   GET /covariates
+#   POST /session/surveys
+#   GET /session/:id/surveys
 #   GET /statistics
 #   GET /health
 
@@ -512,6 +514,50 @@ function(pip_id = NULL, release = NULL, res) {
                  filtered = out$result$filtered,
                  n_surveys = out$result$n_surveys
                ))
+}
+
+# ── POST /session/surveys ────────────────────────────────────────────────────
+
+#* Store selected survey identifiers and return a session ID.
+#*
+#* Sessions are in-memory, process-local, and expire after one hour.
+#*
+#* @param pip_id:[character] Survey identifiers to store (required, repeatable).
+#* @serializer json list(na = "null")
+#* @post /session/surveys
+function(pip_id = NULL, res) {
+  check <- validate_session_pip_id(pip_id)
+  if (!check$valid) return(api_error(check$errors, 400L, res))
+
+  out <- capture_with_warnings({
+    sid <- create_session(check$pip_id)
+    list(session_id = sid)
+  })
+
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  api_response(out$result, warnings = out$warnings)
+}
+
+# ── GET /session/:id/surveys ─────────────────────────────────────────────────
+
+#* Retrieve stored survey identifiers for a given session ID.
+#*
+#* @param id:character Session identifier.
+#* @serializer json list(na = "null")
+#* @get /session/<id>/surveys
+function(id, res) {
+  out <- capture_with_warnings({
+    pip_id <- get_session_surveys(id)
+    if (is.null(pip_id)) {
+      cli::cli_abort("Session not found or expired.")
+    }
+    list(pip_id = pip_id)
+  })
+
+  if (!is.null(out$error)) return(api_error(out$error, 404L, res))
+
+  api_response(out$result, warnings = out$warnings)
 }
 
 
