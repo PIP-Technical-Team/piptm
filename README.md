@@ -49,8 +49,8 @@ devtools::load_all()
 Core inputs:
 
 - `pip_id`: one or more canonical survey IDs
-- `analysis_var`: analysis variable (for example `welfare`, `pov_status`, or allowed optional dimensions)
-- `measures`: one or more registered measures
+- `analysis_var`: analysis variable (for example `welfare`, `pov_status`, or allowed `piptm_analysis_variables()`)
+- `measures`: one or more registered statistics
 - `by`: optional disaggregation dimensions
 - `poverty_line`: required when `analysis_var = "pov_status"` or `by` includes `pov_status`
 - `ppp`: PPP year (defaults to `2021L`)
@@ -160,12 +160,6 @@ Request templates for these endpoints live in:
 
 Use this file to import and test endpoints without manual request creation.
 
-## Limitations (current)
-
-- API server is single-process/single-worker.
-- No auth or rate limiting.
-- Performance depends on network access to Arrow and manifest stores.
-
 ## Deploying the API to Azure
 
 This section documents how to deploy the Table Maker API service to the Azure
@@ -177,12 +171,11 @@ cloud environment. Deployment is managed through Azure DevOps pipelines.
 
 ### Prerequisites
 
-- Access to the PIP project in Azure DevOps (no special permissions required
-  beyond standard team membership).
-- The data inputs are already in place in the PIP repository **before** the
+- Access to the PIP folders in Azure DevOps 
+- The data inputs are already in place in the PIP repository in the Y drive **before** the
   first deployment (or before adding a new data release).
 
-### Related repositories
+### Azure repositories
 
 | Repository | Purpose |
 |---|---|
@@ -245,8 +238,13 @@ variants — one per environment:
 2. Wait for it to succeed — the **Release** pipeline fires automatically.
 
 **First-time deployment or new data release:**
-1. Run the **Copy data** pipeline for the target environment.
-2. Once it succeeds, run the **Build** pipeline.
+1. Run the **Copy data** pipeline **three times**, once per folder. Each run
+   will prompt you to specify a folder name — run it with each of the following
+   in any order:
+   - `arrow`
+   - `manifests`
+   - `registry`
+2. Once all three copy runs succeed, run the **Build** pipeline.
 3. The **Release** pipeline fires automatically.
 
 Always follow the environment promotion order: **DEV → QA → PROD**.
