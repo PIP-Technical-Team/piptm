@@ -202,6 +202,13 @@
           "description": "Structured error responses (invalid pip_ids, unsupported measures, missing poverty_lines). Request logging with timestamps and parameter echoing. Optional telemetry for performance monitoring.",
           "status": "active",
           "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
+        },
+        {
+          "id": "step3-description-file",
+          "title": "Step 3 description file for table results",
+          "description": "Generate structured markdown document describing table configuration: surveys analyzed, sample base filters, statistics computed, disaggregation structure, poverty line, PPP year, suppression threshold, and warnings. New build_table_description() function in R package and /description API endpoint. UI displays inline or downloads as PDF.",
+          "status": "idea",
+          "brainstorm": ".cg-docs/brainstorms/2026-08-13-step3-description-file.md"
         }
       ]
     },
