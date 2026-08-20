@@ -145,3 +145,42 @@ See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-v
 - A1 Current (all cols): 2.370s
 - A2 Column-pruned: 1.675s — **29% faster**
 - A3 Arrow push-down (genuine, 2 scans): TBD — script updated, not yet re-run
+
+---
+
+## Architecture Notes
+
+The {piptm} package follows a **Manifest-First with Lazy Validation** architecture. On load, it reads all `manifest_*.json` files from `PIPTM_MANIFEST_DIR` into memory (keyed by release ID). No microdata is loaded at startup — all loading is on-demand per `table_maker()` call.
+
+The data pipeline is:
+
+```
+Raw survey microdata
+→ {pipdata} harmonization
+→ Clean survey datasets (.qs2)
+→ Arrow/Parquet partitions (partitioned by country_code / year / welfare_type)
+→ Release manifest (reproducibility contract)
+→ {piptm} computation engine
+→ Structured cross-tabulated measure outputs
+```
+
+Key internal components:
+- `load_survey_microdata()` — manifest lookup + lazy file validation + Arrow loading
+- `compute_fgt()`, `compute_gini()`, `compute_mean_welfare()`, etc. — core measure functions
+- `compute_measures()` — orchestrator across surveys and breakdown dimensions
+- `table_maker()` — top-level API function
+
+## Related Resources
+
+- `docs/project-context.md` — Detailed architecture, manifest schema, computation engine design
+- `docs/roadmap.md` — Phased implementation plan
+- `inst/schema/arrow-schema.json` — Arrow partition schema
+- PIP platform: <https://pip.worldbank.org>
+
+---
+
+## Wiki Configuration
+
+<!-- folder: wiki -->
+<!-- audience: developers -->
+<!-- tone: technical -->
