@@ -1,4 +1,4 @@
-#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
+﻿#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
 #' @importFrom cli cli_abort cli_warn
 #' @importFrom collapse GRP
 NULL
@@ -89,6 +89,94 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   }
 
   matched$pip_id
+}
+
+# ── .build_specification ──────────────────────────────────────────────────────
+# Build the specification list from table_maker() arguments and registry lookups.
+# Called only when with_meta = TRUE.
+# @keywords internal
+.build_specification <- function(pip_id, analysis_var, measures, poverty_line,
+                                 by, filter_base, ppp, pop_share_threshold) {
+  # Analysis variable with label
+  av_label <- analysis_var
+  tryCatch({
+    avs <- piptm_analysis_variables()
+    match_idx <- which(vapply(avs, function(av) av[["varname"]] == analysis_var, logical(1L)))
+    if (length(match_idx) == 1L) av_label <- avs[[match_idx]][["label"]]
+  }, error = function(e) NULL)
+
+  # Measures with labels and families
+  measures_list <- lapply(measures, function(m) {
+    lbl <- m
+    fam <- .MEASURE_REGISTRY[[m]]
+    tryCatch({
+      sg <- piptm_stat_groups()
+      for (group in sg) {
+        for (meas in group[["measures"]]) {
+          if (meas[["measure"]] == m) {
+            lbl <- meas[["label"]]
+            break
+          }
+        }
+      }
+    }, error = function(e) NULL)
+    list(name = m, label = lbl, family = fam %||% NA_character_)
+  })
+
+  # by with labels and categories
+  by_list <- NULL
+  if (!is.null(by) && length(by) > 0L) {
+    covariates <- tryCatch(piptm_layout_covariates(), error = function(e) list())
+    by_list <- lapply(by, function(d) {
+      lbl <- d
+      n_cats <- NULL
+      cats <- NULL
+      cov_match <- Filter(function(c) c[["varname"]] == d, covariates)
+      if (length(cov_match) == 1L) {
+        lbl <- cov_match[[1L]][["label"]]
+        n_cats <- cov_match[[1L]][["n_categories"]]
+      }
+      # Try to get categories from filter categories
+      filter_cats <- tryCatch(piptm_filter_categories(), error = function(e) list())
+      fc_match <- Filter(function(f) f[["varname"]] == d, filter_cats)
+      if (length(fc_match) == 1L) {
+        cats <- fc_match[[1L]][["subcategories"]]
+      }
+      list(name = d, label = lbl, n_categories = n_cats, categories = cats)
+    })
+  }
+
+  # filter_base with labels
+  fb_list <- NULL
+  if (!is.null(filter_base) && length(filter_base) > 0L) {
+    filter_cats <- tryCatch(piptm_filter_categories(), error = function(e) list())
+    fb_list <- lapply(names(filter_base), function(varname) {
+      lbl <- varname
+      fc_match <- Filter(function(f) f[["varname"]] == varname, filter_cats)
+      if (length(fc_match) == 1L) {
+        lbl <- fc_match[[1L]][["label"]]
+        # Map integer codes to labels
+        kept_codes <- filter_base[[varname]]
+        kept_labels <- vapply(kept_codes, function(code) {
+          cat_match <- Filter(function(c) c[["code"]] == as.character(code), fc_match[[1L]][["subcategories"]])
+          if (length(cat_match) == 1L) cat_match[[1L]][["label"]] else as.character(code)
+        }, character(1L))
+        return(list(varname = varname, label = lbl, kept = as.list(kept_labels)))
+      }
+      list(varname = varname, label = lbl, kept = as.list(as.character(filter_base[[varname]])))
+    })
+  }
+
+  list(
+    pip_id              = pip_id,
+    analysis_var        = list(name = analysis_var, label = av_label),
+    measures            = measures_list,
+    poverty_line        = poverty_line,
+    ppp                 = ppp,
+    by                  = by_list,
+    filter_base         = fb_list,
+    pop_share_threshold = pop_share_threshold
+  )
 }
 
 # ── table_maker ───────────────────────────────────────────────────────────────
@@ -192,7 +280,37 @@ table_maker <- function(pip_id        = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.01) {
+                        pop_share_threshold = 0.01,
+                        with_meta       = FALSE) {
+
+  # ── Metadata harvesting (when with_meta = TRUE) ────────────────────────────
+  # When with_meta is TRUE, we capture specification, execution metadata,
+  # provenance, and warnings alongside the normal computation.  The default
+  # path (with_meta = FALSE) is completely unchanged.
+  .meta_state <- if (with_meta) {
+    list(
+      included_surveys  = NULL,
+      excluded_surveys  = data.table::data.table(pip_id = character(0L), reason = character(0L)),
+      filters_applied   = NULL,
+      measures_computed = character(0L),
+      suppression       = NULL,
+      ppp_used          = NULL,
+      warnings          = list()
+    )
+  } else {
+    NULL
+  }
+
+  # Warning handler: captures cli_warn() messages when with_meta = TRUE
+  .warn_handler <- if (with_meta) {
+    function(w) {
+      .meta_state[[length(.meta_state) + 1L]] <<-
+        conditionMessage(w)
+      invokeRestart("muffleWarning")
+    }
+  } else {
+    NULL
+  }
 
   # ── 0. Resolve survey identifiers ──────────────────────────────────────────
   if (is.null(pip_id)) {
@@ -281,6 +399,16 @@ table_maker <- function(pip_id        = NULL,
         "No matching surveys found in manifest for release {.val {mf$release[[1L]] %||% piptm_current_release()}}.",
         "i" = "Requested pip_id{?s}: {.val {(.ids)}}"
       )
+    )
+  }
+
+  # Harvest: included surveys (before pre-filters)
+  if (!is.null(.meta_state)) {
+    .meta_state[["included_surveys"]] <- data.table::data.table(
+      pip_id        = entries[["pip_id"]],
+      country_code  = entries[["country_code"]],
+      surveyid_year = entries[["year"]],
+      welfare_type  = entries[["welfare_type"]]
     )
   }
 
@@ -381,6 +509,18 @@ table_maker <- function(pip_id        = NULL,
           )
         )
         entries <- entries[full_idx]
+        # Harvest: excluded surveys (dimension pre-filter)
+        if (!is.null(.meta_state)) {
+          exc <- data.table::data.table(
+            pip_id = dropped_entries[["pip_id"]],
+            reason = paste0("Missing dimensions: ", vapply(dropped_entries[["dimensions"]], function(d) {
+              paste(setdiff(by_check, d), collapse = ", ")
+            }, character(1L)))
+          )
+          .meta_state[["excluded_surveys"]] <- data.table::rbindlist(list(
+            .meta_state[["excluded_surveys"]], exc
+          ))
+        }
       }
 
       if (nrow(entries) == 0L) {
@@ -565,6 +705,39 @@ table_maker <- function(pip_id        = NULL,
     }
   }
 
-  result[]
-}
+    # ── Return ──────────────────────────────────────────────────────────────────
+  if (is.null(.meta_state)) {
+    return(result[])
+  }
 
+  # Build specification
+  .spec <- .build_specification(
+    pip_id = pip_id, analysis_var = analysis_var, measures = measures,
+    poverty_line = poverty_line, by = by, filter_base = filter_base,
+    ppp = ppp, pop_share_threshold = pop_share_threshold
+  )
+
+  # Build execution
+  .exec <- list(
+    included_surveys  = .meta_state[["included_surveys"]],
+    excluded_surveys  = .meta_state[["excluded_surveys"]],
+    filters_applied   = .meta_state[["filters_applied"]],
+    measures_computed = .meta_state[["measures_computed"]],
+    suppression       = .meta_state[["suppression"]],
+    ppp_used          = .meta_state[["ppp_used"]]
+  )
+
+  # Build provenance
+  .prov <- list(
+    release         = tryCatch(piptm_current_release(), error = function(e) release),
+    package_version = as.character(utils::packageVersion("piptm"))
+  )
+
+  list(
+    data          = result,
+    specification = .spec,
+    execution     = .exec,
+    provenance    = .prov,
+    warnings      = .meta_state[["warnings"]]
+  )
+}

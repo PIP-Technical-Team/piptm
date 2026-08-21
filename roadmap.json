@@ -1,386 +1,387 @@
-{
-  "schemaVersion": "compound-gpid-roadmap-v1",
-  "milestones": [
-    {
-      "id": "phase-0-arrow-generation",
-      "title": "Phase 0 — Arrow Dataset Generation",
-      "objective": "Master Arrow repository, partition pipeline in {pipdata}, release manifest generation.",
-      "status": "done",
-      "features": [
-        {
-          "id": "version-partition-key",
-          "title": "Version as partition key with manifest-based resolution",
-          "description": "Add version (vermast_veralt) as a 4th Hive partition key. Manifest file_path is the sole version-resolution mechanism for {piptm}. Multiple versions coexist on disk.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
-          "plan": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
-          "review": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
-        },
-        {
-          "id": "manifest-generation-partition-filter",
-          "title": "Manifest generation and partition-filter loading",
-          "description": "Transition manifest from file_path to partition filter keys. Release-inventory-driven generation in {pipdata} with dimension introspection. Manifest loading and open_dataset()|>filter() data access in {piptm}.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
-          "plan": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
-          "review": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-1-computation-engine",
-      "title": "Phase 1 — Computation Engine",
-      "objective": "Core computation engine: family-based orchestrator for poverty, inequality, and welfare measures with disaggregation across dimensions.",
-      "status": "done",
-      "features": [
-        {
-          "id": "measure-registry",
-          "title": "Measure registry and input validation",
-          "description": "Define canonical measures (5 poverty, 2 inequality, 12 welfare) in .MEASURE_REGISTRY. Implement .classify_measures(), .validate_by(), .validate_poverty_lines() validators.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "family-compute-functions",
-          "title": "Family-level compute functions",
-          "description": "Implement compute_poverty() (FGT measures), compute_inequality() (Gini, MLD), compute_welfare() (mean, median, quantiles, etc.) with collapse backend.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
-          "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
-        },
-        {
-          "id": "computation-engine-family-orchestrator",
-          "title": "Family-based computation orchestrator (compute_measures)",
-          "description": "Orchestrator dispatches compute_poverty(), compute_inequality(), compute_welfare() based on requested measure families. Builds compound GRP(c('pip_id', by)) for batch processing. Long-format output with poverty_line, measure, value, population columns.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
-          "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
-        },
-        {
-          "id": "dimension-disaggregation",
-          "title": "Disaggregation across dimensions (gender, area, education, age)",
-          "description": "Support up to 4 dimensions including at most 1 education column. Age binning (0–14, 15–24, 25–64, 65+). Dimension pre-filter with warnings. Surveys missing any requested dimension are excluded before loading.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-2-table-maker-api",
-      "title": "Phase 2 — table_maker() Top-Level API",
-      "objective": "Build the top-level table_maker() API function, data loading pipeline, and orchestration layer. Implement pip_lookup() triplet resolver. Optimize orchestration and I/O.",
-      "status": "done",
-      "features": [
-        {
-          "id": "table-maker-dual-input",
-          "title": "table_maker() with dual input patterns (pip_id and triplets)",
-          "description": "Implement table_maker(pip_id | country_code/year/welfare_type, measures, poverty_lines, by, release). Accept pip_id for API usage; fall back to triplet resolution via pip_lookup() for ad-hoc R console usage.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "pip-lookup-triplet-resolver",
-          "title": "pip_lookup() triplet-to-pip_id resolver",
-          "description": "Translate human-friendly (country_code, year, welfare_type) tuples to canonical pip_ids via manifest inner join. Emit warnings for unmatched triplets.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "load-surveys-data-loading",
-          "title": "load_surveys() data loading with manifest resolution",
-          "description": "Resolve manifest entries to Arrow partition paths. Lazy load via open_dataset(). Column selection and dictionary casting. Return with metadata columns (pip_id, country_code, surveyid_year, welfare_type).",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "orchestration-batch-vs-per-survey",
-          "title": "Orchestration: batch vs. per-survey optimization",
-          "description": "Compare Approach A (per-survey lapply with GRP rebuild) vs Approach B (single batch GRP). Benchmark on 15 surveys × 50 iterations. Adopt Approach B (72% faster, 0.127s vs 0.432s). Update table_maker() implementation.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
-          "plan": ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
-          "review": ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md"
-        },
-        {
-          "id": "arrow-vs-collapse-benchmark",
-          "title": "Arrow push-down vs. in-memory compute benchmark",
-          "description": "Measure feasibility of pushing grouping/aggregation to Arrow vs. loading and computing in R. Identify which measures can be pushed down. Document performance implications for future optimization.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
-          "plan": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
-          "review": ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md"
-        },
-        {
-          "id": "load-surveys-column-pruning",
-          "title": "Column-pruned Arrow reads (I/O optimization)",
-          "description": "Add cols parameter to load_surveys(); select() before collect() to skip bytes on the network. 68% I/O reduction (1.658s → 0.524s, 15 surveys over UNC share). E2E pipeline 29% faster (2.370s → 1.675s).",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
-          "plan": ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
-          "review": ".cg-docs/reviews/2026-05-20-load-surveys-column-pruning-review.md"
-        },
-        {
-          "id": "remove-redundant-welfare-sort",
-          "title": "Remove redundant welfare sort in compute_inequality()",
-          "description": "compute_inequality() relies on upstream write-sorted Arrow data instead of sorting internally. is.unsorted() guard errors on unsorted input; multi-file guard prevents concatenation from breaking the sort contract.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-05-21-remove-redundant-welfare-sort.md",
-          "plan": ".cg-docs/plans/2026-05-21-remove-redundant-welfare-sort.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-3-validation-testing",
-      "title": "Phase 3 — Validation, Testing & Quality",
-      "objective": "Build comprehensive test suite, parquet validation layer, performance profiling, and documentation.",
-      "status": "in-progress",
-      "features": [
-        {
-          "id": "parquet-validation-schema-data",
-          "title": "Parquet file validation (schema + data checks)",
-          "description": "Implement validate_parquet_schema() (structural checks, dictionary type index width tolerance) and validate_parquet_data() (row-level validation: required columns present, no NAs in welfare/weight, factor level checks). Fast schema-only checks for pipeline validation. Core implementation complete; pending: extract duplicate .find_welfare_col() logic into single helper, add test for cols+ppp=NULL path.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
-          "review": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md"
-        },
-        {
-          "id": "unit-test-coverage",
-          "title": "Unit test suite (≥90% coverage)",
-          "description": "Tests for measure registry, validators, family compute functions, orchestrator, data loading, and table_maker(). Fixture-based testing with synthetic survey data. 414+ tests passing.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "performance-profiling",
-          "title": "Performance benchmarking and profiling",
-          "description": "Profile I/O, compute, and GC overhead. Document 15-survey and 100-survey performance. Column-pruning I/O optimization applied (2026-05-21): 68% I/O reduction; E2E pipeline 29% faster.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
-          "review": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md"
-        },
-        {
-          "id": "data-quality-contracts",
-          "title": "Data quality contracts and multi-file guard",
-          "description": "Enforce welfare sort invariant and one-file-per-partition contract. Gini pre-sort validation in compute_inequality() (is.unsorted guard). Multi-file concatenation guard in .build_parquet_paths(). Solution doc: .cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md",
-          "review": ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
-        },
-        {
-          "id": "dimension-partial-match-exclusion",
-          "title": "Dimension pre-filter: exclude partial-match surveys",
-          "description": "Refactored table_maker() Step 3 so surveys missing any requested breakdown dimension are excluded before loading (manifest check only), not loaded and NA-filled. Warning message lists each excluded survey and which dimensions it lacked.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-05-29-dimension-filter-skip-partial-surveys.md"
-        },
-        {
-          "id": "exported-functions-test-sync",
-          "title": "Exported functions test sync",
-          "description": "Align exported functions with their test coverage after API/compute refactors (analysis_var routing, scalar poverty_line). Sync tests to the current exported surface.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-07-24-exported-functions-test-sync.md"
-        },
-        {
-          "id": "documentation-api-dev",
-          "title": "Documentation: API reference and developer guide",
-          "description": "roxygen2 docstrings for all exported and internal functions. Developer guide for extending measure registry. Architecture overview (manifest, computation pipeline, output schema).",
-          "status": "planned",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        },
-        {
-          "id": "cran-readiness",
-          "title": "CRAN readiness (devtools::check clean)",
-          "description": "Resolve all warnings, notes, and errors from R CMD check. Finalize NAMESPACE, imports, and package metadata.",
-          "status": "planned",
-          "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-4-api-service",
-      "title": "Phase 4 — API Service Layer",
-      "objective": "Plumber service layer connecting the PIP UI platform to table_maker(): core table/lookup endpoints, static catalogues, session surveys, request validation, and response serialization.",
-      "status": "in-progress",
-      "features": [
-        {
-          "id": "plumber-table-endpoint",
-          "title": "Plumber /table endpoint (GET/POST)",
-          "description": "Accept pip_id vector, measures, poverty_lines, by dimensions. Return long-format JSON with poverty_line, measure, value, population. Support batch requests (>50 surveys via POST with JSON body).",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
-        },
-        {
-          "id": "plumber-lookup-endpoint",
-          "title": "Plumber /lookup endpoint",
-          "description": "Resolve (country_code, year, welfare_type) triplets to pip_ids for UI discovery. Caching layer for manifest queries.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
-        },
-        {
-          "id": "categories-measures-covariates-endpoints",
-          "title": "Static catalogue endpoints (categories, measures, covariates, stats)",
-          "description": "pip_tablemaker_categories(), measures, covariates and summary-stats catalogue endpoints. Measure spec YAML drives the build registry and stats endpoint. GET categories structure fixes.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
-        },
-        {
-          "id": "variable-registry",
-          "title": "Variable registry and measure spec YAML",
-          "description": "UI variable spec YAML and tm measure spec YAML. Schema and registry refactor to include measure spec; refactor to use pip_optional_dims.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-06-23-variable-registry.md"
-        },
-        {
-          "id": "countries-regions-endpoints",
-          "title": "Countries and regions endpoints",
-          "description": "Countries and regions listing endpoints. Load filtered sample base in table_maker().",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-06-30-table-maker-filter-base-loading-path.md"
-        },
-        {
-          "id": "analysis-var-routing",
-          "title": "analysis_var routing and scalar poverty_line",
-          "description": "feat(api,compute): add analysis_var routing and scalar poverty_line across the table pipeline. Table endpoint computation refactor (2026-07-01).",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-07-01-table-endpoint-computation-refactor.md"
-        },
-        {
-          "id": "session-surveys-endpoints",
-          "title": "Session surveys endpoints",
-          "description": "Session surveys endpoints for survey selection persistence. pip_ids param for categories and covariates endpoints. Insomnia test collections for endpoint verification.",
-          "status": "done"
-        },
-        {
-          "id": "api-deployment-readme",
-          "title": "API deployment documentation",
-          "description": "API deployment README covering environment variables, data connections, and running the Plumber service.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-07-31-api-deployment-readme.md"
-        },
-        {
-          "id": "survey-specific-variable-filtering",
-          "title": "Survey-specific variable filtering for Step 2",
-          "description": "Filter which variables (dimensions, welfare types, PPPs) apply per survey so the UI only offers valid options for the selected surveys.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md"
-        },
-        {
-          "id": "error-handling-logging",
-          "title": "Error handling, logging, and request tracing",
-          "description": "Structured error responses (invalid pip_ids, unsupported measures, missing poverty_lines). Request logging with timestamps and parameter echoing. Optional telemetry for performance monitoring.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
-        },
-        {
-          "id": "step3-description-file",
-          "title": "Step 3 description file for table results",
-          "description": "Generate structured markdown document describing table configuration: surveys analyzed, sample base filters, statistics computed, disaggregation structure, poverty line, PPP year, suppression threshold, and warnings. New build_table_description() function in R package and /description API endpoint. UI displays inline or downloads as PDF.",
-          "status": "idea",
-          "brainstorm": ".cg-docs/brainstorms/2026-08-13-step3-description-file.md"
-        },
-        {
-          "id": "session-storage-endpoints",
-          "title": "Session storage endpoints for survey selection persistence",
-          "description": "Persist survey selections and table configuration across UI sessions via server-side session storage endpoints.",
-          "status": "idea",
-          "brainstorm": ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-5-ppp-resolution",
-      "title": "Phase 5 — PPP Parameter Handling & Refactor",
-      "objective": "End-to-end resolution of all PPP parameter handling: data loading (manifest-driven welfare column selection, skip logic), API input validation (type guards, digit-only check, truncated error echo), and full test coverage of edge cases.",
-      "status": "done",
-      "features": [
-        {
-          "id": "ppp-load-data-resolution",
-          "title": "PPP welfare column resolution in load_surveys() / load_survey_microdata()",
-          "description": "Manifest welfare_vars drives PPP resolution via .find_welfare_col(). load_survey_microdata() errors on missing PPP with available-PPPs hint. load_surveys() warns and skips surveys without the requested PPP column; errors only when all surveys are skipped. Column pruning translates logical 'welfare' to the physical PPP column name before open_dataset().",
-          "status": "done",
-          "review": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md"
-        },
-        {
-          "id": "ppp-api-input-validation",
-          "title": "API PPP parameter validation refactor",
-          "description": "Input type guard: only character or numeric accepted; lists, logicals, raw types rejected. Digit-only guard for string inputs. Truncated echo in error messages. Implemented in the plumber /table and /lookup endpoints.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
-          "review": ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md"
-        },
-        {
-          "id": "ppp-edge-case-test-coverage",
-          "title": "PPP edge-case test coverage",
-          "description": "8 critical validation tests covering: hex notation (0x7D1), scientific notation (2e3), integer overflow, empty vector, multi-param accumulation, NULL, non-numeric string, and fractional year. All passing.",
-          "status": "done"
-        }
-      ]
-    },
-    {
-      "id": "phase-6-share-measures",
-      "title": "Phase 6 — Cell Share Measures",
-      "objective": "Add obs_share (cell observation proportion) and pop_share (cell population proportion) to the welfare computation family. Per-survey denominators, integrated with the measure registry pattern.",
-      "status": "done",
-      "features": [
-        {
-          "id": "obs-share-pop-share",
-          "title": "obs_share and pop_share measures",
-          "description": "Register obs_share and pop_share in .MEASURE_REGISTRY under welfare family. Compute as cell/survey ratios using coarser pip_id-only GRP for denominators. Reuse existing nobs when available. 21 total measures.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
-          "plan": ".cg-docs/plans/2026-06-01-cell-share-measures.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-7-pop-share-threshold",
-      "title": "Phase 7 — Population Share Threshold-Based Suppression",
-      "objective": "Implement configurable population share suppression rule that removes non-share measures from cells where pop_share falls below a threshold. Integrated into table_maker() API and plumber /table endpoint.",
-      "status": "done",
-      "features": [
-        {
-          "id": "pop-share-threshold-suppression",
-          "title": "pop_share_threshold parameter and cell suppression logic",
-          "description": "Add pop_share_threshold parameter to table_maker() (default 0.01). Validate threshold is NULL or numeric in (0, 1). In Step 10, extract pop_share rows, identify below-threshold cells, tag matching non-share rows with .suppress=TRUE, filter and emit warning. Anti-join pattern for efficient row matching. Subsequent fixes (2026-07-02): remove ghost obs_share from suppression output, shares denominator fix.",
-          "status": "done",
-          "brainstorm": ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
-          "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
-          "review": ".cg-docs/reviews/2026-06-01-pop-share-threshold-suppression-review.md"
-        },
-        {
-          "id": "api-threshold-validation",
-          "title": "API validation and plumber endpoint integration",
-          "description": "Update validate_table_input() to validate pop_share_threshold parameter. Update /table endpoint to accept and pass threshold to table_maker(). Plumber annotation documents the new parameter.",
-          "status": "done",
-          "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md"
-        }
-      ]
-    },
-    {
-      "id": "phase-8-pip-platform-ui",
-      "title": "Phase 8 — PIP Platform UI Integration",
-      "objective": "Stage 1 surveys UI in the PIP platform: survey selection and table configuration UI connected to the API service.",
-      "status": "in-progress",
-      "features": [
-        {
-          "id": "stage1-surveys-ui",
-          "title": "Stage 1 surveys UI",
-          "description": "Survey selection interface in the PIP platform backed by the session surveys / countries / regions endpoints.",
-          "status": "active",
-          "plan": ".cg-docs/plans/2026-06-23-stage1-surveys-ui.md"
-        },
-        {
-          "id": "pop-share-threshold-always-active",
-          "title": "Pop-share threshold as always-active suppression guard",
-          "description": "Treat pop-share threshold suppression as an always-on guard rather than an opt-in parameter, aligned with PIP disclosure rules.",
-          "status": "idea",
-          "brainstorm": ".cg-docs/brainstorms/2026-07-02-pop-share-threshold-always-active.md"
-        }
-      ]
-    }
-  ]
+﻿{
+    "schemaVersion":  "compound-gpid-roadmap-v1",
+    "milestones":  [
+                       {
+                           "id":  "phase-0-arrow-generation",
+                           "title":  "Phase 0 â€” Arrow Dataset Generation",
+                           "objective":  "Master Arrow repository, partition pipeline in {pipdata}, release manifest generation.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "version-partition-key",
+                                                "title":  "Version as partition key with manifest-based resolution",
+                                                "description":  "Add version (vermast_veralt) as a 4th Hive partition key. Manifest file_path is the sole version-resolution mechanism for {piptm}. Multiple versions coexist on disk.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+                                                "plan":  ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+                                                "review":  ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
+                                            },
+                                            {
+                                                "id":  "manifest-generation-partition-filter",
+                                                "title":  "Manifest generation and partition-filter loading",
+                                                "description":  "Transition manifest from file_path to partition filter keys. Release-inventory-driven generation in {pipdata} with dimension introspection. Manifest loading and open_dataset()|\u003efilter() data access in {piptm}.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
+                                                "plan":  ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+                                                "review":  ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-1-computation-engine",
+                           "title":  "Phase 1 â€” Computation Engine",
+                           "objective":  "Core computation engine: family-based orchestrator for poverty, inequality, and welfare measures with disaggregation across dimensions.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "measure-registry",
+                                                "title":  "Measure registry and input validation",
+                                                "description":  "Define canonical measures (5 poverty, 2 inequality, 12 welfare) in .MEASURE_REGISTRY. Implement .classify_measures(), .validate_by(), .validate_poverty_lines() validators.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "family-compute-functions",
+                                                "title":  "Family-level compute functions",
+                                                "description":  "Implement compute_poverty() (FGT measures), compute_inequality() (Gini, MLD), compute_welfare() (mean, median, quantiles, etc.) with collapse backend.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md",
+                                                "review":  ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+                                            },
+                                            {
+                                                "id":  "computation-engine-family-orchestrator",
+                                                "title":  "Family-based computation orchestrator (compute_measures)",
+                                                "description":  "Orchestrator dispatches compute_poverty(), compute_inequality(), compute_welfare() based on requested measure families. Builds compound GRP(c(\u0027pip_id\u0027, by)) for batch processing. Long-format output with poverty_line, measure, value, population columns.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md",
+                                                "review":  ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+                                            },
+                                            {
+                                                "id":  "dimension-disaggregation",
+                                                "title":  "Disaggregation across dimensions (gender, area, education, age)",
+                                                "description":  "Support up to 4 dimensions including at most 1 education column. Age binning (0â€“14, 15â€“24, 25â€“64, 65+). Dimension pre-filter with warnings. Surveys missing any requested dimension are excluded before loading.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-2-table-maker-api",
+                           "title":  "Phase 2 â€” table_maker() Top-Level API",
+                           "objective":  "Build the top-level table_maker() API function, data loading pipeline, and orchestration layer. Implement pip_lookup() triplet resolver. Optimize orchestration and I/O.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "table-maker-dual-input",
+                                                "title":  "table_maker() with dual input patterns (pip_id and triplets)",
+                                                "description":  "Implement table_maker(pip_id | country_code/year/welfare_type, measures, poverty_lines, by, release). Accept pip_id for API usage; fall back to triplet resolution via pip_lookup() for ad-hoc R console usage.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "pip-lookup-triplet-resolver",
+                                                "title":  "pip_lookup() triplet-to-pip_id resolver",
+                                                "description":  "Translate human-friendly (country_code, year, welfare_type) tuples to canonical pip_ids via manifest inner join. Emit warnings for unmatched triplets.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "load-surveys-data-loading",
+                                                "title":  "load_surveys() data loading with manifest resolution",
+                                                "description":  "Resolve manifest entries to Arrow partition paths. Lazy load via open_dataset(). Column selection and dictionary casting. Return with metadata columns (pip_id, country_code, surveyid_year, welfare_type).",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "orchestration-batch-vs-per-survey",
+                                                "title":  "Orchestration: batch vs. per-survey optimization",
+                                                "description":  "Compare Approach A (per-survey lapply with GRP rebuild) vs Approach B (single batch GRP). Benchmark on 15 surveys Ã— 50 iterations. Adopt Approach B (72% faster, 0.127s vs 0.432s). Update table_maker() implementation.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+                                                "plan":  ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+                                                "review":  ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md"
+                                            },
+                                            {
+                                                "id":  "arrow-vs-collapse-benchmark",
+                                                "title":  "Arrow push-down vs. in-memory compute benchmark",
+                                                "description":  "Measure feasibility of pushing grouping/aggregation to Arrow vs. loading and computing in R. Identify which measures can be pushed down. Document performance implications for future optimization.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+                                                "plan":  ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+                                                "review":  ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md"
+                                            },
+                                            {
+                                                "id":  "load-surveys-column-pruning",
+                                                "title":  "Column-pruned Arrow reads (I/O optimization)",
+                                                "description":  "Add cols parameter to load_surveys(); select() before collect() to skip bytes on the network. 68% I/O reduction (1.658s â†’ 0.524s, 15 surveys over UNC share). E2E pipeline 29% faster (2.370s â†’ 1.675s).",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
+                                                "plan":  ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
+                                                "review":  ".cg-docs/reviews/2026-05-20-load-surveys-column-pruning-review.md"
+                                            },
+                                            {
+                                                "id":  "remove-redundant-welfare-sort",
+                                                "title":  "Remove redundant welfare sort in compute_inequality()",
+                                                "description":  "compute_inequality() relies on upstream write-sorted Arrow data instead of sorting internally. is.unsorted() guard errors on unsorted input; multi-file guard prevents concatenation from breaking the sort contract.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-05-21-remove-redundant-welfare-sort.md",
+                                                "plan":  ".cg-docs/plans/2026-05-21-remove-redundant-welfare-sort.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-3-validation-testing",
+                           "title":  "Phase 3 â€” Validation, Testing \u0026 Quality",
+                           "objective":  "Build comprehensive test suite, parquet validation layer, performance profiling, and documentation.",
+                           "status":  "in-progress",
+                           "features":  [
+                                            {
+                                                "id":  "parquet-validation-schema-data",
+                                                "title":  "Parquet file validation (schema + data checks)",
+                                                "description":  "Implement validate_parquet_schema() (structural checks, dictionary type index width tolerance) and validate_parquet_data() (row-level validation: required columns present, no NAs in welfare/weight, factor level checks). Fast schema-only checks for pipeline validation. Core implementation complete; pending: extract duplicate .find_welfare_col() logic into single helper, add test for cols+ppp=NULL path.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md",
+                                                "review":  ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md"
+                                            },
+                                            {
+                                                "id":  "unit-test-coverage",
+                                                "title":  "Unit test suite (â‰¥90% coverage)",
+                                                "description":  "Tests for measure registry, validators, family compute functions, orchestrator, data loading, and table_maker(). Fixture-based testing with synthetic survey data. 414+ tests passing.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "performance-profiling",
+                                                "title":  "Performance benchmarking and profiling",
+                                                "description":  "Profile I/O, compute, and GC overhead. Document 15-survey and 100-survey performance. Column-pruning I/O optimization applied (2026-05-21): 68% I/O reduction; E2E pipeline 29% faster.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
+                                                "review":  ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md"
+                                            },
+                                            {
+                                                "id":  "data-quality-contracts",
+                                                "title":  "Data quality contracts and multi-file guard",
+                                                "description":  "Enforce welfare sort invariant and one-file-per-partition contract. Gini pre-sort validation in compute_inequality() (is.unsorted guard). Multi-file concatenation guard in .build_parquet_paths(). Solution doc: .cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md",
+                                                "review":  ".cg-docs/reviews/2026-04-07-computation-engine-review.md"
+                                            },
+                                            {
+                                                "id":  "dimension-partial-match-exclusion",
+                                                "title":  "Dimension pre-filter: exclude partial-match surveys",
+                                                "description":  "Refactored table_maker() Step 3 so surveys missing any requested breakdown dimension are excluded before loading (manifest check only), not loaded and NA-filled. Warning message lists each excluded survey and which dimensions it lacked.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-05-29-dimension-filter-skip-partial-surveys.md"
+                                            },
+                                            {
+                                                "id":  "exported-functions-test-sync",
+                                                "title":  "Exported functions test sync",
+                                                "description":  "Align exported functions with their test coverage after API/compute refactors (analysis_var routing, scalar poverty_line). Sync tests to the current exported surface.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-07-24-exported-functions-test-sync.md"
+                                            },
+                                            {
+                                                "id":  "documentation-api-dev",
+                                                "title":  "Documentation: API reference and developer guide",
+                                                "description":  "roxygen2 docstrings for all exported and internal functions. Developer guide for extending measure registry. Architecture overview (manifest, computation pipeline, output schema).",
+                                                "status":  "planned",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            },
+                                            {
+                                                "id":  "cran-readiness",
+                                                "title":  "CRAN readiness (devtools::check clean)",
+                                                "description":  "Resolve all warnings, notes, and errors from R CMD check. Finalize NAMESPACE, imports, and package metadata.",
+                                                "status":  "planned",
+                                                "plan":  ".cg-docs/plans/2026-04-07-computation-engine.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-4-api-service",
+                           "title":  "Phase 4 â€” API Service Layer",
+                           "objective":  "Plumber service layer connecting the PIP UI platform to table_maker(): core table/lookup endpoints, static catalogues, session surveys, request validation, and response serialization.",
+                           "status":  "in-progress",
+                           "features":  [
+                                            {
+                                                "id":  "plumber-table-endpoint",
+                                                "title":  "Plumber /table endpoint (GET/POST)",
+                                                "description":  "Accept pip_id vector, measures, poverty_lines, by dimensions. Return long-format JSON with poverty_line, measure, value, population. Support batch requests (\u003e50 surveys via POST with JSON body).",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
+                                            },
+                                            {
+                                                "id":  "plumber-lookup-endpoint",
+                                                "title":  "Plumber /lookup endpoint",
+                                                "description":  "Resolve (country_code, year, welfare_type) triplets to pip_ids for UI discovery. Caching layer for manifest queries.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
+                                            },
+                                            {
+                                                "id":  "categories-measures-covariates-endpoints",
+                                                "title":  "Static catalogue endpoints (categories, measures, covariates, stats)",
+                                                "description":  "pip_tablemaker_categories(), measures, covariates and summary-stats catalogue endpoints. Measure spec YAML drives the build registry and stats endpoint. GET categories structure fixes.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
+                                            },
+                                            {
+                                                "id":  "variable-registry",
+                                                "title":  "Variable registry and measure spec YAML",
+                                                "description":  "UI variable spec YAML and tm measure spec YAML. Schema and registry refactor to include measure spec; refactor to use pip_optional_dims.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-06-23-variable-registry.md"
+                                            },
+                                            {
+                                                "id":  "countries-regions-endpoints",
+                                                "title":  "Countries and regions endpoints",
+                                                "description":  "Countries and regions listing endpoints. Load filtered sample base in table_maker().",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-06-30-table-maker-filter-base-loading-path.md"
+                                            },
+                                            {
+                                                "id":  "analysis-var-routing",
+                                                "title":  "analysis_var routing and scalar poverty_line",
+                                                "description":  "feat(api,compute): add analysis_var routing and scalar poverty_line across the table pipeline. Table endpoint computation refactor (2026-07-01).",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-07-01-table-endpoint-computation-refactor.md"
+                                            },
+                                            {
+                                                "id":  "session-surveys-endpoints",
+                                                "title":  "Session surveys endpoints",
+                                                "description":  "Session surveys endpoints for survey selection persistence. pip_ids param for categories and covariates endpoints. Insomnia test collections for endpoint verification.",
+                                                "status":  "done"
+                                            },
+                                            {
+                                                "id":  "api-deployment-readme",
+                                                "title":  "API deployment documentation",
+                                                "description":  "API deployment README covering environment variables, data connections, and running the Plumber service.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-07-31-api-deployment-readme.md"
+                                            },
+                                            {
+                                                "id":  "survey-specific-variable-filtering",
+                                                "title":  "Survey-specific variable filtering for Step 2",
+                                                "description":  "Filter which variables (dimensions, welfare types, PPPs) apply per survey so the UI only offers valid options for the selected surveys.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md"
+                                            },
+                                            {
+                                                "id":  "error-handling-logging",
+                                                "title":  "Error handling, logging, and request tracing",
+                                                "description":  "Structured error responses (invalid pip_ids, unsupported measures, missing poverty_lines). Request logging with timestamps and parameter echoing. Optional telemetry for performance monitoring.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md"
+                                            },
+                                            {
+                                                "id":  "step3-description-file",
+                                                "title":  "Step 3 description file for table results",
+                                                "description":  "Generate structured markdown document describing table configuration: surveys analyzed, sample base filters, statistics computed, disaggregation structure, poverty line, PPP year, suppression threshold, and warnings. New build_table_description() function in R package and /description API endpoint. UI displays inline or downloads as PDF.",
+                                                "status":  "active",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-08-20-step3-description-architecture.md",
+                                                "plan":  ".cg-docs/plans/2026-08-20-step3-description-implementation.md"
+                                            },
+                                            {
+                                                "id":  "session-storage-endpoints",
+                                                "title":  "Session storage endpoints for survey selection persistence",
+                                                "description":  "Persist survey selections and table configuration across UI sessions via server-side session storage endpoints.",
+                                                "status":  "idea",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-5-ppp-resolution",
+                           "title":  "Phase 5 â€” PPP Parameter Handling \u0026 Refactor",
+                           "objective":  "End-to-end resolution of all PPP parameter handling: data loading (manifest-driven welfare column selection, skip logic), API input validation (type guards, digit-only check, truncated error echo), and full test coverage of edge cases.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "ppp-load-data-resolution",
+                                                "title":  "PPP welfare column resolution in load_surveys() / load_survey_microdata()",
+                                                "description":  "Manifest welfare_vars drives PPP resolution via .find_welfare_col(). load_survey_microdata() errors on missing PPP with available-PPPs hint. load_surveys() warns and skips surveys without the requested PPP column; errors only when all surveys are skipped. Column pruning translates logical \u0027welfare\u0027 to the physical PPP column name before open_dataset().",
+                                                "status":  "done",
+                                                "review":  ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md"
+                                            },
+                                            {
+                                                "id":  "ppp-api-input-validation",
+                                                "title":  "API PPP parameter validation refactor",
+                                                "description":  "Input type guard: only character or numeric accepted; lists, logicals, raw types rejected. Digit-only guard for string inputs. Truncated echo in error messages. Implemented in the plumber /table and /lookup endpoints.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+                                                "review":  ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md"
+                                            },
+                                            {
+                                                "id":  "ppp-edge-case-test-coverage",
+                                                "title":  "PPP edge-case test coverage",
+                                                "description":  "8 critical validation tests covering: hex notation (0x7D1), scientific notation (2e3), integer overflow, empty vector, multi-param accumulation, NULL, non-numeric string, and fractional year. All passing.",
+                                                "status":  "done"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-6-share-measures",
+                           "title":  "Phase 6 â€” Cell Share Measures",
+                           "objective":  "Add obs_share (cell observation proportion) and pop_share (cell population proportion) to the welfare computation family. Per-survey denominators, integrated with the measure registry pattern.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "obs-share-pop-share",
+                                                "title":  "obs_share and pop_share measures",
+                                                "description":  "Register obs_share and pop_share in .MEASURE_REGISTRY under welfare family. Compute as cell/survey ratios using coarser pip_id-only GRP for denominators. Reuse existing nobs when available. 21 total measures.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
+                                                "plan":  ".cg-docs/plans/2026-06-01-cell-share-measures.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-7-pop-share-threshold",
+                           "title":  "Phase 7 â€” Population Share Threshold-Based Suppression",
+                           "objective":  "Implement configurable population share suppression rule that removes non-share measures from cells where pop_share falls below a threshold. Integrated into table_maker() API and plumber /table endpoint.",
+                           "status":  "done",
+                           "features":  [
+                                            {
+                                                "id":  "pop-share-threshold-suppression",
+                                                "title":  "pop_share_threshold parameter and cell suppression logic",
+                                                "description":  "Add pop_share_threshold parameter to table_maker() (default 0.01). Validate threshold is NULL or numeric in (0, 1). In Step 10, extract pop_share rows, identify below-threshold cells, tag matching non-share rows with .suppress=TRUE, filter and emit warning. Anti-join pattern for efficient row matching. Subsequent fixes (2026-07-02): remove ghost obs_share from suppression output, shares denominator fix.",
+                                                "status":  "done",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
+                                                "plan":  ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+                                                "review":  ".cg-docs/reviews/2026-06-01-pop-share-threshold-suppression-review.md"
+                                            },
+                                            {
+                                                "id":  "api-threshold-validation",
+                                                "title":  "API validation and plumber endpoint integration",
+                                                "description":  "Update validate_table_input() to validate pop_share_threshold parameter. Update /table endpoint to accept and pass threshold to table_maker(). Plumber annotation documents the new parameter.",
+                                                "status":  "done",
+                                                "plan":  ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md"
+                                            }
+                                        ]
+                       },
+                       {
+                           "id":  "phase-8-pip-platform-ui",
+                           "title":  "Phase 8 â€” PIP Platform UI Integration",
+                           "objective":  "Stage 1 surveys UI in the PIP platform: survey selection and table configuration UI connected to the API service.",
+                           "status":  "in-progress",
+                           "features":  [
+                                            {
+                                                "id":  "stage1-surveys-ui",
+                                                "title":  "Stage 1 surveys UI",
+                                                "description":  "Survey selection interface in the PIP platform backed by the session surveys / countries / regions endpoints.",
+                                                "status":  "active",
+                                                "plan":  ".cg-docs/plans/2026-06-23-stage1-surveys-ui.md"
+                                            },
+                                            {
+                                                "id":  "pop-share-threshold-always-active",
+                                                "title":  "Pop-share threshold as always-active suppression guard",
+                                                "description":  "Treat pop-share threshold suppression as an always-on guard rather than an opt-in parameter, aligned with PIP disclosure rules.",
+                                                "status":  "idea",
+                                                "brainstorm":  ".cg-docs/brainstorms/2026-07-02-pop-share-threshold-always-active.md"
+                                            }
+                                        ]
+                       }
+                   ]
 }
