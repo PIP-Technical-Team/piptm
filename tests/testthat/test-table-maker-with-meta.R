@@ -2,65 +2,7 @@ library(data.table)
 library(arrow)
 library(jsonlite)
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
-reset_piptm_env_meta <- function() {
-  env <- getNamespace("piptm")$.piptm_env
-  env$arrow_root <- NULL
-  env$manifest_dir <- NULL
-  env$manifests <- list()
-  env$current_release <- NULL
-}
-
-make_tm_fixtures_meta <- function(env = parent.frame()) {
-  tmp_arrow <- withr::local_tempdir(.local_envir = env)
-  tmp_manifest <- withr::local_tempdir(.local_envir = env)
-
-  write_fixture_parquet_tm(
-    arrow_root = tmp_arrow,
-    country_code = "COL",
-    year = 2010L,
-    welfare_type = "INC",
-    version = "v01_v01",
-    pip_id = "COL_2010_ECH_INC_ALL",
-    extra_cols = c("gender", "area")
-  )
-
-  write_fixture_parquet_tm(
-    arrow_root = tmp_arrow,
-    country_code = "BOL",
-    year = 2000L,
-    welfare_type = "INC",
-    version = "v01_v01",
-    pip_id = "BOL_2000_ECH_INC_ALL"
-  )
-
-  entries <- list(
-    list(
-      pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1", country_code = "COL",
-      year = 2010L, welfare_type = "INC", version = "v01_v01",
-      survey_acronym = "ECH", module = "ALL",
-      dimensions = list("gender", "area"),
-      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
-    ),
-    list(
-      pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2", country_code = "BOL",
-      year = 2000L, welfare_type = "INC", version = "v01_v01",
-      survey_acronym = "ECH", module = "ALL",
-      dimensions = list(),
-      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
-    )
-  )
-
-  write_fixture_manifest_tm(tmp_manifest, "20260401_TEST", entries)
-
-  list(tmp_arrow = tmp_arrow, tmp_manifest = tmp_manifest)
-}
-
-activate_tm_fixtures_meta <- function(fx) {
-  piptm::set_manifest_dir(fx$tmp_manifest)
-  piptm::set_arrow_root(fx$tmp_arrow)
-}
+# Fixtures are in helper-description.R (shared)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 

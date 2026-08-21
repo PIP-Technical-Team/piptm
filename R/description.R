@@ -283,6 +283,62 @@ render_description_markdown <- function(model) {
 }
 
 
+# ── build_table_description ──────────────────────────────────────────────────
+
+#' Generate a markdown description of a table result
+#'
+#' Convenience wrapper that runs [table_maker()] with metadata capture, builds
+#' a [build_description_model()], and renders it to markdown via
+#' [render_description_markdown()].
+#'
+#' @inheritParams table_maker
+#'
+#' @return A single character string containing the full markdown description
+#'   document.
+#'
+#' @family api
+#' @export
+#' @examples
+#' \dontrun{
+#' set_manifest_dir("//server/manifests")
+#' set_arrow_root("//server/pip/arrow")
+#'
+#' md <- build_table_description(
+#'   pip_id       = "COL_2010_GEIH_INC_ALL",
+#'   analysis_var = "welfare",
+#'   measures     = c("mean", "gini"),
+#'   by           = c("gender", "area")
+#' )
+#' cat(md)
+#' }
+build_table_description <- function(pip_id        = NULL,
+                                    analysis_var,
+                                    measures,
+                                    poverty_line  = NULL,
+                                    by            = NULL,
+                                    filter_base   = NULL,
+                                    ppp           = 2021L,
+                                    release       = NULL,
+                                    pop_share_threshold = 0.01) {
+
+  result <- table_maker(
+    pip_id              = pip_id,
+    analysis_var        = analysis_var,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    by                  = by,
+    filter_base         = filter_base,
+    ppp                 = ppp,
+    release             = release,
+    pop_share_threshold = pop_share_threshold,
+    with_meta           = TRUE
+  )
+
+  model <- build_description_model(result)
+  render_description_markdown(model)
+}
+
+
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 #' Generate cell definition sentence from specification

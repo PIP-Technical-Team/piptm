@@ -12,6 +12,7 @@
 #
 # Endpoints (this file, bottom section — see Step 3)
 #   GET|POST /table
+#   GET /description
 #   GET /lookup
 #   GET /surveys
 #   GET /countries
@@ -189,6 +190,79 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
         error = function(e) NA_integer_
       )
     )
+  )
+}
+
+# ── GET /description ─────────────────────────────────────────────────────────
+
+#* Generate a structured description of a table result.
+#*
+#* Accepts the same parameters as `/table` and returns both the structured
+#* description model and a rendered markdown document.
+#*
+#* @param analysis_var:character Analysis variable name (required).
+#* @param pip_id:[character] Survey identifiers (required, repeatable; max 15).
+#* @param measures:[character] Measure names (required, repeatable).
+#* @param poverty_line:numeric Poverty line value (required when
+#*   `analysis_var = "pov_status"`).
+#* @param by:[character] Disaggregation dimensions (optional, repeatable).
+#* @param ppp:integer PPP reference year (optional; default `2021`).
+#* @param filter_base:character JSON-encoded sample-base filter object
+#*   (optional).
+#* @param pop_share_threshold:numeric Optional cell-suppression threshold
+#*   (default `0.01`).
+#* @param release:character Release ID (optional; defaults to current release).
+#* @serializer json list(na = "null")
+#* @get /description
+function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
+         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
+         release = NULL, res) {
+
+  check <- validate_table_input(
+    analysis_var = analysis_var,
+    pip_id = pip_id,
+    measures = measures,
+    poverty_line = poverty_line,
+    by = by,
+    ppp = ppp,
+    pop_share_threshold = pop_share_threshold
+  )
+  if (!check$valid) return(api_error(check$errors, 400L, res))
+  poverty_line        <- check$poverty_line
+  ppp                 <- check$ppp
+  pop_share_threshold <- check$pop_share_threshold
+
+  out <- capture_with_warnings({
+    parsed_filter_base <- if (is.null(filter_base)) {
+      NULL
+    } else {
+      jsonlite::fromJSON(filter_base)
+    }
+
+    rel  <- resolve_release(release)
+    meta_result <- piptm::table_maker(
+      pip_id              = pip_id,
+      analysis_var        = analysis_var,
+      measures            = measures,
+      poverty_line        = poverty_line,
+      by                  = by,
+      ppp                 = ppp,
+      filter_base         = parsed_filter_base,
+      release             = rel,
+      pop_share_threshold = pop_share_threshold,
+      with_meta           = TRUE
+    )
+    desc_model  <- piptm:::build_description_model(meta_result)
+    desc_markdown <- piptm:::render_description_markdown(desc_model)
+    list(model = desc_model, markdown = desc_markdown, rel = rel,
+         tm_warnings = meta_result$warnings)
+  })
+  if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  api_response(
+    list(model = out$result$model, markdown = out$result$markdown),
+    warnings = c(out$warnings, out$result$tm_warnings),
+    meta = list(release = out$result$rel)
   )
 }
 
