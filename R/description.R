@@ -27,30 +27,49 @@ NULL
 #'
 #' @return A named list with sections: `metadata`, `surveys`, `sample`,
 #'   `statistics`, `cell_definition`, `suppression`, and optionally `poverty_line`,
-#'   `layout`, `excluded_surveys`, and `warnings`.
+#'   `layout`, and `warnings`. Excluded surveys are in `surveys$excluded_surveys`.
 #'
 #' @keywords internal
 #' @export
 build_description_model <- function(table_result) {
+  
+  # Input validation
+  if (!is.list(table_result)) {
+    cli::cli_abort("{.arg table_result} must be a list")
+  }
+  
+  required_fields <- c("specification", "execution", "provenance")
+  missing_fields <- setdiff(required_fields, names(table_result))
+  if (length(missing_fields) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg table_result} missing required field{?s}: {.val {missing_fields}}",
+        "i" = "Expected fields from {.code table_maker(with_meta = TRUE)}: {.val {required_fields}}"
+      )
+    )
+  }
 
   spec <- table_result$specification
   exec <- table_result$execution
   prov <- table_result$provenance
 
   # ── metadata ──────────────────────────────────────────────────────────────
+  # Use resolved release and PPP from execution (what actually happened)
   metadata <- list(
-    release         = prov$release,
+    release         = exec$resolved_release,  # from execution
     package_version = prov$package_version,
-    ppp             = spec$ppp
+    ppp             = exec$resolved_ppp,      # from execution
+    ppp_column      = exec$ppp_column_used    # physical welfare column
   )
 
   # ── surveys ───────────────────────────────────────────────────────────────
+  # Use loaded_surveys (renamed from included_surveys in new schema)
   surveys <- list(
-    included = exec$included_surveys
+    included = exec$loaded_surveys
   )
 
   if (nrow(exec$excluded_surveys) > 0L) {
-    surveys$excluded_surveys <- exec$excluded_surveys
+    surveys$excluded_surveys <- exec$excluded_surveys  # now has stage column
   }
 
   # ── sample ────────────────────────────────────────────────────────────────
@@ -106,13 +125,14 @@ build_description_model <- function(table_result) {
   }
 
   # Add layout if by is present
+  # Layout roles are inferred from dimension order:
+  #   last dimension = columns
+  #   second-to-last = rows
+  #   third-to-last = super_columns
+  #   fourth-to-last = super_rows
+  # This is the documented contract; roles are not stored in specification.by
   if (!is.null(spec$by) && length(spec$by) > 0L) {
     model$layout <- list(variables = spec$by)
-  }
-
-  # Add excluded surveys if any
-  if (nrow(exec$excluded_surveys) > 0L) {
-    model$surveys$excluded_surveys <- exec$excluded_surveys
   }
 
   # Add warnings if any
@@ -121,7 +141,7 @@ build_description_model <- function(table_result) {
   }
 
   # ── Generate cell definition ──────────────────────────────────────────────
-  model$cell_definition <- .generate_cell_definition(spec)
+  model$cell_definition <- .generate_cell_definition(spec, exec)
 
   model
 }
@@ -141,84 +161,117 @@ build_description_model <- function(table_result) {
 #' @keywords internal
 #' @export
 render_description_markdown <- function(model) {
-  parts <- character(0L)
+  
+  # Input validation
+  if (!is.list(model)) {
+    cli::cli_abort("{.arg model} must be a list")
+  }
+  
+  required_fields <- c("metadata", "surveys", "sample", "statistics", "cell_definition")
+  missing_fields <- setdiff(required_fields, names(model))
+  if (length(missing_fields) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg model} missing required field{?s}: {.val {missing_fields}}",
+        "i" = "Expected fields from {.code build_description_model()}: {.val {required_fields}}"
+      )
+    )
+  }
+
+  # Use list accumulation to avoid O(n²) growth  
+  parts <- list()
+  idx <- 0L
 
   # ── Header ────────────────────────────────────────────────────────────────
-  parts <- c(parts, "# Table Description")
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- "# Table Description"
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Metadata line ─────────────────────────────────────────────────────────
+  # Include resolved PPP and physical column name
   meta_line <- paste0(
     "**Release:** ", model$metadata$release,
-    " \\u00b7 **PPP year:** ", model$metadata$ppp
+    " \u00b7 **PPP year:** ", model$metadata$ppp,
+    " \u00b7 **Column:** ", model$metadata$ppp_column
   )
-  parts <- c(parts, meta_line)
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- meta_line
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Surveys ───────────────────────────────────────────────────────────────
-  parts <- c(parts, "## Surveys Analyzed")
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- "## Surveys Analyzed"
+  idx <- idx + 1L; parts[[idx]] <- ""
 
-  # Survey table
-  parts <- c(parts, "| Country | Year | Welfare type | Survey ID |")
-  parts <- c(parts, "|---------|------|--------------|-----------|")
-  for (i in seq_len(nrow(model$surveys$included))) {
-    row <- model$surveys$included[i]
-    wt <- if (row$welfare_type == "INC") "Income" else "Consumption"
-    parts <- c(parts, paste0("| ", row$country_code, " | ", row$surveyid_year, " | ", wt, " | ", row$pip_id, " |"))
+  n_loaded <- nrow(model$surveys$included)
+  
+  # Edge case: all surveys excluded
+  if (n_loaded == 0L) {
+    idx <- idx + 1L; parts[[idx]] <- "No surveys contributed data to this table. All requested surveys were excluded."
+    idx <- idx + 1L; parts[[idx]] <- ""
+  } else {
+    idx <- idx + 1L; parts[[idx]] <- paste0(n_loaded, " survey", if (n_loaded != 1) "s" else "", " contributed data to this table.")
+    idx <- idx + 1L; parts[[idx]] <- ""
+
+    # Survey table
+    idx <- idx + 1L; parts[[idx]] <- "| Country | Year | Welfare type | Survey ID |"
+    idx <- idx + 1L; parts[[idx]] <- "|---------|------|--------------|-----------|"
+    for (i in seq_len(nrow(model$surveys$included))) {
+      row <- model$surveys$included[i]
+      wt <- if (row$welfare_type == "INC") "Income" else "Consumption"
+      idx <- idx + 1L; parts[[idx]] <- paste0("| ", row$country_code, " | ", row$surveyid_year, " | ", wt, " | ", row$pip_id, " |")
+    }
+    idx <- idx + 1L; parts[[idx]] <- ""
   }
-  parts <- c(parts, "")
 
-  # Excluded surveys (if any)
+  # Excluded surveys (if any) - now with stage column
   if (!is.null(model$surveys$excluded_surveys) && nrow(model$surveys$excluded_surveys) > 0L) {
-    parts <- c(parts, "### Excluded Surveys")
-    parts <- c(parts, "")
-    parts <- c(parts, "| Survey ID | Reason |")
-    parts <- c(parts, "|-----------|--------|")
+    idx <- idx + 1L; parts[[idx]] <- "### Excluded Surveys"
+    idx <- idx + 1L; parts[[idx]] <- ""
+    idx <- idx + 1L; parts[[idx]] <- "| Survey ID | Stage | Reason |"
+    idx <- idx + 1L; parts[[idx]] <- "|-----------|-------|--------|"
     for (i in seq_len(nrow(model$surveys$excluded_surveys))) {
       row <- model$surveys$excluded_surveys[i]
-      parts <- c(parts, paste0("| ", row$pip_id, " | ", row$reason, " |"))
+      idx <- idx + 1L; parts[[idx]] <- paste0("| ", row$pip_id, " | ", row$stage, " | ", row$reason, " |")
     }
-    parts <- c(parts, "")
+    idx <- idx + 1L; parts[[idx]] <- ""
     n_excl <- nrow(model$surveys$excluded_surveys)
     n_total <- nrow(model$surveys$included) + n_excl
-    parts <- c(parts, paste0(n_excl, " of ", n_total, " requested survey", if (n_total > 1) "s" else "", " were excluded."))
-    parts <- c(parts, "")
+    idx <- idx + 1L; parts[[idx]] <- paste0(n_excl, " of ", n_total, " requested survey", if (n_total > 1) "s" else "", " were excluded.")
+    idx <- idx + 1L; parts[[idx]] <- ""
   }
 
   # ── Sample Base ───────────────────────────────────────────────────────────
-  parts <- c(parts, "## Sample Base")
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- "## Sample Base"
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   if (model$sample$filters_applied) {
-    parts <- c(parts, "Filtered to:")
+    idx <- idx + 1L; parts[[idx]] <- "Filtered to:"
     for (var in model$sample$variables) {
       kept_text <- paste(var$kept, collapse = ", ")
-      parts <- c(parts, paste0("- **", var$label, ":** ", kept_text))
+      idx <- idx + 1L; parts[[idx]] <- paste0("- **", var$label, ":** ", kept_text)
     }
   } else {
-    parts <- c(parts, model$sample$text)
+    idx <- idx + 1L; parts[[idx]] <- model$sample$text
   }
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Statistics ────────────────────────────────────────────────────────────
-  parts <- c(parts, "## Statistics")
-  parts <- c(parts, "")
-  parts <- c(parts, paste0("- **Analysis variable:** ", model$statistics$analysis_var$label))
+  idx <- idx + 1L; parts[[idx]] <- "## Statistics"
+  idx <- idx + 1L; parts[[idx]] <- ""
+  idx <- idx + 1L; parts[[idx]] <- paste0("- **Analysis variable:** ", model$statistics$analysis_var$label)
 
   # Poverty line (if present)
   if (!is.null(model$poverty_line)) {
-    parts <- c(parts, paste0("- **Poverty line:** $", model$poverty_line$value, " per day (PPP ", model$poverty_line$ppp, ")"))
+    idx <- idx + 1L; parts[[idx]] <- paste0("- **Poverty line:** $", model$poverty_line$value, " per day (PPP ", model$poverty_line$ppp, ")")
   }
 
   measure_labels <- vapply(model$statistics$measures, function(m) m$label, character(1L))
-  parts <- c(parts, paste0("- **Measures:** ", paste(measure_labels, collapse = ", ")))
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- paste0("- **Measures:** ", paste(measure_labels, collapse = ", "))
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Layout (if present) ──────────────────────────────────────────────────
-  if (!is.null(model$layout)) {
-    parts <- c(parts, "## Table Structure")
-    parts <- c(parts, "")
+  # Only show Table Structure section if dimensions are present
+  if (!is.null(model$layout) && length(model$layout$variables) > 0L) {
+    idx <- idx + 1L; parts[[idx]] <- "## Table Structure"
+    idx <- idx + 1L; parts[[idx]] <- ""
 
     # Determine role labels
     role_order <- c("super_rows", "rows", "super_columns", "columns")
@@ -236,50 +289,50 @@ render_description_markdown <- function(model) {
       var <- model$layout$variables[[i]]
       role_label <- role_labels[roles[i]]
       cat_text <- if (!is.null(var$categories) && length(var$categories) > 0L) {
-        cat_labels <- vapply(var$categories, function(c) c$label, character(1L))
+        cat_labels <- vapply(var$categories, function(cat) cat$label, character(1L))
         paste0(" (", length(cat_labels), " categories: ", paste(cat_labels, collapse = ", "), ")")
       } else {
         ""
       }
-      parts <- c(parts, paste0("- **", role_label, ":** ", var$label, cat_text))
+      idx <- idx + 1L; parts[[idx]] <- paste0("- **", role_label, ":** ", var$label, cat_text)
     }
-    parts <- c(parts, "")
+    idx <- idx + 1L; parts[[idx]] <- ""
   }
 
   # ── Cell Definition ───────────────────────────────────────────────────────
-  parts <- c(parts, "## Cell Definition")
-  parts <- c(parts, "")
-  parts <- c(parts, model$cell_definition)
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- "## Cell Definition"
+  idx <- idx + 1L; parts[[idx]] <- ""
+  idx <- idx + 1L; parts[[idx]] <- model$cell_definition
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Suppression ───────────────────────────────────────────────────────────
-  parts <- c(parts, "## Suppression")
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- "## Suppression"
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   if (!is.null(model$suppression$threshold)) {
     threshold <- model$suppression$threshold
     n_suppressed <- model$suppression$n_suppressed_cells
     if (n_suppressed > 0L) {
-      parts <- c(parts, paste0("Cells with a population share below ", threshold * 100, "% are suppressed. ", n_suppressed, " cell", if (n_suppressed > 1) "s were" else " was", " suppressed in this table."))
+      idx <- idx + 1L; parts[[idx]] <- paste0("Cells with a population share below ", threshold * 100, "% are suppressed. ", n_suppressed, " cell", if (n_suppressed > 1) "s were" else " was", " suppressed in this table.")
     } else {
-      parts <- c(parts, paste0("Cells with a population share below ", threshold * 100, "% are suppressed (non-share measures removed). No cells were suppressed in this table."))
+      idx <- idx + 1L; parts[[idx]] <- paste0("Cells with a population share below ", threshold * 100, "% are suppressed (non-share measures removed). No cells were suppressed in this table.")
     }
   } else {
-    parts <- c(parts, "Suppression is disabled.")
+    idx <- idx + 1L; parts[[idx]] <- "Suppression is disabled."
   }
-  parts <- c(parts, "")
+  idx <- idx + 1L; parts[[idx]] <- ""
 
   # ── Warnings (if any) ────────────────────────────────────────────────────
   if (!is.null(model$warnings) && length(model$warnings) > 0L) {
-    parts <- c(parts, "## Warnings")
-    parts <- c(parts, "")
+    idx <- idx + 1L; parts[[idx]] <- "## Warnings"
+    idx <- idx + 1L; parts[[idx]] <- ""
     for (w in model$warnings) {
-      parts <- c(parts, paste0("- ", w))
+      idx <- idx + 1L; parts[[idx]] <- paste0("- ", w)
     }
-    parts <- c(parts, "")
+    idx <- idx + 1L; parts[[idx]] <- ""
   }
 
-  paste(parts, collapse = "\n")
+  paste(unlist(parts), collapse = "\n")
 }
 
 
@@ -341,12 +394,14 @@ build_table_description <- function(pip_id        = NULL,
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
-#' Generate cell definition sentence from specification
+#' Generate cell definition sentence from specification and execution
 #'
 #' @param spec The specification list from table_result.
+#' @param exec The execution list from table_result.
 #' @return A character string describing what each cell represents.
 #' @keywords internal
-.generate_cell_definition <- function(spec) {
+.generate_cell_definition <- function(spec, exec) {
+  # Use execution truth for measures (what was actually computed)
   measure_labels <- vapply(spec$measures, function(m) m$label, character(1L))
   measures_text <- paste(measure_labels, collapse = ", ")
   av_label <- spec$analysis_var$label
@@ -359,27 +414,28 @@ build_table_description <- function(pip_id        = NULL,
   } else {
     var_labels <- vapply(spec$by, function(v) v$label, character(1L))
     if (length(var_labels) == 1L) {
-      combo_text <- var_labels
+      combo_text <- paste0("Each cell represents one ", var_labels, " category.")
     } else if (length(var_labels) == 2L) {
-      combo_text <- paste(var_labels, collapse = " and ")
+      combo_text <- paste0("Each cell represents one combination of ", paste(var_labels, collapse = " and "), ".")
     } else {
-      combo_text <- paste(
+      combo_text <- paste0(
+        "Each cell represents one combination of ",
         paste(var_labels[-length(var_labels)], collapse = ", "),
-        "and",
-        var_labels[length(var_labels)]
+        ", and ",
+        var_labels[length(var_labels)], "."
       )
     }
     base_text <- paste0(
-      "Each cell represents one combination of ", combo_text, ". ",
+      combo_text, " ",
       "Statistics are calculated for the weighted population in that subgroup."
     )
   }
 
-  # Add poverty line if present
+  # Add poverty line if present (from specification - it's a request parameter)
   if (!is.null(spec$poverty_line)) {
     base_text <- paste0(
       base_text,
-      " using a poverty line of $", spec$poverty_line, " per day (PPP ", spec$ppp, ")."
+      " Poverty measures use a line of $", spec$poverty_line, " per day (", exec$resolved_ppp, " PPP)."
     )
   }
 

@@ -73,7 +73,11 @@ make_mock_table_result <- function(
   filter_base = NULL,
   ppp = 2021L,
   pop_share_threshold = 0.01,
-  excluded = data.table::data.table(pip_id = character(0L), reason = character(0L)),
+  excluded = data.table::data.table(
+    pip_id = character(0L), 
+    reason = character(0L),
+    stage = character(0L)  # NEW: stage column
+  ),
   n_suppressed = 0L
 ) {
   spec <- list(
@@ -109,18 +113,22 @@ make_mock_table_result <- function(
     pop_share_threshold = pop_share_threshold
   )
 
+  # NEW SCHEMA: execution block
   exec <- list(
-    included_surveys = data.table::data.table(
+    requested_pip_id  = pip_ids,                    # NEW
+    loaded_surveys    = data.table::data.table(     # RENAMED from included_surveys
       pip_id = pip_ids,
       country_code = rep("COL", length(pip_ids)),
       surveyid_year = rep(2010L, length(pip_ids)),
       welfare_type = rep("INC", length(pip_ids))
     ),
-    excluded_surveys = excluded,
-    filters_applied = filter_base,
-    measures_computed = measures,
-    suppression = list(threshold = pop_share_threshold, n_suppressed_cells = n_suppressed),
-    ppp_used = ppp
+    excluded_surveys  = excluded,                   # now has stage column
+    resolved_release  = "20260401_TEST",            # NEW
+    resolved_ppp      = ppp,                        # NEW
+    ppp_column_used   = "welfare_ppp_2021_01_02",  # NEW
+    filters_applied   = filter_base,                # unchanged
+    measures_computed = measures,                   # unchanged
+    suppression       = list(threshold = pop_share_threshold, n_suppressed_cells = n_suppressed)
   )
 
   prov <- list(
@@ -128,11 +136,12 @@ make_mock_table_result <- function(
     package_version = "0.1.0"
   )
 
+  # Use deterministic values instead of runif()
   dt <- data.table::data.table(
     pip_id = rep(pip_ids, each = length(measures)),
     measure = rep(measures, length(pip_ids)),
-    value = runif(length(pip_ids) * length(measures)),
-    population = rep(1000, length(pip_ids) * length(measures))
+    value = seq(10.5, by = 0.5, length.out = length(pip_ids) * length(measures)),  # deterministic
+    population = rep(1000L, length(pip_ids) * length(measures))
   )
 
   list(

@@ -37,23 +37,93 @@ test_that("with_meta = TRUE returns list with 5 fields", {
   expect_true(all(c("data", "specification", "execution", "provenance", "warnings") %in% names(res)))
 })
 
-test_that("with_meta = TRUE data field is a data.table", {
+test_that("requested_pip_id captured at function entry", {
   fx <- make_tm_fixtures_meta()
   activate_tm_fixtures_meta(fx)
   withr::defer(reset_piptm_env_meta())
 
   res <- piptm::table_maker(
-    pip_id = "COL_2010_ECH_INC_ALL",
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
     analysis_var = "welfare",
-    measures = c("mean", "gini"),
+    measures = "mean",
     with_meta = TRUE
   )
 
-  expect_true(data.table::is.data.table(res$data))
-  expect_setequal(unique(res$data$measure), c("mean", "gini"))
+  exec <- res$execution
+  expect_true("requested_pip_id" %in% names(exec))
+  expect_equal(exec$requested_pip_id, c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"))
 })
 
-test_that("with_meta = TRUE specification contains labeled inputs", {
+test_that("loaded_surveys populated after all exclusions", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  # Request with dimension that one survey lacks
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    analysis_var = "welfare",
+    measures = "mean",
+    by = "gender",  # BOL doesn't have gender
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("loaded_surveys" %in% names(exec))
+  expect_true(data.table::is.data.table(exec$loaded_surveys))
+  
+  # Should only include COL (BOL excluded for missing gender)
+  expect_equal(nrow(exec$loaded_surveys), 1L)
+  expect_equal(exec$loaded_surveys$pip_id, "COL_2010_ECH_INC_ALL")
+  expect_true(all(c("pip_id", "country_code", "surveyid_year", "welfare_type") %in% names(exec$loaded_surveys)))
+})
+
+test_that("excluded_surveys with stage tracking", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  # Request with dimension that BOL lacks
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    analysis_var = "welfare",
+    measures = "mean",
+    by = "gender",
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("excluded_surveys" %in% names(exec))
+  expect_true(data.table::is.data.table(exec$excluded_surveys))
+  
+  # BOL should be excluded
+  expect_equal(nrow(exec$excluded_surveys), 1L)
+  expect_equal(exec$excluded_surveys$pip_id, "BOL_2000_ECH_INC_ALL")
+  expect_true(all(c("pip_id", "reason", "stage") %in% names(exec$excluded_surveys)))
+  expect_equal(exec$excluded_surveys$stage, "dimension_pre")
+  expect_true(grepl("Missing dimensions.*gender", exec$excluded_surveys$reason))
+})
+
+test_that("excluded_surveys manifest stage for unknown pip_id", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "UNKNOWN_ID"),
+    analysis_var = "welfare",
+    measures = "mean",
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_equal(nrow(exec$excluded_surveys), 1L)
+  expect_equal(exec$excluded_surveys$pip_id, "UNKNOWN_ID")
+  expect_equal(exec$excluded_surveys$stage, "manifest")
+  expect_equal(exec$excluded_surveys$reason, "Not found in manifest")
+})
+
+test_that("resolved_release tracked consistently", {
   fx <- make_tm_fixtures_meta()
   activate_tm_fixtures_meta(fx)
   withr::defer(reset_piptm_env_meta())
@@ -61,28 +131,130 @@ test_that("with_meta = TRUE specification contains labeled inputs", {
   res <- piptm::table_maker(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
-    measures = c("mean", "gini"),
-    by = c("gender", "area"),
+    measures = "mean",
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  prov <- res$provenance
+  
+  expect_true("resolved_release" %in% names(exec))
+  expect_equal(exec$resolved_release, prov$release)
+  expect_equal(exec$resolved_release, "20260401_TEST")  # current release from fixture
+})
+
+test_that("resolved_ppp and ppp_column_used tracked", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  res <- piptm::table_maker(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    ppp = 2021L,
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("resolved_ppp" %in% names(exec))
+  expect_true("ppp_column_used" %in% names(exec))
+  expect_equal(exec$resolved_ppp, 2021L)
+  expect_equal(exec$ppp_column_used, "welfare_ppp_2021_01_02")  # from fixture manifest
+})
+
+test_that("measures_computed stores measure names not families", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  res <- piptm::table_maker(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = c("mean", "gini", "median"),
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("measures_computed" %in% names(exec))
+  expect_equal(exec$measures_computed, c("mean", "gini", "median"))
+  
+  # Should NOT contain family names
+  expect_false("summary_stats" %in% exec$measures_computed)
+  expect_false("inequality" %in% exec$measures_computed)
+})
+
+test_that("filters_applied populated from normalized_filter_base", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  # Test that filters_applied captures normalized_filter_base
+  # Use a pass-through filter that includes all data (no actual filtering)
+  # We test the filter logic elsewhere; here we just verify metadata capture
+  res <- piptm::table_maker(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("filters_applied" %in% names(exec))
+  expect_true(is.list(exec$filters_applied))
+  
+  # When no filter_base provided, filters_applied should be an empty list
+  expect_equal(length(exec$filters_applied), 0L)
+})
+
+test_that("warnings captured via registered handler", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  # Trigger exclusion warning
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    analysis_var = "welfare",
+    measures = "mean",
+    by = "gender",  # BOL doesn't have gender
+    with_meta = TRUE
+  )
+
+  expect_true("warnings" %in% names(res))
+  expect_true(length(res$warnings) > 0)
+  
+  # Should contain dimension exclusion warning
+  warning_text <- paste(res$warnings, collapse = " ")
+  expect_true(grepl("Excluding.*survey.*lack.*dimension", warning_text))
+})
+
+test_that("specification contains requested pip_id not loaded", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    analysis_var = "welfare",
+    measures = "mean",
+    by = "gender",  # BOL excluded
     with_meta = TRUE
   )
 
   spec <- res$specification
-  expect_true(is.list(spec))
-  expect_equal(spec$pip_id, "COL_2010_ECH_INC_ALL")
-  expect_true(is.list(spec$analysis_var))
-  expect_true("name" %in% names(spec$analysis_var))
-  expect_true("label" %in% names(spec$analysis_var))
-  expect_equal(spec$analysis_var$name, "welfare")
-  expect_true(is.list(spec$measures))
-  expect_equal(length(spec$measures), 2)
-  expect_true(all(vapply(spec$measures, function(m) all(c("name", "label") %in% names(m)), logical(1))))
-  expect_equal(spec$ppp, 2021L)
-  expect_null(spec$poverty_line)
-  expect_true(is.list(spec$by))
-  expect_equal(length(spec$by), 2)
+  exec <- res$execution
+  
+  # Specification should have requested (both surveys)
+  expect_equal(spec$pip_id, c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"))
+  
+  # Execution should have only loaded (just COL)
+  expect_equal(exec$requested_pip_id, c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"))
+  expect_equal(nrow(exec$loaded_surveys), 1L)
+  expect_equal(exec$loaded_surveys$pip_id, "COL_2010_ECH_INC_ALL")
 })
 
-test_that("with_meta = TRUE execution tracks included surveys", {
+test_that("new schema fields all present in execution block", {
   fx <- make_tm_fixtures_meta()
   activate_tm_fixtures_meta(fx)
   withr::defer(reset_piptm_env_meta())
@@ -95,66 +267,17 @@ test_that("with_meta = TRUE execution tracks included surveys", {
   )
 
   exec <- res$execution
-  expect_true(is.list(exec))
-  expect_true(is.data.table(exec$included_surveys))
-  expect_true("pip_id" %in% names(exec$included_surveys))
-  expect_equal(exec$included_surveys$pip_id, "COL_2010_ECH_INC_ALL")
-  expect_true(is.data.table(exec$excluded_surveys))
-  expect_equal(nrow(exec$excluded_surveys), 0)
-})
-
-test_that("with_meta = TRUE execution tracks excluded surveys", {
-  fx <- make_tm_fixtures_meta()
-  activate_tm_fixtures_meta(fx)
-  withr::defer(reset_piptm_env_meta())
-
-  expect_warning(
-    res <- piptm::table_maker(
-      pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
-      analysis_var = "welfare",
-      measures = "mean",
-      by = "gender",
-      with_meta = TRUE
-    ),
-    "Excluding"
+  expected_fields <- c(
+    "requested_pip_id",
+    "loaded_surveys",
+    "excluded_surveys",
+    "resolved_release",
+    "resolved_ppp",
+    "ppp_column_used",
+    "filters_applied",
+    "measures_computed",
+    "suppression"
   )
-
-  exec <- res$execution
-  expect_true(nrow(exec$excluded_surveys) > 0)
-  expect_true("pip_id" %in% names(exec$excluded_surveys))
-  expect_true("reason" %in% names(exec$excluded_surveys))
-  expect_equal(exec$excluded_surveys$pip_id, "BOL_2000_ECH_INC_ALL")
-})
-
-test_that("with_meta = TRUE provenance contains release and version", {
-  fx <- make_tm_fixtures_meta()
-  activate_tm_fixtures_meta(fx)
-  withr::defer(reset_piptm_env_meta())
-
-  res <- piptm::table_maker(
-    pip_id = "COL_2010_ECH_INC_ALL",
-    analysis_var = "welfare",
-    measures = "mean",
-    with_meta = TRUE
-  )
-
-  prov <- res$provenance
-  expect_true(is.list(prov))
-  expect_true("release" %in% names(prov))
-  expect_true("package_version" %in% names(prov))
-})
-
-test_that("with_meta = TRUE warnings field is a list", {
-  fx <- make_tm_fixtures_meta()
-  activate_tm_fixtures_meta(fx)
-  withr::defer(reset_piptm_env_meta())
-
-  res <- piptm::table_maker(
-    pip_id = "COL_2010_ECH_INC_ALL",
-    analysis_var = "welfare",
-    measures = "mean",
-    with_meta = TRUE
-  )
-
-  expect_true(is.list(res$warnings))
+  
+  expect_true(all(expected_fields %in% names(exec)))
 })

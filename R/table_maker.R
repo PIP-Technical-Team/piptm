@@ -1,4 +1,4 @@
-﻿#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
+#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
 #' @importFrom cli cli_abort cli_warn
 #' @importFrom collapse GRP
 NULL
@@ -96,11 +96,17 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 # Called only when with_meta = TRUE.
 # @keywords internal
 .build_specification <- function(pip_id, analysis_var, measures, poverty_line,
-                                 by, filter_base, ppp, pop_share_threshold) {
+                                 by, filter_base, ppp, pop_share_threshold, release) {
+  
+  # Hoist all registry lookups to avoid repeated calls
+  stat_groups <- tryCatch(piptm_stat_groups(release = release), error = function(e) list())
+  covariates <- tryCatch(piptm_layout_covariates(release = release), error = function(e) list())
+  filter_cats <- tryCatch(piptm_filter_categories(release = release), error = function(e) list())
+  
   # Analysis variable with label
   av_label <- analysis_var
   tryCatch({
-    avs <- piptm_analysis_variables()
+    avs <- piptm_analysis_variables(release = release)
     match_idx <- which(vapply(avs, function(av) av[["varname"]] == analysis_var, logical(1L)))
     if (length(match_idx) == 1L) av_label <- avs[[match_idx]][["label"]]
   }, error = function(e) NULL)
@@ -109,24 +115,21 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   measures_list <- lapply(measures, function(m) {
     lbl <- m
     fam <- .MEASURE_REGISTRY[[m]]
-    tryCatch({
-      sg <- piptm_stat_groups()
-      for (group in sg) {
-        for (meas in group[["measures"]]) {
-          if (meas[["measure"]] == m) {
-            lbl <- meas[["label"]]
-            break
-          }
+    # Use pre-fetched stat_groups
+    for (group in stat_groups) {
+      for (meas in group[["measures"]]) {
+        if (meas[["measure"]] == m) {
+          lbl <- meas[["label"]]
+          break
         }
       }
-    }, error = function(e) NULL)
+    }
     list(name = m, label = lbl, family = fam %||% NA_character_)
   })
 
-  # by with labels and categories
+  # by with labels and categories  
   by_list <- NULL
   if (!is.null(by) && length(by) > 0L) {
-    covariates <- tryCatch(piptm_layout_covariates(), error = function(e) list())
     by_list <- lapply(by, function(d) {
       lbl <- d
       n_cats <- NULL
@@ -136,8 +139,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
         lbl <- cov_match[[1L]][["label"]]
         n_cats <- cov_match[[1L]][["n_categories"]]
       }
-      # Try to get categories from filter categories
-      filter_cats <- tryCatch(piptm_filter_categories(), error = function(e) list())
+      # Use pre-fetched filter_cats
       fc_match <- Filter(function(f) f[["varname"]] == d, filter_cats)
       if (length(fc_match) == 1L) {
         cats <- fc_match[[1L]][["subcategories"]]
@@ -149,7 +151,6 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   # filter_base with labels
   fb_list <- NULL
   if (!is.null(filter_base) && length(filter_base) > 0L) {
-    filter_cats <- tryCatch(piptm_filter_categories(), error = function(e) list())
     fb_list <- lapply(names(filter_base), function(varname) {
       lbl <- varname
       fc_match <- Filter(function(f) f[["varname"]] == varname, filter_cats)
@@ -226,6 +227,9 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   always retained so callers can inspect the distribution of suppressed
 #'   groups.  Has no effect when `by = NULL` (aggregate mode: each cell is a
 #'   full survey with pop_share = 1.0).  Default: `0.01` (1%).
+#' @param with_meta Logical. When `TRUE`, returns a list with `data`, 
+#'   `specification`, `execution`, `provenance`, and `warnings` instead of a 
+#'   plain data.table. Default `FALSE` preserves backward compatibility.
 #'
 #' @return A [data.table::data.table()] in **long format** with columns:
 #' \describe{
@@ -287,15 +291,34 @@ table_maker <- function(pip_id        = NULL,
   # When with_meta is TRUE, we capture specification, execution metadata,
   # provenance, and warnings alongside the normal computation.  The default
   # path (with_meta = FALSE) is completely unchanged.
+  #
+  # NEW SCHEMA (corrective redesign 2026-08-24):
+  # Execution block: what actually happened
+  #   - requested_pip_id: original user input (before any exclusions)
+  #   - loaded_surveys: surveys that passed all pre-filters and contributed data
+  #   - excluded_surveys: surveys dropped at each stage (manifest, filter_pre, dimension_pre)
+  #   - resolved_release: single authority release ID used throughout
+  #   - resolved_ppp: PPP year after resolution
+  #   - ppp_column_used: physical welfare column name (e.g., "welfare_ppp_2021")
+  #   - filters_applied: normalized request (global, not per-survey)
+  #   - measures_computed: actual measure names dispatched (not families)
+  #   - suppression: threshold + count of suppressed cells
   .meta_state <- if (with_meta) {
     list(
-      included_surveys  = NULL,
-      excluded_surveys  = data.table::data.table(pip_id = character(0L), reason = character(0L)),
-      filters_applied   = NULL,
-      measures_computed = character(0L),
-      suppression       = NULL,
-      ppp_used          = NULL,
-      warnings          = list()
+      requested_pip_id  = NULL,      # Step 2
+      loaded_surveys    = NULL,      # Step 2
+      excluded_surveys  = data.table::data.table(
+                            pip_id = character(0L),
+                            reason = character(0L),
+                            stage  = character(0L)  # Step 3
+                          ),
+      resolved_release  = NULL,      # Step 4
+      resolved_ppp      = NULL,      # Step 4
+      ppp_column_used   = NULL,      # Step 4
+      filters_applied   = NULL,      # Step 6
+      measures_computed = character(0L),  # Step 5
+      suppression       = NULL,      # unchanged
+      warnings          = list()     # Step 7
     )
   } else {
     NULL
@@ -304,7 +327,7 @@ table_maker <- function(pip_id        = NULL,
   # Warning handler: captures cli_warn() messages when with_meta = TRUE
   .warn_handler <- if (with_meta) {
     function(w) {
-      .meta_state[[length(.meta_state) + 1L]] <<-
+      .meta_state[["warnings"]][[length(.meta_state[["warnings"]]) + 1L]] <<-
         conditionMessage(w)
       invokeRestart("muffleWarning")
     }
@@ -312,7 +335,10 @@ table_maker <- function(pip_id        = NULL,
     NULL
   }
 
-  # ── 0. Resolve survey identifiers ──────────────────────────────────────────
+  # ── Computation body ─────────────────────────────────────────────────────
+  # Wrapped in an expression so withCallingHandlers can intercept warnings
+  # when with_meta = TRUE, without changing the execution flow.
+  .compute_body <- expression({
   if (is.null(pip_id)) {
     cli_abort("{.arg pip_id} must be provided.")
   }
@@ -321,8 +347,18 @@ table_maker <- function(pip_id        = NULL,
     cli_abort("No surveys to process: {.arg pip_id} is empty after resolution.")
   }
 
+  # Capture requested pip_id (before any manifest/filter/dimension exclusions)
+  if (with_meta) {
+    .meta_state[["requested_pip_id"]] <- pip_id
+  }
+
   # ── 1. Validate computation parameters ─────────────────────────────────────
   families <- .classify_measures(measures)
+  
+  # Populate measures_computed metadata (measure names, not family names)
+  if (with_meta) {
+    .meta_state[["measures_computed"]] <- measures
+  }
   .validate_poverty_lines(poverty_line, names(families))
   by_validate <- by
   if (!is.null(by_validate)) {
@@ -386,10 +422,26 @@ table_maker <- function(pip_id        = NULL,
       }),
       filter_vars
     )
+    
+    # Populate filters_applied metadata
+    if (with_meta) {
+      .meta_state[["filters_applied"]] <- normalized_filter_base
+    }
+  } else {
+    # No filter_base provided; populate filters_applied with empty list
+    if (with_meta) {
+      .meta_state[["filters_applied"]] <- list()
+    }
   }
 
   # ── 2. Manifest lookup ──────────────────────────────────────────────────────
-  mf      <- piptm_manifest(release)
+  # Resolve release once and use consistently throughout
+  resolved_release <- release %||% piptm_current_release()
+  if (with_meta) {
+    .meta_state[["resolved_release"]] <- resolved_release
+  }
+  
+  mf      <- piptm_manifest(resolved_release)
   .ids    <- pip_id  # local copy avoids data.table column-name ambiguity
   entries <- mf[pip_id %chin% .ids]
 
@@ -402,16 +454,6 @@ table_maker <- function(pip_id        = NULL,
     )
   }
 
-  # Harvest: included surveys (before pre-filters)
-  if (!is.null(.meta_state)) {
-    .meta_state[["included_surveys"]] <- data.table::data.table(
-      pip_id        = entries[["pip_id"]],
-      country_code  = entries[["country_code"]],
-      surveyid_year = entries[["year"]],
-      welfare_type  = entries[["welfare_type"]]
-    )
-  }
-
   # Warn about pip_ids that exist in the request but not in the manifest
   missing_ids <- setdiff(pip_id, entries$pip_id)
   if (length(missing_ids)) {
@@ -421,6 +463,19 @@ table_maker <- function(pip_id        = NULL,
         "i" = "{.val {missing_ids}}"
       )
     )
+    # Harvest: manifest stage exclusions
+    if (with_meta) {
+      for (id in missing_ids) {
+        .meta_state[["excluded_surveys"]] <- rbind(
+          .meta_state[["excluded_surveys"]],
+          data.table::data.table(
+            pip_id = id,
+            reason = "Not found in manifest",
+            stage  = "manifest"
+          )
+        )
+      }
+    }
   }
 
   # ── 2b. Filter-base manifest pre-filter (before loading) ──────────────────
@@ -452,6 +507,27 @@ table_maker <- function(pip_id        = NULL,
           "i" = "{dropped_info}"
         )
       )
+
+      # Harvest excluded surveys into metadata
+      if (with_meta) {
+        for (i in seq_len(nrow(dropped_entries))) {
+          have <- dropped_entries$dimensions[[i]]
+          miss <- setdiff(filter_vars, have)
+          reason <- if (length(miss) == length(filter_vars)) {
+            "No filter_base dimensions"
+          } else {
+            paste0("Missing filter_base dimensions: ", paste(miss, collapse = ", "))
+          }
+          .meta_state[["excluded_surveys"]] <- rbind(
+            .meta_state[["excluded_surveys"]],
+            data.table::data.table(
+              pip_id = dropped_entries$pip_id[[i]],
+              reason = reason,
+              stage  = "filter_pre"
+            )
+          )
+        }
+      }
 
       entries <- entries[full_filter_idx]
     }
@@ -515,7 +591,8 @@ table_maker <- function(pip_id        = NULL,
             pip_id = dropped_entries[["pip_id"]],
             reason = paste0("Missing dimensions: ", vapply(dropped_entries[["dimensions"]], function(d) {
               paste(setdiff(by_check, d), collapse = ", ")
-            }, character(1L)))
+            }, character(1L))),
+            stage  = "dimension_pre"
           )
           .meta_state[["excluded_surveys"]] <- data.table::rbindlist(list(
             .meta_state[["excluded_surveys"]], exc
@@ -532,6 +609,18 @@ table_maker <- function(pip_id        = NULL,
         )
       }
     }
+  }
+
+  # Harvest: loaded surveys (after all pre-filters, before loading)
+  # Semantic: these surveys passed manifest match, filter-base pre-filter,
+  # and dimension pre-filter, and will contribute data to the final result.
+  if (with_meta) {
+    .meta_state[["loaded_surveys"]] <- data.table::data.table(
+      pip_id        = entries[["pip_id"]],
+      country_code  = entries[["country_code"]],
+      surveyid_year = entries[["year"]],
+      welfare_type  = entries[["welfare_type"]]
+    )
   }
 
   # ── 4. Load ─────────────────────────────────────────────────────────────────
@@ -555,7 +644,27 @@ table_maker <- function(pip_id        = NULL,
                      ppp = ppp,
                      cols = needed_cols,
                      filter_base = normalized_filter_base,
-                     release = release)
+                     release = resolved_release)
+
+  # Populate PPP metadata after load_surveys (tracks resolved PPP + physical column)
+  if (with_meta) {
+    # Resolved PPP is the effective PPP year used for loading
+    .meta_state[["resolved_ppp"]] <- ppp
+    
+    # Physical PPP column used: derive from manifest welfare_vars
+    # All surveys in entries have the same welfare column structure
+    # (load_surveys already errored if they diverge)
+    if (nrow(entries) > 0L) {
+      welfare_vars_sample <- entries$welfare_vars[[1L]]
+      # Use .find_welfare_col helper from load_data.R
+      matched_col <- piptm:::.find_welfare_col(welfare_vars_sample, ppp)
+      if (length(matched_col) > 0L) {
+        .meta_state[["ppp_column_used"]] <- matched_col[[1L]]
+      } else {
+        .meta_state[["ppp_column_used"]] <- NA_character_
+      }
+    }
+  }
 
   if (nrow(dt) == 0L) {
     cli_abort(
@@ -604,7 +713,7 @@ table_maker <- function(pip_id        = NULL,
     analysis_var = analysis_var,
     poverty_line = poverty_line,
     by = by,
-    release = release
+    release = resolved_release
   )
 
   # ── 8. Attach survey metadata ────────────────────────────────────────────────
@@ -673,6 +782,14 @@ table_maker <- function(pip_id        = NULL,
       cell_keys  <- c("pip_id", dim_cols)
       suppressed <- pop_rows[value < pop_share_threshold]
 
+      # Populate suppression metadata
+      if (with_meta) {
+        .meta_state[["suppression"]] <- list(
+          threshold = pop_share_threshold,
+          n_suppressed_cells = nrow(suppressed)
+        )
+      }
+
       if (nrow(suppressed) > 0L) {
         # Retain ALL shares-family measures for below-threshold cells so
         # callers can inspect the population distribution of suppressed groups.
@@ -702,7 +819,32 @@ table_maker <- function(pip_id        = NULL,
         result[idx, .suppress := !(measure %chin% share_measures)]
         result <- result[(.suppress) == FALSE][, .suppress := NULL]
       }
+    } else {
+      # suppression not meaningful when by = NULL
+      if (with_meta) {
+        .meta_state[["suppression"]] <- list(
+          threshold = pop_share_threshold,
+          n_suppressed_cells = 0L
+        )
+      }
     }
+  } else {
+    # suppression disabled
+    if (with_meta) {
+      .meta_state[["suppression"]] <- list(
+        threshold = NULL,
+        n_suppressed_cells = 0L
+      )
+    }
+  }
+
+  }) # end .compute_body expression
+
+  # Execute with or without warning capture
+  if (!is.null(.warn_handler)) {
+    withCallingHandlers(eval(.compute_body), warning = .warn_handler)
+  } else {
+    eval(.compute_body)
   }
 
     # ── Return ──────────────────────────────────────────────────────────────────
@@ -710,26 +852,29 @@ table_maker <- function(pip_id        = NULL,
     return(result[])
   }
 
-  # Build specification
+  # Build specification (thread resolved_release for consistency)
   .spec <- .build_specification(
     pip_id = pip_id, analysis_var = analysis_var, measures = measures,
     poverty_line = poverty_line, by = by, filter_base = filter_base,
-    ppp = ppp, pop_share_threshold = pop_share_threshold
+    ppp = ppp, pop_share_threshold = pop_share_threshold, release = resolved_release
   )
 
-  # Build execution
+  # Build execution (NEW SCHEMA - corrective)
   .exec <- list(
-    included_surveys  = .meta_state[["included_surveys"]],
-    excluded_surveys  = .meta_state[["excluded_surveys"]],
-    filters_applied   = .meta_state[["filters_applied"]],
+    requested_pip_id = .meta_state[["requested_pip_id"]],
+    loaded_surveys   = .meta_state[["loaded_surveys"]],
+    excluded_surveys = .meta_state[["excluded_surveys"]],
+    resolved_release = .meta_state[["resolved_release"]],
+    resolved_ppp     = .meta_state[["resolved_ppp"]],
+    ppp_column_used  = .meta_state[["ppp_column_used"]],
+    filters_applied  = .meta_state[["filters_applied"]],
     measures_computed = .meta_state[["measures_computed"]],
-    suppression       = .meta_state[["suppression"]],
-    ppp_used          = .meta_state[["ppp_used"]]
+    suppression      = .meta_state[["suppression"]]
   )
 
   # Build provenance
   .prov <- list(
-    release         = tryCatch(piptm_current_release(), error = function(e) release),
+    release         = .meta_state[["resolved_release"]],
     package_version = as.character(utils::packageVersion("piptm"))
   )
 
