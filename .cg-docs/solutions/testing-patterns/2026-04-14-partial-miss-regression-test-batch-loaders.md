@@ -92,5 +92,8 @@ test_that("load_surveys() errors when a manifest entry has no Parquet files on d
 
 - `.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md` —
   the specific bug this pattern caught
+- `.cg-docs/solutions/data-quality/2026-08-24-metadata-schema-execution-truth-pattern.md` —
+  testing all-excluded scenarios and edge cases with metadata validation
 - `.cg-docs/solutions/bugs/2026-04-07-partition-key-prefix-mismatch.md` —
+  related Arrow path resolution issue
   related Arrow partition path bugs

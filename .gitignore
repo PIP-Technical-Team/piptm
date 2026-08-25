@@ -2,18 +2,32 @@
 
 compound-gpid.local.md
 
+# R development artifacts
+.Rhistory
+.RData
+.Renviron
+*.Rproj
 
+# Data files
+*.csv
+*.xlsx
+*.dta
+*.parquet
 
 benchmarks/arrow-cache.rds
 
 # Compound GPID managed items (junctions + copied file - do not commit)
 .agents/AGENTS.md
 .agents/commands
+.agents/instructions
+.agents/shared
 .agents/skills
 .agents/subagents
 .claude/agents
 .claude/CLAUDE.md
 .claude/commands
+.claude/instructions
+.claude/shared
 .claude/skills
 .compound-gpid/managed-files.json
 .github/agents
@@ -32,5 +46,7 @@ benchmarks/arrow-cache.rds
 .opencode/agents
 .opencode/AGENTS.md
 .opencode/commands
+.opencode/instructions
 .opencode/opencode.json
+.opencode/shared
 .opencode/skills

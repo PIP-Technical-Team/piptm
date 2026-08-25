@@ -40,10 +40,12 @@ Each name is a variable and each value is an integer vector of allowed
 codes (AND across variables, IN within variable). Example:
 \code{list(age_group = c(1L, 2L), gender = 0L)}.}
 
-\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
-Passed through to \code{\link[=load_surveys]{load_surveys()}}. Selects which \verb{welfare_ppp_*} column
-to use as \code{welfare} for surveys written with the deflated-data schema.
-When \code{NULL} (default), the manifest \code{ppp_sort} default is used.}
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}). Defaults to
+\code{2021L}. Passed through to \code{\link[=load_surveys]{load_surveys()}} and selects which
+\verb{welfare_ppp_*} column to use as \code{welfare} for surveys written with the
+deflated-data schema. The manifest \code{ppp_sort} field is not used as a
+fallback; pass an explicit PPP year when a value other than \code{2021L} is
+required.}
 
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}). Defaults
 to the current release as returned by \code{\link[=piptm_current_release]{piptm_current_release()}}.}
@@ -58,6 +60,10 @@ evaluation — it does not appear in the output.  Share-family measures
 always retained so callers can inspect the distribution of suppressed
 groups.  Has no effect when \code{by = NULL} (aggregate mode: each cell is a
 full survey with pop_share = 1.0).  Default: \code{0.01} (1\%).}
+
+\item{with_meta}{Logical. When \code{TRUE}, returns a list with \code{data},
+\code{specification}, \code{execution}, \code{provenance}, and \code{warnings} instead of a
+plain data.table. Default \code{FALSE} preserves backward compatibility.}
 }
 \value{
 A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long format} with columns:

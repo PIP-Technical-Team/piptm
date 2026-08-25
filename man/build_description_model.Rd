@@ -13,7 +13,7 @@ build_description_model(table_result)
 \value{
 A named list with sections: \code{metadata}, \code{surveys}, \code{sample},
 \code{statistics}, \code{cell_definition}, \code{suppression}, and optionally \code{poverty_line},
-\code{layout}, \code{excluded_surveys}, and \code{warnings}.
+\code{layout}, and \code{warnings}. Excluded surveys are in \code{surveys$excluded_surveys}.
 }
 \description{
 Takes the \code{with_meta = TRUE} return from \code{\link[=table_maker]{table_maker()}} and produces a

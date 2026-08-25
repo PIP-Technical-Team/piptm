@@ -40,6 +40,7 @@
 | `measures` | `character` | — | One or more measure names to compute |
 | `by` | `character` | `NULL` | Breakdown dimensions (e.g. `c("gender", "area")`) |
 | `povertyline` | `numeric` | `1.90` | Poverty line for FGT measures |
+| `with_meta` | `logical` | `FALSE` | Return metadata alongside data (specification, execution, provenance, warnings) |
 | ... | | | |
 
 ### `compute_fgt()`
@@ -74,7 +75,27 @@ All measure functions return a `data.table` with columns:
 | `breakdown_*` | `character/factor` | Breakdown dimension columns (if `by` specified) |
 | `nobs` | `integer` | Number of observations used |
 
-`table_maker()` returns a keyed `data.table` with metadata joined from the release manifest.
+### `table_maker()` Return Value
+
+**Default mode** (`with_meta = FALSE`): Returns a keyed `data.table` with metadata joined from the release manifest.
+
+**Metadata mode** (`with_meta = TRUE`): Returns a named list with 5 components:
+
+| Component | Type | Description |
+|-----------|------|-------------|
+| `data` | `data.table` | Computed statistics (same structure as default mode) |
+| `specification` | `list` | Requested parameters as provided by user (preserves NULL values) |
+| `execution` | `list` | Execution results: resolved parameters, loaded/excluded surveys, PPP column used |
+| `provenance` | `list` | Package version and timestamp |
+| `warnings` | `list` | Captured warnings during computation |
+
+**Execution metadata fields:**
+- `requested_pip_id`: Original survey IDs requested by user
+- `loaded_surveys`: `data.table` of surveys that contributed data (columns: `pip_id`, `country_code`, `surveyid_year`, `welfare_type`)
+- `excluded_surveys`: `data.table` of excluded surveys with `stage` (manifest | filter_pre | dimension_pre) and `reason`
+- `resolved_release`: Release ID used after resolution (even if user passed NULL)
+- `resolved_ppp`: PPP year used after resolution
+- `ppp_column_used`: Physical welfare column name (e.g. `"welfare_ppp_2021"`)
 
 <!-- cg:auto:end -->
 

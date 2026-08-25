@@ -23,7 +23,7 @@ Imports:
     dplyr,
     rlang,
     collapse,
-    jsonlite,
+    jsonlite
 Suggests:
     rprojroot,
     testthat (>= 3.0.0),

@@ -76,6 +76,14 @@ test_that("loaded_surveys populated after all exclusions", {
   expect_equal(nrow(exec$loaded_surveys), 1L)
   expect_equal(exec$loaded_surveys$pip_id, "COL_2010_ECH_INC_ALL")
   expect_true(all(c("pip_id", "country_code", "surveyid_year", "welfare_type") %in% names(exec$loaded_surveys)))
+  
+  # Type and completeness checks
+  expect_true(is.character(exec$loaded_surveys$pip_id))
+  expect_true(is.character(exec$loaded_surveys$country_code))
+  expect_true(is.integer(exec$loaded_surveys$surveyid_year) || is.numeric(exec$loaded_surveys$surveyid_year))
+  expect_true(is.character(exec$loaded_surveys$welfare_type))
+  expect_false(any(is.na(exec$loaded_surveys$pip_id)))
+  expect_false(any(is.na(exec$loaded_surveys$country_code)))
 })
 
 test_that("excluded_surveys with stage tracking", {
@@ -280,4 +288,99 @@ test_that("new schema fields all present in execution block", {
   )
   
   expect_true(all(expected_fields %in% names(exec)))
+})
+
+test_that("all surveys excluded returns appropriate response", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+  
+  # Request dimension that no survey has
+  # We need to use a dimension that doesn't exist or create a scenario
+  # where all surveys are filtered out
+  # Since we can't easily create a nonexistent dimension test,
+  # let's test with a scenario where all surveys lack a dimension
+  res <- piptm::table_maker(
+    pip_id = "BOL_2000_ECH_INC_ALL",  # BOL doesn't have gender
+    analysis_var = "welfare",
+    measures = "mean",
+    by = "gender",
+    with_meta = TRUE
+  )
+  
+  exec <- res$execution
+  expect_equal(nrow(exec$loaded_surveys), 0L)
+  expect_equal(nrow(exec$excluded_surveys), 1L)
+  expect_true(all(exec$excluded_surveys$stage == "dimension_pre"))
+  expect_equal(exec$excluded_surveys$pip_id, "BOL_2000_ECH_INC_ALL")
+
+  markdown <- piptm::render_description_markdown(
+    piptm::build_description_model(res)
+  )
+  expect_match(markdown, "No surveys contributed data to this table")
+  expect_false(grepl("| Country |", markdown, fixed = TRUE))
+})
+
+test_that("filter_pre stage exclusions captured", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+  
+  # Neither fixture has the age dimension, so both should be excluded before
+  # Arrow loading at the filter_pre stage.
+  res <- piptm::table_maker(
+    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = list(age_group = c(1L)),
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_equal(nrow(exec$loaded_surveys), 0L)
+  expect_equal(nrow(exec$excluded_surveys), 2L)
+  expect_true(all(exec$excluded_surveys$stage == "filter_pre"))
+})
+
+test_that("default PPP resolution uses fixed 2021 reference", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+  
+  res <- piptm::table_maker(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    with_meta = TRUE
+  )
+
+  exec <- res$execution
+  expect_true("resolved_ppp" %in% names(exec))
+  expect_identical(exec$resolved_ppp, 2021L)
+  expect_identical(exec$ppp_column_used, "welfare_ppp_2021_01_02")
+})
+
+test_that("aggregate mode (by=NULL) metadata tracked correctly", {
+  fx <- make_tm_fixtures_meta()
+  activate_tm_fixtures_meta(fx)
+  withr::defer(reset_piptm_env_meta())
+  
+  res <- piptm::table_maker(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    by = NULL,  # Aggregate mode
+    with_meta = TRUE
+  )
+  
+  spec <- res$specification
+  exec <- res$execution
+  
+  # Specification should reflect by=NULL
+  expect_null(spec$by)
+  
+  # Execution should still track loaded surveys
+  expect_true(data.table::is.data.table(exec$loaded_surveys))
+  expect_equal(nrow(exec$loaded_surveys), 1L)
+  expect_equal(exec$loaded_surveys$pip_id, "COL_2010_ECH_INC_ALL")
 })

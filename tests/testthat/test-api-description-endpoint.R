@@ -1,47 +1,7 @@
 library(data.table)
 library(jsonlite)
 
-# ── Request / response helpers (same pattern as test-api-endpoints.R) ────────
-
-make_desc_api_req <- function(method = "GET", path = "/",
-                              query = list(), body = NULL) {
-
-  qs <- if (length(query) > 0L) {
-    parts <- unlist(lapply(names(query), function(k) {
-      paste0(k, "=", as.character(query[[k]]))
-    }))
-    paste(parts, collapse = "&")
-  } else {
-    ""
-  }
-
-  body_raw <- if (!is.null(body)) {
-    charToRaw(jsonlite::toJSON(body, auto_unbox = TRUE))
-  } else {
-    raw(0L)
-  }
-
-  req                <- new.env(parent = emptyenv())
-  req$REQUEST_METHOD <- toupper(method)
-  req$PATH_INFO      <- path
-  req$QUERY_STRING   <- qs
-  req$HTTP_ACCEPT    <- "application/json"
-  req$CONTENT_TYPE   <- if (!is.null(body)) "application/json" else ""
-  req$CONTENT_LENGTH <- as.character(length(body_raw))
-  req$HTTP_HOST      <- "localhost"
-  req$rook.input     <- list(
-    read_lines = function() rawToChar(body_raw),
-    read       = function(l = -1L) body_raw,
-    rewind     = function() invisible(NULL)
-  )
-  req
-}
-
-parse_desc_api_res <- function(res, simplify = TRUE) {
-  body <- res$body
-  if (is.raw(body)) body <- rawToChar(body)
-  jsonlite::fromJSON(body, simplifyVector = simplify)
-}
+# Use shared API test helpers from helper-api.R
 
 # ── Router ──────────────────────────────────────────────────────────────────
 
@@ -53,12 +13,12 @@ parse_desc_api_res <- function(res, simplify = TRUE) {
 
 test_that("/description returns 400 for missing analysis_var", {
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     measures = "mean"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 400L)
   expect_equal(body$status, "error")
@@ -67,12 +27,12 @@ test_that("/description returns 400 for missing analysis_var", {
 
 test_that("/description returns 400 for missing pip_id", {
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     analysis_var = "welfare",
     measures = "mean"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 400L)
   expect_equal(body$status, "error")
@@ -81,12 +41,12 @@ test_that("/description returns 400 for missing pip_id", {
 
 test_that("/description returns 400 for missing measures", {
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 400L)
   expect_equal(body$status, "error")
@@ -95,13 +55,13 @@ test_that("/description returns 400 for missing measures", {
 
 test_that("/description returns 400 for unknown measures", {
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
     measures = "nonexistent_measure"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 400L)
   expect_true(any(grepl("Unknown measure", body$errors)))
@@ -113,13 +73,13 @@ test_that("/description returns success envelope with model and markdown", {
   withr::defer(reset_piptm_env_meta())
 
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
     measures = "mean"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 200L)
   expect_equal(body$status, "success")
@@ -135,14 +95,14 @@ test_that("/description markdown includes key sections", {
   withr::defer(reset_piptm_env_meta())
 
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
     measures = c("mean", "gini"),
     by = "gender"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 200L)
   md <- body$data$markdown
@@ -158,13 +118,13 @@ test_that("/description model has expected structure", {
   withr::defer(reset_piptm_env_meta())
 
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
     measures = "mean"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 200L)
   model <- body$data$model
@@ -181,13 +141,13 @@ test_that("/description captures warnings from table_maker", {
   withr::defer(reset_piptm_env_meta())
 
   router <- plumber::plumb(.desc_plumber_path)
-  req <- make_desc_api_req("GET", "/description", query = list(
+  req <- make_api_req("GET", "/description", query = list(
     pip_id = c("COL_2010_ECH_INC_ALL", "ZZZ_9999_X_INC_ALL"),
     analysis_var = "welfare",
     measures = "mean"
   ))
   res <- router$call(req)
-  body <- parse_desc_api_res(res)
+  body <- parse_api_res(res)
 
   expect_equal(res$status, 200L)
   expect_true(length(body$warnings) > 0L)

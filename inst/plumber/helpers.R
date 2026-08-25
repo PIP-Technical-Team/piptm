@@ -226,8 +226,9 @@ resolve_release <- function(release) {
 #' @param by           Character vector of disaggregation dimensions, or
 #'   `NULL`.
 #' @param ppp          Integer scalar PPP reference year (e.g. `2017`), or
-#'   `NULL` to use the manifest default.  Must be a single positive integer
-#'   value when provided.
+#'   `NULL` as an omitted-value marker. The API endpoint supplies its fixed
+#'   default of `2021` before calling `table_maker()`; `ppp_sort` is not used
+#'   as a fallback. Must be a single positive integer value when provided.
 #'
 #' @return A named list:
 #'   \describe{

@@ -157,6 +157,8 @@ reflect the new base column count and column list.
   sibling bug: when `.ALLOWED_COLS_GEN` is `NULL`, the same allow-list in
   `.validate_for_write()` silently accepts *all* columns instead of the schema
   set. The lazy-accessor pattern in `arrow_generation.R` is the fix.
+- `.cg-docs/solutions/data-quality/2026-08-24-metadata-schema-execution-truth-pattern.md` —
+  defensive validation pattern: check schema boundaries (NULL, data.table type, required columns) before consuming metadata
 - `piptm/R/schema.R` — `pip_arrow_schema()` (source of truth)
 - `pipdata/R/arrow_prep.R` — `prepare_for_arrow()`, `validate_pre_write()`
 - `pipdata/R/arrow_generation.R` — `.validate_for_write()`, `write_survey_parquet()`

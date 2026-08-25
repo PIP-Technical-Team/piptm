@@ -20,56 +20,7 @@
 library(data.table)
 library(jsonlite)
 
-# ── Request / response helpers ────────────────────────────────────────────────
-
-# Build a plumber-compatible Rook request environment.
-# Repeated-value query params are supported:
-#   query = list(pip_id = c("A", "B"), measures = "mean")
-#   → QUERY_STRING = "pip_id=A&pip_id=B&measures=mean"
-make_api_req <- function(method = "GET", path = "/",
-                         query = list(), body = NULL) {
-  if (identical(path, "/table") && is.null(query$analysis_var)) {
-    query$analysis_var <- "welfare"
-  }
-
-  qs <- if (length(query) > 0L) {
-    parts <- unlist(lapply(names(query), function(k) {
-      paste0(k, "=", as.character(query[[k]]))
-    }))
-    paste(parts, collapse = "&")
-  } else {
-    ""
-  }
-
-  body_raw <- if (!is.null(body)) {
-    charToRaw(jsonlite::toJSON(body, auto_unbox = TRUE))
-  } else {
-    raw(0L)
-  }
-
-  req                <- new.env(parent = emptyenv())
-  req$REQUEST_METHOD <- toupper(method)
-  req$PATH_INFO      <- path
-  req$QUERY_STRING   <- qs
-  req$HTTP_ACCEPT    <- "application/json"
-  req$CONTENT_TYPE   <- if (!is.null(body)) "application/json" else ""
-  req$CONTENT_LENGTH <- as.character(length(body_raw))
-  req$HTTP_HOST      <- "localhost"
-  req$rook.input     <- list(
-    read_lines = function() rawToChar(body_raw),
-    read       = function(l = -1L) body_raw,
-    rewind     = function() invisible(NULL)
-  )
-  req
-}
-
-# Decode a pr$call() response.
-# simplify = TRUE → data.frames for column-oriented JSON; vectors for arrays.
-parse_api_res <- function(res, simplify = TRUE) {
-  body <- res$body
-  if (is.raw(body)) body <- rawToChar(body)
-  jsonlite::fromJSON(body, simplifyVector = simplify)
-}
+# Use shared API test helpers from helper-api.R
 
 # ── Router ─────────────────────────────────────────────────────────────────────
 # Created once per test session; the router itself is stateless — all data
@@ -923,7 +874,7 @@ test_that("GET /table with valid filter_base JSON is accepted by endpoint", {
   expect_false(res$status == 400L)
 })
 
-test_that("GET /table with ppp=NULL omitted uses manifest default — returns 200", {
+test_that("GET /table with omitted ppp uses fixed 2021 default — returns 200", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()

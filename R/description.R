@@ -53,6 +53,25 @@ build_description_model <- function(table_result) {
   exec <- table_result$execution
   prov <- table_result$provenance
 
+  # Validate execution metadata fields
+  if (is.null(exec$resolved_release) || is.null(exec$resolved_ppp) || is.null(exec$ppp_column_used)) {
+    cli::cli_abort(
+      c(
+        "{.arg table_result} execution metadata incomplete",
+        "i" = "resolved_release, resolved_ppp, and ppp_column_used must all be populated"
+      )
+    )
+  }
+
+  if (is.na(exec$ppp_column_used)) {
+    cli::cli_warn(
+      c(
+        "Physical welfare column could not be determined",
+        "i" = "PPP resolution may have failed"
+      )
+    )
+  }
+
   # ── metadata ──────────────────────────────────────────────────────────────
   # Use resolved release and PPP from execution (what actually happened)
   metadata <- list(
@@ -68,7 +87,24 @@ build_description_model <- function(table_result) {
     included = exec$loaded_surveys
   )
 
-  if (nrow(exec$excluded_surveys) > 0L) {
+  # Validate loaded_surveys schema
+  req_survey_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
+  if (!data.table::is.data.table(exec$loaded_surveys)) {
+    cli::cli_abort("{.field execution$loaded_surveys} must be a data.table")
+  }
+  missing_cols <- setdiff(req_survey_cols, names(exec$loaded_surveys))
+  if (length(missing_cols) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.field execution$loaded_surveys} missing column{?s}: {.val {missing_cols}}",
+        "i" = "Required columns: {.val {req_survey_cols}}"
+      )
+    )
+  }
+
+  if (!is.null(exec$excluded_surveys) && 
+      data.table::is.data.table(exec$excluded_surveys) && 
+      nrow(exec$excluded_surveys) > 0L) {
     surveys$excluded_surveys <- exec$excluded_surveys  # now has stage column
   }
 
@@ -190,9 +226,12 @@ render_description_markdown <- function(model) {
   # Include resolved PPP and physical column name
   meta_line <- paste0(
     "**Release:** ", model$metadata$release,
-    " \u00b7 **PPP year:** ", model$metadata$ppp,
-    " \u00b7 **Column:** ", model$metadata$ppp_column
+    " \u00b7 **PPP year:** ", model$metadata$ppp
   )
+  # Only include column field if not NA
+  if (!is.na(model$metadata$ppp_column)) {
+    meta_line <- paste0(meta_line, " \u00b7 **Column:** ", model$metadata$ppp_column)
+  }
   idx <- idx + 1L; parts[[idx]] <- meta_line
   idx <- idx + 1L; parts[[idx]] <- ""
 
@@ -397,7 +436,7 @@ build_table_description <- function(pip_id        = NULL,
 #' Generate cell definition sentence from specification and execution
 #'
 #' @param spec The specification list from table_result.
-#' @param exec The execution list from table_result.
+#' @param exec The execution list from table_result. Uses resolved_ppp for execution truth.
 #' @return A character string describing what each cell represents.
 #' @keywords internal
 .generate_cell_definition <- function(spec, exec) {

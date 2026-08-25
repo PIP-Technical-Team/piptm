@@ -252,8 +252,8 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
       pop_share_threshold = pop_share_threshold,
       with_meta           = TRUE
     )
-    desc_model  <- piptm:::build_description_model(meta_result)
-    desc_markdown <- piptm:::render_description_markdown(desc_model)
+    desc_model  <- piptm::build_description_model(meta_result)
+    desc_markdown <- piptm::render_description_markdown(desc_model)
     list(model = desc_model, markdown = desc_markdown, rel = rel,
          tm_warnings = meta_result$warnings)
   })

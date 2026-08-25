@@ -179,6 +179,69 @@ Key internal components:
 
 ---
 
+## Metadata Validation Patterns
+
+When building metadata schemas (e.g., `table_maker(with_meta = TRUE)`), always separate **specification** (what the user requested) from **execution** (what actually happened):
+
+### Specification = Request
+- Preserve original parameter values (may be NULL)
+- Store unresolved parameters (e.g., `release = NULL` before resolution)
+- Capture user intent exactly as provided
+
+### Execution = Runtime Truth
+- Store resolved values (e.g., `resolved_release`, `resolved_ppp`)
+- Track actual outcomes (loaded vs excluded surveys)
+- Record physical artifacts used (e.g., `ppp_column_used = "welfare_ppp_2021"`)
+
+### Defensive Validation at Boundaries
+
+Before consuming metadata fields, validate:
+
+```r
+# Check for NULL on critical fields
+if (is.null(exec$resolved_release) || is.null(exec$ppp_column_used)) {
+  cli::cli_abort("{.arg table_result} execution metadata incomplete")
+}
+
+# Validate data.table type before nrow()
+if (!data.table::is.data.table(exec$loaded_surveys)) {
+  cli::cli_abort("{.field execution$loaded_surveys} must be a data.table")
+}
+
+# Check schema completeness
+req_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
+missing <- setdiff(req_cols, names(exec$loaded_surveys))
+if (length(missing) > 0L) {
+  cli::cli_abort("Missing columns: {.val {missing}}")
+}
+```
+
+### Fail Loudly, Not Silently
+
+Replace silent fallbacks with explicit errors:
+
+```r
+# ❌ BEFORE: Silent NA assignment
+if (length(result) > 0L) value <- result[[1L]] else value <- NA_character_
+
+# ✅ AFTER: Informative error
+if (length(result) > 0L) {
+  value <- result[[1L]]
+} else {
+  cli::cli_abort(
+    c(
+      "Resolution failed",
+      "i" = "Expected value but got empty result",
+      "i" = "Available options: {.val {options}}"
+    )
+  )
+}
+```
+
+See `.cg-docs/solutions/data-quality/2026-08-24-metadata-schema-execution-truth-pattern.md` for full implementation details and testing patterns.
+
+---
+
 ## Wiki Configuration
 
 <!-- folder: wiki -->

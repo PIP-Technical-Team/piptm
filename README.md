@@ -72,6 +72,49 @@ res <- piptm::table_maker(
 res
 ```
 
+#### Metadata mode (`with_meta = TRUE`)
+
+For reproducibility and documentation workflows, set `with_meta = TRUE` to return a structured list with specification, execution metadata, provenance, and warnings:
+
+```r
+result <- piptm::table_maker(
+  pip_id = "COL_2019_GEIH_INC_ALL",
+  analysis_var = "welfare",
+  measures = c("mean", "gini"),
+  by = c("gender", "area"),
+  with_meta = TRUE
+)
+
+# Result structure
+str(result, max.level = 1)
+# List of 5:
+#  $ data         : data.table with computed statistics
+#  $ specification: list of requested parameters
+#  $ execution    : list of what actually happened
+#  $ provenance   : list of package version, timestamp
+#  $ warnings     : list of captured warnings
+
+# Access components
+result$data                       # Computed table (data.table)
+result$execution$loaded_surveys   # Surveys that contributed data
+result$execution$excluded_surveys # Surveys excluded (with stage & reason)
+result$execution$resolved_release # Actual release ID used
+result$execution$resolved_ppp     # Actual PPP year used
+result$execution$ppp_column_used  # Physical column name (e.g., "welfare_ppp_2021")
+```
+
+**Execution metadata fields:**
+- `requested_pip_id`: Original survey IDs from user input
+- `loaded_surveys`: Surveys that passed all filters and contributed data (data.table with pip_id, country_code, surveyid_year, welfare_type)
+- `excluded_surveys`: Surveys excluded at each stage (data.table with pip_id, reason, stage: "manifest" | "filter_pre" | "dimension_pre")
+- `resolved_release`: Single authority release ID used throughout
+- `resolved_ppp`: PPP year after resolution (e.g., `2021L`)
+- `ppp_column_used`: Physical welfare column name from manifest
+- `filters_applied`: Normalized filter_base request
+- `measures_computed`: Actual measure names dispatched (not families)
+- `suppression`: Threshold and count of suppressed cells
+```
+
 ### `pip_lookup()`
 
 Resolve `(country_code, year, welfare_type)` triplets to canonical `pip_id`:
