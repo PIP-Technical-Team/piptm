@@ -350,7 +350,7 @@ test_that("validate_table_input() rejects decimal string ppp '2017.5'", {
 })
 
 # P2.3 — return list shape contract
-test_that("validate_table_input() return list has the expected 4-field shape", {
+test_that("validate_table_input() return list has the expected 5-field shape", {
   result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean"

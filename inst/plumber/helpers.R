@@ -205,8 +205,8 @@ resolve_release <- function(release) {
 #' Checks performed:
 #' \itemize{
 #'   \item `pip_id` is a non-NULL character vector of length 1–15
-#'   \item `measures` is a non-NULL character vector with all elements in
-#'   \'\' elements in [piptm:::.MEASURE_REGISTRY]
+#'   \item `measures` is a non-NULL character vector whose elements are in
+#'   `names(piptm:::.MEASURE_REGISTRY)`
 #'   \item `analysis_var` is a single non-empty character value
 #'   \item `poverty_line`, if not `NULL`, coerces cleanly to a single numeric
 #'     value and is positive and finite
