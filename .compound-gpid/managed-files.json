@@ -1,0 +1,30 @@
+﻿{
+    "schemaVersion":  "compound-gpid-managed-files-v1",
+    "files":  {
+                  ".opencode/opencode.json":  {
+                                                  "checksum":  "6fce18888c2da82cd28eed4930a462f69a6fa3e00f201566c31c0205b6b8c639",
+                                                  "source":  ".opencode/opencode.json"
+                                              },
+                  ".opencode/AGENTS.md":  {
+                                              "checksum":  "7b5932ddeec85350689750cb7f2335b692d8d3bf33a295d85f83b5c3f7754e41",
+                                              "source":  ".opencode/AGENTS.md"
+                                          },
+                  ".kilo/AGENTS.md":  {
+                                          "checksum":  "e65f3937008cee56a21902e72af271d01ea2617cdd2dbf39f87141bb8dd88fdc",
+                                          "source":  ".kilo/AGENTS.md"
+                                      },
+                  ".agents/AGENTS.md":  {
+                                            "checksum":  "83d51740acc949c1d8f7be09f32cfaf9167693e4b7ad6ce74310a20b6b3d635b",
+                                            "source":  ".agents/AGENTS.md"
+                                        },
+                  ".kilo/kilo.json":  {
+                                          "checksum":  "0189f9556b15d3f64d5ff79fc2e318e7358fac19edf00a71105cd35d24ff000c",
+                                          "source":  ".kilo/kilo.json"
+                                      },
+                  ".claude/CLAUDE.md":  {
+                                            "checksum":  "10c7e6a0f4d4634e5df90b51336ea8e29d65beaf13f1072494c52d2725bd92e9",
+                                            "source":  ".claude/CLAUDE.md"
+                                        }
+              }
+}
+
