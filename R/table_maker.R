@@ -91,6 +91,189 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   matched$pip_id
 }
 
+# ── .build_description_metadata ───────────────────────────────────────────────
+
+#' Build description metadata for table_maker results
+#'
+#' Internal helper that assembles execution metadata, provenance, and resolved
+#' labels for use by the `/description` endpoint.
+#'
+#' @param params Named list of function parameters echoed from table_maker()
+#' @param result data.table result from table_maker()
+#' @param release Character scalar release ID
+#' @param excluded_surveys data.table with pip_id and reason columns
+#' @param suppressed_cells data.table of suppressed cells, or NULL
+#' @param captured_warnings Character vector of warning messages
+#'
+#' @return Named list conforming to spec §2.1 schema
+#' @keywords internal
+.build_description_metadata <- function(params, result, release, 
+                                       excluded_surveys, suppressed_cells, 
+                                       captured_warnings) {
+  # ── Provenance ────────────────────────────────────────────────────────────
+  provenance <- list(
+    release = release,
+    ppp_year = params$ppp,
+    generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S UTC", tz = "UTC")
+  )
+  
+  # ── Surveys ───────────────────────────────────────────────────────────────
+  # Extract loaded surveys from result
+  loaded_pip_ids <- unique(result$pip_id)
+  manifest <- piptm_manifest(release)
+  loaded_surveys <- manifest[pip_id %chin% loaded_pip_ids, 
+                             .(pip_id, country_code, country_name, 
+                               surveyid_year, welfare_type)]
+  
+  # ── Resolved Labels ───────────────────────────────────────────────────────
+  # Analysis variable
+  reg <- piptm_variable_registry(release)
+  analysis_var_entry <- reg[[params$analysis_var]]
+  if (is.null(analysis_var_entry)) {
+    analysis_var_info <- list(
+      varname = params$analysis_var,
+      ui_label = params$analysis_var,
+      tm_type = "unknown"
+    )
+  } else {
+    analysis_var_info <- list(
+      varname = analysis_var_entry$varname,
+      ui_label = analysis_var_entry$ui_label,
+      tm_type = analysis_var_entry$tm_type
+    )
+  }
+  
+  # Measures
+  stat_groups <- piptm_stat_groups(release)
+  measures_dt <- data.table::rbindlist(lapply(stat_groups, function(group) {
+    group_name <- group$group
+    group_measures <- group$measures
+    data.table::rbindlist(lapply(group_measures, function(m) {
+      data.table::data.table(
+        measure = m$measure,
+        ui_label = m$label,
+        stat_group = group_name
+      )
+    }), use.names = TRUE, fill = TRUE)
+  }), use.names = TRUE, fill = TRUE)
+  
+  # Filter to requested measures only
+  measures_dt <- measures_dt[measure %chin% params$measures]
+  
+  # Filters
+  filters_dt <- NULL
+  if (!is.null(params$filter_base)) {
+    filter_cats <- piptm_filter_categories(release)
+    filters_list <- lapply(names(params$filter_base), function(varname) {
+      # Find the filter category entry
+      filter_entry <- Filter(function(x) x$varname == varname, filter_cats)[[1]]
+      if (is.null(filter_entry)) {
+        return(NULL)
+      }
+      
+      selected_codes <- params$filter_base[[varname]]
+      # Find labels for selected codes
+      subcats <- filter_entry$subcategories
+      selected_labels <- vapply(selected_codes, function(code) {
+        subcat <- Filter(function(s) s$code == as.character(code), subcats)
+        if (length(subcat) > 0) subcat[[1]]$label else as.character(code)
+      }, character(1))
+      
+      list(
+        varname = varname,
+        ui_label = filter_entry$label,
+        selected_codes = list(selected_codes),
+        selected_labels = list(selected_labels)
+      )
+    })
+    filters_list <- Filter(Negate(is.null), filters_list)
+    if (length(filters_list) > 0) {
+      filters_dt <- data.table::rbindlist(filters_list, use.names = TRUE, fill = TRUE)
+    }
+  }
+  
+  # Covariates
+  covariates_dt <- data.table::data.table(
+    slot = character(0),
+    varname = character(0),
+    ui_label = character(0),
+    n_categories = integer(0)
+  )
+  if (!is.null(params$by) && length(params$by) > 0) {
+    layout_covs <- piptm_layout_covariates(release)
+    # For now, assume all covariates are in "rows" slot (simplified)
+    # Full implementation would need layout information from params
+    covariates_list <- lapply(params$by, function(varname) {
+      cov_entry <- Filter(function(x) x$varname == varname, layout_covs)
+      if (length(cov_entry) > 0) {
+        cov_entry <- cov_entry[[1]]
+        list(
+          slot = "rows",  # Simplified assumption
+          varname = cov_entry$varname,
+          ui_label = cov_entry$label,
+          n_categories = cov_entry$n_categories %||% NA_integer_
+        )
+      } else if (varname == "pov_status") {
+        # Special case for pov_status
+        list(
+          slot = "rows",
+          varname = "pov_status",
+          ui_label = "Poverty Status",
+          n_categories = 2L
+        )
+      } else {
+        NULL
+      }
+    })
+    covariates_list <- Filter(Negate(is.null), covariates_list)
+    if (length(covariates_list) > 0) {
+      covariates_dt <- data.table::rbindlist(covariates_list, use.names = TRUE, fill = TRUE)
+    }
+  }
+  
+  # ── Execution ─────────────────────────────────────────────────────────────
+  n_surveys_loaded <- length(loaded_pip_ids)
+  n_surveys_excluded <- nrow(excluded_surveys)
+  n_filters_applied <- if (is.null(params$filter_base)) 0L else length(params$filter_base)
+  n_measures_computed <- length(params$measures)
+  
+  # Suppression
+  suppression_triggered <- !is.null(suppressed_cells) && nrow(suppressed_cells) > 0
+  suppression <- list(
+    triggered = suppression_triggered,
+    threshold = params$pop_share_threshold,
+    n_cells_suppressed = if (suppression_triggered) nrow(suppressed_cells) else 0L,
+    suppressed_cells = suppressed_cells
+  )
+  
+  # Warnings
+  warnings <- if (length(captured_warnings) > 0) captured_warnings else NULL
+  
+  # ── Assemble ──────────────────────────────────────────────────────────────
+  list(
+    params = params,
+    provenance = provenance,
+    surveys = list(
+      loaded = loaded_surveys,
+      excluded = excluded_surveys
+    ),
+    resolved_labels = list(
+      analysis_var = analysis_var_info,
+      measures = measures_dt,
+      filters = filters_dt,
+      covariates = covariates_dt
+    ),
+    execution = list(
+      n_surveys_loaded = n_surveys_loaded,
+      n_surveys_excluded = n_surveys_excluded,
+      n_filters_applied = n_filters_applied,
+      n_measures_computed = n_measures_computed,
+      suppression = suppression,
+      warnings = warnings
+    )
+  )
+}
+
 # ── table_maker ───────────────────────────────────────────────────────────────
 
 #' Compute cross-tabulated welfare, inequality, and poverty measures
@@ -138,8 +321,46 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   always retained so callers can inspect the distribution of suppressed
 #'   groups.  Has no effect when `by = NULL` (aggregate mode: each cell is a
 #'   full survey with pop_share = 1.0).  Default: `0.01` (1%).
+#' @param include_metadata Logical scalar (default `FALSE`). When `FALSE`, returns
+#'   a [data.table::data.table()] directly (default behavior). When `TRUE`, returns
+#'   a list with two elements: `data` (the data.table) and `description_metadata`
+#'   (a structured list containing execution logs, provenance, and resolved labels
+#'   for use by the `/description` endpoint).
 #'
-#' @return A [data.table::data.table()] in **long format** with columns:
+#' @return When `include_metadata = FALSE` (default): A [data.table::data.table()] 
+#'   in **long format** with columns:
+#' \describe{
+#'   \item{`pip_id`}{Survey identifier.}
+#'   \item{`country_code`}{ISO3 country code.}
+#'   \item{`surveyid_year`}{Survey year.}
+#'   \item{`welfare_type`}{`"INC"` or `"CON"`.}
+#'   \item{`[by cols]`}{One column per element of `by` (if non-NULL).
+#'     Surveys missing any requested dimension are excluded before loading;
+#'     every row in the result is guaranteed to have non-`NA` values for all
+#'     breakdown columns.}
+#'   \item{`poverty_line`}{Poverty threshold; populated for poverty-family
+#'     rows and `NA` for non-poverty rows.}
+#'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
+#'   \item{`value`}{Computed statistic.}
+#'   \item{`population`}{Total weighted population in the group.  For surveys
+#'     where a requested dimension is absent (partial-match), this reflects the
+#'     weighted count of respondents in the non-`NA` grouping cells only; rows
+#'     with `NA` in the missing dimension still carry the correct weighted count
+#'     for their observed group.}
+#' }
+#'   When `include_metadata = TRUE`: A list with elements:
+#' \describe{
+#'   \item{`data`}{The [data.table::data.table()] described above.}
+#'   \item{`description_metadata`}{A named list containing:
+#'     \describe{
+#'       \item{`params`}{Echo of all function arguments.}
+#'       \item{`provenance`}{Release ID, PPP year, and generation timestamp.}
+#'       \item{`surveys`}{Data tables of loaded and excluded surveys.}
+#'       \item{`resolved_labels`}{UI labels for analysis_var, measures, filters, and covariates.}
+#'       \item{`execution`}{Execution logs including warnings and suppression events.}
+#'     }
+#'   }
+#' }
 #' \describe{
 #'   \item{`pip_id`}{Survey identifier.}
 #'   \item{`country_code`}{ISO3 country code.}
@@ -192,9 +413,15 @@ table_maker <- function(pip_id        = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.01) {
+                        pop_share_threshold = 0.01,
+                        include_metadata = FALSE) {
 
-  # ── 0. Resolve survey identifiers ──────────────────────────────────────────
+  # ── 0. Validate metadata parameter ─────────────────────────────────────────
+  if (!is.logical(include_metadata) || length(include_metadata) != 1L) {
+    cli_abort("{.arg include_metadata} must be a logical scalar (TRUE or FALSE).")
+  }
+
+  # ── 1. Resolve survey identifiers ──────────────────────────────────────────
   if (is.null(pip_id)) {
     cli_abort("{.arg pip_id} must be provided.")
   }
@@ -203,7 +430,7 @@ table_maker <- function(pip_id        = NULL,
     cli_abort("No surveys to process: {.arg pip_id} is empty after resolution.")
   }
 
-  # ── 1. Validate computation parameters ─────────────────────────────────────
+  # ── 2. Validate computation parameters ─────────────────────────────────────
   families <- .classify_measures(measures)
   .validate_poverty_lines(poverty_line, names(families))
   by_validate <- by
@@ -213,7 +440,7 @@ table_maker <- function(pip_id        = NULL,
   }
   .validate_by(by_validate, release = release)
 
-  # ── 1b. Validate and normalize sample-base filters ─────────────────────────
+  # ── 2b. Validate and normalize sample-base filters ─────────────────────────
   normalized_filter_base <- NULL
   filter_vars <- character(0L)
   if (!is.null(filter_base)) {
@@ -295,6 +522,15 @@ table_maker <- function(pip_id        = NULL,
     )
   }
 
+  # ── Initialize execution log trackers ──────────────────────────────────────
+  # Only used when include_metadata = TRUE
+  excluded_surveys <- data.table::data.table(
+    pip_id = character(0),
+    reason = character(0)
+  )
+  captured_warnings <- character()
+  suppressed_cells <- NULL
+
   # ── 2b. Filter-base manifest pre-filter (before loading) ──────────────────
   if (!is.null(normalized_filter_base)) {
     overlap_fb <- vapply(
@@ -317,6 +553,17 @@ table_maker <- function(pip_id        = NULL,
           paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
         }
       }, character(1L))
+
+      # Capture exclusions for metadata
+      if (include_metadata) {
+        excluded_surveys <- data.table::rbindlist(list(
+          excluded_surveys,
+          data.table::data.table(
+            pip_id = dropped_entries$pip_id,
+            reason = dropped_info
+          )
+        ), use.names = TRUE, fill = TRUE)
+      }
 
       cli_warn(
         c(
@@ -374,6 +621,18 @@ table_maker <- function(pip_id        = NULL,
             paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
           }
         }, character(1L))
+
+        # Capture exclusions for metadata
+        if (include_metadata) {
+          excluded_surveys <- data.table::rbindlist(list(
+            excluded_surveys,
+            data.table::data.table(
+              pip_id = dropped_entries$pip_id,
+              reason = dropped_info
+            )
+          ), use.names = TRUE, fill = TRUE)
+        }
+
         cli_warn(
           c(
             "Excluding {length(dropped_info)} survey{?s} that lack all requested dimensions ({.val {by_check}}):",
@@ -533,6 +792,11 @@ table_maker <- function(pip_id        = NULL,
       cell_keys  <- c("pip_id", dim_cols)
       suppressed <- pop_rows[value < pop_share_threshold]
 
+      # Store suppressed for metadata capture
+      if (include_metadata && nrow(suppressed) > 0L) {
+        suppressed_cells <- suppressed
+      }
+
       if (nrow(suppressed) > 0L) {
         # Retain ALL shares-family measures for below-threshold cells so
         # callers can inspect the population distribution of suppressed groups.
@@ -563,6 +827,34 @@ table_maker <- function(pip_id        = NULL,
         result <- result[(.suppress) == FALSE][, .suppress := NULL]
       }
     }
+  }
+
+  # ── 11. Return ──────────────────────────────────────────────────────────────
+  if (include_metadata) {
+    # Return list with data and description_metadata
+    metadata <- .build_description_metadata(
+      params = list(
+        pip_id = pip_id,
+        analysis_var = analysis_var,
+        measures = measures,
+        poverty_line = poverty_line,
+        by = by,
+        filter_base = filter_base,
+        ppp = ppp,
+        release = release %||% piptm_current_release(),
+        pop_share_threshold = pop_share_threshold
+      ),
+      result = result,
+      release = release %||% piptm_current_release(),
+      excluded_surveys = excluded_surveys,
+      suppressed_cells = suppressed_cells,
+      captured_warnings = captured_warnings
+    )
+    
+    return(list(
+      data = result,
+      description_metadata = metadata
+    ))
   }
 
   result[]
