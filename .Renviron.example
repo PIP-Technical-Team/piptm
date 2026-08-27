@@ -1,0 +1,11 @@
+# Arrow partitions
+PIPTM_ARROW_ROOT=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/arrow
+
+# Release manifests
+PIPTM_MANIFEST_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/manifests
+
+# Variable registries
+PIPTM_REGISTRY_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/tm_data/registry
+
+# Optional: location of integration-test data used by testthat skips
+PIPTM_DATA_DIR=Y:/PIP_ingestion_pipeline_v2/pip_repository/test_data

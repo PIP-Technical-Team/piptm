@@ -9,8 +9,8 @@ estimated-effort: "large"
 deviation-policy: "ask"
 artifact-schema-version: 1
 phases: 5
-current-phase: 2
-completed-phases: [0, 1]
+current-phase: 5
+completed-phases: [1, 2, 3, 4]
 execution-report: ".cg-docs/work-reports/2026-08-26-description-endpoint-implementation.md"
 tags: [description-endpoint, table_maker, api, cell-definition, metadata, renderer]
 ---
@@ -51,7 +51,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 | R12 | Warning capture does not interfere with error propagation | Plan review P1.2 |
 | R13 | `devtools::check()` clean — 0 errors, 0 warnings | Spec §VII |
 
-## Phase 0: Pre-flight — Registry Structure Validation
+## Phase 1: Pre-flight — Registry Structure Validation
 
 ### 1. Validate registry function return structures
 
@@ -72,7 +72,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 - **Tests**: `tests/testthat/test-registry-structure.R`
 - **Acceptance criteria**: All 4 functions return structures matching spec §5.1; any deviations documented
 
-## Phase 1: Backend Enhancements — Metadata Capture (No Return-Type Change)
+## Phase 2: Backend Enhancements — Metadata Capture (No Return-Type Change)
 
 ### 2. Add `include_metadata` parameter to `table_maker()`
 
@@ -129,7 +129,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
   - `params`: Echo function arguments directly
   - `provenance`: `piptm_current_release()`, `ppp` param, `Sys.time()`
   - `surveys`: Join result `pip_id` with manifest metadata for loaded; use `excluded_surveys` tracker for excluded
-  - `resolved_labels`: Call `piptm_variable_registry()`, `piptm_stat_groups()`, `piptm_filter_categories()`, `piptm_layout_covariates()` — structures validated in Phase 0
+  - `resolved_labels`: Call `piptm_variable_registry()`, `piptm_stat_groups()`, `piptm_filter_categories()`, `piptm_layout_covariates()` — structures validated in Phase 1
   - `execution`: Populated from capture instruments (Step 3)
   - Add internal assertions: `stopifnot(is.list(meta$params), is.data.table(meta$surveys$loaded))`
 - **Test Scenarios**:
@@ -141,7 +141,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 - **Tests**: `tests/testthat/test-description-metadata.R` — new file
 - **Acceptance criteria**: `str(description_metadata)` matches spec §2.1 schema exactly
 
-## Phase 2: Description Data Model Builder
+## Phase 3: Description Data Model Builder
 
 ### 5. Implement `build_description_model()`
 
@@ -216,7 +216,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 - **Tests**: `tests/testthat/test-description-helpers.R` — new file
 - **Acceptance criteria**: Each helper returns expected output for all documented input shapes
 
-## Phase 3: Markdown Renderer
+## Phase 4: Markdown Renderer
 
 ### 8. Implement `render_description_markdown()`
 
@@ -258,7 +258,7 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 - **Tests**: `tests/testthat/test-description-renderer.R`
 - **Acceptance criteria**: Each content type produces correct Markdown syntax
 
-## Phase 4: API Integration
+## Phase 5: API Integration
 
 ### 10. Update `/table` endpoint with `include_metadata` support
 
@@ -322,6 +322,21 @@ The cell definition algorithm (spec Section IV) is the highest-risk component: i
 - **Tests**: `tests/testthat/test-api-description.R`
 - **Acceptance criteria**: `/description` is listed in router endpoints; CORS works
 
+### 13. Run `devtools::check()` and address regressions
+
+- **Requirements**: R13
+- **Files**: Package root
+- **Details**:
+  - Execute `devtools::check()` after the API endpoints are implemented to validate the full package surface.
+  - Investigate and fix any reported errors or warnings before marking the phase complete.
+  - Capture notes about NOTE-level findings (e.g., documentation reminders) in the execution report.
+- **Test Scenarios**:
+  - Happy path: `devtools::check()` completes with 0 errors and 0 warnings.
+  - Edge case: Downstream vignette or documentation build failure → fix and rerun until clean.
+  - Edge case: System dependency missing (e.g., Arrow) → document and skip only with explicit exception approval.
+- **Tests**: `devtools::check()`
+- **Acceptance criteria**: Check concludes with 0 errors and 0 warnings; NOTE-level items documented for follow-up if they cannot be resolved immediately.
+
 ## Testing Strategy
 
 ### Cell Definition Safety Net (R5, R6)
@@ -382,7 +397,7 @@ The cell definition algorithm is the highest-risk component. Tests must serve as
 |------|--------|------------|
 | Cell definition logic errors produce incorrect descriptions | **High** | Golden-file tests, negative phrasing tests, 54-combination permutation matrix — all must pass |
 | Warning capture interferes with error propagation | **Medium** | Only wrap core computation (after validation); selective `cli_warn()` capture; explicit abort-path tests |
-| Registry data inconsistencies cause wrong labels | **Medium** | Phase 0 structure validation; tests use real registry data |
+| Registry data inconsistencies cause wrong labels | **Medium** | Phase 1 structure validation; tests use real registry data |
 | Spec examples contain interpretation blocks that shouldn't be in output | **Medium** | Clean spec §4.3 before Phase 2; golden files based on cleaned examples |
 | Markdown rendering produces malformed output | **Low** | Parsed Markdown assertions; visual inspection of canonical examples |
 | Performance degradation from metadata assembly | **Low** | Metadata assembly is opt-in (`include_metadata = TRUE`); benchmark after Phase 1 |
@@ -406,31 +421,31 @@ The cell definition algorithm is the highest-risk component. Tests must serve as
 
 | Phase | ID | Evidence Required | Command/Artifact | Required |
 |-------|----|-------------------|------------------|----------|
-| 0 | V0 | Registry functions return structures matching spec §5.1 | `test-registry-structure.R` | yes |
-| 1 | V1 | `include_metadata = FALSE` returns `data.table` (unchanged) | `test-table-maker-metadata.R` | yes |
-| 1 | V2 | `include_metadata = TRUE` returns `list(data, description_metadata)` | `test-table-maker-metadata.R` | yes |
-| 1 | V3 | All 414+ existing tests pass unchanged | `devtools::test()` | yes |
-| 1 | V4 | Abort messages unchanged when validation fails with `include_metadata = TRUE` | `test-table-maker-metadata.R` | yes |
-| 2 | V5 | `build_description_model()` produces correct model for all 4 worked examples | `test-description-builder.R` | yes |
-| 2 | V6 | Cell definition algorithm passes 54-combination permutation matrix | `test-cell-definition.R` | yes |
-| 2 | V7 | Negative phrasing tests confirm no incorrect cell content | `test-cell-definition.R` | yes |
-| 3 | V8 | Markdown output matches golden files for all 4 examples | `test-description-renderer.R` | yes |
-| 4 | V9 | `/table?include_metadata=true` returns metadata in JSON | `test-api-description.R` | yes |
-| 4 | V10 | `/description` POST returns Markdown from metadata | `test-api-description.R` | yes |
-| final | V11 | `devtools::check()` clean — 0 errors, 0 warnings | R CMD check | yes |
+| 1 | V1 | Registry functions return structures matching spec §5.1 | `test-registry-structure.R` | yes |
+| 2 | V2 | `include_metadata = FALSE` returns `data.table` (unchanged) | `test-table-maker-metadata.R` | yes |
+| 2 | V3 | `include_metadata = TRUE` returns `list(data, description_metadata)` | `test-table-maker-metadata.R` | yes |
+| 2 | V4 | All 414+ existing tests pass unchanged | `devtools::test()` | yes |
+| 2 | V5 | Abort messages unchanged when validation fails with `include_metadata = TRUE` | `test-table-maker-metadata.R` | yes |
+| 3 | V6 | `build_description_model()` produces correct model for all 4 worked examples | `test-description-builder.R` | yes |
+| 3 | V7 | Cell definition algorithm passes 54-combination permutation matrix | `test-cell-definition.R` | yes |
+| 3 | V8 | Negative phrasing tests confirm no incorrect cell content | `test-cell-definition.R` | yes |
+| 4 | V9 | Markdown output matches golden files for all 4 examples | `test-description-renderer.R` | yes |
+| 5 | V10 | `/table?include_metadata=true` returns metadata in JSON | `test-api-description.R` | yes |
+| 5 | V11 | `/description` POST returns Markdown from metadata | `test-api-description.R` | yes |
+| final | V12 | `devtools::check()` clean — 0 errors, 0 warnings | R CMD check | yes |
 
 ### Constraints
 
 | Phase | ID | Constraint | Check |
 |-------|----|------------|-------|
-| 0 | C0 | Registry function return structures match spec §5.1 | Structure validation tests |
-| 1 | C1 | `include_metadata = FALSE` output identical to current `data.table` | Regression test |
-| 1 | C2 | Abort messages unchanged when `include_metadata = TRUE` | Explicit abort-path tests |
-| 2 | C3 | All 4 worked examples byte-identical to cleaned spec §4.3 | Golden-file assertions |
-| 2 | C4 | Cell definition permutation matrix (54 combos) all pass | Parameterized tests |
-| 3 | C5 | Markdown output valid and readable | Parsed Markdown assertions |
-| 4 | C6 | API responses follow `{status, data, warnings, errors, meta}` envelope | Integration tests |
-| 4 | C7 | POST body schemas documented and validated | Schema validation tests |
+| 1 | C1 | Registry function return structures match spec §5.1 | Structure validation tests |
+| 2 | C2 | `include_metadata = FALSE` output identical to current `data.table` | Regression test |
+| 2 | C3 | Abort messages unchanged when `include_metadata = TRUE` | Explicit abort-path tests |
+| 3 | C4 | All 4 worked examples byte-identical to cleaned spec §4.3 | Golden-file assertions |
+| 3 | C5 | Cell definition permutation matrix (54 combos) all pass | Parameterized tests |
+| 4 | C6 | Markdown output valid and readable | Parsed Markdown assertions |
+| 5 | C7 | API responses follow `{status, data, warnings, errors, meta}` envelope | Integration tests |
+| 5 | C8 | POST body schemas documented and validated | Schema validation tests |
 
 ### Boundaries
 - Allowed: New files `R/description_builder.R`, `R/description_renderer.R`; modifications to `R/table_maker.R`, `inst/plumber/plumber.R`, `inst/plumber/helpers.R`
@@ -438,18 +453,18 @@ The cell definition algorithm is the highest-risk component. Tests must serve as
 
 ### Iteration Policy
 1. Each phase must complete and pass all tests before starting the next
-2. Phase 0 is a gate — block if registry structures don't match spec
-3. Phase 1 is the foundation — all downstream phases depend on it
-4. Phases 2 and 3 can be developed in parallel after Phase 1 completes
-5. Phase 4 depends on Phases 1 + 2 + 3
+2. Phase 1 is a gate — block if registry structures don't match spec
+3. Phase 2 is the foundation — all downstream phases depend on it
+4. Phases 3 and 4 can be developed in parallel after Phase 2 completes
+5. Phase 5 depends on Phases 2 + 3 + 4
 6. Within each phase, implement steps sequentially
 
 ### Blocked-Stop Conditions
-- Phase 0: If any registry function returns a structure that doesn't match spec §5.1, halt and document the deviation
-- Phase 1: If warning capture breaks any `cli_abort()` test, halt and redesign the capture boundary
-- Phase 1: If `include_metadata = FALSE` return type differs from current `data.table`, halt
-- Phase 2: If golden-file tests fail for any of the 4 worked examples, halt — the algorithm has a bug
-- Phase 4: If Plumber serialization produces malformed JSON, halt and investigate
+- Phase 1: If any registry function returns a structure that doesn't match spec §5.1, halt and document the deviation
+- Phase 2: If warning capture breaks any `cli_abort()` test, halt and redesign the capture boundary
+- Phase 2: If `include_metadata = FALSE` return type differs from current `data.table`, halt
+- Phase 3: If golden-file tests fail for any of the 4 worked examples, halt — the algorithm has a bug
+- Phase 5: If Plumber serialization produces malformed JSON, halt and investigate
 
 ### Deviation policy
 `ask` (default)

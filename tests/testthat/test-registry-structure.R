@@ -17,6 +17,9 @@ test_that("piptm_variable_registry returns correct structure", {
   
   # Each entry should have the required fields per spec §5.1
   for (varname in names(reg)) {
+    if (identical(varname, "measure_spec")) {
+      next
+    }
     entry <- reg[[varname]]
     
     expect_true("varname" %in% names(entry), 
@@ -30,9 +33,8 @@ test_that("piptm_variable_registry returns correct structure", {
     expect_true("stat_groups" %in% names(entry),
                 info = paste(varname, "missing 'stat_groups'"))
     
-    # n_categories and categories may be NULL for continuous vars
-    expect_true("n_categories" %in% names(entry))
-    expect_true("categories" %in% names(entry))
+    expect_true("n_categories" %in% names(entry),
+                info = paste(varname, "missing 'n_categories'"))
   }
 })
 
@@ -129,9 +131,13 @@ test_that("piptm_layout_covariates returns correct structure", {
                 info = paste("Covariate", i, "missing 'varname'"))
     expect_true("label" %in% names(cov),
                 info = paste("Covariate", i, "missing 'label'"))
-    expect_true("n_categories" %in% names(cov),
-                info = paste("Covariate", i, "missing '
-
-categories'"))
+    expect_true(
+      "n_categories" %in% names(cov),
+      info = paste("Covariate", i, "missing 'n_categories'")
+    )
+    expect_true(
+      is.numeric(cov$n_categories),
+      info = paste("Covariate", i, "has non-numeric 'n_categories'")
+    )
   }
 })

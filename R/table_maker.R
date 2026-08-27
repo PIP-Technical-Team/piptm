@@ -57,10 +57,29 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
     )
   }
 
+  if (!is.integer(year)) {
+    if (!is.numeric(year)) {
+      cli_abort("{.arg year} must be an integer vector of survey years (e.g. 2010L).")
+    }
+    if (any(is.na(year))) {
+      cli_abort("{.arg year} cannot contain NA values.")
+    }
+    fractional_years <- year != floor(year)
+    if (any(fractional_years)) {
+      cli_abort(
+        c(
+          "{.arg year} must contain whole-number years (no fractional values).",
+          "i" = "Offending value{?s}: {.val {unique(year[fractional_years])}}"
+        )
+      )
+    }
+    year <- as.integer(year)
+  }
+
   # ── Build query table ───────────────────────────────────────────────────────
   query <- data.table(
     country_code = country_code,
-    year         = as.integer(year),
+    year         = year,
     welfare_type = welfare_type
   )
 
@@ -107,28 +126,57 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'
 #' @return Named list conforming to spec §2.1 schema
 #' @keywords internal
-.build_description_metadata <- function(params, result, release, 
-                                       excluded_surveys, suppressed_cells, 
-                                       captured_warnings) {
+.build_description_metadata <- function(
+    params,
+    result,
+    release,
+    excluded_surveys,
+    suppressed_cells,
+    captured_warnings) {
+  if (is.null(release) || !nzchar(release)) {
+    cli::cli_abort(
+      c(
+        "{.fn .build_description_metadata} requires a resolved {.arg release} identifier.",
+        "i" = "Callers must resolve the manifest release before assembling metadata."
+      )
+    )
+  }
   # ── Provenance ────────────────────────────────────────────────────────────
   provenance <- list(
     release = release,
     ppp_year = params$ppp,
-    generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S UTC", tz = "UTC")
+    generated_at = sprintf(
+      "%s UTC",
+      format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC", usetz = FALSE)
+    )
   )
   
   # ── Surveys ───────────────────────────────────────────────────────────────
-  # Extract loaded surveys from result
+  # Loaded surveys are derived from the result table, which reliably carries
+  # pip_id, country_code, surveyid_year, and welfare_type. The manifest does
+  # not expose `country_name` or `surveyid_year` columns, so we must not query
+  # it for these (see piptm_surveys_ui note). Attempt to enrich with a
+  # country label best-effort without breaking the assembly.
   loaded_pip_ids <- unique(result$pip_id)
-  manifest <- piptm_manifest(release)
-  loaded_surveys <- manifest[pip_id %chin% loaded_pip_ids, 
-                             .(pip_id, country_code, country_name, 
-                               surveyid_year, welfare_type)]
+  loaded_surveys <- unique(result[, .(pip_id, country_code, surveyid_year,
+                                      welfare_type)])
+  data.table::setorder(loaded_surveys, pip_id)
   
   # ── Resolved Labels ───────────────────────────────────────────────────────
+  # All registry lookups are best-effort: a missing registry or measure spec
+  # must never abort the primary table_maker() result. Failures degrade to
+  # fallback values instead of raising.
+  empty_measures <- data.table::data.table(
+    measure = character(0), ui_label = character(0), stat_group = character(0)
+  )
+  empty_covariates <- data.table::data.table(
+    slot = character(0), varname = character(0), ui_label = character(0),
+    n_categories = integer(0)
+  )
+
   # Analysis variable
-  reg <- piptm_variable_registry(release)
-  analysis_var_entry <- reg[[params$analysis_var]]
+  reg <- tryCatch(piptm_variable_registry(release), error = function(e) NULL)
+  analysis_var_entry <- if (is.null(reg)) NULL else reg[[params$analysis_var]]
   if (is.null(analysis_var_entry)) {
     analysis_var_info <- list(
       varname = params$analysis_var,
@@ -137,53 +185,96 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
     )
   } else {
     analysis_var_info <- list(
-      varname = analysis_var_entry$varname,
-      ui_label = analysis_var_entry$ui_label,
-      tm_type = analysis_var_entry$tm_type
+      varname = analysis_var_entry$varname %||% params$analysis_var,
+      ui_label = analysis_var_entry$ui_label %||% params$analysis_var,
+      tm_type = analysis_var_entry$tm_type %||% "unknown"
     )
   }
-  
+
   # Measures
-  stat_groups <- piptm_stat_groups(release)
-  measures_dt <- data.table::rbindlist(lapply(stat_groups, function(group) {
-    group_name <- group$group
-    group_measures <- group$measures
-    data.table::rbindlist(lapply(group_measures, function(m) {
+  stat_groups <- tryCatch(piptm_stat_groups(release), error = function(e) list())
+  measures_dt <- empty_measures
+  if (length(stat_groups) > 0L) {
+    group_tables <- lapply(stat_groups, function(group) {
+      group_measures <- group$measures
+      if (is.null(group_measures) || length(group_measures) == 0L) {
+        return(NULL)
+      }
       data.table::data.table(
-        measure = m$measure,
-        ui_label = m$label,
-        stat_group = group_name
+        measure = vapply(group_measures, function(m) m$measure %||% "unknown", character(1)),
+        ui_label = vapply(
+          group_measures,
+          function(m) m$label %||% (m$measure %||% "unknown"),
+          character(1)
+        ),
+        stat_group = group$group %||% ""
       )
-    }), use.names = TRUE, fill = TRUE)
-  }), use.names = TRUE, fill = TRUE)
-  
-  # Filter to requested measures only
-  measures_dt <- measures_dt[measure %chin% params$measures]
-  
+    })
+    group_tables <- Filter(Negate(is.null), group_tables)
+    if (length(group_tables) > 0L) {
+      measures_dt <- data.table::rbindlist(group_tables, use.names = TRUE, fill = TRUE)
+      measures_dt <- measures_dt[measure %chin% params$measures]
+    }
+  }
+  if (nrow(measures_dt) == 0L && length(params$measures) > 0L) {
+    cli::cli_warn(
+      c(
+        "No stat_groups registry entries found for requested measures: {.val {params$measures}}.",
+        "i" = "Descriptions will fall back to raw measure keys."
+      )
+    )
+  }
+
   # Filters
   filters_dt <- NULL
   if (!is.null(params$filter_base)) {
-    filter_cats <- piptm_filter_categories(release)
+    filter_cats <- tryCatch(piptm_filter_categories(release), error = function(e) list())
     filters_list <- lapply(names(params$filter_base), function(varname) {
-      # Find the filter category entry
-      filter_entry <- Filter(function(x) x$varname == varname, filter_cats)[[1]]
-      if (is.null(filter_entry)) {
-        return(NULL)
+      matches <- Filter(function(x) !is.null(x$varname) && identical(x$varname, varname),
+                        filter_cats)
+      if (length(matches) == 0L) matches <- list(list(label = varname))
+      filter_entry <- matches[[1]]
+
+      selected_codes <- unlist(params$filter_base[[varname]], use.names = FALSE)
+      if (length(selected_codes) == 0L) {
+        cli_abort(
+          c(
+            "Internal error: {.arg filter_base} variable {.val {varname}} produced zero selected values during metadata assembly.",
+            "i" = "Metadata requires at least one selected category per filter."
+          )
+        )
       }
-      
-      selected_codes <- params$filter_base[[varname]]
-      # Find labels for selected codes
-      subcats <- filter_entry$subcategories
+      subcats        <- filter_entry$subcategories
+      if (is.null(subcats)) subcats <- list()
+      if (length(subcats) > 0) {
+        subcat_codes <- vapply(subcats, function(s) as.character(s$code %||% ""), character(1))
+        subcat_labels <- vapply(
+          subcats,
+          function(s) s$label %||% as.character(s$code %||% ""),
+          character(1)
+        )
+        subcat_map <- stats::setNames(subcat_labels, subcat_codes)
+      } else {
+        subcat_map <- character(0)
+      }
       selected_labels <- vapply(selected_codes, function(code) {
-        subcat <- Filter(function(s) s$code == as.character(code), subcats)
-        if (length(subcat) > 0) subcat[[1]]$label else as.character(code)
+        code_char <- as.character(code)
+        subcat_map[[code_char]] %||% code_char
       }, character(1))
-      
+      if (length(selected_labels) == 0L) {
+        cli_abort(
+          c(
+            "Internal error: {.arg filter_base} variable {.val {varname}} failed to resolve labels for its selections.",
+            "i" = "Check registry entries for {.val {varname}}."
+          )
+        )
+      }
+
       list(
-        varname = varname,
-        ui_label = filter_entry$label,
-        selected_codes = list(selected_codes),
-        selected_labels = list(selected_labels)
+        varname          = varname,
+        ui_label         = filter_entry$label %||% varname,
+        selected_codes   = list(as.integer(selected_codes)),
+        selected_labels  = list(unname(selected_labels))
       )
     })
     filters_list <- Filter(Negate(is.null), filters_list)
@@ -191,38 +282,43 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
       filters_dt <- data.table::rbindlist(filters_list, use.names = TRUE, fill = TRUE)
     }
   }
-  
+
   # Covariates
-  covariates_dt <- data.table::data.table(
-    slot = character(0),
-    varname = character(0),
-    ui_label = character(0),
-    n_categories = integer(0)
-  )
+  covariates_dt <- empty_covariates
   if (!is.null(params$by) && length(params$by) > 0) {
-    layout_covs <- piptm_layout_covariates(release)
-    # For now, assume all covariates are in "rows" slot (simplified)
-    # Full implementation would need layout information from params
+    layout_covs <- tryCatch(piptm_layout_covariates(release), error = function(e) list())
     covariates_list <- lapply(params$by, function(varname) {
-      cov_entry <- Filter(function(x) x$varname == varname, layout_covs)
-      if (length(cov_entry) > 0) {
-        cov_entry <- cov_entry[[1]]
+      cov_entry <- NULL
+      matches   <- Filter(function(x) !is.null(x$varname) && identical(x$varname, varname),
+                          layout_covs)
+      if (length(matches) > 0) cov_entry <- matches[[1]]
+      if (identical(varname, "pov_status")) {
+        pov_line <- params$poverty_line
+        pov_valid <- !is.null(pov_line) && is.numeric(pov_line) &&
+          length(pov_line) == 1L && is.finite(pov_line) && pov_line > 0
+        if (!pov_valid) {
+          return(NULL)
+        }
+      }
+
+      if (!is.null(cov_entry)) {
         list(
-          slot = "rows",  # Simplified assumption
-          varname = cov_entry$varname,
-          ui_label = cov_entry$label,
+          slot         = cov_entry$slot %||% "rows",
+          varname      = cov_entry$varname,
+          ui_label     = cov_entry$label %||% varname,
           n_categories = cov_entry$n_categories %||% NA_integer_
         )
-      } else if (varname == "pov_status") {
+      } else if (identical(varname, "pov_status")) {
         # Special case for pov_status
         list(
-          slot = "rows",
-          varname = "pov_status",
-          ui_label = "Poverty Status",
-          n_categories = 2L
+          slot = "rows", varname = "pov_status",
+          ui_label = "Poverty Status", n_categories = 2L
         )
       } else {
-        NULL
+        list(
+          slot = "rows", varname = varname,
+          ui_label = varname, n_categories = NA_integer_
+        )
       }
     })
     covariates_list <- Filter(Negate(is.null), covariates_list)
@@ -305,10 +401,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   Each name is a variable and each value is an integer vector of allowed
 #'   codes (AND across variables, IN within variable). Example:
 #'   `list(age_group = c(1L, 2L), gender = 0L)`.
-#' @param ppp          Integer scalar PPP year (e.g. `2017L`), or `NULL`.
-#'   Passed through to [load_surveys()]. Selects which `welfare_ppp_*` column
-#'   to use as `welfare` for surveys written with the deflated-data schema.
-#'   When `NULL` (default), the manifest `ppp_sort` default is used.
+#' @param ppp          Integer scalar PPP year (e.g. `2017L`). Defaults to
+#'   `2021L`, the current PPP baseline. Passed through to [load_surveys()] and
+#'   selects which `welfare_ppp_*` column to use as `welfare` for deflated-data
+#'   surveys. Set to `NULL` to fall back to the manifest `ppp_sort` default.
 #' @param release Character scalar release ID (e.g. `"20260206"`). Defaults
 #'   to the current release as returned by [piptm_current_release()].
 #' @param pop_share_threshold Numeric scalar in (0, 1) or `NULL`.  When
@@ -361,25 +457,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'     }
 #'   }
 #' }
-#' \describe{
-#'   \item{`pip_id`}{Survey identifier.}
-#'   \item{`country_code`}{ISO3 country code.}
-#'   \item{`surveyid_year`}{Survey year.}
-#'   \item{`welfare_type`}{`"INC"` or `"CON"`.}
-#'   \item{`[by cols]`}{One column per element of `by` (if non-NULL).
-#'     Surveys missing any requested dimension are excluded before loading;
-#'     every row in the result is guaranteed to have non-`NA` values for all
-#'     breakdown columns.}
-#'   \item{`poverty_line`}{Poverty threshold; populated for poverty-family
-#'     rows and `NA` for non-poverty rows.}
-#'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
-#'   \item{`value`}{Computed statistic.}
-#'   \item{`population`}{Total weighted population in the group.  For surveys
-#'     where a requested dimension is absent (partial-match), this reflects the
-#'     weighted count of respondents in the non-`NA` grouping cells only; rows
-#'     with `NA` in the missing dimension still carry the correct weighted count
-#'     for their observed group.}
-#' }
+#'
 #'
 #' @family api
 #' @export
@@ -417,7 +495,8 @@ table_maker <- function(pip_id        = NULL,
                         include_metadata = FALSE) {
 
   # ── 0. Validate metadata parameter ─────────────────────────────────────────
-  if (!is.logical(include_metadata) || length(include_metadata) != 1L) {
+  if (!is.logical(include_metadata) || length(include_metadata) != 1L ||
+      is.na(include_metadata)) {
     cli_abort("{.arg include_metadata} must be a logical scalar (TRUE or FALSE).")
   }
 
@@ -482,15 +561,27 @@ table_maker <- function(pip_id        = NULL,
             "{.arg filter_base} variable {.val {varname}} must include at least one value."
           )
         }
-        suppressWarnings(vals_int <- as.integer(vals))
-        if (anyNA(vals_int)) {
+        vals_numeric <- suppressWarnings(as.numeric(vals))
+        if (anyNA(vals_numeric)) {
           cli_abort(
             c(
               "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
-              "i" = "Values must be integer codes stored in Parquet."
+              "i" = "Values must be integer codes stored in Parquet.",
+              "i" = "Offending value{?s}: {.val {unique(vals[is.na(vals_numeric)])}}"
             )
           )
         }
+        fractional_idx <- vals_numeric != floor(vals_numeric)
+        if (any(fractional_idx)) {
+          cli_abort(
+            c(
+              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+              "i" = "Values must be integer codes stored in Parquet.",
+              "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
+            )
+          )
+        }
+        vals_int <- as.integer(vals_numeric)
         unique(vals_int)
       }),
       filter_vars
@@ -498,9 +589,25 @@ table_maker <- function(pip_id        = NULL,
   }
 
   # ── 2. Manifest lookup ──────────────────────────────────────────────────────
+  # Resolve the release once. When the caller leaves `release = NULL`, fall back
+  # to the current release so downstream metadata provenance carries the real
+  # release identifier instead of NULL.
+  if (is.null(release)) {
+    release <- piptm_current_release()
+  }
   mf      <- piptm_manifest(release)
   .ids    <- pip_id  # local copy avoids data.table column-name ambiguity
   entries <- mf[pip_id %chin% .ids]
+  if (data.table::uniqueN(entries, by = "pip_id") != nrow(entries)) {
+    dup_ids <- entries[duplicated(entries, by = "pip_id"), pip_id]
+    cli::cli_abort(
+      c(
+        "Manifest contains duplicate entries for {length(dup_ids)} pip_id{?s}.",
+        "i" = "Each pip_id must map to exactly one manifest row.",
+        "i" = "Duplicates: {.val {unique(dup_ids)}}"
+      )
+    )
+  }
 
   if (nrow(entries) == 0L) {
     cli_abort(
@@ -670,193 +777,227 @@ table_maker <- function(pip_id        = NULL,
     by[!by %in% "pov_status"],
     filter_vars   # NULL is silently dropped by c()
   ))
-  dt <- load_surveys(entries,
-                     ppp = ppp,
-                     cols = needed_cols,
-                     filter_base = normalized_filter_base,
-                     release = release)
 
-  if (nrow(dt) == 0L) {
-    cli_abort(
-      c(
+  # ── 4. Load surveys & compute (warning-captured when included) ─────────────
+  # Wrapping the core computation in withCallingHandlers lets us collect
+  # warnings for description metadata. When include_metadata = FALSE the
+  # handler is inert, so behavior and output are byte-for-byte identical to
+  # the pre-feature code path. cli_abort() errors are not warnings and are NOT
+  # muffled, so abort-path behavior is unchanged.
+  compute_core <- function() {
+    dt <- load_surveys(entries,
+                       ppp = ppp,
+                       cols = needed_cols,
+                       filter_base = normalized_filter_base,
+                       release = release)
+
+    if (nrow(dt) == 0L) {
+      cli_abort(c(
         "{.fn load_surveys} returned no rows for the requested surveys.",
         "i" = "Check the Arrow repository path and partition keys."
-      )
-    )
-  }
-
-  # Guard: assert load_surveys() attached the expected metadata columns so that
-  # downstream sdt$country_code[[1L]] etc. fail at the right place with a clear
-  # message if the contract changes.
-  required_meta <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
-  missing_meta  <- setdiff(required_meta, names(dt))
-  if (length(missing_meta)) {
-    cli_abort(
-      c(
-        "{.fn load_surveys} result is missing expected metadata columns.",
-        "i" = "Missing: {.val {missing_meta}}"
-      )
-    )
-  }
-
-  # ── 5. Derived covariates ───────────────────────────────────────────────────
-  if (!is.null(by) && "pov_status" %in% by) {
-    if (is.null(poverty_line) || !is.numeric(poverty_line) ||
-        length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
-      cli_abort(
-        c(
-          "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
-          "i" = "Provide a single positive numeric scalar."
-        )
-      )
+))
     }
-    dt[, pov_status := as.integer(welfare < poverty_line)]
-  }
 
-  # ── 7. Batch compute ────────────────────────────────────────────────────────
-  # Single grouped call across all surveys (Approach B). compute_measures()
-  # uses GRP(c("pip_id", by)) internally, paying the overhead once instead
-  # of once per survey.
-  result <- compute_measures(
-    dt,
-    measures = measures,
-    analysis_var = analysis_var,
-    poverty_line = poverty_line,
-    by = by,
-    release = release
-  )
-
-  # ── 8. Attach survey metadata ────────────────────────────────────────────────
-  # country_code, surveyid_year, welfare_type are attached via a keyed join
-  # from a pip_id → metadata lookup extracted from the loaded data.
-  meta <- unique(dt[, .(pip_id, country_code, surveyid_year, welfare_type)])
-  if (data.table::uniqueN(meta, by = "pip_id") != nrow(meta)) {
-    dups <- meta[duplicated(meta, by = "pip_id"), pip_id]
-    cli_abort(
-      c(
-        "{.fn load_surveys} returned inconsistent metadata for {length(dups)} pip_id{?s}.",
-        "i" = "Each pip_id must map to exactly one country_code / surveyid_year / welfare_type.",
-        "i" = "Affected: {.val {dups}}"
-      ),
-      call = NULL
-    )
-  }
-  result <- meta[result, on = "pip_id"]
-
-  # ── 9. Reorder columns ──────────────────────────────────────────────────────
-  meta_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
-  dim_cols  <- if (!is.null(by)) by else character(0L)
-  tail_cols <- c("poverty_line", "measure", "value", "population")
-  col_order <- c(meta_cols, dim_cols, tail_cols)
-  # Only reorder columns that are actually present
-  col_order <- intersect(col_order, names(result))
-  data.table::setcolorder(result, col_order)
-
-  # ── 10. Pop-share threshold suppression ─────────────────────────────────────
-  # The threshold is a data-quality safeguard: cells whose population share
-  # falls below `pop_share_threshold` have all non-share measures suppressed
-  # (dropped from output).  Activation is unconditional — if "pop_share" was
-  # not requested by the caller it is computed internally for evaluation only
-  # and never appended to the output.
-  if (!is.null(pop_share_threshold)) {
-    # Validate threshold unconditionally — not contingent on requested measures.
-    if (!is.numeric(pop_share_threshold) || length(pop_share_threshold) != 1L ||
-        !is.finite(pop_share_threshold) || pop_share_threshold <= 0 ||
-        pop_share_threshold >= 1) {
+    # Guard metadata columns
+    required_meta <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
+    missing_meta  <- setdiff(required_meta, names(dt))
+    if (length(missing_meta)) {
       cli_abort(
         c(
-          "{.arg pop_share_threshold} must be a single numeric value in (0, 1), or {.code NULL} to disable.",
-          "i" = "Got: {.val {pop_share_threshold}}."
+          "{.fn load_surveys} result is missing expected metadata columns.",
+          "i" = "Missing: {.val {missing_meta}}"
         )
       )
     }
 
-    # Suppression is only meaningful when `by` is non-NULL.  With by = NULL
-    # every "cell" is a full survey (pop_share = 1.0 always), so the threshold
-    # can never trigger.
-    if (length(dim_cols) > 0L) {
-      caller_requested_pop_share <- "pop_share" %in% measures
-
-      # Obtain pop_share per cell.  If pop_share was not requested by the
-      # caller, compute it internally using the same batch grouping as
-      # compute_measures(); used only for threshold evaluation, never output.
-      if (caller_requested_pop_share) {
-        pop_rows <- result[measure == "pop_share"]
-      } else {
-        batch_by_ps <- c("pip_id", dim_cols)
-        grp_ps      <- collapse::GRP(dt, by = batch_by_ps)
-        pop_rows    <- compute_shares(dt, by = batch_by_ps,
-                                      measures = "pop_share", grp = grp_ps)
+    pip_metadata <- unique(dt[, .(pip_id, country_code, surveyid_year, welfare_type)])
+    if (data.table::uniqueN(pip_metadata, by = "pip_id") != nrow(pip_metadata)) {
+      dups <- pip_metadata[duplicated(pip_metadata, by = "pip_id"), pip_id]
+      cli_abort(
+        c(
+          "{.fn load_surveys} returned inconsistent metadata for {length(dups)} pip_id{?s}.",
+          "i" = "Each pip_id must map to exactly one country_code / surveyid_year / welfare_type.",
+          "i" = "Affected: {.val {dups}}"
+        ),
+        call = NULL
+      )
+    }
+    if (!is.character(pip_metadata$pip_id)) {
+      pip_metadata[, pip_id := as.character(pip_id)]
+    }
+    if (!is.character(pip_metadata$country_code)) {
+      pip_metadata[, country_code := as.character(country_code)]
+    }
+    if (!is.integer(pip_metadata$surveyid_year)) {
+      if (!is.numeric(pip_metadata$surveyid_year)) {
+        cli_abort("surveyid_year metadata must be numeric/integer")
       }
+      pip_metadata[, surveyid_year := as.integer(round(pip_metadata$surveyid_year))]
+    }
+    if (!is.character(pip_metadata$welfare_type)) {
+      pip_metadata[, welfare_type := as.character(welfare_type)]
+    }
 
-      cell_keys  <- c("pip_id", dim_cols)
-      suppressed <- pop_rows[value < pop_share_threshold]
-
-      # Store suppressed for metadata capture
-      if (include_metadata && nrow(suppressed) > 0L) {
-        suppressed_cells <- suppressed
-      }
-
-      if (nrow(suppressed) > 0L) {
-        # Retain ALL shares-family measures for below-threshold cells so
-        # callers can inspect the population distribution of suppressed groups.
-        share_measures <- names(Filter(function(f) f == "shares",
-                                       .MEASURE_REGISTRY))
-
-        sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
-          dims <- paste(
-            vapply(cell_keys, function(k)
-              paste0(k, "=", suppressed[[k]][[i]]), character(1L)),
-            collapse = ", "
-          )
-          paste0(dims, " (pop_share=", round(suppressed[["value"]][[i]], 4L), ")")
-        }, character(1L))
-
-        cli_warn(
+    # Derived covariates
+    if (!is.null(by) && "pov_status" %in% by) {
+      if (is.null(poverty_line) || !is.numeric(poverty_line) ||
+          length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
+        cli_abort(
           c(
-            "Suppressing non-share measures for {nrow(suppressed)} cell{?s} with pop_share < {pop_share_threshold}:",
-            "i" = "{sup_labels}"
+            "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
+            "i" = "Provide a single positive numeric scalar."
           )
         )
+      }
+      dt[, pov_status := as.integer(welfare < poverty_line)]
+    }
 
-        # Anti-join: for suppressed cells, drop all non-share measure rows.
-        sup_keys <- suppressed[, ..cell_keys]
-        result[, .suppress := FALSE]
-        idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
-        result[idx, .suppress := !(measure %chin% share_measures)]
-        result <- result[(.suppress) == FALSE][, .suppress := NULL]
+    result <- compute_measures(
+      dt,
+      measures = measures,
+      analysis_var = analysis_var,
+      poverty_line = poverty_line,
+      by = by,
+      release = release
+    )
+
+    result <- pip_metadata[result, on = "pip_id"]
+
+    meta_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
+    dim_cols  <- if (!is.null(by)) by else character(0L)
+    tail_cols <- c("poverty_line", "measure", "value", "population")
+    col_order <- intersect(c(meta_cols, dim_cols, tail_cols), names(result))
+    data.table::setcolorder(result, col_order)
+
+    if (!is.null(pop_share_threshold)) {
+      if (!is.numeric(pop_share_threshold) || length(pop_share_threshold) != 1L ||
+          !is.finite(pop_share_threshold) || pop_share_threshold <= 0 ||
+          pop_share_threshold >= 1) {
+        cli_abort(
+          c(
+            "{.arg pop_share_threshold} must be a single numeric value in (0, 1), or {.code NULL} to disable.",
+            "i" = "Got: {.val {pop_share_threshold}}."
+          )
+        )
+      }
+
+      if (length(dim_cols) > 0L) {
+        caller_requested_pop_share <- "pop_share" %in% measures
+        if (caller_requested_pop_share) {
+          pop_rows <- result[measure == "pop_share"]
+        } else {
+          batch_by_ps <- c("pip_id", dim_cols)
+          grp_ps      <- collapse::GRP(dt, by = batch_by_ps)
+          pop_rows    <- compute_shares(dt, by = batch_by_ps,
+                                        measures = "pop_share", grp = grp_ps)
+        }
+
+        cell_keys  <- c("pip_id", dim_cols)
+        suppressed <- pop_rows[value < pop_share_threshold]
+
+        if (include_metadata && nrow(suppressed) > 0L) {
+          suppressed_cells <- suppressed
+        }
+
+        if (nrow(suppressed) > 0L) {
+          share_measures <- names(Filter(function(f) f == "shares",
+                                         .MEASURE_REGISTRY))
+
+          sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
+            dims <- paste(
+              vapply(cell_keys, function(k)
+                paste0(k, "=", suppressed[[k]][[i]]), character(1L)),
+              collapse = ", "
+            )
+            paste0(dims, " (pop_share=", round(suppressed[["value"]][[i]], 4L), ")")
+          }, character(1L))
+
+          cli_warn(
+            c(
+              "Suppressing non-share measures for {nrow(suppressed)} cell{?s} with pop_share < {pop_share_threshold}:",
+              "i" = "{sup_labels}"
+            )
+          )
+
+          sup_keys <- suppressed[, ..cell_keys]
+          result[, .suppress := FALSE]
+          idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
+          result[idx, .suppress := !(measure %chin% share_measures)]
+          result <- result[(.suppress) == FALSE][, .suppress := NULL]
+        }
       }
     }
+
+    list(
+      dt = dt,
+      result = result,
+      pip_metadata = pip_metadata,
+      suppressed_cells = suppressed_cells
+    )
   }
+
+  if (include_metadata) {
+    captured_warnings <- character()
+    core_out <- withCallingHandlers(
+      compute_core(),
+      warning = function(w) {
+        captured_warnings <<- c(captured_warnings, conditionMessage(w))
+        tryCatch(invokeRestart("muffleWarning"), error = function(e) NULL)
+      }
+    )
+  } else {
+    captured_warnings <- character()
+    core_out <- compute_core()
+  }
+
+  dt <- core_out$dt
+  result <- core_out$result
+  pip_metadata <- core_out$pip_metadata
+  suppressed_cells <- core_out$suppressed_cells
 
   # ── 11. Return ──────────────────────────────────────────────────────────────
   if (include_metadata) {
-    # Return list with data and description_metadata
-    metadata <- .build_description_metadata(
-      params = list(
-        pip_id = pip_id,
-        analysis_var = analysis_var,
-        measures = measures,
-        poverty_line = poverty_line,
-        by = by,
-        filter_base = filter_base,
-        ppp = ppp,
-        release = release %||% piptm_current_release(),
-        pop_share_threshold = pop_share_threshold
+    # Never let metadata assembly abort the primary result. Registry and
+    # manifest lookups inside .build_description_metadata() are best-effort and
+    # degrade to fallback values, so `release` may be NULL here.
+    metadata <- tryCatch(
+      .build_description_metadata(
+        params = list(
+          pip_id = pip_id,
+          analysis_var = analysis_var,
+          measures = measures,
+          poverty_line = poverty_line,
+          by = by,
+          filter_base = filter_base,
+          ppp = ppp,
+          release = release,
+          pop_share_threshold = pop_share_threshold,
+          include_metadata = include_metadata
+        ),
+        result = result,
+        release = release,
+        excluded_surveys = excluded_surveys,
+        suppressed_cells = suppressed_cells,
+        captured_warnings = captured_warnings
       ),
-      result = result,
-      release = release %||% piptm_current_release(),
-      excluded_surveys = excluded_surveys,
-      suppressed_cells = suppressed_cells,
-      captured_warnings = captured_warnings
+      error = function(e) {
+        cli_warn(
+          c(
+            "Description metadata assembly failed; returning data without metadata.",
+            "i" = conditionMessage(e)
+          )
+        )
+        NULL
+      }
     )
-    
+
     return(list(
       data = result,
       description_metadata = metadata
     ))
+  } else {
+    # Default: return data.table only (backward compatible)
+    return(result[])
   }
-
-  result[]
 }
 

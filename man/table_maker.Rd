@@ -13,7 +13,8 @@ table_maker(
   filter_base = NULL,
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0.01
+  pop_share_threshold = 0.01,
+  include_metadata = FALSE
 )
 }
 \arguments{
@@ -39,10 +40,10 @@ Each name is a variable and each value is an integer vector of allowed
 codes (AND across variables, IN within variable). Example:
 \code{list(age_group = c(1L, 2L), gender = 0L)}.}
 
-\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}), or \code{NULL}.
-Passed through to \code{\link[=load_surveys]{load_surveys()}}. Selects which \verb{welfare_ppp_*} column
-to use as \code{welfare} for surveys written with the deflated-data schema.
-When \code{NULL} (default), the manifest \code{ppp_sort} default is used.}
+\item{ppp}{Integer scalar PPP year (e.g. \code{2017L}). Defaults to
+\code{2021L}, the current PPP baseline. Passed through to \code{\link[=load_surveys]{load_surveys()}} and
+selects which \verb{welfare_ppp_*} column to use as \code{welfare} for deflated-data
+surveys. Set to \code{NULL} to fall back to the manifest \code{ppp_sort} default.}
 
 \item{release}{Character scalar release ID (e.g. \code{"20260206"}). Defaults
 to the current release as returned by \code{\link[=piptm_current_release]{piptm_current_release()}}.}
@@ -57,9 +58,16 @@ evaluation — it does not appear in the output.  Share-family measures
 always retained so callers can inspect the distribution of suppressed
 groups.  Has no effect when \code{by = NULL} (aggregate mode: each cell is a
 full survey with pop_share = 1.0).  Default: \code{0.01} (1\%).}
+
+\item{include_metadata}{Logical scalar (default \code{FALSE}). When \code{FALSE}, returns
+a \code{\link[data.table:data.table]{data.table::data.table()}} directly (default behavior). When \code{TRUE}, returns
+a list with two elements: \code{data} (the data.table) and \code{description_metadata}
+(a structured list containing execution logs, provenance, and resolved labels
+for use by the \verb{/description} endpoint).}
 }
 \value{
-A \code{\link[data.table:data.table]{data.table::data.table()}} in \strong{long format} with columns:
+When \code{include_metadata = FALSE} (default): A \code{\link[data.table:data.table]{data.table::data.table()}}
+in \strong{long format} with columns:
 \describe{
 \item{\code{pip_id}}{Survey identifier.}
 \item{\code{country_code}}{ISO3 country code.}
@@ -78,6 +86,19 @@ where a requested dimension is absent (partial-match), this reflects the
 weighted count of respondents in the non-\code{NA} grouping cells only; rows
 with \code{NA} in the missing dimension still carry the correct weighted count
 for their observed group.}
+}
+When \code{include_metadata = TRUE}: A list with elements:
+\describe{
+\item{\code{data}}{The \code{\link[data.table:data.table]{data.table::data.table()}} described above.}
+\item{\code{description_metadata}}{A named list containing:
+\describe{
+\item{\code{params}}{Echo of all function arguments.}
+\item{\code{provenance}}{Release ID, PPP year, and generation timestamp.}
+\item{\code{surveys}}{Data tables of loaded and excluded surveys.}
+\item{\code{resolved_labels}}{UI labels for analysis_var, measures, filters, and covariates.}
+\item{\code{execution}}{Execution logs including warnings and suppression events.}
+}
+}
 }
 }
 \description{
