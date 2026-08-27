@@ -1,9 +1,9 @@
 {
   "plan": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
   "executionReport": ".cg-docs/work-reports/2026-08-26-description-endpoint-implementation.md",
-  "phase": 4,
-  "step": 9,
-  "status": "active",
-  "rationale": "Phase 4 (Markdown Renderer) complete: R/description_renderer.R implements render_description_markdown() + .render_section_content() dispatcher supporting data.table pipe tables, named-list key/value bullets, and numbered lists. test-description-renderer.R (33 assertions) passes. Full suite: 0 failures, 930 passing.",
-  "nextCommand": "/cg-work phase5"
+  "phase": 5,
+  "step": 13,
+  "status": "completed",
+  "rationale": "Phase 5 (API Integration) complete: /table gains include_metadata param; /description POST endpoint implemented with fast (metadata) + fallback (recompute) paths; validate_description_input() helper added; CORS + router introspection verified. test-api-description.R (22 assertions) + full suite (952 passing) green. devtools::check(): 0 errors (down from 2); 3 pre-existing warnings and 7 NOTEs unrelated to Phase 5. Plan marked completed.",
+  "nextCommand": "/cg-review manual"
 }

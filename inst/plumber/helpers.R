@@ -160,6 +160,33 @@ get_session_surveys <- function(session_id) {
   as.character(entry$pip_id)
 }
 
+# List of helpers that return JSON/TEXT and set res$status. Used by the
+# /description endpoint whose serializer is text (so error envelopes are
+# serialized explicitly as JSON strings).
+
+#' Build a JSON-serialized error envelope and set the HTTP status code
+#'
+#' Unlike [api_error()] (which returns a list for a JSON serializer), this
+#' returns a pre-serialized JSON string suitable for text-serialized endpoints.
+#'
+#' @param errors      Character vector of human-readable error messages.
+#' @param status_code Integer HTTP status code to apply to `res`.
+#' @param res         The plumber response object.
+#' @return A JSON string of the standard error envelope.
+error_json <- function(errors, status_code, res) {
+  res$status <- status_code
+  jsonlite::toJSON(
+    list(
+      status   = "error",
+      data     = NULL,
+      warnings = character(),
+      errors   = errors,
+      meta     = list()
+    ),
+    auto_unbox = TRUE
+  )
+}
+
 # ── Release resolver ──────────────────────────────────────────────────────────
 
 #' Resolve and validate a release parameter
@@ -484,6 +511,50 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     ppp                 = coerced_ppp,
     pop_share_threshold = coerced_threshold
   )
+}
+
+#' Validate inputs for the /description fallback path
+#'
+#' Ensures the fallback body contains at least the required table parameters.
+#' The heavy lifting is delegated to [validate_table_input()]; this helper
+#' mainly checks the distinction between the fast and fallback paths and
+#' rejects ambiguous bodies.
+#'
+#' @param body Parsed JSON request body (a list).
+#'
+#' @return A named list with `valid` (logical), `errors` (character vector),
+#'   and `mode` ("metadata" | "fallback").
+validate_description_input <- function(body) {
+  errors <- character()
+
+  if (!is.list(body) || length(body) == 0L) {
+    return(list(
+      valid = FALSE,
+      errors = "Request body must be a non-empty JSON object.",
+      mode = NA_character_
+    ))
+  }
+
+  has_metadata <- "description_metadata" %in% names(body)
+  param_fields <- intersect(
+    names(body),
+    c("pip_id", "analysis_var", "measures", "poverty_line", "by",
+      "filter_base", "ppp", "release", "pop_share_threshold")
+  )
+  has_params <- length(param_fields) > 0L
+
+  if (has_metadata && has_params) {
+    errors <- c(errors,
+      "Request must provide either `description_metadata` OR table parameters, not both.")
+  }
+
+  mode <- if (has_metadata) "metadata" else if (has_params) "fallback" else NA_character_
+  if (is.na(mode)) {
+    errors <- c(errors,
+      "Request body must contain `description_metadata` or table parameters.")
+  }
+
+  list(valid = length(errors) == 0L, errors = errors, mode = mode)
 }
 
 #' Validate inputs for the /lookup endpoint

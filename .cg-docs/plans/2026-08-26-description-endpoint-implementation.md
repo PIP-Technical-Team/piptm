@@ -1,7 +1,8 @@
 ---
 date: 2026-08-26
 title: "/description Endpoint — Dynamic Table Description Generation"
-status: active
+status: completed
+completed-date: 2026-08-27
 scope: "Deep"
 brainstorm: ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md"
 language: "R"
@@ -10,7 +11,7 @@ deviation-policy: "ask"
 artifact-schema-version: 1
 phases: 5
 current-phase: 5
-completed-phases: [1, 2, 3, 4]
+completed-phases: [1, 2, 3, 4, 5]
 execution-report: ".cg-docs/work-reports/2026-08-26-description-endpoint-implementation.md"
 tags: [description-endpoint, table_maker, api, cell-definition, metadata, renderer]
 ---

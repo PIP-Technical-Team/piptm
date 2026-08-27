@@ -532,3 +532,89 @@ test_that("Edge case: Binary analysis var with non-share measures handled gracef
   
   expect_length(result$measure_interpretation, 1L)
 })
+# P0-4: Schema validation for build_cell_definition()
+# Tests for filters_dt column validation
+
+test_that("build_cell_definition() aborts when filters_dt missing varname", {
+  resolved_labels <- list(
+    analysis_var = list(varname = "welfare", ui_label = "Welfare", tm_type = "continuous"),
+    measures = data.table(measure = "mean", ui_label = "Mean", stat_group = "summary_statistics"),
+    filters = data.table(
+      # missing varname
+      ui_label = "Age group",
+      selected_labels = list(c("0-14"))
+    )
+  )
+  expect_error(
+    build_cell_definition(
+      analysis_var = "welfare", measures = "mean",
+      filter_base = list(age_group = 1L), by = NULL,
+      poverty_line = NULL, ppp = 2021L, release = "TEST",
+      resolved_labels = resolved_labels
+    ),
+    class = "rlang_error",
+    regexp = "missing required columns"
+  )
+})
+
+test_that("build_cell_definition() aborts when filters_dt missing ui_label", {
+  resolved_labels <- list(
+    analysis_var = list(varname = "welfare", ui_label = "Welfare", tm_type = "continuous"),
+    measures = data.table(measure = "mean", ui_label = "Mean", stat_group = "summary_statistics"),
+    filters = data.table(
+      varname = "age_group",
+      # missing ui_label
+      selected_labels = list(c("0-14"))
+    )
+  )
+  expect_error(
+    build_cell_definition(
+      analysis_var = "welfare", measures = "mean",
+      filter_base = list(age_group = 1L), by = NULL,
+      poverty_line = NULL, ppp = 2021L, release = "TEST",
+      resolved_labels = resolved_labels
+    ),
+    class = "rlang_error",
+    regexp = "missing required columns"
+  )
+})
+
+test_that("build_cell_definition() aborts when filters_dt missing selected_labels", {
+  resolved_labels <- list(
+    analysis_var = list(varname = "welfare", ui_label = "Welfare", tm_type = "continuous"),
+    measures = data.table(measure = "mean", ui_label = "Mean", stat_group = "summary_statistics"),
+    filters = data.table(
+      varname = "age_group",
+      ui_label = "Age group"
+      # missing selected_labels
+    )
+  )
+  expect_error(
+    build_cell_definition(
+      analysis_var = "welfare", measures = "mean",
+      filter_base = list(age_group = 1L), by = NULL,
+      poverty_line = NULL, ppp = 2021L, release = "TEST",
+      resolved_labels = resolved_labels
+    ),
+    class = "rlang_error",
+    regexp = "missing required columns"
+  )
+})
+
+test_that("build_cell_definition() handles NULL filters_dt gracefully", {
+  resolved_labels <- list(
+    analysis_var = list(varname = "welfare", ui_label = "Welfare", tm_type = "continuous"),
+    measures = data.table(measure = "mean", ui_label = "Mean", stat_group = "summary_statistics"),
+    filters = NULL
+  )
+  # Should not error when filters is NULL (no filter-base case)
+  expect_no_error({
+    result <- build_cell_definition(
+      analysis_var = "welfare", measures = "mean",
+      filter_base = NULL, by = NULL,
+      poverty_line = NULL, ppp = 2021L, release = "TEST",
+      resolved_labels = resolved_labels
+    )
+  })
+  expect_match(result$population_scope, "total weighted population")
+})

@@ -12,6 +12,7 @@
 #
 # Endpoints (this file, bottom section — see Step 3)
 #   GET|POST /table
+#   POST /description
 #   GET /lookup
 #   GET /surveys
 #   GET /countries
@@ -135,12 +136,15 @@ function(req) {
 #* @param pop_share_threshold:numeric Optional cell-suppression threshold
 #*   (default `0.01`). Use null/empty to disable suppression.
 #* @param release:character Release ID (optional; defaults to current release).
+#* @param include_metadata:character When `"true"`, returns the table plus
+#*   assembled `description_metadata` in the response `meta` field.
+#*   Defaults to `"false"` (metadata off).
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
 function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
          ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
-         release = NULL, res) {
+         release = NULL, include_metadata = "false", res) {
 
   check <- validate_table_input(
     analysis_var = analysis_var,
@@ -155,6 +159,9 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   poverty_line        <- check$poverty_line
   ppp                 <- check$ppp
   pop_share_threshold <- check$pop_share_threshold
+
+  # Parse include_metadata ("true"/"false"; anything else defaults to FALSE).
+  include_meta <- identical(tolower(include_metadata), "true")
 
   out <- capture_with_warnings({
     parsed_filter_base <- if (is.null(filter_base)) {
@@ -173,23 +180,148 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
       ppp           = ppp,
       filter_base   = parsed_filter_base,
       release       = rel,
-      pop_share_threshold = pop_share_threshold
+      pop_share_threshold = pop_share_threshold,
+      include_metadata = include_meta
     )
-    list(data = data, rel = rel)
+
+    if (include_meta) {
+      # table_maker returns list(data, description_metadata); keep the table
+      # as `data` and surface metadata in the response `meta` field.
+      result_data <- data$data
+      description_metadata <- data$description_metadata
+    } else {
+      result_data <- data
+      description_metadata <- NULL
+    }
+
+    list(
+      data = result_data,
+      rel = rel,
+      description_metadata = description_metadata
+    )
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
+
+  meta <- list(
+    release   = out$result$rel,
+    n_surveys = tryCatch(
+      data.table::uniqueN(out$result$data, by = "pip_id"),
+      error = function(e) NA_integer_
+    )
+  )
+  if (include_meta) {
+    meta$description_metadata <- out$result$description_metadata
+  }
 
   api_response(
     out$result$data,
     warnings = out$warnings,
-    meta = list(
-      release   = out$result$rel,
-      n_surveys = tryCatch(
-        data.table::uniqueN(out$result$data, by = "pip_id"),
-        error = function(e) NA_integer_
-      )
-    )
+    meta = meta
   )
+}
+
+# ── POST /description ─────────────────────────────────────────────────────────
+
+#* Render a natural-language description of a table from metadata (fast path)
+#* or by recomputation (fallback path).
+#*
+#* Request body (JSON):
+#* - Fast path: `{"description_metadata": <metadata object>}` — render only,
+#*   no recomputation.
+#* - Fallback path: `{"pip_id": [...], "analysis_var": "...", "measures": [...],
+#*   "poverty_line": ..., "by": [...], "filter_base": {...}, "ppp": ...,
+#*   "release": "...", "pop_share_threshold": ...}` — recomputes via
+#*   `table_maker(include_metadata = TRUE)`.
+#*
+#* Supplying BOTH `description_metadata` and table parameters returns HTTP 400.
+#*
+#* @param req The plumber request object (used to read the JSON body).
+#* @serializer text
+#* @post /description
+function(req, res) {
+  # ── Parse + validate body ───────────────────────────────────────────────────
+  # Read the raw JSON body robustly: plumber exposes the raw body via
+  # req$rook.input; also accept req$postBody (used by the test harness and some
+  # proxies).
+  raw_body <- tryCatch(
+    if (!is.null(req$postBody)) {
+      req$postBody
+    } else {
+      req$rook.input$read_lines()
+    },
+    error = function(e) NULL
+  )
+  if (is.null(raw_body) || !nzchar(raw_body)) {
+    return(error_json("Request body must be a non-empty JSON object.", 400L, res))
+  }
+
+  body <- tryCatch(
+    jsonlite::fromJSON(raw_body),
+    error = function(e) NULL
+  )
+  if (is.null(body) || !is.list(body) || length(body) == 0L) {
+    return(error_json("Request body must be a non-empty JSON object.", 400L, res))
+  }
+
+  check <- validate_description_input(body)
+  if (!check$valid) {
+    return(error_json(check$errors, 400L, res))
+  }
+  has_metadata <- identical(check$mode, "metadata")
+
+  out <- capture_with_warnings({
+    if (has_metadata) {
+      description_metadata <- body$description_metadata
+      if (is.null(description_metadata) || !is.list(description_metadata)) {
+        cli::cli_abort("`description_metadata` must be a JSON object.")
+      }
+
+      # Fast path: validate + build model + render. Table params derive from
+      # the embedded metadata.
+      params <- description_metadata$params
+      if (is.null(params)) {
+        cli::cli_abort("`description_metadata` is missing the `params` field.")
+      }
+
+      model <- piptm::build_description_model(description_metadata, params)
+      list(markdown = piptm::render_description_markdown(model))
+    } else {
+      # Fallback path: recompute via table_maker(include_metadata = TRUE).
+      fcheck <- validate_table_input(
+        analysis_var = body$analysis_var %||% NULL,
+        pip_id = body$pip_id %||% NULL,
+        measures = body$measures %||% NULL,
+        poverty_line = body$poverty_line %||% NULL,
+        by = body$by %||% NULL,
+        ppp = body$ppp %||% NULL,
+        pop_share_threshold = body$pop_share_threshold %||% NULL
+      )
+      if (!fcheck$valid) cli::cli_abort(paste(fcheck$errors, collapse = "; "))
+
+      parsed_filter_base <- body$filter_base
+
+      rel <- resolve_release(body$release %||% NULL)
+      tm_out <- piptm::table_maker(
+        pip_id        = body$pip_id,
+        analysis_var  = body$analysis_var,
+        measures      = body$measures,
+        poverty_line  = fcheck$poverty_line,
+        by            = body$by,
+        ppp           = fcheck$ppp,
+        filter_base   = parsed_filter_base,
+        release       = rel,
+        pop_share_threshold = fcheck$pop_share_threshold,
+        include_metadata = TRUE
+      )
+
+      desc_meta  <- tm_out$description_metadata
+      model      <- piptm::build_description_model(desc_meta, desc_meta$params)
+      list(markdown = piptm::render_description_markdown(model))
+    }
+  })
+  if (!is.null(out$error)) return(error_json(out$error, 422L, res))
+
+  out$result$markdown
 }
 
 # ── GET /lookup ───────────────────────────────────────────────────────────────

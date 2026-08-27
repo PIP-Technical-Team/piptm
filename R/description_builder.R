@@ -216,9 +216,15 @@ build_description_model <- function(description_metadata, params) {
 .build_surveys_content <- function(meta) {
   loaded <- meta$surveys$loaded
   excluded <- meta$surveys$excluded
-  
+
+  # Coerce to data.table defensively. Metadata can arrive from the API after a
+  # JSON round-trip, which converts data.tables to data.frames and empty tables
+  # to empty lists. NULL check required before is.data.frame().
+  n_loaded_rows <- if (is.null(loaded)) 0L else if (is.data.frame(loaded)) nrow(loaded) else 0L
+  n_excluded_rows <- if (is.null(excluded)) 0L else if (is.data.frame(excluded)) nrow(excluded) else 0L
+
   # Map welfare_type codes to labels
-  loaded_list <- if (nrow(loaded) > 0) {
+  loaded_list <- if (n_loaded_rows > 0) {
     data.table::data.table(
       country_code = loaded$country_code,
       surveyid_year = loaded$surveyid_year,
@@ -231,12 +237,18 @@ build_description_model <- function(description_metadata, params) {
       welfare_type_label = character(0)
     )
   }
-  
+
+  excluded_list <- if (n_excluded_rows > 0) {
+    data.table::as.data.table(excluded)
+  } else {
+    NULL
+  }
+
   return(list(
     n_loaded = meta$execution$n_surveys_loaded,
     n_excluded = meta$execution$n_surveys_excluded,
     loaded_list = loaded_list,
-    excluded_list = if (nrow(excluded) > 0) excluded else NULL
+    excluded_list = excluded_list
   ))
 }
 
@@ -248,17 +260,31 @@ build_description_model <- function(description_metadata, params) {
 #' @keywords internal
 .build_filters_content <- function(meta) {
   filters_dt <- meta$resolved_labels$filters
-  
-  if (is.null(filters_dt) || nrow(filters_dt) == 0) {
+
+  n_rows <- if (is.null(filters_dt)) 0L else if (is.data.frame(filters_dt)) nrow(filters_dt) else 0L
+  if (n_rows == 0L) {
     return(NULL)
   }
+  
+  # P0-2: Validate schema before column access
+  filters_dt <- data.table::as.data.table(filters_dt)
+  required_cols <- c("ui_label", "selected_labels")
+  if (!all(required_cols %in% names(filters_dt))) {
+    cli::cli_abort("filters_dt missing required columns: {setdiff(required_cols, names(filters_dt))}")
+  }
+  
+  # P0-3: Normalize list-column before vapply to handle NULL/non-character elements
+  filters_dt[, selected_labels := lapply(selected_labels, function(x) {
+    if (is.null(x) || length(x) == 0) return(character(0))
+    as.character(x)
+  })]
   
   # Format selected_labels as comma-separated strings
   filters_formatted <- data.table::data.table(
     variable = filters_dt$ui_label,
     selected_categories = vapply(
       filters_dt$selected_labels,
-      function(x) paste(x, collapse = ", "),
+      function(x) if (length(x) == 0) "(unspecified)" else paste(x, collapse = ", "),
       character(1)
     )
   )
@@ -279,8 +305,16 @@ build_description_model <- function(description_metadata, params) {
 .build_statistics_content <- function(meta, params) {
   measures_dt <- meta$resolved_labels$measures
   
-  # Poverty line applicable flag
-  has_poverty <- !is.null(params$poverty_line)
+  # P1-4: Validate measures_dt before column access
+  if (is.null(measures_dt) || !is.data.frame(measures_dt) || nrow(measures_dt) == 0) {
+    cli::cli_abort("`resolved_labels$measures` must be a non-empty data.frame")
+  }
+  measures_dt <- data.table::as.data.table(measures_dt)
+  
+  # Poverty line applicable flag. A JSON round-trip converts NULL to a
+  # length-0 list; treat length-0 or NULL as "not applicable".
+  pl <- params$poverty_line
+  has_poverty <- !is.null(pl) && length(pl) > 0L && !is.na(pl)
   
   return(list(
     analysis_var_label = meta$resolved_labels$analysis_var$ui_label,
@@ -306,13 +340,25 @@ build_description_model <- function(description_metadata, params) {
 .build_layout_content <- function(meta) {
   covariates_dt <- meta$resolved_labels$covariates
   
-  if (is.null(covariates_dt) || nrow(covariates_dt) == 0) {
+  # P1-5: Check NULL and is.data.frame before nrow
+  if (is.null(covariates_dt) || !is.data.frame(covariates_dt) || nrow(covariates_dt) == 0) {
     return(NULL)
   }
+  
+  # Coerce to data.table: metadata can arrive from the API after a JSON
+  # round-trip, which converts data.tables to plain data.frames.
+  covariates_dt <- data.table::as.data.table(covariates_dt)
   
   # Format with slot labels
   covariates_formatted <- data.table::copy(covariates_dt)
   covariates_formatted[, slot_label := format_slot_label(slot)]
+  
+  # P1-6: Coerce to character/integer before fifelse to ensure type compatibility
+  covariates_formatted[, ':='(
+    varname = as.character(varname),
+    ui_label = as.character(ui_label),
+    n_categories = as.integer(n_categories)
+  )]
   
   return(list(
     description = "Table dimensions are organized as follows:",
@@ -375,12 +421,20 @@ build_description_model <- function(description_metadata, params) {
 build_cell_definition <- function(analysis_var, measures, filter_base, by,
                                    poverty_line, ppp, release, resolved_labels) {
   
+  # P0-4: Validate filters_dt schema at function entry (only if non-NULL and has rows)
+  filters_dt <- resolved_labels$filters
+  if (!is.null(filters_dt) && is.data.frame(filters_dt) && nrow(filters_dt) > 0) {
+    required <- c("varname", "ui_label", "selected_labels")
+    if (!all(required %in% names(filters_dt))) {
+      cli::cli_abort("filters_dt missing required columns: {setdiff(required, names(filters_dt))}")
+    }
+  }
+  
   # Step 1: Determine base_pop from filter_base
   if (is.null(filter_base) || length(filter_base) == 0) {
     base_pop <- "the total weighted population of the survey"
   } else {
     # Format filter conditions
-    filters_dt <- resolved_labels$filters
     filter_conditions <- if (!is.null(filters_dt) && nrow(filters_dt) > 0) {
       vapply(
         seq_len(nrow(filters_dt)),
