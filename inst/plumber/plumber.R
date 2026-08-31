@@ -235,32 +235,35 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 #*
 #* Supplying BOTH `description_metadata` and table parameters returns HTTP 400.
 #*
-#* @param req The plumber request object (used to read the JSON body).
+#* @param body:object Request body (JSON object)
+#* @parser json
 #* @serializer text
 #* @post /description
-function(req, res) {
+function(req, body = NULL, res) {
   # ── Parse + validate body ───────────────────────────────────────────────────
-  # Read the raw JSON body robustly: plumber exposes the raw body via
-  # req$rook.input; also accept req$postBody (used by the test harness and some
-  # proxies).
-  raw_body <- tryCatch(
-    if (!is.null(req$postBody)) {
-      req$postBody
-    } else {
-      req$rook.input$read_lines()
-    },
-    error = function(e) NULL
-  )
-  if (is.null(raw_body) || !nzchar(raw_body)) {
-    return(error_json("Request body must be a non-empty JSON object.", 400L, res))
-  }
-
-  body <- tryCatch(
-    jsonlite::fromJSON(raw_body),
-    error = function(e) NULL
-  )
+  # For Swagger UI (and plumber's automatic parsing), body will be populated.
+  # For test harness and some proxies, body might be NULL and we fall back to req$postBody.
   if (is.null(body) || !is.list(body) || length(body) == 0L) {
-    return(error_json("Request body must be a non-empty JSON object.", 400L, res))
+    # Fallback: read raw body manually (for backwards compat with tests)
+    raw_body <- tryCatch(
+      if (!is.null(req$postBody)) {
+        req$postBody
+      } else {
+        req$rook.input$read_lines()
+      },
+      error = function(e) NULL
+    )
+    if (is.null(raw_body) || !nzchar(raw_body)) {
+      return(error_json("Request body must be a non-empty JSON object.", 400L, res))
+    }
+    
+    body <- tryCatch(
+      jsonlite::fromJSON(raw_body),
+      error = function(e) NULL
+    )
+    if (is.null(body) || !is.list(body) || length(body) == 0L) {
+      return(error_json("Request body must be a non-empty JSON object.", 400L, res))
+    }
   }
 
   check <- validate_description_input(body)

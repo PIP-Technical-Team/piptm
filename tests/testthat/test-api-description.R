@@ -268,6 +268,33 @@ test_that("/description appears in router endpoint introspection", {
   expect_true("/description" %in% paths)
 })
 
+test_that("POST /description OpenAPI spec does not expose req as a parameter", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+
+  # Generate the OpenAPI spec
+  spec <- .desc_router$getApiSpec()
+  
+  # Navigate to POST /description
+  desc_post <- spec$paths[["/description"]][["post"]]
+  expect_false(is.null(desc_post), "POST /description should exist in OpenAPI spec")
+  
+  # Check that 'req' is NOT listed as a parameter
+  # req is a Plumber-injected request object, not a user-supplied parameter
+  # The bug was: @param req caused Swagger to show POST /description?req=<string>
+  params <- desc_post$parameters
+  if (!is.null(params) && length(params) > 0) {
+    param_names <- vapply(params, function(p) p$name %||% "", character(1))
+    expect_false("req" %in% param_names,
+                 "req should not appear as a parameter in OpenAPI spec")
+  }
+  
+  # Success criterion: no 'req' parameter means Swagger won't generate
+  # POST /description?req=<string> interface. The endpoint will be
+  # callable with a JSON body (even if Plumber doesn't auto-generate
+  # full requestBody schema for manually-parsed bodies).
+})
+
 test_that("OPTIONS preflight works for /description (CORS)", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
