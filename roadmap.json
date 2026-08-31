@@ -216,6 +216,14 @@
           "description": "Implement /description endpoint with 3-tier architecture: metadata capture in table_maker(), structured model builder (build_description_model), and Markdown renderer. Covers cell definition algorithm for all measure families × filter × covariate permutations. Includes /table include_metadata support and /description POST endpoint.",
           "status": "done",
           "plan": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md"
+        },
+        {
+          "id": "api-contract-openapi",
+          "title": "API Contract — Markdown with OpenAPI-Style Schemas",
+          "description": "Create a Markdown API contract (docs/api-contract.md) with OpenAPI-style schemas embedded in fenced code blocks, inline UI mapping sections connecting endpoints to the 3-step wizard flow, structured response envelope, error handling, input validation rules, and session management. Internal handoff document for the UI/IT team.",
+          "status": "idea",
+          "brainstorm": ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
+          "plan": null
         }
       ]
     },
