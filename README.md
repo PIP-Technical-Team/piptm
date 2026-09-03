@@ -134,6 +134,8 @@ Rscript inst/plumber/run.R
 | `/session/surveys` | POST | Create a session and store a survey selection |
 | `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
 
+Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
+
 All endpoints return a common envelope:
 
 ```json
@@ -263,7 +265,7 @@ Expected response:
 ```json
 {
   "status": "success",
-  "data": { "release": "<release-id>", "status": "healthy" },
+  "data": { "release": "<release-id>", "status": "ok" },
   "warnings": [],
   "errors": [],
   "meta": {}

@@ -1,7 +1,8 @@
 ---
 date: 2026-08-31
 title: "API Contract — Markdown with OpenAPI-Style Schemas"
-status: in-progress
+status: completed
+completed-date: 2026-08-31
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md"
 language: "R"
@@ -13,11 +14,11 @@ tags: [api, openapi, documentation, handoff, phase-4, markdown]
 
 ## Objective
 
-Create a single Markdown file (`docs/api-contract.md`) documenting all 14+ Table Maker API endpoints with OpenAPI-style schemas, inline UI mapping, structured response envelopes, error handling, and input validation rules. This serves as the internal handoff document for the UI/IT team to build against the existing API.
+Create a single Markdown file (`docs/api-contract.md`) documenting all 15 Table Maker API endpoints with OpenAPI-style schemas, inline UI mapping, structured response envelopes, error handling, and input validation rules. This serves as the internal handoff document for the UI/IT team to build against the existing API.
 
 ## Context
 
-- The Table Maker API (`piptm`) has 14+ Plumber endpoints implemented in `inst/plumber/plumber.R`.
+- The Table Maker API (`piptm`) has 15 Plumber endpoints implemented in `inst/plumber/plumber.R` (16 route decorators total, since `/table` supports both GET and POST).
 - The existing Insomnia collection (`insomnia-collection.json`) provides request templates but lacks formal documentation.
 - The UI/IT team needs a clear, readable contract to understand all endpoints, their inputs/outputs, and how each maps to the 3-step wizard UI.
 - Approach chosen: Markdown with OpenAPI-style schemas (single file, no external tooling required).
@@ -26,7 +27,7 @@ Create a single Markdown file (`docs/api-contract.md`) documenting all 14+ Table
 
 | ID  | Requirement                                              | Source        |
 |-----|----------------------------------------------------------|---------------|
-| R1  | Document all 14+ existing endpoints                      | brainstorm    |
+| R1  | Document all 15 existing endpoints                       | brainstorm    |
 | R2  | Markdown with OpenAPI-style schemas (single file)        | brainstorm    |
 | R3  | Internal handoff — reference doc for UI/IT team           | brainstorm    |
 | R4  | Single UI/IT team as primary consumer                     | brainstorm    |
@@ -67,7 +68,7 @@ Create the Markdown file with the following sections:
 
 ### Step 2: Document Each Endpoint
 
-For each of the 14+ endpoints, document:
+For each of the 15 endpoints, document:
 - Method(s) and path
 - UI step mapping (Step 1, Step 2, Step 3, or utility)
 - Description
@@ -76,7 +77,7 @@ For each of the 14+ endpoints, document:
 - Error responses (400, 422, 500)
 - Example request and response
 
-Endpoints to document:
+**All 15 endpoints** (note: `/table` supports both GET and POST, counted as one endpoint with two methods):
 - `/health` (GET) — Server health check
 - `/releases` (GET) — List loaded releases + current
 - `/surveys` (GET) — Full manifest rows for a release
@@ -89,7 +90,7 @@ Endpoints to document:
 - `/analysis-variables` (GET) — Analysis variable catalogue
 - `/statistics` (GET) — Measure-group catalogue
 - `/lookup` (GET) — Resolve triplets to `pip_id`
-- `/table` (GET, POST) — Compute table output
+- `/table` (GET, POST) — Compute table output *(one endpoint, two methods)*
 - `/description` (POST) — Render natural-language description
 - `/session/surveys` (POST) — Create session with survey selection
 - `/session/<id>/surveys` (GET) — Retrieve survey selection for session
@@ -107,6 +108,13 @@ For each endpoint, add a UI step mapping section that connects the endpoint to t
 - Cross-reference the contract with the existing implementation in `inst/plumber/plumber.R` and `inst/plumber/helpers.R`.
 - Ensure all endpoints, parameters, and response schemas match the actual implementation.
 - Validate that validation rules (max 15 surveys, PPP validation, filter base JSON, pop share threshold) are correctly documented.
+- **Additional validation points from plan review**:
+  - Session edge cases: 1-hour TTL expiry, invalid session IDs, 12-character alphanumeric IDs with 20-try collision handling, process-local scope (not shared across API instances)
+  - `filter_base` JSON schema with example structure showing key-value pairs (e.g., `{"gender": [0], "age_group": [1,2]}`)
+  - `/description` dual-mode structure: fast path (description_metadata only) vs fallback path (table parameters only), with mutual exclusion rule (supplying both returns HTTP 400)
+  - `/categories` and `/covariates` intersection logic when `pip_id` is provided (returns only dimensions present in ALL selected surveys)
+  - Optional parameters documented with their defaults (`ppp=2021`, `pop_share_threshold=0.01`, `include_metadata=false`, `release=NULL`)
+  - `/lookup` parallel array structure: `country_code`, `year`, and `welfare_type` are zip/triplet structure with equal length requirement
 
 ### Step 5: Update README.md
 
@@ -115,7 +123,7 @@ For each endpoint, add a UI step mapping section that connects the endpoint to t
 
 ## Validation Criteria
 
-- All 14+ endpoints are documented with method, path, UI step mapping, request parameters, response schemas, and validation rules.
+- All 15 endpoints are documented with method, path, UI step mapping, request parameters, response schemas, and validation rules.
 - The response envelope schema is consistent across all endpoints.
 - Error codes (400, 422, 500) are correctly documented for each endpoint.
 - Input validation rules are documented (max 15 surveys, PPP validation, filter base JSON, pop share threshold).
