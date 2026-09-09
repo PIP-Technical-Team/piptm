@@ -43,11 +43,11 @@ test_that("Example 1: Simple aggregate mean produces exact expected output", {
   
   # Expected output from spec §4.3 Example 1
   expected_sentence <- paste(
-    "The Mean of Welfare for the total weighted population",
-    "of the survey."
+    "The Mean of Welfare for survey-weighted individuals",
+    "in the selected survey."
   )
-  
-  expect_equal(result$population_scope, "the total weighted population of the survey")
+
+  expect_equal(result$population_scope, "survey-weighted individuals in the selected survey")
   expect_length(result$measure_interpretation, 1L)
   expect_equal(result$measure_interpretation[1], expected_sentence)
   expect_null(result$note)
@@ -95,17 +95,17 @@ test_that("Example 2: Filtered poverty with covariates produces exact expected o
   
   # Expected outputs from spec §4.3 Example 2
   expected_pop_scope <- paste(
-    "the weighted population that is Age group in [0 to 14, 15 to 24]",
+    "survey-weighted individuals for whom Age group is among [0 to 14, 15 to 24],",
     "within each Gender × Area group"
   )
   expected_sentence_1 <- paste(
-    "The Poverty headcount at $2.15/day (PPP 2021) for the weighted",
-    "population that is Age group in [0 to 14, 15 to 24]",
+    "The Poverty headcount at $2.15/day (PPP 2021) for survey-weighted",
+    "individuals for whom Age group is among [0 to 14, 15 to 24],",
     "within each Gender × Area group."
   )
   expected_sentence_2 <- paste(
-    "The Poverty gap index at $2.15/day (PPP 2021) for the weighted",
-    "population that is Age group in [0 to 14, 15 to 24]",
+    "The Poverty gap index at $2.15/day (PPP 2021) for survey-weighted",
+    "individuals for whom Age group is among [0 to 14, 15 to 24],",
     "within each Gender × Area group."
   )
   
@@ -158,17 +158,17 @@ test_that("Example 3: Binary var with target shares produces exact expected outp
   
   # Expected outputs from spec §4.3 Example 3 (NO interpretation blocks)
   expected_pop_scope <- paste(
-    "the weighted population that is Age group in [0 to 14]",
+    "survey-weighted individuals for whom Age group is among [0 to 14],",
     "within each Area group"
   )
   expected_sentence_1 <- paste(
-    "Within the weighted population that is Age group in [0 to 14]",
+    "Within survey-weighted individuals for whom Age group is among [0 to 14],",
     "within each Area group, the share for which Improved water source",
     "is true."
   )
   expected_sentence_2 <- paste(
-    "The share of the total weighted survey population represented",
-    "by the weighted population that is Age group in [0 to 14]",
+    "The share of the total survey-weighted population represented",
+    "by survey-weighted individuals for whom Age group is among [0 to 14],",
     "within each Area group where Improved water source is true."
   )
   
@@ -215,17 +215,17 @@ test_that("Example 4: pov_status covariate produces exact expected output with n
   
   # Expected outputs from spec §4.3 Example 4 (NO interpretation blocks)
   expected_pop_scope <- paste(
-    "the total weighted population of the survey within each",
+    "survey-weighted individuals in the selected survey, within each",
     "Poverty status group (below/above $6.85/day PPP 2021)"
   )
   expected_sentence_1 <- paste(
-    "The Mean of Welfare for the total weighted population of",
-    "the survey within each Poverty status group",
+    "The Mean of Welfare for survey-weighted individuals in",
+    "the selected survey, within each Poverty status group",
     "(below/above $6.85/day PPP 2021)."
   )
   expected_sentence_2 <- paste(
-    "The Gini index of Welfare among the total weighted population",
-    "of the survey within each Poverty status group",
+    "The Gini index of Welfare among survey-weighted individuals",
+    "in the selected survey, within each Poverty status group",
     "(below/above $6.85/day PPP 2021)."
   )
   expected_note <- paste(
@@ -266,7 +266,7 @@ test_that("build_cell_definition handles NULL filters safely", {
     resolved_labels = resolved_labels
   )
 
-  expect_match(result$population_scope, "weighted population", fixed = FALSE)
+  expect_match(result$population_scope, "survey-weighted individuals", fixed = TRUE)
   expect_length(result$measure_interpretation, 1L)
 })
 
@@ -461,8 +461,8 @@ test_that("Edge case: Multiple filters use AND separator", {
   
   pop_scope <- result$population_scope
   expect_match(pop_scope, " AND ", fixed = TRUE)
-  expect_match(pop_scope, "Age group in [0 to 14]", fixed = TRUE)
-  expect_match(pop_scope, "Area in [Urban]", fixed = TRUE)
+  expect_match(pop_scope, "Age group is among [0 to 14]", fixed = TRUE)
+  expect_match(pop_scope, "Area is among [Urban]", fixed = TRUE)
 })
 
 
@@ -616,5 +616,5 @@ test_that("build_cell_definition() handles NULL filters_dt gracefully", {
       resolved_labels = resolved_labels
     )
   })
-  expect_match(result$population_scope, "total weighted population")
+  expect_match(result$population_scope, "survey-weighted individuals in the selected survey", fixed = TRUE)
 })

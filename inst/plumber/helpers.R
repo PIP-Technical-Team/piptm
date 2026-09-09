@@ -535,6 +535,18 @@ validate_description_input <- function(body) {
     ))
   }
 
+  fmt <- body$format %||% NULL
+  if (!is.null(fmt)) {
+    if (!is.character(fmt) || length(fmt) != 1L || is.na(fmt)) {
+      errors <- c(errors, "`format` must be a single string when provided.")
+    } else {
+      fmt <- tolower(trimws(fmt))
+      if (!(fmt %in% c("markdown", "html"))) {
+        errors <- c(errors, "`format` must be one of: markdown, html.")
+      }
+    }
+  }
+
   has_metadata <- "description_metadata" %in% names(body)
   param_fields <- intersect(
     names(body),

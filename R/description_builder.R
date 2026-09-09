@@ -229,12 +229,14 @@ build_description_model <- function(description_metadata, params) {
   # Map welfare_type codes to labels
   loaded_list <- if (n_loaded_rows > 0) {
     data.table::data.table(
+      pip_id = loaded$pip_id,
       country_code = loaded$country_code,
       surveyid_year = loaded$surveyid_year,
       welfare_type_label = format_welfare_type(loaded$welfare_type)
     )
   } else {
     data.table::data.table(
+      pip_id = character(0),
       country_code = character(0),
       surveyid_year = character(0),
       welfare_type_label = character(0)
@@ -313,6 +315,27 @@ build_description_model <- function(description_metadata, params) {
     cli::cli_abort("`resolved_labels$measures` must be a non-empty data.frame")
   }
   measures_dt <- data.table::as.data.table(measures_dt)
+
+  analysis_var_label <- meta$resolved_labels$analysis_var$ui_label
+  analysis_var_type <- meta$resolved_labels$analysis_var$tm_type
+
+  if (is.list(analysis_var_label)) {
+    analysis_var_label <- unlist(analysis_var_label, use.names = FALSE)
+  }
+  if (is.list(analysis_var_type)) {
+    analysis_var_type <- unlist(analysis_var_type, use.names = FALSE)
+  }
+
+  analysis_var_label <- if (length(analysis_var_label) == 0L) {
+    as.character(params$analysis_var)
+  } else {
+    as.character(analysis_var_label[[1]])
+  }
+  analysis_var_type <- if (length(analysis_var_type) == 0L) {
+    "unknown"
+  } else {
+    as.character(analysis_var_type[[1]])
+  }
   
   # Poverty line applicable flag. A JSON round-trip converts NULL to a
   # length-0 list; treat length-0 or NULL as "not applicable".
@@ -320,11 +343,12 @@ build_description_model <- function(description_metadata, params) {
   has_poverty <- !is.null(pl) && length(pl) > 0L && !is.na(pl)
   
   return(list(
-    analysis_var_label = meta$resolved_labels$analysis_var$ui_label,
-    analysis_var_type = meta$resolved_labels$analysis_var$tm_type,
+    analysis_var_label = analysis_var_label,
+    analysis_var_type = analysis_var_type,
     measures = data.table::data.table(
       measure_label = measures_dt$ui_label,
-      stat_group = measures_dt$stat_group
+      stat_group = measures_dt$stat_group,
+      analysis_var_label = rep(analysis_var_label, nrow(measures_dt))
     ),
     poverty_line = list(
       applicable = has_poverty,
@@ -435,7 +459,7 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
   
   # Step 1: Determine base_pop from filter_base
   if (is.null(filter_base) || length(filter_base) == 0) {
-    base_pop <- "the total weighted population of the survey"
+    base_pop <- "survey-weighted individuals in the selected survey"
   } else {
     # Format filter conditions
     filter_conditions <- if (!is.null(filters_dt) && nrow(filters_dt) > 0) {
@@ -452,7 +476,7 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
           if (is.null(var_label) || !nzchar(var_label)) {
             var_label <- filters_dt$varname[i]
           }
-          sprintf("%s in [%s]", var_label, label_text)
+          sprintf("%s is among [%s]", var_label, label_text)
         },
         character(1)
       )
@@ -467,13 +491,13 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
           varname <- fallback_names[idx]
           values <- filter_base[[idx]]
           value_text <- if (length(values)) paste(as.character(values), collapse = ", ") else "(unspecified)"
-          sprintf("%s in [%s]", varname, value_text)
+          sprintf("%s is among [%s]", varname, value_text)
         },
         character(1)
       )
     }
     filter_text <- paste(filter_conditions, collapse = " AND ")
-    base_pop <- sprintf("the weighted population that is %s", filter_text)
+    base_pop <- sprintf("survey-weighted individuals for whom %s", filter_text)
   }
   
   # Step 2: Layer group_qualifier from by
@@ -493,13 +517,14 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
       if (is.na(pov_label) || !nzchar(pov_label)) {
         pov_label <- "Poverty status"
       }
-      group_qualifier <- sprintf(" within each %s group (below/above $%.2f/day PPP %d)",
-                                  pov_label,
-                                  poverty_line,
-                                  ppp)
+      group_qualifier <- sprintf(
+        ", within each %s group (below/above $%.2f/day PPP %d)",
+                                   pov_label,
+                                   poverty_line,
+                                   ppp)
     } else {
       covariate_desc <- format_covariate_description(by, resolved_labels$covariates)
-      group_qualifier <- sprintf(" within each %s group", covariate_desc)
+      group_qualifier <- sprintf(", within each %s group", covariate_desc)
     }
     full_pop <- paste0(base_pop, group_qualifier)
   }
@@ -579,7 +604,7 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
           } else if (measure_key == "target_survey_share") {
             # Numerator is filtered+grouped, denominator is total survey
             sprintf(
-              "The share of the total weighted survey population represented by %s where %s is true.",
+              "The share of the total survey-weighted population represented by %s where %s is true.",
               full_pop,
               analysis_var_label
             )

@@ -229,7 +229,7 @@
           "id": "html-description-renderer-wording-quality-improvements",
           "title": "HTML Description Renderer + Wording Quality Improvements",
           "description": "Add an HTML rendering option (inline styles only) to the /description endpoint via a format parameter, alongside targeted wording/grammar fixes to the description model's sentence templates in description_builder.R.",
-          "status": "active",
+          "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
           "plan": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md"
         }

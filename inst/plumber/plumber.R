@@ -270,6 +270,9 @@ function(req, body = NULL, res) {
   if (!check$valid) {
     return(error_json(check$errors, 400L, res))
   }
+
+  format <- body$format %||% "markdown"
+  format <- tolower(trimws(as.character(format)[1]))
   has_metadata <- identical(check$mode, "metadata")
 
   out <- capture_with_warnings({
@@ -287,7 +290,12 @@ function(req, body = NULL, res) {
       }
 
       model <- piptm::build_description_model(description_metadata, params)
-      list(markdown = piptm::render_description_markdown(model))
+      rendered <- if (identical(format, "html")) {
+        piptm::render_description_html(model)
+      } else {
+        piptm::render_description_markdown(model)
+      }
+      list(content = rendered)
     } else {
       # Fallback path: recompute via table_maker(include_metadata = TRUE).
       fcheck <- validate_table_input(
@@ -319,12 +327,21 @@ function(req, body = NULL, res) {
 
       desc_meta  <- tm_out$description_metadata
       model      <- piptm::build_description_model(desc_meta, desc_meta$params)
-      list(markdown = piptm::render_description_markdown(model))
+      rendered <- if (identical(format, "html")) {
+        piptm::render_description_html(model)
+      } else {
+        piptm::render_description_markdown(model)
+      }
+      list(content = rendered)
     }
   })
   if (!is.null(out$error)) return(error_json(out$error, 422L, res))
 
-  out$result$markdown
+  if (identical(format, "html")) {
+    res$setHeader("Content-Type", "text/html; charset=utf-8")
+  }
+
+  out$result$content
 }
 
 # ── GET /lookup ───────────────────────────────────────────────────────────────

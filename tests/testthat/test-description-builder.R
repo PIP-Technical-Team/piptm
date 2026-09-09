@@ -93,6 +93,11 @@ test_that("build_description_model() produces complete model with all sections",
   expect_true(model$cell_definition$visible)
   expect_true(model$execution_summary$visible)
   expect_false(model$warnings$visible)  # No warnings
+
+  # Survey identifier is now included in loaded_list for renderer display
+  loaded_list <- model$surveys_selected$content$loaded_list
+  expect_true("pip_id" %in% names(loaded_list))
+  expect_identical(loaded_list$pip_id[[1]], "TEST_2020_SURVEY_CON_ALL")
 })
 
 test_that("build_description_model() rejects malformed metadata", {

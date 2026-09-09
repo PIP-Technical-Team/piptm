@@ -1,7 +1,8 @@
 ---
 date: 2026-09-08
 title: "HTML Description Renderer + Wording Quality Improvements"
-status: active
+status: completed
+completed-date: 2026-09-09
 failing-steps: []
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md"
