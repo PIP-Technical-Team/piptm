@@ -1,9 +1,30 @@
 {
-  "plan": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
-  "executionReport": ".cg-docs/work-reports/2026-08-26-description-endpoint-implementation.md",
-  "phase": 5,
-  "step": 13,
-  "status": "completed",
-  "rationale": "Phase 5 (API Integration) complete: /table gains include_metadata param; /description POST endpoint implemented with fast (metadata) + fallback (recompute) paths; validate_description_input() helper added; CORS + router introspection verified. test-api-description.R (22 assertions) + full suite (952 passing) green. devtools::check(): 0 errors (down from 2); 3 pre-existing warnings and 7 NOTEs unrelated to Phase 5. Plan marked completed.",
-  "nextCommand": "/cg-review manual"
+  "schemaVersion": "compound-gpid-active-state-v1",
+  "updatedAt": "2026-09-09T15:40:30Z",
+  "workflow": "/cg-work",
+  "status": "blocked",
+  "branch": "new_description_model",
+  "plan": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+  "executionReport": ".cg-docs/work-reports/2026-09-09-description-html-renderer-and-wording.md",
+  "currentPhase": null,
+  "evidenceStatus": [
+    {"id": "V1", "status": "passed", "artifact": "temporary script output"},
+    {"id": "V2", "status": "passed", "artifact": "devtools::test(filter='description')"},
+    {"id": "V3", "status": "passed", "artifact": "C:/Users/wb621604/AppData/Local/Temp/2/kilo/plumber_ct_spike.R"},
+    {"id": "V4", "status": "pending", "artifact": ".cg-docs/plans/assets/2026-09-08-description-html-mock.html"},
+    {"id": "V5", "status": "pending", "artifact": null},
+    {"id": "V6", "status": "pending", "artifact": null},
+    {"id": "V7", "status": "pending", "artifact": null},
+    {"id": "V8", "status": "pending", "artifact": null},
+    {"id": "V9", "status": "pending", "artifact": null}
+  ],
+  "unresolvedDecisions": [
+    {"id": "D1", "summary": "Approve Step 5 static HTML mock to unlock Step 6", "blocking": true}
+  ],
+  "artifactRefs": [
+    {"kind": "plan", "path": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md", "status": "active"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-09-09-description-html-renderer-and-wording.md", "status": "active"},
+    {"kind": "mock", "path": ".cg-docs/plans/assets/2026-09-08-description-html-mock.html", "status": "pending-approval"}
+  ],
+  "nextCommand": "/cg-work"
 }

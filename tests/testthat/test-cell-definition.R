@@ -162,14 +162,14 @@ test_that("Example 3: Binary var with target shares produces exact expected outp
     "within each Area group"
   )
   expected_sentence_1 <- paste(
-    "The share of the weighted population that is Age group in",
-    "[0 to 14] within each Area group for whom Improved water source",
+    "Within the weighted population that is Age group in [0 to 14]",
+    "within each Area group, the share for which Improved water source",
     "is true."
   )
   expected_sentence_2 <- paste(
     "The share of the total weighted survey population represented",
     "by the weighted population that is Age group in [0 to 14]",
-    "within each Area group for whom Improved water source is true."
+    "within each Area group where Improved water source is true."
   )
   
   expect_equal(result$population_scope, expected_pop_scope)

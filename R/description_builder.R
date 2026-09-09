@@ -179,14 +179,17 @@ build_description_model <- function(description_metadata, params) {
   
   # Covariate description
   covariate_desc <- if (!is.null(params$by) && length(params$by) > 0) {
-    paste0(", broken down by ", format_covariate_description(params$by, meta$resolved_labels$covariates))
+    paste0(
+      ", with results disaggregated by ",
+      format_covariate_description(params$by, meta$resolved_labels$covariates)
+    )
   } else {
     ""
   }
   
   # Structure description
   structure_desc <- sprintf(
-    "This table presents %d %s for each of %d selected %s%s.",
+    "This table reports %d %s for %d selected %s%s.",
     n_measures,
     if (n_measures == 1) "statistic" else "statistics",
     n_surveys,
@@ -290,7 +293,7 @@ build_description_model <- function(description_metadata, params) {
   )
   
   return(list(
-    description = "The sample base has been filtered to include only the weighted population matching ALL of the following criteria:",
+    description = "The weighted sample is restricted to observations that meet all of the following criteria:",
     filters = filters_formatted
   ))
 }
@@ -568,7 +571,7 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
               )
             } else {
               sprintf(
-                "The share of %s for whom %s is true.",
+                "Within %s, the share for which %s is true.",
                 full_pop,
                 analysis_var_label
               )
@@ -576,7 +579,7 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
           } else if (measure_key == "target_survey_share") {
             # Numerator is filtered+grouped, denominator is total survey
             sprintf(
-              "The share of the total weighted survey population represented by %s for whom %s is true.",
+              "The share of the total weighted survey population represented by %s where %s is true.",
               full_pop,
               analysis_var_label
             )

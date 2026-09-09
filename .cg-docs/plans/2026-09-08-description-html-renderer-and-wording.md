@@ -2,11 +2,13 @@
 date: 2026-09-08
 title: "HTML Description Renderer + Wording Quality Improvements"
 status: active
+failing-steps: []
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md"
 language: "R"
 estimated-effort: "medium"
 deviation-policy: "ask"
+execution-report: ".cg-docs/work-reports/2026-09-09-description-html-renderer-and-wording.md"
 artifact-schema-version: 1
 tags: [description-endpoint, html-renderer, api, table-maker, wording, ux]
 ---
