@@ -1,0 +1,162 @@
+#' @importFrom collapse GRP
+#' @importFrom data.table rbindlist
+#' @importFrom cli cli_abort
+NULL
+
+# ── Measures orchestrator ─────────────────────────────────────────────────────
+
+#' Dispatch welfare, inequality, and poverty computations across one or more surveys
+#'
+#' Internal orchestrator that classifies requested measures into their
+#' computation families, builds a single compound [collapse::GRP()] object
+#' keyed by `c("pip_id", by)` (shared across inequality and welfare family
+#' functions), and dispatches to [compute_poverty()], [compute_inequality()],
+#' and [compute_summary_stats()] as required.  Results are row-bound via
+#' [data.table::rbindlist()] with `fill = TRUE`, so poverty rows carry a
+#' `poverty_line` column while inequality and welfare rows receive `NA_real_`.
+#'
+#' `pip_id` is always included in the grouping structure so every output row
+#' identifies its source survey.  A single-survey call is a degenerate batch
+#' of one and behaves identically to the previous single-survey contract.
+#'
+#' @param dt A [data.table::data.table()] for **one or more surveys**.  Must
+#'   contain at minimum `welfare`, `weight`, and `pip_id` columns, plus any
+#'   columns named in `by`.
+#' @param measures A non-empty character vector of measure names drawn from
+#'   the internal registry (see [.classify_measures()]).  Validated by
+#'   [.classify_measures()].
+#' @param analysis_var Character scalar analysis variable name. `"pov_status"`
+#'   routes poverty-family computation using `welfare` as the underlying
+#'   variable.
+#' @param poverty_line A positive numeric scalar poverty line value, or
+#'   `NULL`. Required when any poverty-family measure is requested.
+#' @param by A character vector of grouping column names present in `dt`, or
+#'   `NULL` for the aggregate (no disaggregation).  Passed unchanged to all
+#'   three family functions.
+#'
+#' @return A [data.table::data.table()] in **long format** with columns:
+#' \describe{
+#'   \item{`poverty_line`}{(numeric) Poverty threshold; `NA_real_` for
+#'     non-poverty measures.}
+#'   \item{`[by cols]`}{One column per element of `by` (if non-NULL).}
+#'   \item{`measure`}{(character) The measure name.}
+#'   \item{`value`}{(numeric) The computed statistic.}
+#'   \item{`population`}{(numeric) Total weighted population in the group.}
+#' }
+#'
+#' @family compute
+#' @keywords internal
+compute_measures <- function(dt, measures, analysis_var = NULL, poverty_line = NULL, by = NULL, release = NULL) {
+
+  # ── 1. Guard: required columns present ─────────────────────────────────────
+  required <- unique(c(
+    "pip_id", "weight",
+    if (is.null(analysis_var) || analysis_var %in% c("welfare", "pov_status")) "welfare",
+    if (!is.null(analysis_var) && !analysis_var %in% c("welfare", "pov_status")) analysis_var
+  ))
+  missing_cols <- setdiff(required, names(dt))
+  if (length(missing_cols)) {
+    cli_abort(
+      c("Required column{?s} missing from {.arg dt}: {.col {missing_cols}}."),
+      call = NULL
+    )
+  }
+
+  # ── 1b. Guard: all `by` columns present ────────────────────────────────────
+  if (!is.null(by)) {
+    missing_by <- setdiff(by, names(dt))
+    if (length(missing_by)) {
+      cli_abort(
+        c(
+          "Column{?s} listed in {.arg by} not found in {.arg dt}: {.col {missing_by}}.",
+          "i" = "Use {.fn table_maker} (which NA-fills missing dimension columns automatically),",
+          "i" = "or add the columns to {.arg dt} before calling {.fn compute_measures} directly."
+        ),
+        call = NULL
+      )
+    }
+  }
+
+  # ── 2. Classify measures → families ────────────────────────────────────────
+  classified <- .classify_measures(measures)
+  families   <- names(classified)
+
+  # ── 3. Validate inputs ──────────────────────────────────────────────────────
+  .validate_poverty_lines(poverty_line, families)
+  .validate_by(by, release = release)
+
+  target_variable <- if (is.null(analysis_var) || analysis_var == "pov_status") {
+    NULL
+  } else {
+    analysis_var
+  }
+
+  # ── 4. Build compound grouping: pip_id × by ─────────────────────────────────
+  # pip_id is always the first grouping key so every output row identifies its
+  # source survey.  A single-survey call is a degenerate batch of 1 and
+  # produces identical results to the previous single-survey contract.
+  # The compound GRP is shared by inequality and welfare.
+  # compute_poverty() must NOT receive the shared grp — it builds its own GRP
+  # after its poverty_line cross-join, which changes the row count and would
+  # invalidate the outer GRP object.
+  batch_by <- if (!is.null(by)) c("pip_id", by) else "pip_id"
+  grp      <- collapse::GRP(dt, by = batch_by)
+
+  # ── 5. Dispatch to each active family ──────────────────────────────────────
+  results <- list()
+
+  if ("poverty" %in% families) {
+    results$poverty <- compute_poverty(
+      dt,
+      poverty_lines = poverty_line,
+      by            = batch_by,
+      measures      = classified$poverty
+      # grp intentionally omitted — poverty builds its own after cross-join
+    )
+  }
+
+  if ("inequality" %in% families) {
+    results$inequality <- compute_inequality(
+      dt,
+      by       = batch_by,
+      measures = classified$inequality,
+      grp      = grp
+    )
+  }
+
+  if ("summary_stats" %in% families) {
+    summary_target <- if (is.null(target_variable)) "welfare" else target_variable
+    results$summary_stats <- compute_summary_stats(
+      dt,
+      by       = batch_by,
+      measures = classified$summary_stats,
+      target_variable = summary_target,
+      grp      = grp
+    )
+  }
+
+  if ("shares" %in% families) {
+    results$shares <- compute_shares(
+      dt,
+      by       = batch_by,
+      measures = classified$shares,
+      target_variable = target_variable,
+      grp      = grp
+    )
+  }
+
+
+  # ── 6. Merge — poverty rows have poverty_line; others receive NA_real_ ──────
+  # rbindlist(fill=TRUE) only creates poverty_line when at least one source
+  # table carries it.  When no poverty measures are requested the column never
+  # materialises via fill, so we guarantee its presence explicitly.
+  result <- data.table::rbindlist(results, fill = TRUE)
+  if (!"poverty_line" %in% names(result)) result[, poverty_line := NA_real_]
+
+  if (!is.null(by) && "pov_status" %in% by && !is.null(poverty_line)) {
+    poverty_line_scalar <- as.numeric(poverty_line[[1L]])
+    result[is.na(poverty_line), poverty_line := poverty_line_scalar]
+  }
+
+  result
+}

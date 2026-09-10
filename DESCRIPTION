@@ -3,7 +3,7 @@ Type: Package
 Title: Computation Engine for the PIP Table Maker
 Version: 0.1.0
 Authors@R: 
-    person("First", "Last", email = "your@email.org", role = c("aut", "cre"))
+    person("Rossana", "Tatulli", email = "rtatulli@worldbank.org", role = c("aut", "cre"))
 Description: 
     Provides the computation engine for the PIP Table Maker system. 
     The package loads survey microdata stored as partitioned Arrow/Parquet datasets 
@@ -18,15 +18,20 @@ Depends:
     R (>= 4.2)
 Imports:
     arrow,
+    cli,
     data.table,
     dplyr,
     rlang,
     collapse,
-    jsonlite
+    jsonlite,
 Suggests:
+    rprojroot,
     testthat (>= 3.0.0),
+    withr,
+    yaml,
     knitr,
+    plumber (>= 1.1.0),
     rmarkdown
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3

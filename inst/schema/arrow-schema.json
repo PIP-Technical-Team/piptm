@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "piptm/arrow-schema/v1",
+  "description": "Canonical schema for Parquet files in the PIP Master Arrow Repository. Contract between {pipdata} and {piptm}. Column names reflect {pipdata} clean output where possible, with minimal renames documented in source_column.",
+  "version": "2.0.0",
+  "created": "2026-03-20",
+  "updated": "2026-04-02",
+  "partition_keys": ["country_code", "surveyid_year", "welfare_type", "version"],
+  "breakdown_dimensions": [
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    "hsize",
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    "lstatus", "lstatus_year",
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
+  ],
+  "required_columns": [
+    "country_code",
+    "surveyid_year",
+    "welfare_type",
+    "version",
+    "pip_id",
+    "welfare",
+    "weight"
+  ],
+  "optional_columns": [
+    "gender", "area", "educat4", "educat5", "educat7", "age",
+    "hsize",
+    "imp_wat_rec", "imp_san_rec", "electricity",
+    "lstatus", "lstatus_year",
+    "empstat", "empstat_2", "empstat_year", "empstat_2_year",
+    "industrycat10", "industrycat10_2", "industrycat10_year", "industrycat10_2_year",
+    "industrycat4", "industrycat4_2", "industrycat4_year", "industrycat4_2_year"
+  ],
+  "columns": [
+    {
+      "name": "country_code",
+      "arrow_type": "utf8",
+      "r_type": "character",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": true,
+      "source": "metadata",
+      "source_field": "country_code",
+      "constraints": {
+        "pattern": "^[A-Z]{3}$",
+        "unique_per_file": true
+      },
+      "description": "ISO3 country code. Not present as a data column — injected as a constant from metadata$country_code. Must match the partition directory value (country=<country_code>). All rows in a single Parquet file share the same value."
+    },
+    {
+      "name": "surveyid_year",
+      "arrow_type": "int32",
+      "r_type": "integer",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": true,
+      "source": "metadata",
+      "source_field": "surveyid_year",
+      "constraints": {
+        "min": 1900,
+        "max": 2100,
+        "unique_per_file": true
+      },
+      "description": "Survey identification year. Not present as a data column — injected as a constant from metadata$surveyid_year. May differ from survey_year for multi-round surveys. Used as the year partition key. All rows in a single Parquet file share the same value."
+    },
+    {
+      "name": "welfare_type",
+      "arrow_type": "utf8",
+      "r_type": "character",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": true,
+      "source": "metadata",
+      "source_field": "welfare_type",
+      "constraints": {
+        "enum": ["INC", "CON"],
+        "unique_per_file": true
+      },
+      "description": "Welfare aggregate type. Not present as a data column — injected as a constant from metadata$welfare_type. Raw metadata value is a full string ('income', 'consumption'); recode to uppercase code required ('INC', 'CON'). Must match the partition directory value (welfare_type=<welfare_type>). All rows in a single Parquet file share the same value."
+    },
+    {
+      "name": "version",
+      "arrow_type": "utf8",
+      "r_type": "character",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": true,
+      "source": "metadata",
+      "source_field": ["vermast", "veralt"],
+      "construction": "paste0(tolower(vermast), '_', tolower(veralt))",
+      "constraints": {
+        "pattern": "^v[0-9]{2}_v[0-9]{2}$",
+        "unique_per_file": true
+      },
+      "description": "Combined master and alternative version string derived from metadata$vermast and metadata$veralt (e.g. 'v01_v04'). Atomic value — never split into components at the partition level. Must match the partition directory value (version=<version>). All rows in a single Parquet file share the same value."
+    },
+    {
+      "name": "pip_id",
+      "arrow_type": "utf8",
+      "r_type": "character",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": false,
+      "source": "metadata",
+      "source_field": "pip_id",
+      "construction": null,
+      "constraints": {
+        "pattern": "^[A-Z]{3}_[0-9]{4}_[A-Z0-9-]+_(INC|CON)_(ALL|GPWG)$",
+        "unique_per_file": true
+      },
+      "description": "File-level survey identifier (e.g. 'BOL_2020_EH_INC_ALL'). Uniquely identifies a single Parquet file — one welfare type for one survey. Stored in the data column so the file is self-describing. Derived from the release inventory pip_id column. Used as the Parquet filename stem."
+    },
+    {
+      "name": "welfare",
+      "arrow_type": "float64",
+      "r_type": "numeric",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "welfare",
+      "constraints": {
+        "min": 0,
+        "no_inf": true,
+        "no_nan": true
+      },
+      "description": "PPP-adjusted welfare (consumption or income). Present as a data column. The {pipdata} ALL module provides this already PPP-adjusted in the 'welfare' column. Zero values are permitted (valid zero-income observations). Negative values are not permitted."
+    },
+    {
+      "name": "weight",
+      "arrow_type": "float64",
+      "r_type": "numeric",
+      "required": true,
+      "nullable": false,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "weight",
+      "constraints": {
+        "min_exclusive": 0,
+        "no_inf": true,
+        "no_nan": true
+      },
+      "description": "Individual-level sampling weight. Must be strictly positive. Used as-is from the data column 'weight'. Assumed to be clean and valid after {pipdata} harmonization."
+    },
+    {
+      "name": "gender",
+      "arrow_type": "dictionary(int32, utf8)",
+      "r_type": "factor",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "gender",
+      "constraints": {
+        "allowed_values": ["male", "female"],
+        "factor_levels": ["male", "female"]
+      },
+      "description": "Individual gender. Present as a data column. Must be absent (column omitted, not all-NA) if the survey does not include this dimension. Preferred source is 'gender' (string: 'male'/'female'). Fallback is 'male' (integer: 1=male, 0=female). Standardise to lowercase string before writing. Factor levels are fixed: ['male', 'female']."
+    },
+    {
+      "name": "area",
+      "arrow_type": "dictionary(int32, utf8)",
+      "r_type": "factor",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "area",
+      "constraints": {
+        "allowed_values": ["urban", "rural"],
+        "factor_levels": ["urban", "rural"]
+      },
+      "description": "Urban/rural classification. Present as a data column. Must be absent (column omitted) if not available. Preferred source is 'area' (string: 'urban'/'rural'). Fallback is 'urban' (integer: 1=urban, 0=rural). Standardise to lowercase string before writing. Factor levels are fixed: ['urban', 'rural']."
+    },
+    {
+      "name": "educat4",
+      "arrow_type": "dictionary(int32, utf8)",
+      "r_type": "factor",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "educat4",
+      "constraints": {},
+      "description": "Educational attainment — 4-category GMD classification. Present as a data column when available in the survey. Factor levels are survey-specific (GMD verbose labels preserved as-is, e.g. 'Primary (complete or incomplete)'). Column is absent when not available."
+    },
+    {
+      "name": "educat5",
+      "arrow_type": "dictionary(int32, utf8)",
+      "r_type": "factor",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "educat5",
+      "constraints": {},
+      "description": "Educational attainment — 5-category GMD classification. Present as a data column when available in the survey. Factor levels are survey-specific. Column is absent when not available."
+    },
+    {
+      "name": "educat7",
+      "arrow_type": "dictionary(int32, utf8)",
+      "r_type": "factor",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "educat7",
+      "constraints": {},
+      "description": "Educational attainment — 7-category GMD classification. Present as a data column when available in the survey. Factor levels are survey-specific. Column is absent when not available."
+    },
+    {
+      "name": "age",
+      "arrow_type": "int32",
+      "r_type": "integer",
+      "required": false,
+      "nullable": true,
+      "is_partition_key": false,
+      "source": "data",
+      "source_column": "age",
+      "constraints": {
+        "min": 0,
+        "max": 130
+      },
+      "description": "Age of the individual in years. Present as a data column. Stored as a continuous integer, not a categorical. Age-group binning (e.g. 0-14, 15-24, 25-64, 65+) is performed by {piptm} at query time, not at ingestion. Must be absent (column omitted) if not available in the survey. Zero is a valid age (infants)."
+    }
+  ],
+  "filename_convention": {
+    "pattern": "<survey_id_with_welfare_suffix>-0.parquet",
+    "description": "The welfare_type suffix in survey_id is replaced: _PIP (and any trailing module suffix) becomes _<welfare_type>. Example: ALB_2012_LSMS_V01_M_V04_A_PIP_TB-ALL becomes ALB_2012_LSMS_V01_M_V04_A_INC-0.parquet",
+    "example_input": "ALB_2012_LSMS_V01_M_V04_A_PIP_TB-ALL",
+    "example_output": "ALB_2012_LSMS_V01_M_V04_A_INC-0.parquet"
+  },
+  "schema_rules": [
+    "Partition key columns (country_code, surveyid_year, welfare_type, version) must be stored inside the Parquet file in addition to encoding the partition path — this enables self-describing validation.",
+    "The version column encodes metadata$vermast and metadata$veralt as a single atomic string (e.g. 'v01_v04'). It must never be split into components at the partition level.",
+    "Optional breakdown dimension columns must be ABSENT from the file (column not present, not present as all-NA) when not available for a survey. Presence in the file implies availability and must be reflected in the manifest available_dimensions field.",
+    "educat4, educat5, and educat7 are stored with their original GMD factor levels — no recoding to a canonical 4-level set is applied. Level sets are survey-specific.",
+    "Only columns defined in this schema may be written to the Parquet file. Additional columns from {pipdata} clean output must be dropped before write.",
+    "'age' is stored as a continuous int32, not a categorical/dictionary column. Age-group binning is performed at query time by {piptm}.",
+    "Zero welfare values are permitted and must not be dropped. They represent valid zero-income observations.",
+    "Cleaning and standardization rules are fully specified in docs/pre-arrow-cleaning-spec.md. The schema defines the contract; the spec defines how to reach it."
+  ]
+}

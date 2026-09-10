@@ -1,0 +1,657 @@
+# Survey Microdata Loading Functions
+#
+# Plan: .cg-docs/plans/2026-04-03-manifest-generation-version-partition.md
+#       (Step 5)
+#
+# Provides functions for loading PIP survey microdata from the shared Arrow
+# repository. The manifest is the authoritative source for the `version`
+# partition key, ensuring reproducibility across releases. All surveys must
+# use the current deflated-data schema (non-empty `welfare_vars`); the
+# retired single-`welfare`-column schema is not supported.
+#
+# PPP handling: both functions default to ppp = 2021L. Surveys lacking the
+# requested welfare_ppp_<ppp> column are skipped with a warning in
+# load_surveys(); load_survey_microdata() errors (single survey, no partial
+# result makes sense).
+#
+# Partition structure (4-level Hive):
+#   <arrow_root>/country_code=<cc>/surveyid_year=<yr>/welfare_type=<wt>/version=<ver>/
+#
+# Both loading functions use the same path-based backend (.build_parquet_paths):
+#   1. Construct the exact Hive leaf directory path from the four partition keys.
+#   2. Discover *.parquet files in that directory (non-recursive).
+#   3. Open via open_dataset(files, format = "parquet") |> collect().
+# This avoids a global repository scan and is ~19x faster than filtering on
+# data columns.
+#
+# Internal helpers
+# ----------------
+#   .build_parquet_paths()   — construct leaf paths + discover parquet files
+#
+# Exported functions
+# ------------------
+#   load_survey_microdata()  — load a single survey by (country, year, welfare_type)
+#   load_surveys()           — batch-load via a manifest data.table subset
+
+# ---------------------------------------------------------------------------
+# .build_parquet_paths()  — shared internal helper
+# ---------------------------------------------------------------------------
+
+#' Construct the Hive leaf directory path and discover Parquet files
+#'
+#' Given the four partition keys for one survey, builds the exact leaf
+#' directory path under `arrow_root` and returns all `.parquet` files found
+#' directly in that directory (non-recursive).  Errors if no files are found.
+#'
+#' @param arrow_root   Character scalar. Root of the shared Arrow repository.
+#' @param country_code Character scalar. ISO3 country code.
+#' @param year         Integer scalar. Survey year.
+#' @param welfare_type Character scalar. `"INC"` or `"CON"`.
+#' @param version      Character scalar. Version string (e.g. `"v01_v04"`).
+#'
+#' @return Character vector of absolute `.parquet` file paths.
+#' @keywords internal
+.build_parquet_paths <- function(arrow_root, country_code, year,
+                                  welfare_type, version) {
+  leaf <- file.path(
+    arrow_root,
+    paste0("country_code=",  country_code),
+    paste0("surveyid_year=", year),
+    paste0("welfare_type=",  welfare_type),
+    paste0("version=",       version)
+  )
+  files <- list.files(leaf, pattern = "\\.parquet$",
+                      full.names = TRUE, recursive = FALSE)
+  if (length(files) == 0L) {
+    cli::cli_abort(
+      c(
+        "No Parquet files found for {.val {country_code}} / {year} / {.val {welfare_type}} / version {.val {version}}.",
+        "i" = "Expected partition path: {.path {leaf}}",
+        "i" = "Arrow root: {.path {arrow_root}}"
+      )
+    )
+  }
+  if (length(files) > 1L) {
+    cli::cli_abort(
+      c(
+        "Multiple Parquet files found for {.val {country_code}} / {year} / {.val {welfare_type}} / {.val {version}}.",
+        "i" = "Expected exactly one file per partition. Found: {.val {basename(files)}}",
+        "i" = "Partition path: {.path {leaf}}"
+      )
+    )
+  }
+  files
+}
+
+# ---------------------------------------------------------------------------
+# .find_welfare_col()  — shared internal helper
+# ---------------------------------------------------------------------------
+
+#' Find welfare column(s) in a welfare_vars vector for a given PPP year
+#'
+#' Matches column names following the pattern
+#' `welfare_ppp_<year>` or `welfare_ppp_<year>_<vermast>_<veralt>`.
+#'
+#' @param wv       Character vector of welfare column names from the manifest.
+#' @param year_val Integer or numeric PPP year to search for.
+#'
+#' @return Character vector of matching column names (length 0 if none found).
+#' @keywords internal
+.find_welfare_col <- function(wv, year_val) {
+  prefix <- paste0("welfare_ppp_", year_val)
+  wv[wv == prefix | startsWith(wv, paste0(prefix, "_"))]
+}
+
+# ---------------------------------------------------------------------------
+# load_survey_microdata()
+# ---------------------------------------------------------------------------
+
+#' Load microdata for a single survey from the shared Arrow repository
+#'
+#' Looks up the manifest for `release` (defaulting to the current release),
+#' finds the entry matching `country_code`, `year`, and `welfare_type`,
+#' extracts the `version` partition key, then constructs the exact Hive leaf
+#' directory path and loads only the Parquet files in that directory.
+#'
+#' For surveys written with the deflated-data schema (multiple `welfare_ppp_*`
+#' columns), the `ppp` argument controls which welfare column is selected and
+#' returned as `welfare`. For legacy surveys with a single `welfare` column,
+#' the `ppp` argument has no effect.
+#'
+#' The returned `data.table` has a `"dimensions"` attribute: a character
+#' vector of the available breakdown dimension columns recorded in the
+#' manifest entry (e.g. `c("area", "gender", "age")`).
+#'
+#' @param country_code Character scalar ISO3 country code (e.g. `"COL"`).
+#' @param year         Integer scalar survey year (e.g. `2010L`).
+#' @param welfare_type Character scalar welfare type (`"INC"` or `"CON"`).
+#' @param ppp          Integer scalar PPP year (e.g. `2017L`). Defaults to
+#'   `2021L`. Selects the `welfare_ppp_<ppp>` column and renames it to
+#'   `welfare`.
+#' @param cols         Character vector of **logical** column names to load, or
+#'   `NULL` (default).  When non-`NULL`, only those columns are fetched from
+#'   the Parquet file (the `select()` happens before `collect()`, so network
+#'   bytes are skipped).  Use the logical name `"welfare"` regardless of the
+#'   underlying PPP column name in the file — the translation is handled
+#'   internally.  Do **not** pass physical welfare column names (e.g.
+#'   `"welfare_ppp_2017_01_02"`).  `"welfare"`, `"weight"`, and `"pip_id"` are
+#'   always included automatically, even if not listed.  Columns absent from
+#'   the survey's schema are silently omitted.  When `NULL`, all columns are
+#'   loaded (default behaviour).
+#' @param release      Character scalar release ID (e.g. `"20260206"`).
+#'   Defaults to [piptm_current_release()].
+#'
+#' @return A `data.table` of survey microdata with a single `welfare` column
+#'   and attribute `"dimensions"`. The manifest entry must have a non-empty
+#'   `welfare_vars` — the retired single-`welfare`-column schema is not supported.
+#'
+#' @seealso [load_surveys()], [piptm_manifest()], [set_arrow_root()]
+#' @importFrom arrow open_dataset
+#' @importFrom dplyr collect select all_of
+#' @importFrom data.table as.data.table setattr is.data.table setnames
+#' @importFrom cli cli_abort cli_warn
+#' @export
+#' @examples
+#' \dontrun{
+#' set_manifest_dir("//server/manifests")
+#' set_arrow_root("//server/pip/arrow")
+#' dt <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L)
+#' dt_slim <- load_survey_microdata("COL", 2010L, "INC", ppp = 2017L,
+#'                                  cols = c("welfare", "weight", "gender"))
+#' attr(dt, "dimensions")
+#' }
+load_survey_microdata <- function(country_code,
+                                  year,
+                                  welfare_type,
+                                  ppp     = 2021L,
+                                  cols    = NULL,
+                                  release = NULL) {
+
+  stopifnot(
+    is.character(country_code), length(country_code) == 1L, !is.na(country_code),
+    is.numeric(year),           length(year) == 1L,          !is.na(year),
+    is.character(welfare_type), length(welfare_type) == 1L,  !is.na(welfare_type)
+  )
+
+  if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
+    cli::cli_abort("{.arg cols} must be NULL or a non-empty character vector.")
+
+  year <- as.integer(year)
+
+  # --- 1. Resolve release and manifest ----------------------------------------
+  if (is.null(release)) {
+    release <- piptm_current_release()
+    if (is.null(release)) {
+      cli::cli_abort(
+        c(
+          "No current release is set.",
+          "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
+        )
+      )
+    }
+  }
+
+  mf <- piptm_manifest(release)
+
+  # --- 2. Filter manifest to the requested survey -----------------------------
+  # Rename scalars before filtering to avoid data.table's scoping rules:
+  # inside [.data.table, bare names resolve to columns first, so a column
+  # named `country_code` would shadow the function argument of the same name,
+  # making `country_code == country_code` always TRUE and returning all rows.
+  # Using distinct local names (prefixed with `.`) sidesteps the collision.
+  .cc  <- country_code
+  .yr  <- year
+  .wt  <- welfare_type
+
+  entry <- mf[
+    country_code == .cc &
+    year         == .yr &
+    welfare_type == .wt
+  ]
+
+  if (nrow(entry) == 0L) {
+    cli::cli_abort(
+      c(
+        "No manifest entry found for {.val {country_code}} / {year} / {.val {welfare_type}} in release {.val {release}}.",
+        "i" = "Check {.fn piptm_manifest} for available surveys in this release."
+      )
+    )
+  }
+
+  if (nrow(entry) > 1L) {
+    cli::cli_abort(
+      c(
+        "Multiple manifest entries found for {.val {country_code}} / {year} / {.val {welfare_type}} in release {.val {release}}.",
+        "i" = "This indicates a corrupt manifest. Expected exactly one match."
+      )
+    )
+  }
+
+  version      <- entry$version[[1L]]
+  dimensions   <- entry$dimensions[[1L]]
+  welfare_vars <- entry$welfare_vars[[1L]]
+
+  # --- 3. Resolve Arrow root --------------------------------------------------
+  arrow_root <- piptm_arrow_root()
+  if (is.null(arrow_root)) {
+    cli::cli_abort(
+      c(
+        "Arrow root is not configured.",
+        "i" = "Call {.fn set_arrow_root} to set the path to the Arrow repository."
+      )
+    )
+  }
+
+  # --- 4. Load data via path-based Parquet discovery -------------------------
+  # .build_parquet_paths() constructs the exact Hive leaf directory path from
+  # the four partition keys and discovers *.parquet files non-recursively.
+  # This avoids opening the entire repository and is ~19x faster than
+  # open_dataset(arrow_root) |> filter(...) on data columns.
+  parquet_files <- .build_parquet_paths(
+    arrow_root    = arrow_root,
+    country_code  = country_code,
+    year          = year,
+    welfare_type  = welfare_type,
+    version       = version
+  )
+
+  # --- 4a. Resolve physical target_col for column pruning --------------------
+  # The physical welfare column name (e.g. "welfare_ppp_2017_01_02") is needed
+  # before open_dataset() so that logical "welfare" in `cols` can be translated
+  # before the Arrow select.  Resolved only when cols != NULL.
+  target_col_for_prune <- NULL
+  if (!is.null(cols)) {
+    cands <- .find_welfare_col(welfare_vars, ppp)
+    if (length(cands) > 0L) target_col_for_prune <- cands[[1L]]
+    # If resolution fails (PPP not found), fall back to loading all columns —
+    # step 5 will raise the informative error as usual.
+  }
+
+  ds <- arrow::open_dataset(parquet_files, format = "parquet")
+
+  if (!is.null(cols) && !is.null(target_col_for_prune)) {
+    physical_cols <- cols
+    physical_cols[physical_cols == "welfare"] <- target_col_for_prune
+    physical_cols <- union(physical_cols, c("pip_id", target_col_for_prune, "weight"))
+    safe_cols     <- intersect(physical_cols, ds$schema$names)
+    # Warn for requested columns absent from the schema (welfare-family and
+    # auto-included columns are silently omitted by design).
+    auto_or_welfare_cols_lsm <- unique(c(welfare_vars, target_col_for_prune,
+                                         "welfare", "weight", "pip_id"))
+    dropped <- setdiff(setdiff(physical_cols, safe_cols), auto_or_welfare_cols_lsm)
+    if (length(dropped) > 0L)
+      cli::cli_warn(
+        "Requested column(s) absent from Arrow schema and skipped: {.val {dropped}}"
+      )
+    ds <- dplyr::select(ds, dplyr::all_of(safe_cols))
+  }
+
+  dt <- ds |>
+    dplyr::collect() |>
+    data.table::as.data.table()
+
+  if (nrow(dt) == 0L) {
+    cli::cli_abort(
+      c(
+        "Arrow query returned 0 rows for {.val {country_code}} / {year} / {.val {welfare_type}} / version {.val {version}}.",
+        "i" = "The Parquet partition may be missing from the Arrow repository.",
+        "i" = "Arrow root: {.path {arrow_root}}"
+      )
+    )
+  }
+
+  # --- 5. PPP welfare column selection ------------------------------------------
+  candidates <- .find_welfare_col(welfare_vars, ppp)
+  if (length(candidates) == 0L) {
+    available_ppp <- unique(sub(
+      "^welfare_ppp_([0-9]+).*", "\\1",
+      welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
+    ))
+    cli::cli_abort(
+      c(
+        "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
+        "i" = "Available PPPs: {.val {available_ppp}}"
+      )
+    )
+  }
+  target_col <- candidates[[1L]]
+  welfare_data_cols <- intersect(welfare_vars, names(dt))
+  data.table::setnames(dt, target_col, "welfare")
+  drop_cols <- setdiff(welfare_data_cols, target_col)
+  if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
+
+  # --- 6. Attach manifest metadata as attributes ------------------------------
+  data.table::setattr(dt, "dimensions", dimensions)
+  data.table::setattr(dt, "pip_id",     entry$pip_id[[1L]])
+  data.table::setattr(dt, "release",    release)
+
+  dt[]
+}
+
+# ---------------------------------------------------------------------------
+# load_surveys()
+# ---------------------------------------------------------------------------
+
+#' Batch-load microdata for multiple surveys from the shared Arrow repository
+#'
+#' Accepts a subset of a manifest `data.table` (as returned by
+#' [piptm_manifest()], possibly filtered by the caller) and loads all
+#' matching surveys by opening their exact Hive partition directories directly.
+#' This avoids a global dataset scan and is significantly faster than filtering
+#' on data columns.
+#'
+#' The returned `data.table` contains all surveys combined (row-bound). A
+#' `pip_id` column (already present in the Parquet files) identifies each row's
+#' survey. A `"release"` attribute records the release ID.
+#'
+#' The `ppp` argument selects a single welfare column uniformly across all
+#' surveys and renames it to `welfare`. All surveys must carry the current
+#' deflated-data schema (non-empty `welfare_vars`).
+#'
+#' @param entries_dt A `data.table` with at least the columns `country_code`,
+#'   `year`, `welfare_type`, `version`, and `welfare_vars` (i.e. a subset of
+#'   what [piptm_manifest()] returns). The first four map directly to the Hive
+#'   partition keys; `welfare_vars` drives welfare column selection.  Every
+#'   entry must have a non-empty `welfare_vars` — the retired
+#'   single-`welfare`-column schema is no longer supported.
+#' @param ppp        Integer scalar PPP year (e.g. `2017L`). Defaults to
+#'   `2021L`. Applied to all surveys in `entries_dt`. Surveys that do not
+#'   carry a `welfare_ppp_<ppp>` column are skipped with a warning; the
+#'   remaining surveys are returned. An error is raised only when no surveys
+#'   remain after skipping.
+#' @param cols      Character vector of **logical** column names to load, or
+#'   `NULL` (default).  When non-`NULL`, only those columns are fetched from
+#'   the Parquet files (the `select()` happens before `collect()`, so network
+#'   bytes are skipped).  Use the logical name `"welfare"` regardless of the
+#'   underlying PPP column name in the file — the translation is handled
+#'   internally.  Do **not** pass physical welfare column names (e.g.
+#'   `"welfare_ppp_2017_01_02"`) — those are treated as explicitly-requested
+#'   welfare-family columns, will trigger a warning, and are dropped; always
+#'   use `"welfare"` as the logical name instead.  `"welfare"`, `"weight"`,
+#'   and `"pip_id"` are always included automatically, even if not listed
+#'   (`pip_id` is required for the loaded-vs-requested integrity check and
+#'   cannot be excluded).  Columns absent from a survey's schema are silently
+#'   omitted (they will appear as `NA` if added back by the caller).  When
+#'   `NULL`, all columns are loaded (current default behaviour).
+#' @param filter_base Named list of sample-base filters, or `NULL`.
+#'   Each name is a variable and each value is an integer vector of allowed
+#'   codes (AND across variables, IN within variable). Filters are applied on
+#'   the Arrow dataset before `collect()`. When `cols` is non-`NULL`, filter
+#'   columns are auto-included for filtering and dropped post-collect when they
+#'   were not explicitly requested in `cols`.
+#' @param release Character scalar release ID. Used only for error messages and
+#'   to attach as an attribute on the result. Defaults to [piptm_current_release()].
+#'
+#' @return A `data.table` of combined survey microdata with a single `welfare`
+#'   column and attribute `"release"`. Contains all rows from matching surveys.
+#'   All surveys must use the current deflated-data schema (non-empty
+#'   `welfare_vars`). The retired single-`welfare`-column schema is not
+#'   supported.
+#'
+#' @seealso [load_survey_microdata()], [piptm_manifest()]
+#' @export
+#' @examples
+#' \dontrun{
+#' set_manifest_dir("//server/manifests")
+#' set_arrow_root("//server/pip/arrow")
+#' colombia <- piptm_manifest()[country_code == "COL"]
+#' dt <- load_surveys(colombia, ppp = 2017L)
+#' }
+load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL,
+                         filter_base = NULL, release = NULL) {
+
+  stopifnot(
+    data.table::is.data.table(entries_dt),
+    all(c("country_code", "year", "welfare_type", "version",
+          "welfare_vars") %in% names(entries_dt))
+  )
+
+  if (!is.null(cols) && (!is.character(cols) || length(cols) == 0L))
+    cli::cli_abort("{.arg cols} must be NULL or a non-empty character vector.")
+
+  normalized_filter_base <- NULL
+  filter_vars <- character(0L)
+  if (!is.null(filter_base)) {
+    if (is.data.frame(filter_base)) {
+      filter_base <- as.list(filter_base)
+    }
+    if (!is.list(filter_base) || length(filter_base) == 0L) {
+      cli::cli_abort("{.arg filter_base} must be NULL or a non-empty named list.")
+    }
+
+    filter_vars <- names(filter_base)
+    if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
+      cli::cli_abort("{.arg filter_base} must have non-empty variable names.")
+    }
+
+    normalized_filter_base <- setNames(
+      lapply(filter_vars, function(varname) {
+        vals <- unlist(filter_base[[varname]], use.names = FALSE)
+        if (length(vals) == 0L) {
+          cli::cli_abort(
+            "{.arg filter_base} variable {.val {varname}} must include at least one value."
+          )
+        }
+        suppressWarnings(vals_int <- as.integer(vals))
+        if (anyNA(vals_int)) {
+          cli::cli_abort(
+            c(
+              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+              "i" = "Values must be integer codes stored in Parquet."
+            )
+          )
+        }
+        unique(vals_int)
+      }),
+      filter_vars
+    )
+  }
+
+  if (nrow(entries_dt) == 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg entries_dt} has 0 rows — nothing to load.",
+        "i" = "Pass a non-empty subset of {.fn piptm_manifest}."
+      )
+    )
+  }
+
+  if (is.null(release)) {
+    release <- piptm_current_release()
+  }
+
+  # --- Resolve Arrow root -----------------------------------------------------
+  arrow_root <- piptm_arrow_root()
+
+  if (is.null(arrow_root)) {
+    cli::cli_abort(
+      c(
+        "Arrow root is not configured.",
+        "i" = "Call {.fn set_arrow_root} to set the path to the Arrow repository."
+      )
+    )
+  }
+
+  # --- PPP welfare column selection ------------------------------------------
+  # Resolve target_col BEFORE building parquet paths and before open_dataset so
+  # column pruning (cols parameter) can translate logical "welfare" → the
+  # physical PPP column name.  Filtering must happen BEFORE path building so
+  # that skipped surveys' files are never opened.
+  # All entries must carry non-empty welfare_vars (new deflated-data schema).
+  effective_year <- ppp
+
+  # Skip surveys that do not carry a welfare column for the requested PPP year.
+  # Issue a warning per skipped survey so callers can diagnose coverage gaps.
+  has_col <- vapply(
+    entries_dt$welfare_vars,
+    function(wv) length(.find_welfare_col(wv, effective_year)) > 0L,
+    logical(1L)
+  )
+  if (any(!has_col)) {
+    skipped_ids <- entries_dt$pip_id[!has_col]
+    cli::cli_warn(
+      c(
+        "PPP {.val {effective_year}} welfare column not found in {length(skipped_ids)} survey{?s} — skipping.",
+        "i" = "Skipped: {.val {skipped_ids}}"
+      )
+    )
+    entries_dt <- entries_dt[has_col]
+  }
+  if (nrow(entries_dt) == 0L) {
+    cli::cli_abort(
+      c(
+        "No surveys remain after skipping those without PPP {.val {effective_year}} welfare column.",
+        "i" = "Provide {.arg ppp} matching the surveys' available welfare columns."
+      )
+    )
+  }
+
+  # --- Build exact partition paths and collect Parquet files -----------------
+  # Call .build_parquet_paths() per survey row so any missing partition
+  # directory raises an error immediately (no silent partial-miss).
+  # Built AFTER the PPP skip filter so only files for remaining surveys are opened.
+  parquet_files <- unlist(lapply(seq_len(nrow(entries_dt)), function(i) {
+    .build_parquet_paths(
+      arrow_root    = arrow_root,
+      country_code  = entries_dt$country_code[[i]],
+      year          = entries_dt$year[[i]],
+      welfare_type  = entries_dt$welfare_type[[i]],
+      version       = entries_dt$version[[i]]
+    )
+  }))
+
+  # Determine the physical target column name from the manifest welfare_vars.
+  # All surveys in a release share the same full column name for a given PPP
+  # year (same version suffix). Error if they diverge.
+  target_cols <- unique(vapply(
+    seq_len(nrow(entries_dt)),
+    function(i) .find_welfare_col(entries_dt$welfare_vars[[i]], effective_year)[[1L]],
+    character(1L)
+  ))
+  if (length(target_cols) > 1L) {
+    cli::cli_abort(
+      c(
+        "Surveys have different full column names for PPP year {.val {effective_year}}:",
+        "i" = "{.val {target_cols}}",
+        "i" = "This can occur when surveys come from different pipeline versions. Load surveys separately."
+      )
+    )
+  }
+  target_col       <- target_cols[[1L]]
+  all_welfare_vars <- unique(unlist(entries_dt$welfare_vars))
+
+  # --- Open dataset, optionally prune columns, then collect -----------------
+  # Column pruning (cols != NULL) translates logical "welfare" to target_col
+  # and limits the Arrow -> R transfer to only the bytes we need.
+  # intersect() against ds$schema$names makes the select safe for partial-match
+  # surveys whose schema lacks some dimension columns (e.g. a survey without
+  # the "area" column): those columns are omitted here and NA-filled downstream
+  # by table_maker().
+  ds <- arrow::open_dataset(parquet_files, format = "parquet")
+  original_cols <- cols
+
+  if (!is.null(cols)) {
+    # Translate logical "welfare" → physical column name. Always ensure
+    # pip_id (integrity check), target_col (welfare), and weight are included
+    # regardless of what the caller requested.
+    physical_cols <- cols
+    physical_cols[physical_cols == "welfare"] <- target_col
+    physical_cols <- union(physical_cols, filter_vars)
+    physical_cols <- union(physical_cols, c("pip_id", target_col, "weight"))
+    # Only select columns that actually exist in the unified schema.
+    safe_cols <- intersect(physical_cols, ds$schema$names)
+    # Warn for non-welfare columns that are absent from the unified schema.
+    # Columns in auto_or_welfare_cols are never surfaced in this warning:
+    #   - welfare-variant columns are handled by PPP selection above
+    #   - "weight" and "pip_id" are auto-fetched unconditionally, so a
+    #     schema miss on either is handled separately (not a user error).
+    auto_or_welfare_cols <- unique(c(all_welfare_vars, target_col, "welfare",
+                                     "weight", "pip_id"))
+    dropped_requested  <- setdiff(setdiff(physical_cols, safe_cols), auto_or_welfare_cols)
+    if (length(dropped_requested) > 0L)
+      cli::cli_warn(
+        "Requested column(s) absent from Arrow schema and skipped: {.val {dropped_requested}}"
+      )
+    ds <- dplyr::select(ds, dplyr::all_of(safe_cols))
+  }
+
+  if (!is.null(normalized_filter_base)) {
+    for (varname in names(normalized_filter_base)) {
+      allowed_vals <- normalized_filter_base[[varname]]
+      ds <- dplyr::filter(ds, .data[[varname]] %in% allowed_vals)
+    }
+  }
+
+  dt <- ds |>
+    dplyr::collect() |>
+    data.table::as.data.table()
+
+  if (!is.null(normalized_filter_base) && !is.null(original_cols)) {
+    filter_only_cols <- setdiff(names(normalized_filter_base), original_cols)
+    filter_only_cols <- intersect(filter_only_cols, names(dt))
+    if (length(filter_only_cols) > 0L) dt[, (filter_only_cols) := NULL]
+  }
+
+  if (nrow(dt) == 0L) {
+    cli::cli_abort(
+      c(
+        "Arrow query returned 0 rows for the requested surveys.",
+        "i" = "Arrow root: {.path {arrow_root}}"
+      )
+    )
+  }
+
+  # --- Integrity check: verify only requested surveys were loaded ------------
+  # pip_id is stored in every Parquet file and encodes the exact survey tuple.
+  # An unexpected pip_id indicates path construction error or partition
+  # contamination.
+  loaded_ids   <- unique(dt$pip_id)
+  unexpected   <- setdiff(loaded_ids, entries_dt$pip_id)
+  if (length(unexpected) > 0L) {
+    cli::cli_abort(
+      c(
+        "Loaded unexpected survey(s): {.val {unexpected}}.",
+        "i" = "This may indicate partition path contamination or a manifest mismatch.",
+        "i" = "Arrow root: {.path {arrow_root}}"
+      )
+    )
+  }
+
+  # --- Post-collect: rename target_col -> "welfare", drop other welfare_vars -
+  # When cols was non-NULL, target_col is the only welfare_ppp_* column in dt
+  # (others were excluded by the Arrow select above).
+  # When cols was NULL, all_welfare_vars may include multiple columns — drop
+  # everything except target_col, then rename.
+  # target_col is always fetched (added unconditionally above), so the rename
+  # is always safe regardless of what cols the caller requested.
+  welfare_data_cols <- intersect(all_welfare_vars, names(dt))
+  if (target_col %in% welfare_data_cols) {
+    data.table::setnames(dt, target_col, "welfare")
+    drop_cols <- setdiff(welfare_data_cols, target_col)
+    # Warn if caller explicitly requested a welfare-family column —
+    # those are always dropped after target_col is renamed to "welfare".
+    if (!is.null(cols) && length(drop_cols) > 0L) {
+      explicitly_requested <- intersect(drop_cols, cols)
+      if (length(explicitly_requested) > 0L)
+        cli::cli_warn(
+          c(
+            "Welfare-family column(s) {.val {explicitly_requested}} were dropped.",
+            "i" = "Physical welfare column names are not retrievable via {.arg cols}.",
+            "i" = "Use {.arg ppp} to select a welfare variant; pass {.val \"welfare\"} in {.arg cols} for the unified column."
+          )
+        )
+    }
+    if (length(drop_cols) > 0L) dt[, (drop_cols) := NULL]
+  } else {
+    cli::cli_abort(
+      c(
+        "Expected welfare column {.val {target_col}} not found in loaded data.",
+        "i" = "Columns present: {.val {names(dt)}}"
+      )
+    )
+  }
+
+  data.table::setattr(dt, "release", release)
+
+  dt[]
+}

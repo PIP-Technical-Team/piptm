@@ -1,0 +1,451 @@
+# Manifest Loading and Accessor Functions
+#
+# Plan: .cg-docs/plans/2026-04-03-manifest-generation-version-partition.md
+#       (Step 4)
+#
+# Provides functions for loading, caching, and accessing PIP release manifests.
+# The manifest system is the reproducibility contract between {pipdata} (data
+# producer) and {piptm} (data consumer).
+#
+# Manifest JSON format (written by pipdata::generate_release_manifest()):
+#
+#   {
+#     "release": "20260206",
+#     "generated_at": "2026-04-03T17:00:00Z",
+#     "entries": [
+#       {
+#         "pip_id":          "COL_2010_GEIH_INC_ALL",
+#         "survey_id":       "COL_2010_GEIH_v01_M_v05_A_GMD_ALL",
+#         "country_code":    "COL",
+#         "year":            2010,
+#         "welfare_type":    "INC",
+#         "version":         "v01_v05",
+#         "survey_acronym":  "GEIH",
+#         "module":          "ALL",
+#         "reporting_level": "national",
+#         "dimensions":      ["area", "gender", "age"]
+#       }
+#     ]
+#   }
+#
+# Exported functions
+# ------------------
+#   piptm_manifest_dir()    — configured manifest directory path
+#   piptm_arrow_root()      — configured Arrow repository root path
+#   piptm_manifests()       — named list of all loaded manifest data.tables
+#   piptm_current_release() — default release ID
+#   piptm_manifest()        — data.table for a specific release
+#   set_manifest_dir()      — override manifest directory at runtime
+#   set_arrow_root()        — override Arrow root at runtime
+#
+# Internal functions
+# ------------------
+#   .load_manifests()       — scan a directory, parse JSONs, cache in env
+
+# ---------------------------------------------------------------------------
+# Internal: parse and cache manifests from a directory
+# ---------------------------------------------------------------------------
+
+#' Scan a manifest directory, parse all manifest JSON files, and cache results
+#'
+#' Looks for files matching the glob `manifest_*.json` in `manifest_dir`,
+#' parses each with [jsonlite::fromJSON()], converts the `entries` array to a
+#' `data.table`, and stores all manifests in `.piptm_env$manifests` keyed by
+#' `release` ID. Also reads `current_release.json` if present to set the
+#' default release.
+#'
+#' The `dimensions` field in each entry is stored as a list column — each
+#' element is a character vector of available breakdown dimension names.
+#'
+#' @param manifest_dir Absolute path to the manifest directory.
+#'
+#' @return Invisibly returns the number of manifests loaded.
+#' @importFrom cli cli_abort cli_warn cli_inform
+#' @importFrom data.table data.table set is.data.table setattr
+#' @importFrom jsonlite fromJSON
+#' @keywords internal
+.load_manifests <- function(manifest_dir) {
+
+  if (!dir.exists(manifest_dir)) {
+    cli::cli_abort(
+      "Manifest directory does not exist: {.path {manifest_dir}}"
+    )
+  }
+
+  .piptm_env$manifest_dir <- manifest_dir
+
+  manifest_files <- list.files(
+    manifest_dir,
+    pattern    = "^manifest_.*\\.json$",
+    full.names = TRUE
+  )
+
+  manifests <- list()
+
+  for (f in manifest_files) {
+    parsed <- tryCatch(
+      jsonlite::fromJSON(f, simplifyVector = FALSE),
+      error = function(e) {
+        cli::cli_warn(
+          "Could not parse manifest file {.path {f}}: {conditionMessage(e)}"
+        )
+        NULL
+      }
+    )
+
+    if (is.null(parsed)) next
+
+    release_id <- parsed$release
+    if (is.null(release_id) || !nzchar(release_id)) {
+      cli::cli_warn(
+        "Manifest file {.path {f}} has no 'release' field. Skipping."
+      )
+      next
+    }
+
+    entries <- parsed$entries
+    if (is.null(entries) || length(entries) == 0L) {
+      manifests[[release_id]] <- .empty_manifest_dt()
+      next
+    }
+
+    # --- Scalar columns -------------------------------------------------------
+    dt <- data.table::data.table(
+      pip_id         = vapply(entries, `[[`, character(1L), "pip_id"),
+      survey_id      = vapply(entries, `[[`, character(1L), "survey_id"),
+      country_code   = vapply(entries, `[[`, character(1L), "country_code"),
+      country_name   = vapply(entries, function(e) {
+        cn <- e$country_name
+        if (is.null(cn)) NA_character_ else as.character(cn)
+      }, character(1L)),
+      region_name    = vapply(entries, function(e) {
+        rn <- e$region_name
+        if (is.null(rn)) NA_character_ else as.character(rn)
+      }, character(1L)),
+      region_code    = vapply(entries, function(e) {
+        rc <- e$region_code
+        if (is.null(rc)) NA_character_ else as.character(rc)
+      }, character(1L)),
+      year           = vapply(entries, function(e) as.integer(e$year), integer(1L)),
+      welfare_type   = vapply(entries, `[[`, character(1L), "welfare_type"),
+      version        = vapply(entries, `[[`, character(1L), "version"),
+      survey_acronym = vapply(entries, `[[`, character(1L), "survey_acronym"),
+      module         = vapply(entries, `[[`, character(1L), "module"),
+      n_obs          = vapply(entries, function(e) {
+        n <- e$n_obs
+        if (is.null(n) || (length(n) == 1L && is.na(n))) NA_integer_
+        else as.integer(n)
+      }, integer(1L))
+    )
+
+    # --- dimensions: list column — each element is a character vector ---------
+    dims_col <- lapply(entries, function(e) {
+      d <- e$dimensions
+      if (is.null(d)) character(0L) else as.character(unlist(d))
+    })
+    data.table::set(dt, j = "dimensions", value = dims_col)
+
+    # --- welfare_vars: list column --------------------------------------------
+    welfare_vars_col <- lapply(entries, function(e) {
+      wv <- e$welfare_vars
+      if (is.null(wv)) character(0L) else as.character(unlist(wv))
+    })
+    data.table::set(dt, j = "welfare_vars", value = welfare_vars_col)
+
+    # --- ppp_sort: integer scalar per survey ----------------------------------
+    ppp_sort_col <- vapply(entries, function(e) {
+      ps <- e$ppp_sort
+      if (is.null(ps) || (length(ps) == 1L && is.na(ps))) NA_integer_
+      else suppressWarnings(as.integer(ps))
+    }, integer(1L))
+    data.table::set(dt, j = "ppp_sort", value = ppp_sort_col)
+
+    # --- dimensions_n_obs: list column ----------------------------------------
+    # Each element is a named integer vector — dimension name → non-NA count.
+    # Absent in legacy manifests — falls back to empty named integer vector.
+    dimensions_n_obs_col <- lapply(entries, function(e) {
+      dnobs <- e$dimensions_n_obs
+      if (is.null(dnobs) || length(dnobs) == 0L) {
+        return(setNames(integer(0), character(0)))
+      }
+      vals  <- as.integer(unlist(dnobs, use.names = FALSE))
+      nms   <- names(dnobs)
+      setNames(vals, nms)
+    })
+    data.table::set(dt, j = "dimensions_n_obs", value = dimensions_n_obs_col)
+
+    manifests[[release_id]] <- dt[]
+  }
+
+  .piptm_env$manifests <- manifests
+
+  # --- current_release.json pointer -----------------------------------------
+  pointer_path <- file.path(manifest_dir, "current_release.json")
+  if (file.exists(pointer_path)) {
+    pointer <- tryCatch(
+      jsonlite::fromJSON(pointer_path),
+      error = function(e) NULL
+    )
+    if (!is.null(pointer) && !is.null(pointer$current_release)) {
+      .piptm_env$current_release <- as.character(pointer$current_release)
+    }
+  }
+
+  if (is.null(.piptm_env$current_release) && length(manifests) > 0L) {
+    .piptm_env$current_release <- sort(names(manifests), decreasing = TRUE)[[1L]]
+  }
+
+  n <- length(manifests)
+  cli::cli_inform("Loaded {n} manifest{?s} from {.path {manifest_dir}}.")
+
+  invisible(n)
+}
+
+
+#' Build an empty manifest data.table with the canonical column schema
+#'
+#' @return An empty `data.table` with all required manifest columns.
+#' @keywords internal
+.empty_manifest_dt <- function() {
+  dt <- data.table::data.table(
+    pip_id          = character(0L),
+    survey_id       = character(0L),
+    country_code    = character(0L),
+    year            = integer(0L),
+    welfare_type    = character(0L),
+    version         = character(0L),
+    survey_acronym  = character(0L),
+    module          = character(0L),
+    reporting_level = character(0L),
+    dimensions      = list(),
+    welfare_vars    = list(),
+    ppp_sort        = integer(0L)
+  )
+  dt
+}
+
+# ---------------------------------------------------------------------------
+# Accessor functions
+# ---------------------------------------------------------------------------
+
+#' Return the configured manifest directory path
+#'
+#' Returns the path set by `PIPTM_MANIFEST_DIR` at startup or the most recent
+#' call to [set_manifest_dir()]. Returns `NULL` in dev mode (no manifest dir
+#' configured).
+#'
+#' @return Character scalar path, or `NULL`.
+#' @family manifest-accessors
+#' @export
+piptm_manifest_dir <- function() {
+  .piptm_env$manifest_dir
+}
+
+#' Return the configured Arrow repository root path
+#'
+#' Returns the path set by `PIPTM_ARROW_ROOT` at startup or the most recent
+#' call to [set_arrow_root()]. Returns `NULL` when not configured.
+#'
+#' @return Character scalar path, or `NULL`.
+#' @family manifest-accessors
+#' @export
+piptm_arrow_root <- function() {
+  .piptm_env$arrow_root
+}
+
+#' Return all loaded manifests as a named list
+#'
+#' Each element is a `data.table` of survey entries for one release, keyed by
+#' `release` ID (e.g. `"20260206"`). Returns an empty list when no manifests
+#' have been loaded.
+#'
+#' @return Named list of `data.table`s.
+#' @family manifest-accessors
+#' @export
+piptm_manifests <- function() {
+  .piptm_env$manifests
+}
+
+#' Return the default (current) release ID
+#'
+#' The current release is determined at load time by reading
+#' `current_release.json` in the manifest directory. Falls back to the
+#' lexicographically latest release ID when the pointer file is absent.
+#'
+#' At package load time this value is overridden by
+#' `pipfun::get_wrk_release()` to reflect the user's active working release,
+#' taking precedence over the `current_release.json` pointer file. This
+#' means two users with different working releases will see different default
+#' release IDs in the same session — by design.
+#'
+#' @return Character scalar release ID, or `NULL` when no manifests are loaded.
+#' @family manifest-accessors
+#' @export
+piptm_current_release <- function() {
+  .piptm_env$current_release
+}
+
+#' Return the manifest data.table for a specific release
+#'
+#' Looks up the in-memory manifest cache and returns the `data.table` of
+#' survey entries for the requested release. Each row is one survey and
+#' contains the four Arrow partition filter keys (`country_code`, `year`,
+#' `welfare_type`, `version`) plus `pip_id`, `survey_id`, `survey_acronym`,
+#' `module`, and `dimensions` (list column of available breakdown columns).
+#'
+#' @param release Character scalar release ID (e.g. `"20260206"`). Defaults
+#'   to the current release as returned by [piptm_current_release()].
+#'
+#' @return A `data.table` with columns: `pip_id`, `survey_id`, `country_code`,
+#'   `year`, `welfare_type`, `version`, `survey_acronym`, `module`,
+#'   `reporting_level`, `dimensions`, `welfare_vars`, `ppp_sort`.
+#'
+#' @family manifest-accessors
+#' @export
+#' @examples
+#' \dontrun{
+#' set_manifest_dir("//server/manifests")
+#' mf <- piptm_manifest("20260206")
+#' mf[country_code == "COL"]
+#' }
+piptm_manifest <- function(release = NULL) {
+  if (is.null(release)) {
+    release <- piptm_current_release()
+    if (is.null(release)) {
+      cli::cli_abort(
+        c(
+          "No current release is set.",
+          "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
+        )
+      )
+    }
+  }
+
+  manifests <- .piptm_env$manifests
+  if (!release %in% names(manifests)) {
+    cli::cli_abort(
+      c(
+        "Release {.val {release}} not found in loaded manifests.",
+        "i" = "Available releases: {.val {sort(names(manifests))}}",
+        "i" = "Call {.fn set_manifest_dir} to load manifests from a directory."
+      )
+    )
+  }
+
+  manifests[[release]]
+}
+
+#' Build a UI-friendly surveys catalogue
+#'
+#' Returns one row per manifest entry enriched with UI-friendly labels and
+#' dimension metadata (varname + UI label). Country names are mapped from
+#' ISO3 codes when the `countrycode` package is available; otherwise the
+#' ISO3 code is repeated as the label.
+#'
+#' @param release Character scalar release ID (optional; defaults to current)
+#' @return A list of named lists suitable for JSON serialization.
+#' @export
+piptm_surveys_ui <- function(release = NULL) {
+  mf <- piptm_manifest(release)
+
+  country_labels <- if (nrow(mf) == 0L) character(0L) else as.character(mf$country_name) #NB: ADD COUNTRY NAME TO MANIFEST, NOT YET THERE!!!
+
+  # map welfare_type to UI label
+  welfare_label <- if (nrow(mf) > 0L) {
+    vapply(mf$welfare_type, function(x) {
+      if (identical(toupper(x), "INC")) return("Income")
+      if (identical(toupper(x), "CON")) return("Consumption")
+      as.character(x)
+    }, character(1L))
+  } else character(0L)
+
+  # Load variable registry for labels (best-effort)
+  registry <- tryCatch(piptm_variable_registry(release), error = function(e) NULL)
+
+  # Order rows for UI: alphabetical by `pip_id` (case-insensitive)
+  if (nrow(mf) > 0L) {
+    ord <- order(toupper(as.character(mf$pip_id)), na.last = TRUE)
+    mf <- mf[ord]
+    country_labels <- country_labels[ord]
+    welfare_label <- welfare_label[ord]
+  }
+
+  out <- lapply(seq_len(nrow(mf)), function(i) {
+    dims <- mf$dimensions[[i]]
+    # For Stage-1 the UI only needs varnames (no labels). Return a simple
+    # character vector of available dimension varnames for each survey.
+    dims_list <- character(0)
+    if (!is.null(dims) && length(dims) > 0L) {
+      dims_list <- as.character(dims)
+    }
+
+    list(
+      pip_id = as.character(mf$pip_id[i]),
+      country_code = as.character(mf$country_code[i]),
+      country_label = as.character(country_labels[i]),
+      year = as.integer(mf$year[i]),
+      welfare_type = as.character(mf$welfare_type[i]),
+      welfare_label = as.character(welfare_label[i]),
+      version = as.character(mf$version[i]),
+      dimensions = dims_list
+    )
+  })
+
+  out
+}
+
+# ---------------------------------------------------------------------------
+# Runtime configuration overrides
+# ---------------------------------------------------------------------------
+
+#' Override the manifest directory at runtime
+#'
+#' Sets the manifest directory and immediately rescans it, loading all
+#' `manifest_*.json` files into memory. Replaces any previously loaded
+#' manifests. Useful for development and testing when the `PIPTM_MANIFEST_DIR`
+#' environment variable is not set.
+#'
+#' @param path Absolute path to the manifest directory. Must exist and contain
+#'   at least one `manifest_*.json` file.
+#'
+#' @return Invisibly returns `path`.
+#' @family manifest-accessors
+#' @export
+#' @examples
+#' \dontrun{
+#' set_manifest_dir("//server/manifests")
+#' piptm_current_release()
+#' }
+set_manifest_dir <- function(path) {
+  stopifnot(is.character(path), length(path) == 1L, !is.na(path))
+  .load_manifests(path)
+  invisible(path)
+}
+
+#' Override the Arrow repository root path at runtime
+#'
+#' Sets the Arrow root path used by [load_survey_microdata()] and
+#' [load_surveys()]. Replaces the value from `PIPTM_ARROW_ROOT` (or a
+#' previous call to this function). Useful for development and testing.
+#'
+#' @param path Absolute path to the root of the shared Arrow repository
+#'   (the directory containing `country_code=*/surveyid_year=*/welfare_type=*/version=*`
+#'   subdirectories). Must exist.
+#'
+#' @return Invisibly returns `path`.
+#' @family manifest-accessors
+#' @export
+#' @examples
+#' \dontrun{
+#' set_arrow_root("//server/pip/arrow")
+#' }
+set_arrow_root <- function(path) {
+  stopifnot(is.character(path), length(path) == 1L, !is.na(path))
+  if (!dir.exists(path)) {
+    cli::cli_abort("Arrow root directory does not exist: {.path {path}}")
+  }
+  .piptm_env$arrow_root <- path
+  invisible(path)
+}
+
+
