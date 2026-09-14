@@ -27,6 +27,11 @@
 #' cat(render_description_html(model))
 #' }
 #' @keywords internal
+#' @note This file mirrors `R/description_renderer.R`'s dispatch structure
+#'   (table / named list / char vector / scalar) for the HTML output format.
+#'   Changes to `build_description_model()`'s content shapes must be
+#'   reflected in BOTH renderers, or Markdown/HTML output will silently
+#'   diverge.
 render_description_html <- function(model) {
   stopifnot(is.list(model))
 
@@ -181,7 +186,7 @@ render_description_html <- function(model) {
       summary_statistics = "Summary statistics",
       poverty = "Poverty",
       inequality = "Inequality",
-      welfare = "Welfare"
+      shares = "Shares"
     )
 
     if (text %in% names(stat_group_map)) {
@@ -528,7 +533,7 @@ render_description_html <- function(model) {
 
   if (identical(section_name, "statistics_selected")) {
     if (identical(key, "analysis_var_label")) return("Analysis variable")
-    if (identical(key, "analysis_var_type")) return("Variable type")
+    if (identical(key, "analysis_var_type")) return("Analysis variable type")
     if (identical(key, "measures")) return("Measures")
     if (identical(key, "poverty_line")) return("Poverty line")
   }

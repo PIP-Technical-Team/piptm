@@ -316,31 +316,19 @@ build_description_model <- function(description_metadata, params) {
   }
   measures_dt <- data.table::as.data.table(measures_dt)
 
-  analysis_var_label <- meta$resolved_labels$analysis_var$ui_label
-  analysis_var_type <- meta$resolved_labels$analysis_var$tm_type
-
-  if (is.list(analysis_var_label)) {
-    analysis_var_label <- unlist(analysis_var_label, use.names = FALSE)
-  }
-  if (is.list(analysis_var_type)) {
-    analysis_var_type <- unlist(analysis_var_type, use.names = FALSE)
-  }
-
-  analysis_var_label <- if (length(analysis_var_label) == 0L) {
-    as.character(params$analysis_var)
-  } else {
-    as.character(analysis_var_label[[1]])
-  }
-  analysis_var_type <- if (length(analysis_var_type) == 0L) {
-    "unknown"
-  } else {
-    as.character(analysis_var_type[[1]])
-  }
+  analysis_var_label <- .coerce_description_scalar(
+    meta$resolved_labels$analysis_var$ui_label,
+    fallback = as.character(params$analysis_var)
+  )
+  analysis_var_type <- .coerce_description_scalar(
+    meta$resolved_labels$analysis_var$tm_type,
+    fallback = "unknown"
+  )
   
   # Poverty line applicable flag. A JSON round-trip converts NULL to a
   # length-0 list; treat length-0 or NULL as "not applicable".
-  pl <- params$poverty_line
-  has_poverty <- !is.null(pl) && length(pl) > 0L && !is.na(pl)
+  pl <- .normalize_poverty_line_values(params$poverty_line)
+  has_poverty <- length(pl) > 0L
   
   return(list(
     analysis_var_label = analysis_var_label,
@@ -348,14 +336,94 @@ build_description_model <- function(description_metadata, params) {
     measures = data.table::data.table(
       measure_label = measures_dt$ui_label,
       stat_group = measures_dt$stat_group,
-      analysis_var_label = rep(analysis_var_label, nrow(measures_dt))
+      analysis_var_label = analysis_var_label
     ),
     poverty_line = list(
       applicable = has_poverty,
-      value = if (has_poverty) params$poverty_line else NULL,
+      value = if (has_poverty) .format_poverty_line_display(pl) else NULL,
       ppp_year = if (has_poverty) params$ppp else NULL
     )
   ))
+}
+
+
+#' Coerce a possibly list-wrapped scalar metadata field into a single string.
+#'
+#' @param x Scalar-like metadata field, possibly list-wrapped after JSON.
+#' @param fallback Character scalar to use when `x` is NULL/empty/NA/blank.
+#' @return Character scalar.
+#' @keywords internal
+.coerce_description_scalar <- function(x, fallback) {
+  if (is.list(x)) {
+    x <- unlist(x, use.names = FALSE)
+  }
+
+  if (is.null(x) || length(x) == 0L) {
+    return(fallback)
+  }
+
+  x <- as.character(x)
+  x <- x[!is.na(x) & nzchar(x)]
+  if (length(x) == 0L) {
+    return(fallback)
+  }
+
+  x[[1]]
+}
+
+
+#' Normalize poverty-line input for safe description rendering.
+#'
+#' @param poverty_line Numeric-like vector, possibly list-wrapped after JSON.
+#' @return Numeric vector with NULL/NA/empty values removed.
+#' @keywords internal
+.normalize_poverty_line_values <- function(poverty_line) {
+  if (is.null(poverty_line)) {
+    return(numeric())
+  }
+
+  if (is.list(poverty_line)) {
+    poverty_line <- unlist(poverty_line, use.names = FALSE)
+  }
+
+  if (length(poverty_line) == 0L) {
+    return(numeric())
+  }
+
+  poverty_line <- suppressWarnings(as.numeric(poverty_line))
+  poverty_line <- poverty_line[!is.na(poverty_line)]
+  if (length(poverty_line) == 0L) {
+    return(numeric())
+  }
+
+  poverty_line
+}
+
+
+#' Format one or more poverty lines for natural-language descriptions.
+#'
+#' @param poverty_line Numeric vector of poverty thresholds.
+#' @param include_currency Logical; prefix values with `$` when TRUE.
+#' @param suffix Character scalar appended to each formatted value (e.g.
+#'   `"/day"`); default `""` adds no suffix.
+#' @return Character scalar.
+#' @keywords internal
+.format_poverty_line_display <- function(poverty_line, include_currency = FALSE, suffix = "") {
+  stopifnot(is.numeric(poverty_line))
+
+  if (length(poverty_line) == 0L) {
+    return("")
+  }
+
+  values <- sprintf("%.2f", poverty_line)
+  if (include_currency) {
+    values <- paste0("$", values)
+  }
+  if (nzchar(suffix)) {
+    values <- paste0(values, suffix)
+  }
+
+  paste(values, collapse = " / ")
 }
 
 
@@ -457,6 +525,18 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
     }
   }
   
+  poverty_line_values <- .normalize_poverty_line_values(poverty_line)
+  poverty_line_daily_text <- .format_poverty_line_display(
+    poverty_line_values,
+    include_currency = TRUE,
+    suffix = "/day"
+  )
+  poverty_group_text <- if (length(poverty_line_values) <= 1L) {
+    sprintf("below/above %s PPP %d", poverty_line_daily_text, ppp)
+  } else {
+    sprintf("below/above poverty lines %s PPP %d", poverty_line_daily_text, ppp)
+  }
+
   # Step 1: Determine base_pop from filter_base
   if (is.null(filter_base) || length(filter_base) == 0) {
     base_pop <- "survey-weighted individuals in the selected survey"
@@ -518,10 +598,10 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
         pov_label <- "Poverty status"
       }
       group_qualifier <- sprintf(
-        ", within each %s group (below/above $%.2f/day PPP %d)",
-                                   pov_label,
-                                   poverty_line,
-                                   ppp)
+        ", within each %s group (%s)",
+        pov_label,
+        poverty_group_text
+      )
     } else {
       covariate_desc <- format_covariate_description(by, resolved_labels$covariates)
       group_qualifier <- sprintf(", within each %s group", covariate_desc)
@@ -530,11 +610,14 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
   }
   
   # Step 3: Build measure-specific sentences
-  analysis_var_label <- resolved_labels$analysis_var$ui_label
-  if (is.null(analysis_var_label) || !nzchar(analysis_var_label)) {
-    analysis_var_label <- analysis_var
-  }
-  analysis_var_type <- resolved_labels$analysis_var$tm_type
+  analysis_var_label <- .coerce_description_scalar(
+    resolved_labels$analysis_var$ui_label,
+    fallback = as.character(analysis_var)
+  )
+  analysis_var_type <- .coerce_description_scalar(
+    resolved_labels$analysis_var$tm_type,
+    fallback = "unknown"
+  )
   unknown_tm_type <- is.null(analysis_var_type) || identical(analysis_var_type, "unknown")
   measures_dt <- resolved_labels$measures
   
@@ -572,9 +655,9 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
         ),
         
         "poverty" = sprintf(
-          "The %s at $%.2f/day (PPP %d) for %s.",
+          "The %s at %s (PPP %d) for %s.",
           measure_label,
-          poverty_line,
+          poverty_line_daily_text,
           ppp,
           full_pop
         ),
@@ -629,8 +712,12 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
     notes <- c(
       notes,
       sprintf(
-        "Note: Poverty status groups are defined using a threshold of $%.2f/day (PPP %d).",
-        poverty_line,
+        if (length(poverty_line_values) <= 1L) {
+          "Note: Poverty status groups are defined using a threshold of %s (PPP %d)."
+        } else {
+          "Note: Poverty status groups are defined using thresholds of %s (PPP %d)."
+        },
+        poverty_line_daily_text,
         ppp
       )
     )

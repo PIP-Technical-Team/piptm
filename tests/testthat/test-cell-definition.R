@@ -466,6 +466,141 @@ test_that("Edge case: Multiple filters use AND separator", {
 })
 
 
+test_that("Edge case: Poverty measures support multiple poverty lines", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "continuous"
+    ),
+    measures_info = data.table(
+      measure = "headcount",
+      ui_label = "Poverty headcount",
+      stat_group = "poverty"
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "headcount",
+    filter_base = NULL,
+    by = NULL,
+    poverty_line = c(2.15, 6.85),
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_equal(result$population_scope, "survey-weighted individuals in the selected survey")
+  expect_identical(
+    result$measure_interpretation,
+    c("The Poverty headcount at $2.15/day / $6.85/day (PPP 2021) for survey-weighted individuals in the selected survey.")
+  )
+})
+
+
+test_that("Edge case: pov_status grouping supports multiple poverty lines", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "continuous"
+    ),
+    measures_info = data.table(
+      measure = "mean",
+      ui_label = "Mean",
+      stat_group = "summary_statistics"
+    ),
+    covariates_info = data.table(
+      slot = "columns",
+      varname = "pov_status",
+      ui_label = "Poverty status",
+      n_categories = 2L
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = NULL,
+    by = c("pov_status"),
+    poverty_line = c(2.15, 6.85),
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_match(
+    result$population_scope,
+    "below/above poverty lines \\$2.15/day / \\$6.85/day PPP 2021"
+  )
+  expect_match(
+    result$note,
+    "thresholds of \\$2.15/day / \\$6.85/day \\(PPP 2021\\)"
+  )
+})
+
+
+test_that("build_cell_definition unwraps list-wrapped analysis variable metadata after JSON coercion", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = list("Welfare"),
+      tm_type = list("continuous")
+    ),
+    measures_info = data.table(
+      measure = "mean",
+      ui_label = "Mean",
+      stat_group = "summary_statistics"
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = NULL,
+    by = NULL,
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_match(result$measure_interpretation[1], "The Mean of Welfare", fixed = TRUE)
+  expect_null(result$note)
+})
+
+
+test_that("build_cell_definition falls back to raw analysis_var/'unknown' when JSON coercion yields empty metadata", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = list(),
+      tm_type = list()
+    ),
+    measures_info = data.table(
+      measure = "mean",
+      ui_label = "Mean",
+      stat_group = "summary_statistics"
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = NULL,
+    by = NULL,
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_match(result$measure_interpretation[1], "The Mean of welfare", fixed = TRUE)
+  expect_match(result$note, "metadata", fixed = FALSE)
+})
+
+
 test_that("Edge case: 3+ covariates use × join", {
   resolved_labels <- .make_resolved_labels(
     analysis_var_info = list(

@@ -357,3 +357,214 @@ test_that("build_description_model() sets warnings visible when warnings present
   expect_type(model$warnings$content, "list")
   expect_equal(model$warnings$content$warnings, c("Sample warning 1", "Sample warning 2"))
 })
+
+
+test_that("build_description_model() unwraps analysis variable metadata after JSON-style list coercion", {
+  meta <- list(
+    params = list(
+      pip_id = c("TEST_2020_SURVEY_CON_ALL"),
+      analysis_var = "welfare",
+      measures = c("mean"),
+      poverty_line = NULL,
+      ppp = 2021L,
+      release = "TEST_2024",
+      by = NULL,
+      filter_base = NULL,
+      pop_share_threshold = NULL
+    ),
+    provenance = list(
+      release = "TEST_2024",
+      ppp_year = 2021L,
+      generated_at = as.POSIXct("2026-08-26 10:00:00", tz = "UTC")
+    ),
+    surveys = list(
+      loaded = data.table(
+        pip_id = "TEST_2020_SURVEY_CON_ALL",
+        country_code = "TST",
+        surveyid_year = "2020",
+        welfare_type = "CON"
+      ),
+      excluded = data.table(pip_id = character(0), reason = character(0))
+    ),
+    resolved_labels = list(
+      analysis_var = list(
+        varname = "welfare",
+        ui_label = list("Welfare"),
+        tm_type = list("continuous")
+      ),
+      measures = data.table(
+        measure = "mean",
+        ui_label = "Mean",
+        stat_group = "summary_statistics"
+      ),
+      filters = NULL,
+      covariates = data.table(
+        slot = character(0),
+        varname = character(0),
+        ui_label = character(0),
+        n_categories = integer(0)
+      )
+    ),
+    execution = list(
+      n_surveys_loaded = 1L,
+      n_surveys_excluded = 0L,
+      n_filters_applied = 0L,
+      n_measures_computed = 1L,
+      suppression = list(
+        triggered = FALSE,
+        threshold = NULL,
+        n_cells_suppressed = 0L,
+        suppressed_cells = NULL
+      ),
+      warnings = NULL
+    )
+  )
+
+  model <- build_description_model(meta, meta$params)
+
+  expect_identical(model$statistics_selected$content$analysis_var_label, "Welfare")
+  expect_identical(model$statistics_selected$content$analysis_var_type, "continuous")
+})
+
+
+test_that("build_description_model() falls back when analysis variable metadata is empty after JSON coercion", {
+  meta <- list(
+    params = list(
+      pip_id = c("TEST_2020_SURVEY_CON_ALL"),
+      analysis_var = "welfare",
+      measures = c("mean"),
+      poverty_line = NULL,
+      ppp = 2021L,
+      release = "TEST_2024",
+      by = NULL,
+      filter_base = NULL,
+      pop_share_threshold = NULL
+    ),
+    provenance = list(
+      release = "TEST_2024",
+      ppp_year = 2021L,
+      generated_at = as.POSIXct("2026-08-26 10:00:00", tz = "UTC")
+    ),
+    surveys = list(
+      loaded = data.table(
+        pip_id = "TEST_2020_SURVEY_CON_ALL",
+        country_code = "TST",
+        surveyid_year = "2020",
+        welfare_type = "CON"
+      ),
+      excluded = data.table(pip_id = character(0), reason = character(0))
+    ),
+    resolved_labels = list(
+      analysis_var = list(
+        varname = "welfare",
+        ui_label = list(),
+        tm_type = list()
+      ),
+      measures = data.table(
+        measure = "mean",
+        ui_label = "Mean",
+        stat_group = "summary_statistics"
+      ),
+      filters = NULL,
+      covariates = data.table(
+        slot = character(0),
+        varname = character(0),
+        ui_label = character(0),
+        n_categories = integer(0)
+      )
+    ),
+    execution = list(
+      n_surveys_loaded = 1L,
+      n_surveys_excluded = 0L,
+      n_filters_applied = 0L,
+      n_measures_computed = 1L,
+      suppression = list(
+        triggered = FALSE,
+        threshold = NULL,
+        n_cells_suppressed = 0L,
+        suppressed_cells = NULL
+      ),
+      warnings = NULL
+    )
+  )
+
+  model <- build_description_model(meta, meta$params)
+
+  expect_identical(model$statistics_selected$content$analysis_var_label, "welfare")
+  expect_identical(model$statistics_selected$content$analysis_var_type, "unknown")
+})
+
+
+test_that("build_description_model() normalizes multiple poverty lines for rendering", {
+  meta <- list(
+    params = list(
+      pip_id = c("TEST_2020_SURVEY_CON_ALL"),
+      analysis_var = "welfare",
+      measures = c("headcount"),
+      poverty_line = c(2.15, 6.85),
+      ppp = 2021L,
+      release = "TEST_2024",
+      by = c("pov_status"),
+      filter_base = NULL,
+      pop_share_threshold = NULL
+    ),
+    provenance = list(
+      release = "TEST_2024",
+      ppp_year = 2021L,
+      generated_at = as.POSIXct("2026-08-26 10:00:00", tz = "UTC")
+    ),
+    surveys = list(
+      loaded = data.table(
+        pip_id = "TEST_2020_SURVEY_CON_ALL",
+        country_code = "TST",
+        surveyid_year = "2020",
+        welfare_type = "CON"
+      ),
+      excluded = data.table(pip_id = character(0), reason = character(0))
+    ),
+    resolved_labels = list(
+      analysis_var = list(
+        varname = "welfare",
+        ui_label = "Welfare",
+        tm_type = "continuous"
+      ),
+      measures = data.table(
+        measure = "headcount",
+        ui_label = "Poverty headcount",
+        stat_group = "poverty"
+      ),
+      filters = NULL,
+      covariates = data.table(
+        slot = "columns",
+        varname = "pov_status",
+        ui_label = "Poverty status",
+        n_categories = 2L
+      )
+    ),
+    execution = list(
+      n_surveys_loaded = 1L,
+      n_surveys_excluded = 0L,
+      n_filters_applied = 0L,
+      n_measures_computed = 1L,
+      suppression = list(
+        triggered = FALSE,
+        threshold = NULL,
+        n_cells_suppressed = 0L,
+        suppressed_cells = NULL
+      ),
+      warnings = NULL
+    )
+  )
+
+  model <- build_description_model(meta, meta$params)
+
+  expect_identical(model$statistics_selected$content$poverty_line$value, "2.15 / 6.85")
+  expect_match(
+    model$cell_definition$content$population_scope,
+    "below/above poverty lines \\$2.15/day / \\$6.85/day PPP 2021"
+  )
+  expect_match(
+    model$cell_definition$content$note,
+    "thresholds of \\$2.15/day / \\$6.85/day \\(PPP 2021\\)"
+  )
+})

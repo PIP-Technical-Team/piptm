@@ -142,16 +142,16 @@ test_that("render_description_markdown() renders data.table content as pipe tabl
   out <- render_description_markdown(model)
 
   # Loaded surveys table
-  expect_match(out, "| country_code", fixed = TRUE)
+  expect_match(out, "| Country | Survey year | Welfare type |", fixed = TRUE)
   expect_match(out, "| ---", fixed = TRUE)
   expect_match(out, "Consumption", fixed = TRUE)
 
   # Measures table
-  expect_match(out, "measure_label", fixed = TRUE)
+  expect_match(out, "| Measure | Group |", fixed = TRUE)
   expect_match(out, "Gini index", fixed = TRUE)
 
   # Layout table
-  expect_match(out, "slot_label", fixed = TRUE)
+  expect_match(out, "| Dimension | Variable | Label | Categories |", fixed = TRUE)
 })
 
 test_that("render_description_markdown() renders cell definition as paragraph + numbered list", {
@@ -159,7 +159,7 @@ test_that("render_description_markdown() renders cell definition as paragraph + 
   out <- render_description_markdown(model)
 
   # population_scope as paragraph
-  expect_match(out, "population_scope: the total weighted population of the survey", fixed = TRUE)
+  expect_match(out, "Population scope: the total weighted population of the survey", fixed = TRUE)
   # measure_interpretation as nested numbered list with label prefixes
   expect_match(out, "1. **mean:** The Mean of Welfare", fixed = TRUE)
   expect_match(out, "2. **gini:** The Gini index of Welfare", fixed = TRUE)
@@ -219,8 +219,8 @@ test_that("render_description_markdown() renders key-value provenance bullets", 
   model <- .make_render_model()
   out <- render_description_markdown(model)
 
-  expect_match(out, "- release_id: TEST_2024", fixed = TRUE)
-  expect_match(out, "- ppp_year: 2021", fixed = TRUE)
+  expect_match(out, "- Release: TEST_2024", fixed = TRUE)
+  expect_match(out, "- PPP year: 2021", fixed = TRUE)
 })
 
 

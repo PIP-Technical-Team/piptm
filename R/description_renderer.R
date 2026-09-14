@@ -23,6 +23,11 @@
 #' cat(render_description_markdown(model))
 #' }
 #' @keywords internal
+#' @note This file mirrors `R/description_renderer_html.R`'s dispatch
+#'   structure (table / named list / char vector / scalar) for the Markdown
+#'   output format. Changes to `build_description_model()`'s content shapes
+#'   must be reflected in BOTH renderers, or Markdown/HTML output will
+#'   silently diverge.
 render_description_markdown <- function(model) {
   stopifnot(is.list(model))
 
@@ -37,7 +42,7 @@ render_description_markdown <- function(model) {
     }
 
     title <- section$title %||% section_name
-    rendered <- .render_section_content(content)
+    rendered <- .render_section_content(content, section_name = section_name)
     if (is.null(rendered) || !nzchar(rendered)) {
       next
     }
@@ -66,7 +71,7 @@ render_description_markdown <- function(model) {
 #' @param content The `content` field of a description model section.
 #' @return Character scalar Markdown, or `NULL` when there is nothing to render.
 #' @keywords internal
-.render_section_content <- function(content) {
+.render_section_content <- function(content, section_name = NULL) {
   if (is.null(content)) {
     return(NULL)
   }
@@ -76,7 +81,7 @@ render_description_markdown <- function(model) {
   }
 
   if (is.list(content)) {
-    return(.render_named_list(content))
+    return(.render_named_list(content, section_name = section_name))
   }
 
   if (is.character(content)) {
@@ -98,11 +103,13 @@ render_description_markdown <- function(model) {
   }
 
   cols <- names(dt)
-  header <- paste0("| ", paste(cols, collapse = " | "), " |")
+  header <- paste0("| ", paste(vapply(cols, .display_table_header_markdown, character(1)), collapse = " | "), " |")
   separator <- paste0("| ", paste(rep("---", length(cols)), collapse = " | "), " |")
 
   rows <- vapply(seq_len(nrow(dt)), function(i) {
-    values <- vapply(dt[i, , drop = TRUE], as.character, character(1))
+    values <- vapply(cols, function(col_name) {
+      .display_table_value_markdown(col_name, dt[[col_name]][[i]])
+    }, character(1))
     values[is.na(values)] <- ""
     paste0("| ", paste(values, collapse = " | "), " |")
   }, character(1))
@@ -120,7 +127,7 @@ render_description_markdown <- function(model) {
 #' @param content Named list.
 #' @return Character scalar Markdown, or NULL when empty.
 #' @keywords internal
-.render_named_list <- function(content) {
+.render_named_list <- function(content, section_name = NULL, parent_key = NULL) {
   if (length(content) == 0) {
     return(NULL)
   }
@@ -133,31 +140,80 @@ render_description_markdown <- function(model) {
     content <- content[names(content) != "description"]
   }
 
+  if (identical(section_name, "overview") && "ppp_note" %in% names(content)) {
+    lines <- c(lines, as.character(content[["ppp_note"]]))
+    content <- content[names(content) != "ppp_note"]
+  }
+
   for (key in names(content)) {
     value <- content[[key]]
     if (is.null(value)) {
       next
     }
 
+    if (
+      identical(section_name, "statistics_selected") &&
+      key %in% c("analysis_var_label", "analysis_var_type")
+    ) {
+      next
+    }
+
+    if (
+      identical(section_name, "statistics_selected") &&
+      identical(key, "poverty_line") &&
+      is.list(value)
+    ) {
+      if (!isTRUE(value$applicable)) {
+        next
+      }
+
+      nested_lines <- character()
+      for (nested_key in c("value", "ppp_year")) {
+        nested_text <- .scalar_text(value[[nested_key]])
+        if (is.null(nested_text) || is.na(nested_text) || !nzchar(nested_text)) {
+          next
+        }
+        nested_lines <- c(
+          nested_lines,
+          sprintf(
+            "- %s: %s",
+            .display_label_markdown(section_name, nested_key, parent_key = "poverty_line"),
+            nested_text
+          )
+        )
+      }
+
+      if (length(nested_lines) > 0) {
+        lines <- c(
+          lines,
+          .printed_nested(
+            .display_label_markdown(section_name, key, parent_key = parent_key),
+            paste(nested_lines, collapse = "\n")
+          )
+        )
+      }
+      next
+    }
+
     if (inherits(value, "data.table") || is.data.frame(value)) {
       rendered <- .render_table(value)
       if (!is.null(rendered)) {
-        lines <- c(lines, paste0("**", key, "**"), rendered)
+        lines <- c(lines, paste0("**", .display_label_markdown(section_name, key, parent_key = parent_key), "**"), rendered)
       }
     } else if (is.list(value)) {
-      rendered <- .render_named_list(value)
+      rendered <- .render_named_list(value, section_name = section_name, parent_key = key)
       if (!is.null(rendered)) {
-        lines <- c(lines, .printed_nested(key, rendered))
+        lines <- c(lines, .printed_nested(.display_label_markdown(section_name, key, parent_key = parent_key), rendered))
       }
     } else if (is.character(value) && length(value) > 1) {
       rendered <- .render_char_vector(value)
       if (!is.null(rendered)) {
-        lines <- c(lines, .printed_nested(key, rendered))
+        lines <- c(lines, .printed_nested(.display_label_markdown(section_name, key, parent_key = parent_key), rendered))
       }
     } else if (is.null(dim(value))) {
       text <- .scalar_text(value)
       if (!is.null(text)) {
-        lines <- c(lines, sprintf("- %s: %s", key, text))
+        lines <- c(lines, sprintf("- %s: %s", .display_label_markdown(section_name, key, parent_key = parent_key), text))
       }
     }
   }
@@ -225,4 +281,138 @@ render_description_markdown <- function(model) {
 #' @keywords internal
 .printed_nested <- function(key, rendered) {
   paste0("- ", key, ":\n", paste0("  ", strsplit(rendered, "\n")[[1]], collapse = "\n"))
+}
+
+
+#' Map internal Markdown keys to display labels aligned with HTML output.
+#'
+#' @param section_name Top-level description section key.
+#' @param key Field key to label.
+#' @param parent_key Optional nested parent key.
+#' @return Display label.
+#' @keywords internal
+.display_label_markdown <- function(section_name, key, parent_key = NULL) {
+  if (identical(parent_key, "poverty_line")) {
+    if (identical(key, "value")) return("Value")
+    if (identical(key, "ppp_year")) return("PPP year")
+    if (identical(key, "applicable")) return("Applicable")
+  }
+
+  if (identical(section_name, "overview")) {
+    if (identical(key, "structure_description")) return("Description")
+    if (identical(key, "weighting_note")) return("Population note")
+    if (identical(key, "ppp_note")) return("PPP note")
+  }
+
+  if (identical(section_name, "provenance")) {
+    if (identical(key, "release_id")) return("Release")
+    if (identical(key, "ppp_year")) return("PPP year")
+    if (identical(key, "generated_at")) return("Generated at")
+  }
+
+  if (identical(section_name, "surveys_selected")) {
+    if (identical(key, "n_loaded")) return("Surveys loaded")
+    if (identical(key, "n_excluded")) return("Surveys excluded")
+    if (identical(key, "loaded_list")) return("Included surveys")
+    if (identical(key, "excluded_list")) return("Excluded surveys")
+  }
+
+  if (identical(section_name, "statistics_selected")) {
+    if (identical(key, "analysis_var_label")) return("Analysis variable")
+    if (identical(key, "analysis_var_type")) return("Analysis variable type")
+    if (identical(key, "measures")) return("Selected measures")
+    if (identical(key, "poverty_line")) return("Poverty line")
+  }
+
+  if (identical(section_name, "filters_applied")) {
+    if (identical(key, "filters")) return("Filter criteria")
+  }
+
+  if (identical(section_name, "layout_configuration")) {
+    if (identical(key, "layout")) return("Layout dimensions")
+  }
+
+  if (identical(section_name, "cell_definition")) {
+    if (identical(key, "population_scope")) return("Population scope")
+    if (identical(key, "measure_interpretation")) return("Measure interpretation")
+    if (identical(key, "note")) return("Note")
+  }
+
+  if (identical(section_name, "warnings") && identical(key, "warnings")) {
+    return("Warnings")
+  }
+
+  if (identical(key, "release_id")) return("Release")
+  if (identical(key, "ppp_year")) return("PPP year")
+  if (identical(key, "generated_at")) return("Generated at")
+  if (identical(key, "n_surveys_loaded")) return("Surveys loaded")
+  if (identical(key, "n_surveys_excluded")) return("Surveys excluded")
+  if (identical(key, "n_filters_applied")) return("Filters applied")
+  if (identical(key, "n_measures_computed")) return("Measures computed")
+  if (identical(key, "suppression_summary")) return("Suppression")
+  if (identical(key, "suppressed_cells")) return("Suppressed cells")
+
+  label <- gsub("_", " ", key, fixed = TRUE)
+  if (!nzchar(label)) {
+    return(key)
+  }
+  paste0(toupper(substr(label, 1, 1)), substring(label, 2))
+}
+
+
+#' Map internal table column names to display labels for Markdown headers.
+#'
+#' @param col_name Internal column name.
+#' @return Display label.
+#' @keywords internal
+.display_table_header_markdown <- function(col_name) {
+  mapping <- c(
+    pip_id = "Survey identifier",
+    country_code = "Country",
+    surveyid_year = "Survey year",
+    welfare_type_label = "Welfare type",
+    measure_label = "Measure",
+    stat_group = "Group",
+    analysis_var_label = "Variable of analysis",
+    slot_label = "Dimension",
+    varname = "Variable",
+    ui_label = "Label",
+    n_categories = "Categories"
+  )
+
+  if (col_name %in% names(mapping)) {
+    return(unname(mapping[[col_name]]))
+  }
+  col_name
+}
+
+
+#' Format table cell values for Markdown display aligned with HTML output.
+#'
+#' @param col_name Internal column name.
+#' @param value Scalar cell value.
+#' @return Character scalar.
+#' @keywords internal
+.display_table_value_markdown <- function(col_name, value) {
+  if (is.null(value) || length(value) == 0) {
+    return("")
+  }
+  if (is.na(value)) {
+    return("")
+  }
+
+  if (identical(col_name, "stat_group")) {
+    mapping <- c(
+      summary_statistics = "Summary statistics",
+      inequality = "Inequality",
+      poverty = "Poverty",
+      shares = "Shares"
+    )
+    key <- as.character(value)
+    if (key %in% names(mapping)) {
+      return(unname(mapping[[key]]))
+    }
+  }
+
+  as.character(value)
 }

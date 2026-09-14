@@ -235,6 +235,11 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 #*
 #* Supplying BOTH `description_metadata` and table parameters returns HTTP 400.
 #*
+#* Optional `format` field in the JSON body controls the response format:
+#* `"markdown"` (default; unchanged behavior, `Content-Type: text/plain`) or
+#* `"html"` (inline-styled HTML, `Content-Type: text/html; charset=utf-8`).
+#* Any other value returns HTTP 400.
+#*
 #* @param body:object Request body (JSON object)
 #* @parser json
 #* @serializer text
@@ -275,6 +280,19 @@ function(req, body = NULL, res) {
   format <- tolower(trimws(as.character(format)[1]))
   has_metadata <- identical(check$mode, "metadata")
 
+  # Verified: res$setHeader("Content-Type", ...) below overrides this route's
+  # `@serializer text` default on the installed plumber version (>= 1.1.0) --
+  # see the Step 4 spike in .cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md
+  # and the regression guard in tests/testthat/test-api-description.R.
+  # format == "markdown" leaves Content-Type as text/plain (unchanged behavior).
+  render_description <- function(model) {
+    if (identical(format, "html")) {
+      piptm::render_description_html(model)
+    } else {
+      piptm::render_description_markdown(model)
+    }
+  }
+
   out <- capture_with_warnings({
     if (has_metadata) {
       description_metadata <- body$description_metadata
@@ -290,11 +308,7 @@ function(req, body = NULL, res) {
       }
 
       model <- piptm::build_description_model(description_metadata, params)
-      rendered <- if (identical(format, "html")) {
-        piptm::render_description_html(model)
-      } else {
-        piptm::render_description_markdown(model)
-      }
+      rendered <- render_description(model)
       list(content = rendered)
     } else {
       # Fallback path: recompute via table_maker(include_metadata = TRUE).
@@ -327,11 +341,7 @@ function(req, body = NULL, res) {
 
       desc_meta  <- tm_out$description_metadata
       model      <- piptm::build_description_model(desc_meta, desc_meta$params)
-      rendered <- if (identical(format, "html")) {
-        piptm::render_description_html(model)
-      } else {
-        piptm::render_description_markdown(model)
-      }
+      rendered <- render_description(model)
       list(content = rendered)
     }
   })
