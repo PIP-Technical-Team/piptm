@@ -200,6 +200,20 @@ render_description_markdown <- function(model) {
       if (!is.null(rendered)) {
         lines <- c(lines, paste0("**", .display_label_markdown(section_name, key, parent_key = parent_key), "**"), rendered)
       }
+    } else if (
+      identical(section_name, "cell_definition") &&
+      identical(key, "measure_interpretation") &&
+      is.list(value) &&
+      !is.data.frame(value)
+    ) {
+      # Share measures: render non-share prose first, then the structured
+      # shares table, then the identity footer (if present). Character-
+      # vector `measure_interpretation` (no shares requested) falls through
+      # to the existing branch below unchanged.
+      rendered <- .render_measure_interpretation_shares(value)
+      if (!is.null(rendered)) {
+        lines <- c(lines, paste0("**", .display_label_markdown(section_name, key, parent_key = parent_key), "**"), rendered)
+      }
     } else if (is.list(value)) {
       rendered <- .render_named_list(value, section_name = section_name, parent_key = key)
       if (!is.null(rendered)) {
@@ -222,6 +236,38 @@ render_description_markdown <- function(model) {
     return(NULL)
   }
   return(paste(lines, collapse = "\n"))
+}
+
+
+#' Render the structured shares payload of `cell_definition$measure_interpretation`.
+#'
+#' Emits non-share prose (numbered list, matching the legacy character-vector
+#' rendering), then the shares table, then the identity footer.
+#'
+#' @param value List with `prose`, `shares_table`, `shares_footer`.
+#' @return Character scalar Markdown, or NULL when there is nothing to render.
+#' @keywords internal
+.render_measure_interpretation_shares <- function(value) {
+  blocks <- character()
+
+  prose_rendered <- .render_char_vector(value$prose)
+  if (!is.null(prose_rendered)) {
+    blocks <- c(blocks, prose_rendered)
+  }
+
+  table_rendered <- .render_table(value$shares_table)
+  if (!is.null(table_rendered)) {
+    blocks <- c(blocks, table_rendered)
+  }
+
+  if (!is.null(value$shares_footer) && nzchar(value$shares_footer)) {
+    blocks <- c(blocks, paste0("*", value$shares_footer, "*"))
+  }
+
+  if (length(blocks) == 0) {
+    return(NULL)
+  }
+  return(paste(blocks, collapse = "\n\n"))
 }
 
 
@@ -377,7 +423,11 @@ render_description_markdown <- function(model) {
     slot_label = "Dimension",
     varname = "Variable",
     ui_label = "Label",
-    n_categories = "Categories"
+    n_categories = "Categories",
+    measure = "Measure",
+    denominator = "Denominator",
+    numerator = "Numerator",
+    plain_meaning = "Plain meaning"
   )
 
   if (col_name %in% names(mapping)) {

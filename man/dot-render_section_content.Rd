@@ -4,7 +4,7 @@
 \alias{.render_section_content}
 \title{Render a single section's content to Markdown by type.}
 \usage{
-.render_section_content(content)
+.render_section_content(content, section_name = NULL)
 }
 \arguments{
 \item{content}{The \code{content} field of a description model section.}

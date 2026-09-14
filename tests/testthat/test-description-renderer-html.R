@@ -216,3 +216,93 @@ test_that("render_description_html() omits bottom border on final visible sectio
   expect_true(grepl("border-bottom", section_styles[[1]], fixed = TRUE))
   expect_false(grepl("border-bottom", section_styles[[length(section_styles)]], fixed = TRUE))
 })
+
+
+# ── Structured shares payload rendering ─────────────────────────────────────
+
+test_that("render_description_html() renders shares-only structured payload as an escaped table with footer", {
+  model <- .make_render_model_html(list(
+    cell_definition = list(
+      visible = TRUE,
+      title = "Cell Definition",
+      content = list(
+        population_scope = "survey-weighted individuals in the selected survey",
+        measure_interpretation = list(
+          prose = character(0),
+          shares_table = data.table(
+            measure = c("Population share", "Target share within cell"),
+            denominator = c("d1", "d2"),
+            numerator = c("n1 & <cell>", "n2 \"quoted\""),
+            plain_meaning = c("What share, p1?", "What share, p2?")
+          ),
+          shares_footer = paste0(
+            "For cells with positive weighted population: Target share in ",
+            "sample base = Population share \u00d7 Target share within cell."
+          )
+        )
+      )
+    )
+  ))
+  out <- render_description_html(model)
+
+  expect_match(out, "<table[^>]*>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Measure</th>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Denominator</th>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Numerator</th>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Plain meaning</th>", perl = TRUE)
+
+  # Dynamic cell values must be HTML-escaped.
+  expect_match(out, "n1 &amp; &lt;cell&gt;", fixed = TRUE)
+  expect_match(out, "n2 &quot;quoted&quot;", fixed = TRUE)
+
+  # Footer present (2 shares requested).
+  expect_match(
+    out,
+    "For cells with positive weighted population: Target share in sample base",
+    fixed = TRUE
+  )
+})
+
+test_that("render_description_html() renders mixed prose + shares table, one share has no footer", {
+  model <- .make_render_model_html(list(
+    cell_definition = list(
+      visible = TRUE,
+      title = "Cell Definition",
+      content = list(
+        population_scope = "survey-weighted individuals in the selected survey",
+        measure_interpretation = list(
+          prose = "The Mean of Welfare for survey-weighted individuals in the selected survey.",
+          shares_table = data.table(
+            measure = "Population share",
+            denominator = "d1",
+            numerator = "n1",
+            plain_meaning = "What share, p1?"
+          ),
+          shares_footer = NULL
+        )
+      )
+    )
+  ))
+  out <- render_description_html(model)
+
+  mean_pos <- regexpr("The Mean of Welfare", out, fixed = TRUE)
+  table_pos <- regexpr("Plain meaning", out, fixed = TRUE)
+  expect_true(mean_pos > 0)
+  expect_true(table_pos > 0)
+  expect_true(mean_pos < table_pos)
+
+  # Only one share requested: no identity footer.
+  expect_false(grepl("Population share \u00d7 Target share within cell", out, fixed = TRUE))
+})
+
+test_that("render_description_html() leaves non-share measure_interpretation rendering unchanged", {
+  model <- .make_render_model_html()
+  out <- render_description_html(model)
+
+  expect_match(
+    out,
+    "The Mean of Welfare for survey-weighted individuals in the selected survey.",
+    fixed = TRUE
+  )
+  expect_false(grepl("<th[^>]*>Plain meaning</th>", out, perl = TRUE))
+})

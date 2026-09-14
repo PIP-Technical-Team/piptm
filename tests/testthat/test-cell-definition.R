@@ -128,7 +128,7 @@ test_that("Example 3: Binary var with target shares produces exact expected outp
     ),
     measures_info = data.table(
       measure = c("target_within_group_share", "target_survey_share"),
-      ui_label = c("Target share within cell", "Target share in total survey"),
+      ui_label = c("Target share within cell", "Target share in sample base"),
       stat_group = c("shares", "shares")
     ),
     filters_info = data.table(
@@ -156,27 +156,68 @@ test_that("Example 3: Binary var with target shares produces exact expected outp
     resolved_labels = resolved_labels
   )
   
-  # Expected outputs from spec §4.3 Example 3 (NO interpretation blocks)
+  # Expected outputs: shares now render as a structured payload, not prose.
   expected_pop_scope <- paste(
     "survey-weighted individuals for whom Age group is among [0 to 14],",
     "within each Area group"
   )
-  expected_sentence_1 <- paste(
-    "Within survey-weighted individuals for whom Age group is among [0 to 14],",
-    "within each Area group, the share for which Improved water source",
-    "is true."
+  expected_base_pop <- "survey-weighted individuals for whom Age group is among [0 to 14]"
+  expected_cell_numerator <- paste0(
+    "Individuals in this cell (survey-weighted individuals for whom ",
+    "Age group is among [0 to 14], within each Area group)"
   )
-  expected_sentence_2 <- paste(
-    "The share of the total survey-weighted population represented",
-    "by survey-weighted individuals for whom Age group is among [0 to 14],",
-    "within each Area group where Improved water source is true."
-  )
-  
+  expected_target_numerator <- "Cell members for whom Improved water source is true"
+
   expect_equal(result$population_scope, expected_pop_scope)
-  expect_length(result$measure_interpretation, 2L)
-  expect_equal(result$measure_interpretation[1], expected_sentence_1)
-  expect_equal(result$measure_interpretation[2], expected_sentence_2)
   expect_null(result$note)
+  expect_type(result$measure_interpretation, "list")
+  expect_named(
+    result$measure_interpretation,
+    c("prose", "shares_table", "shares_footer")
+  )
+  expect_length(result$measure_interpretation$prose, 0L)
+
+  shares_table <- result$measure_interpretation$shares_table
+  expect_s3_class(shares_table, "data.table")
+  expect_equal(nrow(shares_table), 2L)
+  expect_named(
+    shares_table,
+    c("measure", "denominator", "numerator", "plain_meaning")
+  )
+
+  within_row <- shares_table[measure == "Target share within cell"]
+  expect_equal(within_row$denominator, expected_cell_numerator)
+  expect_equal(within_row$numerator, expected_target_numerator)
+  expect_equal(
+    within_row$plain_meaning,
+    paste(
+      "Among all individuals for whom Age group is among [0 to 14] in this",
+      "Area group, what fraction have Improved water source?"
+    )
+  )
+
+  survey_row <- shares_table[measure == "Target share in sample base"]
+  expect_equal(survey_row$denominator, expected_base_pop)
+  expect_equal(survey_row$numerator, expected_target_numerator)
+  expect_equal(
+    survey_row$plain_meaning,
+    paste(
+      "Among all individuals for whom Age group is among [0 to 14], what",
+      "fraction fall in this Area group and have Improved water source?"
+    )
+  )
+
+  # Footer must name the measures using the SAME labels as the table above:
+  # "Target share in sample base" (this test's ui_label for
+  # target_survey_share), and the canonical fallback "Population share"
+  # since pop_share was not requested and has no row in `measures_dt` here.
+  expect_equal(
+    result$measure_interpretation$shares_footer,
+    paste0(
+      "For cells with positive weighted population: Target share in sample ",
+      "base = Population share \u00d7 Target share within cell."
+    )
+  )
 })
 
 
@@ -396,7 +437,7 @@ test_that("Negative test: Poverty measures include dollar sign and PPP year", {
 })
 
 
-test_that("Negative test: target_within_group_share with by=NULL uses 'total weighted survey population'", {
+test_that("Negative test: target_within_group_share with by=NULL uses generic total-survey phrasing", {
   resolved_labels <- .make_resolved_labels(
     analysis_var_info = list(
       varname = "imp_wat_rec",
@@ -421,8 +462,287 @@ test_that("Negative test: target_within_group_share with by=NULL uses 'total wei
     resolved_labels = resolved_labels
   )
   
-  sentence <- result$measure_interpretation[1]
-  expect_match(sentence, "total weighted survey population", fixed = TRUE)
+  shares_table <- result$measure_interpretation$shares_table
+  expect_equal(nrow(shares_table), 1L)
+  expect_null(result$measure_interpretation$shares_footer)
+  expect_equal(
+    shares_table$plain_meaning,
+    "Among the total survey population, what fraction have Improved water source?"
+  )
+})
+
+
+# ── Structured shares table: additional scenarios ───────────────────────────
+
+test_that("Structured shares table: all three shares, no filter, with grouping", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "imp_wat_rec",
+      ui_label = "Improved water source",
+      tm_type = "binary"
+    ),
+    measures_info = data.table(
+      measure = c("pop_share", "target_within_group_share", "target_survey_share"),
+      ui_label = c(
+        "Population share",
+        "Target share within cell",
+        "Sample base share"
+      ),
+      stat_group = c("shares", "shares", "shares")
+    ),
+    covariates_info = data.table(
+      slot = "columns",
+      varname = "gender",
+      ui_label = "Gender",
+      n_categories = 2L
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "imp_wat_rec",
+    measures = c("pop_share", "target_within_group_share", "target_survey_share"),
+    filter_base = NULL,
+    by = c("gender"),
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expected_base_pop <- "survey-weighted individuals in the selected survey"
+  expected_cell_numerator <- paste0(
+    "Individuals in this cell (survey-weighted individuals in the ",
+    "selected survey, within each Gender group)"
+  )
+  expected_target_numerator <- "Cell members for whom Improved water source is true"
+
+  shares_table <- result$measure_interpretation$shares_table
+  expect_equal(nrow(shares_table), 3L)
+
+  pop_row <- shares_table[measure == "Population share"]
+  expect_equal(pop_row$denominator, expected_base_pop)
+  expect_equal(pop_row$numerator, expected_cell_numerator)
+  expect_equal(
+    pop_row$plain_meaning,
+    "Among the total survey population, what fraction fall in this Gender group?"
+  )
+
+  within_row <- shares_table[measure == "Target share within cell"]
+  expect_equal(within_row$denominator, expected_cell_numerator)
+  expect_equal(within_row$numerator, expected_target_numerator)
+  expect_equal(
+    within_row$plain_meaning,
+    paste(
+      "Among the total survey population in this Gender group, what",
+      "fraction have Improved water source?"
+    )
+  )
+
+  survey_row <- shares_table[measure == "Sample base share"]
+  expect_equal(survey_row$denominator, expected_base_pop)
+  expect_equal(survey_row$numerator, expected_target_numerator)
+  expect_equal(
+    survey_row$plain_meaning,
+    paste(
+      "Among the total survey population, what fraction fall in this",
+      "Gender group and have Improved water source?"
+    )
+  )
+
+  # Regression: the footer must reference each requested share measure using
+  # the SAME resolved ui_label shown in its table row, not an independently
+  # hardcoded name. This fixture deliberately uses a custom label
+  # ("Sample base share") for target_survey_share, distinct from both the
+  # real piptm registry default ("Target share in sample base",
+  # inst/extdata/tm_measure_spec.yaml) and the earlier incorrect hardcoded
+  # footer text ("Target share in total survey"), to prove the footer is not
+  # hardcoded to either.
+  footer <- result$measure_interpretation$shares_footer
+  expect_false(is.null(footer))
+  expect_match(footer, "Population share", fixed = TRUE)
+  expect_match(footer, "Target share within cell", fixed = TRUE)
+  expect_match(footer, "Sample base share", fixed = TRUE)
+  expect_false(grepl("Target share in sample base", footer, fixed = TRUE))
+  expect_false(grepl("Target share in total survey", footer, fixed = TRUE))
+})
+
+
+test_that("Structured shares table: filtered with no grouping uses honest degenerate wording", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "imp_wat_rec",
+      ui_label = "Improved water source",
+      tm_type = "binary"
+    ),
+    measures_info = data.table(
+      measure = c("pop_share", "target_within_group_share", "target_survey_share"),
+      ui_label = c(
+        "Population share",
+        "Target share within cell",
+        "Target share in sample base"
+      ),
+      stat_group = c("shares", "shares", "shares")
+    ),
+    filters_info = data.table(
+      varname = "age_group",
+      ui_label = "Age group",
+      selected_codes = list(1L),
+      selected_labels = list("0 to 14")
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "imp_wat_rec",
+    measures = c("pop_share", "target_within_group_share", "target_survey_share"),
+    filter_base = list(age_group = 1L),
+    by = NULL,
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  shares_table <- result$measure_interpretation$shares_table
+  expect_equal(nrow(shares_table), 3L)
+
+  pop_row <- shares_table[measure == "Population share"]
+  expect_equal(pop_row$plain_meaning, "This value is always 1 when there is no grouping.")
+
+  within_row <- shares_table[measure == "Target share within cell"]
+  survey_row <- shares_table[measure == "Target share in sample base"]
+
+  expect_equal(
+    within_row$plain_meaning,
+    paste(
+      "Among all individuals for whom Age group is among [0 to 14], what",
+      "fraction have Improved water source?"
+    )
+  )
+  # target_survey_share carries a parenthetical cross-reference so the two
+  # rows are never textually indistinguishable, even though the underlying
+  # values are numerically identical when there is no grouping.
+  expect_equal(
+    survey_row$plain_meaning,
+    paste0(
+      "Among all individuals for whom Age group is among [0 to 14], what ",
+      "fraction have Improved water source? (Equivalent to Target share ",
+      "within cell when no grouping is applied.)"
+    )
+  )
+  expect_false(identical(within_row$plain_meaning, survey_row$plain_meaning))
+})
+
+
+test_that("Structured shares table: pov_status group label matches population_scope wording", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "continuous"
+    ),
+    measures_info = data.table(
+      measure = "pop_share",
+      ui_label = "Population share",
+      stat_group = "shares"
+    ),
+    covariates_info = data.table(
+      slot = "columns",
+      varname = "pov_status",
+      ui_label = "Poverty status",
+      n_categories = 2L
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "pop_share",
+    filter_base = NULL,
+    by = c("pov_status"),
+    poverty_line = 6.85,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  # The group label used in plain_meaning ("Poverty status") must match the
+  # group label embedded in population_scope's qualifier -- same source
+  # (.resolve_group_label()), so they can never drift.
+  expect_match(result$population_scope, "Poverty status", fixed = TRUE)
+  shares_table <- result$measure_interpretation$shares_table
+  expect_equal(
+    shares_table$plain_meaning,
+    "Among the total survey population, what fraction fall in this Poverty status group?"
+  )
+})
+
+
+test_that("Structured shares table: mixed shares and non-share measures", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "continuous"
+    ),
+    measures_info = data.table(
+      measure = c("mean", "pop_share"),
+      ui_label = c("Mean", "Population share"),
+      stat_group = c("summary_statistics", "shares")
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = c("mean", "pop_share"),
+    filter_base = NULL,
+    by = NULL,
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_type(result$measure_interpretation, "list")
+  expect_equal(
+    result$measure_interpretation$prose,
+    "The Mean of Welfare for survey-weighted individuals in the selected survey."
+  )
+
+  shares_table <- result$measure_interpretation$shares_table
+  expect_equal(nrow(shares_table), 1L)
+  expect_equal(shares_table$measure, "Population share")
+
+  # Only one share measure requested: no footer.
+  expect_null(result$measure_interpretation$shares_footer)
+})
+
+
+test_that("No shares requested: measure_interpretation remains a character vector", {
+  resolved_labels <- .make_resolved_labels(
+    analysis_var_info = list(
+      varname = "welfare",
+      ui_label = "Welfare",
+      tm_type = "continuous"
+    ),
+    measures_info = data.table(
+      measure = "mean",
+      ui_label = "Mean",
+      stat_group = "summary_statistics"
+    )
+  )
+
+  result <- build_cell_definition(
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = NULL,
+    by = NULL,
+    poverty_line = NULL,
+    ppp = 2021L,
+    release = "TEST_2024",
+    resolved_labels = resolved_labels
+  )
+
+  expect_type(result$measure_interpretation, "character")
+  expect_length(result$measure_interpretation, 1L)
 })
 
 

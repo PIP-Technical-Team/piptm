@@ -23,6 +23,13 @@ The renderer applies context-aware display labels for internal model keys
 (for example, \code{structure_description} -> "Description") without modifying
 the model schema itself.
 }
+\note{
+This file mirrors \code{R/description_renderer.R}'s dispatch structure
+(table / named list / char vector / scalar) for the HTML output format.
+Changes to \code{build_description_model()}'s content shapes must be
+reflected in BOTH renderers, or Markdown/HTML output will silently
+diverge.
+}
 \examples{
 \dontrun{
 result <- table_maker(

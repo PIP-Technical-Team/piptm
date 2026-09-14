@@ -34,7 +34,16 @@ build_cell_definition(
 }
 \value{
 List with \code{population_scope} (character scalar) and
-\code{measure_interpretation} (character vector, one entry per measure).
+\code{measure_interpretation}. When no share measure
+(\code{pop_share}, \code{target_within_group_share}, \code{target_survey_share}) is
+among \code{measures}, \code{measure_interpretation} is a character vector, one
+sentence per measure (unchanged legacy shape). When one or more share
+measures are requested, \code{measure_interpretation} is instead a named
+list with: \code{prose} (character vector of non-share sentences, possibly
+length 0), \code{shares_table} (a \code{data.table} with one row per requested
+share measure and columns \code{measure}, \code{denominator}, \code{numerator},
+\code{plain_meaning}), and \code{shares_footer} (a character scalar identity note,
+or \code{NULL} when fewer than 2 share measures were requested).
 }
 \description{
 Generates mathematically precise population definitions that adapt to all

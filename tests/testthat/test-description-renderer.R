@@ -157,12 +157,94 @@ test_that("render_description_markdown() renders data.table content as pipe tabl
 test_that("render_description_markdown() renders cell definition as paragraph + numbered list", {
   model <- .make_render_model()
   out <- render_description_markdown(model)
-
   # population_scope as paragraph
   expect_match(out, "Population scope: the total weighted population of the survey", fixed = TRUE)
   # measure_interpretation as nested numbered list with label prefixes
   expect_match(out, "1. **mean:** The Mean of Welfare", fixed = TRUE)
   expect_match(out, "2. **gini:** The Gini index of Welfare", fixed = TRUE)
+})
+
+
+# ── Structured shares payload rendering ─────────────────────────────────────
+
+test_that("render_description_markdown() renders shares-only structured payload as a table with footer", {
+  model <- .make_render_model(list(
+    cell_definition = list(
+      visible = TRUE,
+      title = "Cell Definition",
+      content = list(
+        population_scope = "the total weighted population of the survey",
+        measure_interpretation = list(
+          prose = character(0),
+          shares_table = data.table(
+            measure = c("Population share", "Target share within cell"),
+            denominator = c("d1", "d2"),
+            numerator = c("n1", "n2"),
+            plain_meaning = c("What share, p1?", "What share, p2?")
+          ),
+          shares_footer = paste0(
+            "For cells with positive weighted population: Target share in ",
+            "sample base = Population share \u00d7 Target share within cell."
+          )
+        ),
+        note = NULL
+      )
+    )
+  ))
+  out <- render_description_markdown(model)
+
+  expect_match(out, "## Cell Definition", fixed = TRUE)
+  expect_match(out, "| Measure | Denominator | Numerator | Plain meaning |", fixed = TRUE)
+  expect_match(out, "Population share", fixed = TRUE)
+  expect_match(out, "Target share within cell", fixed = TRUE)
+  expect_match(
+    out,
+    "For cells with positive weighted population: Target share in sample base",
+    fixed = TRUE
+  )
+  # No leftover numbered-prose lines when prose is empty.
+  expect_false(grepl("\n1\\. ", out))
+})
+
+test_that("render_description_markdown() renders mixed prose + shares table, one share has no footer", {
+  model <- .make_render_model(list(
+    cell_definition = list(
+      visible = TRUE,
+      title = "Cell Definition",
+      content = list(
+        population_scope = "the total weighted population of the survey",
+        measure_interpretation = list(
+          prose = c("The Mean of Welfare for the total weighted population of the survey."),
+          shares_table = data.table(
+            measure = "Population share",
+            denominator = "d1",
+            numerator = "n1",
+            plain_meaning = "What share, p1?"
+          ),
+          shares_footer = NULL
+        ),
+        note = NULL
+      )
+    )
+  ))
+  out <- render_description_markdown(model)
+
+  mean_pos <- regexpr("The Mean of Welfare", out, fixed = TRUE)
+  table_pos <- regexpr("| Measure | Denominator | Numerator | Plain meaning |", out, fixed = TRUE)
+  expect_true(mean_pos > 0)
+  expect_true(table_pos > 0)
+  expect_true(mean_pos < table_pos)
+
+  # Only one share requested: no identity footer.
+  expect_false(grepl("Population share \u00d7 Target share within cell", out, fixed = TRUE))
+})
+
+test_that("render_description_markdown() leaves non-share measure_interpretation rendering unchanged", {
+  model <- .make_render_model()
+  out <- render_description_markdown(model)
+
+  expect_match(out, "1. **mean:** The Mean of Welfare", fixed = TRUE)
+  expect_false(grepl("| Measure | Denominator | Numerator | Plain meaning |", out, fixed = TRUE))
 })
 
 test_that("render_description_markdown() renders warnings when present", {

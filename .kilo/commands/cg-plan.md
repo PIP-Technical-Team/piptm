@@ -1,5 +1,5 @@
 ---
-description: Create a structured implementation plan with research. Use after brainstorming or when requirements are clear.
+description: "Create a structured implementation plan with research. Use after brainstorming or when requirements are clear."
 ---
 
 # Plan
@@ -254,6 +254,19 @@ If out-of-scope ideas surfaced, ask whether any should be added to the roadmap. 
 
 After approval:
 
+1. Compute the default implementation command from the saved plan shape:
+   - If the saved plan contains any `## Phase N:` headers, the default start command is `/cg-work phase1`.
+   - Otherwise the default start command is `/cg-work`.
+2. Emit a compact **Execution controls** block before the next-action menu:
+   - `Phase`: say whether the plan is phased. For phased plans, note that `/cg-work phaseN` runs only that phase and that `## Phase` headers, not `phases:` frontmatter, are authoritative.
+   - `Review`: state that `/cg-work` defaults to `review:manual`, and list the accepted review controls: `review:none`, `review:manual`, `review:auto`, `review:light`, `review:standard`, `review:data-risk`, `review:architecture`, `review:full`.
+   - `Deviation`: state the stored `deviation-policy` from plan frontmatter and note that `/cg-work deviate:ask|auto|autonomous|strict` can override it for a single run, with `auto` and `autonomous` both mapping to `autonomous`.
+3. Include 2-4 concrete command examples tailored to the saved plan:
+   - Start now with the default command.
+   - Start a later phase for phased plans (for example `/cg-work phase2`).
+   - Start with automatic review routing (for example `<default-command> review:auto`).
+   - Start with an explicit deviation override different from the stored value (for example `<default-command> deviate:strict`).
+
 Read `.kilo/shared/model-advisory.contract.md` and use the `planning` stage
 for the next `/cg-work` transition. Emit a compact advisory recommendation with
 the capability profile, strong option and effort, economical option when useful,
@@ -263,8 +276,19 @@ or set a model or reasoning effort.
 
 > Plan saved to `.cg-docs/plans/<filename>`.
 >
+> Before the next-action menu, include an **Execution controls** section that names:
+> - whether the plan is phased and, if so, that `/cg-work phaseN` runs a specific phase and `## Phase` headers are authoritative;
+> - that `/cg-work` defaults to `review:manual`, with optional `review:none`, `review:manual`, `review:auto`, `review:light`, `review:standard`, `review:data-risk`, `review:architecture`, and `review:full`;
+> - the stored `deviation-policy` and the optional per-run override `deviate:ask|auto|autonomous|strict`.
+>
+> Then include a **Suggested commands** list with concrete commands for this saved plan:
+> - the default start command (`/cg-work` or `/cg-work phase1` for phased plans);
+> - the same command with `review:auto`;
+> - the same command with a non-default `deviate:` override;
+> - for phased plans only, one later-phase example such as `/cg-work phase2`.
+>
 > **What would you like to do next?**
-> 1. **`/cg-work`** -- Start implementing this plan immediately
+> 1. **`/cg-work` or `phase1` variant for phased plans** -- Start implementing this plan immediately
 > 2. **`/cg-plan-review`** -- Challenge this plan before starting *(recommended for Standard/Deep plans)*
 > 3. **`/cg-brainstorm`** -- Revisit open questions or explore a related topic first
 

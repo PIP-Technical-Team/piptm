@@ -327,8 +327,32 @@ description_model <- list(
     title   = "Cell Definition",
     content = list(
       population_scope = character(1),
-      # Dynamically generated sentence; see Section IV
-      measure_interpretation = character()  # vector of sentences, one per measure
+      # Shape depends on whether any share measure (pop_share,
+      # target_within_group_share, target_survey_share) is among the
+      # requested measures:
+      #
+      # - No share measures requested: unchanged legacy shape --
+      #   `measure_interpretation` is a character vector, one dynamically
+      #   generated sentence per measure (see Section IV).
+      #
+      # - One or more share measures requested: `measure_interpretation`
+      #   becomes a named list with:
+      #     prose         = character() -- sentences for any non-share
+      #                     measures also requested (possibly length 0)
+      #     shares_table  = data.table() with one row per requested share
+      #                     measure and columns `measure`, `denominator`,
+      #                     `numerator`, `plain_meaning` -- a structured,
+      #                     scannable alternative to prose for the three
+      #                     share measures, which otherwise produce
+      #                     near-identical sentences that are hard to tell
+      #                     apart (see updated Example 3 below).
+      #     shares_footer = character(1) or NULL -- an identity note
+      #                     ("<target_survey_share label> = <pop_share
+      #                     label> x <target_within_group_share label>",
+      #                     qualified to cells with positive weighted
+      #                     population), present only when 2+ share
+      #                     measures were requested.
+      measure_interpretation = character()  # or list(prose, shares_table, shares_footer)
     )
   ),
 
@@ -454,9 +478,21 @@ START: Building cell definition sentence
 
        CASE "shares":
 
-           SUBSWITCH measure:
+            # SUPERSEDED: when any share measure is requested, the shares
+            # family no longer produces prose via this pseudocode branch.
+            # `build_cell_definition()` instead builds a structured
+            # `shares_table` (columns: measure, denominator, numerator,
+            # plain_meaning) plus an optional `shares_footer` identity note.
+            # See Section III.1's `cell_definition` shape contract and the
+            # updated Example 3 below for the current behavior. The
+            # sub-cases below are retained only as historical context for
+            # the original per-measure semantics (denominator/numerator
+            # definitions still hold; only the *rendering* changed from
+            # prose to a table).
 
-           CASE "pop_share":
+            SUBSWITCH measure:
+
+            CASE "pop_share":
                cell_def = "The share of the total weighted survey population represented by {combined_pop}."
                Example: "The share of the total weighted survey population represented by the weighted population that is Education level in [Primary] within each Gender group."
 
@@ -564,20 +600,27 @@ Each cell contains:
 **Analysis Variable Resolution:**
 - `imp_wat_rec` -> "Improved water source"
 
-**Output:**
-```
-Cell Definition:
-Population scope: The weighted population that is Age group in [0 to 14] within each Area group.
+**Output (structured shares table, since both requested measures are share measures):**
 
-Each cell contains:
-1. Target share within cell: The share of the weighted population that is Age group in [0 to 14] within each Area group for whom Improved water source is true.
+`measure_interpretation` is a named list. `prose` is empty (no non-share measures
+were requested). `shares_table` has one row per requested share measure:
 
-   (Interpretation: Among the weighted 0-14 year-old population, what fraction has improved water? Computed separately for urban and rural.)
+| Measure | Denominator | Numerator | Plain meaning |
+|---|---|---|---|
+| Target share within cell | Individuals in this cell (survey-weighted individuals for whom Age group is among [0 to 14], within each Area group) | Cell members for whom Improved water source is true | Among all individuals for whom Age group is among [0 to 14] in this Area group, what fraction have Improved water source? |
+| Target share in sample base | survey-weighted individuals for whom Age group is among [0 to 14] | Cell members for whom Improved water source is true | Among all individuals for whom Age group is among [0 to 14], what fraction fall in this Area group and have Improved water source? |
 
-2. Target share in total survey: The share of the total weighted survey population represented by the weighted population that is Age group in [0 to 14] within each Area group for whom Improved water source is true.
+`shares_footer` (2+ share measures requested):
 
-   (Interpretation: What fraction of the ENTIRE weighted survey population consists of 0-14 year-old urban dwellers with improved water access? Computed separately for urban and rural.)
-```
+> For cells with positive weighted population: Target share in sample base =
+> Population share × Target share within cell.
+
+This structured shape replaces the earlier prose-only rendering for share
+measures. The three share measures (`pop_share`, `target_within_group_share`,
+`target_survey_share`) share the same population scope and grouping, so
+prose sentences describing all three read as nearly identical; the table
+separates denominator, numerator, and plain-meaning question into distinct
+columns to make each measure's definition unambiguous.
 
 ---
 
@@ -721,7 +764,10 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 2. **`build_cell_definition(analysis_var, measures, filter_base, by, poverty_line, ppp, release)`**
    - Implements algorithm from Section IV.2
-   - Returns `list(population_scope, measure_interpretation)`
+   - Returns `list(population_scope, measure_interpretation)`, where
+     `measure_interpretation` is a character vector when no share measure is
+     requested, or a named list (`prose`, `shares_table`, `shares_footer`)
+     when one or more share measures are requested -- see Section III.1.
 
 3. **Helper: `resolve_filter_labels(filter_base, release)`**
    - Input: Named list of filter codes

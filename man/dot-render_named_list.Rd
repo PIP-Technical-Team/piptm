@@ -4,7 +4,7 @@
 \alias{.render_named_list}
 \title{Render a named list to Markdown.}
 \usage{
-.render_named_list(content)
+.render_named_list(content, section_name = NULL, parent_key = NULL)
 }
 \arguments{
 \item{content}{Named list.}

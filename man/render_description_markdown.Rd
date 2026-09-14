@@ -18,6 +18,13 @@ Converts the structured description model produced by
 \code{\link[=build_description_model]{build_description_model()}} into readable Markdown text. Only sections
 marked as visible are rendered; sections with \code{NULL} content are skipped.
 }
+\note{
+This file mirrors \code{R/description_renderer_html.R}'s dispatch
+structure (table / named list / char vector / scalar) for the Markdown
+output format. Changes to \code{build_description_model()}'s content shapes
+must be reflected in BOTH renderers, or Markdown/HTML output will
+silently diverge.
+}
 \examples{
 \dontrun{
 result <- table_maker(

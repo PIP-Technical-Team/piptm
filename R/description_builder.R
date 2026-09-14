@@ -497,6 +497,37 @@ build_description_model <- function(description_metadata, params) {
 }
 
 
+#' Resolve a human-readable group label for a set of covariates.
+#'
+#' Handles the `pov_status` special case (using its resolved `ui_label`, or
+#' falling back to `"Poverty status"`) identically to the general covariate
+#' path. Used for both the `population_scope` group qualifier and the shares
+#' table's `plain_meaning` group phrase, so the two never drift apart.
+#'
+#' @param by Character vector or NULL: covariate names.
+#' @param covariates_dt Data frame of resolved covariate labels, or NULL.
+#' @return Character scalar group label, or NULL when `by` is NULL/empty.
+#' @keywords internal
+.resolve_group_label <- function(by, covariates_dt) {
+  if (is.null(by) || length(by) == 0) {
+    return(NULL)
+  }
+  if ("pov_status" %in% by) {
+    pov_label <- if (!is.null(covariates_dt) && "varname" %in% names(covariates_dt)) {
+      vals <- covariates_dt[varname == "pov_status", ui_label]
+      vals[!is.na(vals)][1]
+    } else {
+      NA_character_
+    }
+    if (is.na(pov_label) || !nzchar(pov_label)) {
+      pov_label <- "Poverty status"
+    }
+    return(pov_label)
+  }
+  return(format_covariate_description(by, covariates_dt))
+}
+
+
 #' Build cell definition content (core algorithm)
 #'
 #' Generates mathematically precise population definitions that adapt to all
@@ -511,7 +542,16 @@ build_description_model <- function(description_metadata, params) {
 #' @param release Character scalar: release ID.
 #' @param resolved_labels List: pre-resolved labels from metadata.
 #' @return List with `population_scope` (character scalar) and
-#'   `measure_interpretation` (character vector, one entry per measure).
+#'   `measure_interpretation`. When no share measure
+#'   (`pop_share`, `target_within_group_share`, `target_survey_share`) is
+#'   among `measures`, `measure_interpretation` is a character vector, one
+#'   sentence per measure (unchanged legacy shape). When one or more share
+#'   measures are requested, `measure_interpretation` is instead a named
+#'   list with: `prose` (character vector of non-share sentences, possibly
+#'   length 0), `shares_table` (a `data.table` with one row per requested
+#'   share measure and columns `measure`, `denominator`, `numerator`,
+#'   `plain_meaning`), and `shares_footer` (a character scalar identity note,
+#'   or `NULL` when fewer than 2 share measures were requested).
 #' @keywords internal
 build_cell_definition <- function(analysis_var, measures, filter_base, by,
                                    poverty_line, ppp, release, resolved_labels) {
@@ -581,30 +621,24 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
   }
   
   # Step 2: Layer group_qualifier from by
+  group_label <- if (is.null(by) || length(by) == 0) {
+    NULL
+  } else {
+    .resolve_group_label(by, resolved_labels$covariates)
+  }
   if (is.null(by) || length(by) == 0) {
     group_qualifier <- ""
     full_pop <- base_pop
   } else {
     # Check for pov_status special case
     if ("pov_status" %in% by) {
-      covariates_dt <- resolved_labels$covariates
-      pov_label <- if (!is.null(covariates_dt) && "varname" %in% names(covariates_dt)) {
-        vals <- covariates_dt[varname == "pov_status", ui_label]
-        vals[!is.na(vals)][1]
-      } else {
-        NA_character_
-      }
-      if (is.na(pov_label) || !nzchar(pov_label)) {
-        pov_label <- "Poverty status"
-      }
       group_qualifier <- sprintf(
         ", within each %s group (%s)",
-        pov_label,
+        group_label,
         poverty_group_text
       )
     } else {
-      covariate_desc <- format_covariate_description(by, resolved_labels$covariates)
-      group_qualifier <- sprintf(", within each %s group", covariate_desc)
+      group_qualifier <- sprintf(", within each %s group", group_label)
     }
     full_pop <- paste0(base_pop, group_qualifier)
   }
@@ -620,12 +654,30 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
   )
   unknown_tm_type <- is.null(analysis_var_type) || identical(analysis_var_type, "unknown")
   measures_dt <- resolved_labels$measures
-  
-  # Each stat_group has distinct natural-language semantics (summary stats use
-  # "of/for", inequality uses "among", poverty includes thresholds, and
-  # shares distinguish between survey-level and group-level denominators).
-  measure_sentences <- vapply(
+
+  # Partition requested measures into shares and non-shares. Shares get a
+  # structured table (denominator/numerator/plain meaning); everything else
+  # keeps the existing prose path unchanged. Duplicate measures are not a
+  # supported request pattern, so `setdiff()`/logical indexing on unique
+  # values is acceptable here.
+  measure_stat_groups <- vapply(
     measures,
+    function(measure_key) {
+      idx <- which(measures_dt$measure == measure_key)
+      if (length(idx) == 0) return(NA_character_)
+      measures_dt$stat_group[idx[1]]
+    },
+    character(1)
+  )
+  is_share_measure <- !is.na(measure_stat_groups) & measure_stat_groups == "shares"
+  nonshare_measures <- measures[!is_share_measure]
+  share_measures <- measures[is_share_measure]
+
+  # Each stat_group has distinct natural-language semantics (summary stats use
+  # "of/for", inequality uses "among", poverty includes thresholds). Shares
+  # are handled separately below via a structured table.
+  measure_sentences <- vapply(
+    nonshare_measures,
     function(measure_key) {
       # Find measure label and stat_group
       idx <- which(measures_dt$measure == measure_key)
@@ -662,41 +714,6 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
           full_pop
         ),
         
-        "shares" = {
-          # Shares family has 3 distinct measures
-          if (measure_key == "pop_share") {
-            sprintf(
-              "The share of the total weighted survey population represented by %s.",
-              full_pop
-            )
-          } else if (measure_key == "target_within_group_share") {
-            # Denominator is the group population
-            if (is.null(by) || length(by) == 0) {
-              # No groups -> collapses to survey-level
-              sprintf(
-                "The share of the total weighted survey population for whom %s is true.",
-                analysis_var_label
-              )
-            } else {
-              sprintf(
-                "Within %s, the share for which %s is true.",
-                full_pop,
-                analysis_var_label
-              )
-            }
-          } else if (measure_key == "target_survey_share") {
-            # Numerator is filtered+grouped, denominator is total survey
-            sprintf(
-              "The share of the total survey-weighted population represented by %s where %s is true.",
-              full_pop,
-              analysis_var_label
-            )
-          } else {
-            # Fallback for unknown shares measures
-            sprintf("The %s for %s.", measure_label, full_pop)
-          }
-        },
-        
         # Fallback for unknown stat_groups
         sprintf("The %s of %s for %s.", measure_label, analysis_var_label, full_pop)
       )
@@ -705,6 +722,132 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
     },
     character(1)
   )
+
+  # Build the structured shares table, if any share measures were requested.
+  shares_table <- NULL
+  shares_footer <- NULL
+  if (length(share_measures) > 0) {
+    cell_numerator <- sprintf("Individuals in this cell (%s)", full_pop)
+    target_numerator <- sprintf("Cell members for whom %s is true", analysis_var_label)
+    no_grouping <- is.null(by) || length(by) == 0
+
+    # Plain-meaning phrasing building blocks, reused across all three share
+    # templates. `filter_phrase` and `group_phrase` are built from the same
+    # filter/group labels used for `base_pop`/`full_pop` and `group_label`
+    # above, so wording never drifts from the rest of the section.
+    has_filter <- !is.null(filter_base) && length(filter_base) > 0
+    filter_phrase <- if (has_filter) {
+      sprintf("all individuals for whom %s", filter_text)
+    } else {
+      "the total survey population"
+    }
+    group_phrase <- if (!no_grouping) sprintf("this %s group", group_label) else NULL
+
+    # Canonical share-measure labels, used as a fallback when a measure isn't
+    # itself requested (so its metadata row may be absent from `measures_dt`,
+    # per table_maker.R's upstream filtering) and we still need to refer to
+    # it by name -- e.g. target_survey_share's no-grouping clarification below
+    # and the identity footer further down. Never leak a raw internal key.
+    share_canonical_labels <- c(
+      pop_share = "Population share",
+      target_within_group_share = "Target share within cell",
+      target_survey_share = "Target share in sample base"
+    )
+    share_label <- function(measure_key) {
+      idx <- which(measures_dt$measure == measure_key)
+      if (length(idx) > 0) {
+        return(measures_dt$ui_label[idx[1]])
+      }
+      unname(share_canonical_labels[measure_key])
+    }
+
+    share_row <- function(measure_key) {
+      idx <- which(measures_dt$measure == measure_key)
+      measure_label <- if (length(idx) > 0) measures_dt$ui_label[idx[1]] else measure_key
+
+      if (identical(measure_key, "pop_share")) {
+        plain_meaning <- if (no_grouping) {
+          "This value is always 1 when there is no grouping."
+        } else {
+          sprintf("Among %s, what fraction fall in %s?", filter_phrase, group_phrase)
+        }
+        return(data.table::data.table(
+          measure = measure_label,
+          denominator = base_pop,
+          numerator = cell_numerator,
+          plain_meaning = plain_meaning
+        ))
+      }
+
+      if (identical(measure_key, "target_within_group_share")) {
+        # When there is no grouping, this measure is numerically identical
+        # to target_survey_share (the cell IS the filtered base), so the two
+        # intentionally share the same plain-meaning text in that case.
+        plain_meaning <- if (no_grouping) {
+          sprintf("Among %s, what fraction have %s?", filter_phrase, analysis_var_label)
+        } else {
+          sprintf(
+            "Among %s in %s, what fraction have %s?",
+            filter_phrase, group_phrase, analysis_var_label
+          )
+        }
+        return(data.table::data.table(
+          measure = measure_label,
+          denominator = cell_numerator,
+          numerator = target_numerator,
+          plain_meaning = plain_meaning
+        ))
+      }
+
+      if (identical(measure_key, "target_survey_share")) {
+        # When there is no grouping, this measure is numerically identical to
+        # target_within_group_share (the cell IS the filtered base). The
+        # plain-meaning question itself is worded identically for both in
+        # that case, so we append a parenthetical cross-reference here (only
+        # on target_survey_share) to avoid two indistinguishable rows in the
+        # rendered table.
+        plain_meaning <- if (no_grouping) {
+          sprintf(
+            "Among %s, what fraction have %s? (Equivalent to %s when no grouping is applied.)",
+            filter_phrase, analysis_var_label, share_label("target_within_group_share")
+          )
+        } else {
+          sprintf(
+            "Among %s, what fraction fall in %s and have %s?",
+            filter_phrase, group_phrase, analysis_var_label
+          )
+        }
+        return(data.table::data.table(
+          measure = measure_label,
+          denominator = base_pop,
+          numerator = target_numerator,
+          plain_meaning = plain_meaning
+        ))
+      }
+
+      # Fallback for unknown shares measures
+      data.table::data.table(
+        measure = measure_label,
+        denominator = base_pop,
+        numerator = cell_numerator,
+        plain_meaning = sprintf("What share is represented by %s?", measure_label)
+      )
+    }
+
+    shares_table <- data.table::rbindlist(lapply(share_measures, share_row))
+
+    if (length(share_measures) >= 2) {
+      # Reuses the shared `share_label()` resolver defined above (falls back
+      # to canonical labels rather than leaking a raw internal measure key
+      # when a referenced measure wasn't itself requested).
+      shares_footer <- sprintf(
+        "For cells with positive weighted population: %s = %s \u00d7 %s.",
+        share_label("target_survey_share"),
+        share_label("pop_share"),
+        share_label("target_within_group_share")
+      )
+    }
+  }
   
   # Step 4: Handle annotations
   notes <- character()
@@ -733,10 +876,27 @@ build_cell_definition <- function(analysis_var, measures, filter_base, by,
   }
   note <- if (length(notes)) paste(notes, collapse = "\n") else NULL
   
-  # Return structured cell definition
+  # Return structured cell definition. `measure_interpretation` remains a
+  # plain character vector (one sentence per measure) when no share measures
+  # were requested, preserving the existing contract exactly. When one or
+  # more share measures are requested, it becomes a named list of
+  # `prose` (non-share sentences, possibly empty), `shares_table` (a
+  # data.table with one row per share measure: measure/denominator/
+  # numerator/plain_meaning), and `shares_footer` (an identity note, present
+  # only when 2+ share measures were requested).
+  measure_interpretation <- if (length(share_measures) == 0) {
+    unname(measure_sentences)
+  } else {
+    list(
+      prose = unname(measure_sentences),
+      shares_table = shares_table,
+      shares_footer = shares_footer
+    )
+  }
+
   return(list(
     population_scope = full_pop,
-    measure_interpretation = unname(measure_sentences),
+    measure_interpretation = measure_interpretation,
     note = note
   ))
 }

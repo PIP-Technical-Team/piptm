@@ -100,3 +100,42 @@ test_that("compute_measures shares use survey-specific denominators in batched m
   survey_sum <- survey[, .(total = sum(value)), by = .(pip_id)]
   expect_equal(survey_sum[order(pip_id)]$total, c(0.75, 0.75), tolerance = 1e-12)
 })
+
+
+test_that("compute_shares: zero-weight cell yields NA within-share, justifying the footer qualification", {
+  # "rural" cell has zero total weight; "urban" is non-degenerate.
+  dt <- data.table(
+    pip_id = rep("TST_ZERO", 4L),
+    weight = c(0, 0, 1, 1),
+    area = c("rural", "rural", "urban", "urban"),
+    female = c(1L, 0L, 1L, 0L)
+  )
+
+  res <- compute_shares(
+    dt,
+    by = "area",
+    measures = c("pop_share", "target_within_group_share", "target_survey_share"),
+    target_variable = "female"
+  )
+
+  pop_rural <- res[measure == "pop_share" & area == "rural"]$value
+  within_rural <- res[measure == "target_within_group_share" & area == "rural"]$value
+  survey_rural <- res[measure == "target_survey_share" & area == "rural"]$value
+
+  expect_equal(pop_rural, 0, tolerance = 1e-12)
+  expect_true(is.na(within_rural))
+  expect_equal(survey_rural, 0, tolerance = 1e-12)
+
+  # The identity pop_share * target_within_group_share == target_survey_share
+  # does NOT hold for a zero-weight cell: 0 * NA is NA, not 0. This is why
+  # the description footer must be qualified to "cells with positive
+  # weighted population" rather than stated unconditionally.
+  expect_true(is.na(pop_rural * within_rural))
+  expect_false(isTRUE(all.equal(pop_rural * within_rural, survey_rural)))
+
+  # The non-degenerate "urban" cell satisfies the identity exactly.
+  pop_urban <- res[measure == "pop_share" & area == "urban"]$value
+  within_urban <- res[measure == "target_within_group_share" & area == "urban"]$value
+  survey_urban <- res[measure == "target_survey_share" & area == "urban"]$value
+  expect_equal(pop_urban * within_urban, survey_urban, tolerance = 1e-12)
+})
