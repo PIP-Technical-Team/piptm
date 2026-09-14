@@ -131,6 +131,7 @@ Rscript inst/plumber/run.R
 | `/covariates` | GET | Layout covariates for table slicing |
 | `/lookup` | GET | Resolve triplets to `pip_id` |
 | `/table` | GET, POST | Compute table output |
+| `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
 | `/session/surveys` | POST | Create a session and store a survey selection |
 | `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
 
