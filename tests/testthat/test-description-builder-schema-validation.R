@@ -202,24 +202,26 @@ test_that(".build_layout_content() coerces factor columns to character", {
   expect_type(result$layout$ui_label, "character")
 })
 
-test_that(".build_layout_content() coerces numeric n_categories to integer", {
+test_that(".build_layout_content() emits n_categories as a character string", {
+  # n_categories now carries a combined "<count>: <label1>, <label2>" string,
+  # so the underlying type is character regardless of the input numeric type.
   meta <- list(
     resolved_labels = list(
       covariates = data.table(
         slot = "columns",
         varname = "gender",
         ui_label = "Gender",
-        n_categories = 2.0  # numeric, not integer
+        n_categories = 2.0
       )
     )
   )
-  # Should not error; as.integer() coerces numeric
   result <- piptm:::.build_layout_content(meta)
-  expect_type(result$layout$n_categories, "integer")
+  expect_type(result$layout$n_categories, "character")
 })
 
-test_that(".build_layout_content() handles NA in n_categories after coercion", {
+test_that(".build_layout_content() handles NA n_categories without erroring", {
   meta <- list(
+    provenance = list(release = "TEST"),
     resolved_labels = list(
       covariates = data.table(
         slot = "columns",
@@ -229,6 +231,92 @@ test_that(".build_layout_content() handles NA in n_categories after coercion", {
       )
     )
   )
-  result <- piptm:::.build_layout_content(meta)
-  expect_equal(result$layout$n_categories, 0L)
+  # Without registry resolution, the fallback is the bare count. NA coerces
+  # to 0.
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) list(),
+    {
+      result <- piptm:::.build_layout_content(meta)
+      expect_equal(result$layout$n_categories, "0")
+    },
+    .package = "piptm"
+  )
+})
+
+# =============================================================================
+# Category-label resolution in the layout section
+# =============================================================================
+
+test_that(".build_layout_content() combines count and labels from registry", {
+  fake_registry <- list(
+    gender = list(
+      categories = list(
+        list(code = 1, label = "male"),
+        list(code = 2, label = "female")
+      )
+    )
+  )
+  meta <- list(
+    provenance = list(release = "TEST"),
+    resolved_labels = list(
+      covariates = data.table(
+        slot = "columns",
+        varname = "gender",
+        ui_label = "Gender",
+        n_categories = 2L
+      )
+    )
+  )
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) fake_registry,
+    {
+      result <- piptm:::.build_layout_content(meta)
+      expect_equal(result$layout$n_categories, "2: male, female")
+    },
+    .package = "piptm"
+  )
+})
+
+test_that(".build_layout_content() hardcodes pov_status labels", {
+  meta <- list(
+    provenance = list(release = "TEST"),
+    resolved_labels = list(
+      covariates = data.table(
+        slot = "rows",
+        varname = "pov_status",
+        ui_label = "Poverty Status",
+        n_categories = 2L
+      )
+    )
+  )
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) list(),
+    {
+      result <- piptm:::.build_layout_content(meta)
+      expect_equal(result$layout$n_categories, "2: poor, non-poor")
+    },
+    .package = "piptm"
+  )
+})
+
+test_that(".build_layout_content() falls back to bare count on registry failure", {
+  meta <- list(
+    provenance = list(release = "TEST"),
+    resolved_labels = list(
+      covariates = data.table(
+        slot = "columns",
+        varname = "gender",
+        ui_label = "Gender",
+        n_categories = 3L
+      )
+    )
+  )
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) stop("registry missing"),
+    {
+      result <- piptm:::.build_layout_content(meta)
+      expect_equal(result$layout$n_categories, "3")
+    },
+    .package = "piptm"
+  )
 })

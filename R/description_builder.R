@@ -434,36 +434,103 @@ build_description_model <- function(description_metadata, params) {
 #' @keywords internal
 .build_layout_content <- function(meta) {
   covariates_dt <- meta$resolved_labels$covariates
-  
+
   # P1-5: Check NULL and is.data.frame before nrow
   if (is.null(covariates_dt) || !is.data.frame(covariates_dt) || nrow(covariates_dt) == 0) {
     return(NULL)
   }
-  
+
   # Coerce to data.table: metadata can arrive from the API after a JSON
   # round-trip, which converts data.tables to plain data.frames.
   covariates_dt <- data.table::as.data.table(covariates_dt)
-  
+
   # Format with slot labels
   covariates_formatted <- data.table::copy(covariates_dt)
   covariates_formatted[, slot_label := format_slot_label(slot)]
-  
+
   # P1-6: Coerce to character/integer before fifelse to ensure type compatibility
   covariates_formatted[, ':='(
     varname = as.character(varname),
     ui_label = as.character(ui_label),
     n_categories = as.integer(n_categories)
   )]
-  
+
+  # Resolve category labels per covariate from the variable registry, so the
+  # Categories column carries both the count and the labels (e.g.
+  # "2: male, female") instead of just the integer count.
+  release <- meta$provenance$release
+  registry <- tryCatch(
+    piptm_variable_registry(release),
+    error = function(e) NULL
+  )
+
+  categories_field <- vapply(
+    seq_len(nrow(covariates_formatted)),
+    function(i) {
+      varname <- covariates_formatted$varname[[i]]
+      count <- covariates_formatted$n_categories[[i]]
+      count_int <- if (is.na(count)) 0L else count
+
+      # Special case: pov_status is not a registry covariate; use fixed labels.
+      if (identical(varname, "pov_status")) {
+        return("2: poor, non-poor")
+      }
+
+      labels <- .resolve_covariate_category_labels(varname, registry)
+      if (length(labels) == 0L) {
+        return(as.character(count_int))
+      }
+
+      # If the registry-resolved label count disagrees with n_categories, prefer
+      # the registry length (it reflects reality of what will be displayed).
+      n_labels <- length(labels)
+      sprintf("%d: %s", n_labels, paste(labels, collapse = ", "))
+    },
+    character(1)
+  )
+
+  covariates_formatted[, n_categories := categories_field]
+
   return(list(
     description = "Table dimensions are organized as follows:",
     layout = covariates_formatted[, .(
       slot_label,
       varname = data.table::fifelse(is.na(varname), "", varname),
       ui_label = data.table::fifelse(is.na(ui_label), "(None)", ui_label),
-      n_categories = data.table::fifelse(is.na(n_categories), 0L, n_categories)
+      n_categories = n_categories
     )]
   ))
+}
+
+
+#' Resolve category labels for a covariate from the variable registry.
+#'
+#' Looks up `varname` in `registry` and returns its category labels in
+#' registry order. Returns `character(0)` when the registry is unavailable,
+#' the entry is missing, or the entry has no categories.
+#'
+#' @param varname Character scalar covariate variable name.
+#' @param registry Named list returned by `piptm_variable_registry()`, or NULL.
+#' @return Character vector of category labels (possibly empty).
+#' @keywords internal
+.resolve_covariate_category_labels <- function(varname, registry) {
+  if (is.null(registry) || !is.list(registry)) {
+    return(character(0))
+  }
+  entry <- registry[[varname]]
+  if (is.null(entry)) {
+    return(character(0))
+  }
+  cats <- entry$categories
+  if (is.null(cats) || length(cats) == 0L) {
+    return(character(0))
+  }
+  labels <- vapply(cats, function(cat) {
+    lbl <- cat$label %||% cat$code
+    if (is.null(lbl)) "" else as.character(lbl)
+  }, character(1))
+  labels <- labels[nzchar(labels)]
+  labels
 }
 
 
