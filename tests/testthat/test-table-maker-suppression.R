@@ -189,6 +189,49 @@ test_that("all share-family measures retained for suppressed cells", {
   expect_true("target_survey_share" %in% g0$measure)
 })
 
+test_that("captured suppression warnings surfaced via include_metadata are plain text (no ANSI escapes)", {
+  # Regression test: cli_warn() formats its message using ANSI escape
+  # sequences (bold/color spans, "i" bullet glyph) when the ambient session
+  # is detected as color-capable. table_maker()'s withCallingHandlers()
+  # captures conditionMessage(w) verbatim, so those escape codes leak into
+  # execution$warnings and are ultimately rendered in the /description
+  # endpoint's plain-text warning payload as garbled characters.
+  #
+  # Expected behavior source (package-convention): warnings surfaced through
+  # description metadata are plain human-readable text with no ANSI/terminal
+  # escape sequences, since the description endpoint is consumed by non-
+  # terminal clients (JSON/text API response, PIP platform UI).
+  fx <- make_sup_fixture()
+  activate_sup_fixture(fx)
+  withr::defer(reset_piptm_env_sup())
+
+  # Force cli to emit ANSI styling regardless of the test runner's terminal,
+  # matching what happens when the plumber server process has color support
+  # detected (e.g. via NO_COLOR unset / a colorized parent shell).
+  withr::local_options(cli.num_colors = 256L)
+
+  out <- piptm::table_maker(
+    pip_id              = "TST_2020_ECH_INC_ALL",
+    analysis_var        = "welfare",
+    measures            = "mean",
+    by                  = "gender",
+    ppp                 = 2021L,
+    pop_share_threshold = 0.01,
+    include_metadata    = TRUE
+  )
+
+  warnings_out <- out$description_metadata$execution$warnings
+  expect_true(length(warnings_out) > 0L)
+
+  # ANSI CSI escape sequences look like ESC [ ... <letter>, e.g. "\033[1m".
+  ansi_pattern <- "\u001b\\[[0-9;]*[a-zA-Z]"
+  expect_false(
+    any(grepl(ansi_pattern, warnings_out)),
+    info = paste0("Warning text contains raw ANSI escape codes: ",
+                   paste(warnings_out, collapse = " | "))
+  )
+})
+
 test_that("threshold has no effect when by = NULL (aggregate mode)", {
   fx <- make_sup_fixture()
   activate_sup_fixture(fx)

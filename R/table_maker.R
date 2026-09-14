@@ -941,7 +941,12 @@ table_maker <- function(pip_id        = NULL,
     core_out <- withCallingHandlers(
       compute_core(),
       warning = function(w) {
-        captured_warnings <<- c(captured_warnings, conditionMessage(w))
+        # cli_warn() styles its message with ANSI escape codes (bold spans,
+        # "i" bullet glyphs, colors) whenever the ambient session is detected
+        # as color-capable. These captured warnings are surfaced verbatim in
+        # the /description endpoint's text/JSON payload, which is consumed by
+        # non-terminal clients, so strip ANSI styling before capturing.
+        captured_warnings <<- c(captured_warnings, cli::ansi_strip(conditionMessage(w)))
         tryCatch(invokeRestart("muffleWarning"), error = function(e) NULL)
       }
     )
