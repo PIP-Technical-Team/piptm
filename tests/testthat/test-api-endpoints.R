@@ -75,10 +75,12 @@ parse_api_res <- function(res, simplify = TRUE) {
 # Created once per test session; the router itself is stateless — all data
 # state lives in piptm::.piptm_env, which each test block mutates via fixtures.
 
-.ep_plumber_path <- file.path(
-  rprojroot::find_package_root_file(), "inst", "plumber", "plumber.R"
-)
-if (!file.exists(.ep_plumber_path)) {
+# P1-3: Add file.exists check inside tryCatch to avoid nonexistent path issue
+.ep_plumber_path <- tryCatch({
+  candidate <- file.path(rprojroot::find_package_root_file(), "inst", "plumber", "plumber.R")
+  if (file.exists(candidate)) candidate else ""
+}, error = function(e) "")
+if (!nzchar(.ep_plumber_path)) {
   .ep_plumber_path <- system.file("plumber", "plumber.R", package = "piptm")
 }
 

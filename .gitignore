@@ -1,4 +1,14 @@
 .Rproj.user
+.Rhistory
+.RData
+.Rprofile
+.Renviron
+
+renv/library/
+renv/staging/
+
+# Development helpers
+*-interactive.R
 
 compound-gpid.local.md
 
@@ -11,3 +21,4 @@ compound-gpid.local.md
 
 
 benchmarks/arrow-cache.rds
+benchmarks/*.rds

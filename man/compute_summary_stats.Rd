@@ -76,6 +76,7 @@ target variable.
 }
 }
 \examples{
+\dontrun{
 library(data.table)
 
 dt <- data.table(
@@ -87,6 +88,7 @@ compute_summary_stats(
   dt,
   measures = c("mean", "median")
 )
+}
 }
 \seealso{
 Other compute: 

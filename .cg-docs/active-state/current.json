@@ -1,8 +1,26 @@
 {
-  "plan": ".cg-docs/plans/2026-07-24-exported-functions-test-sync.md",
-  "executionReport": ".cg-docs/work-reports/2026-07-24-exported-functions-test-sync.md",
-  "phase": 1,
-  "step": 1,
-  "status": "active",
-  "nextCommand": "/cg-work"
+  "schemaVersion": "compound-gpid-active-state-v1",
+  "updatedAt": "2026-09-14T18:52:00Z",
+  "workflow": "/cg-work",
+  "status": "completed",
+  "branch": "new_description_model",
+  "plan": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md",
+  "executionReport": ".cg-docs/work-reports/2026-09-14-shares-cell-definition-structured-table-revised.md",
+  "currentPhase": null,
+  "evidenceStatus": [
+    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-cell-definition.R"},
+    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-cell-definition.R"},
+    {"id": "V3", "status": "passed", "artifact": "tests/testthat/test-phase1-shares-and-family-routing.R"},
+    {"id": "V4", "status": "passed", "artifact": "test-description-renderer.R, test-description-renderer-html.R"},
+    {"id": "V5", "status": "passed", "artifact": "test-description-renderer-html.R"},
+    {"id": "V6", "status": "passed", "artifact": "full suite regression"},
+    {"id": "V7", "status": "passed", "artifact": "docs/description-endpoint-spec.md"},
+    {"id": "V8", "status": "passed", "artifact": "devtools::test (1118/1118), devtools::check (0 errors)"}
+  ],
+  "unresolvedDecisions": [],
+  "artifactRefs": [
+    {"kind": "plan", "path": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md", "status": "completed"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-09-14-shares-cell-definition-structured-table-revised.md", "status": "completed"}
+  ],
+  "nextCommand": "/cg-review light"
 }

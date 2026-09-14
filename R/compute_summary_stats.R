@@ -65,6 +65,7 @@
 #' @family compute
 #'
 #' @examples
+#' \dontrun{
 #' library(data.table)
 #'
 #' dt <- data.table(
@@ -76,6 +77,7 @@
 #'   dt,
 #'   measures = c("mean", "median")
 #' )
+#' }
 compute_summary_stats <- function(dt, by = NULL, measures = NULL, target_variable = "welfare", grp = NULL) {
 
   # Suppress R CMD check NOTEs for data.table NSE column references

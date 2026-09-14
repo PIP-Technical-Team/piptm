@@ -1,0 +1,23 @@
+{
+    "schemaVersion":  1,
+    "source":  ".kilo/agents",
+    "files":  {
+                  "cg-learnings-researcher.md":  "2e84f7c778766bd7e0e3aaa7af0238555c2ddc86e6d60373ff5232cd2149e053",
+                  "cg-code-quality.md":  "d0aee94db4768d665a4173b1e9e9ab4be3882306c86ca27448926821b75a0d9d",
+                  "cg-plan-critic.md":  "9e86cd3d985a0585022bd6f4117dc24d8710455aafd6fbf059dc4bd79367e19a",
+                  "cg-version-control.md":  "68966d1a45a5e39626c30143f432b5138d12be427f61569b1933abcf193b9cec",
+                  "cg-reproducibility.md":  "c09d14809f953bd411100696303f295b1caab03a5ca1c0d093279ac28de0f7b4",
+                  "cg-roadmap.md":  "eb04f62ce56f733a2119ebc36fa9fd4dca1105d67db27ede4b32850623493a81",
+                  "cg-data-quality.md":  "5aa128679829ea565b9c9a6372d53188bd870eec3da460102620de17db2c225d",
+                  "cg-project-scanner.md":  "396778400d7c84f1162dff832ec4fb3e92559ad07077ef21b57f86c36e8d08a6",
+                  "cg-testing.md":  "414cdf9fd303c45b10cb10ef09f7ff959ea3553af60e8f7bac66a5c53586b159",
+                  "cg-architecture.md":  "73617effd68bbf5af001302addaeff0ab1fb0b06838beca5b6c5c0c0f1f74ab7",
+                  "cg-release-scanner.md":  "89487645c77e35bb1819afeab13d7faf9d0226a91034769687362393c78ac5f1",
+                  "cg-adversarial.md":  "68512ed01bb998d62ec7e8ae842d100e869926ecdc10b61cc24df6c7aec07d1b",
+                  "cg-roadmap-view.md":  "10c4d935090b909c79aeecfea0eb2cd9b0fa9218eea2545940ab38f2f3888a2e",
+                  "cg-documentation.md":  "c052709e85a661c6b9a48593e916b8edc36ea677389b19b3bc7a4ba534c8488d",
+                  "cg-wiki.md":  "c682b35500662e1765ee1e557e7fa8ece626f782ab17368cb44e351b473aacae",
+                  "cg-performance.md":  "07bd6983bdb93b99eff383155486d17bf59ed7573e861017e88a2a94eb1e950c",
+                  "cg-fix-problems.md":  "790cd84948abd7ee9e4e65b19a57fd9341be19e271a8704037ea53e69d861303"
+              }
+}

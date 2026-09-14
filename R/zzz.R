@@ -75,6 +75,24 @@
   arrow_root_opt   <- Sys.getenv("PIPTM_ARROW_ROOT",   unset = "")
   manifest_dir_opt <- Sys.getenv("PIPTM_MANIFEST_DIR", unset = "")
   registry_dir_opt <- Sys.getenv("PIPTM_REGISTRY_DIR", unset = "")
+  data_dir_opt     <- Sys.getenv("PIPTM_DATA_DIR",     unset = "")
+
+  missing_required <- c()
+  if (!nzchar(arrow_root_opt))   missing_required <- c(missing_required, "PIPTM_ARROW_ROOT")
+  if (!nzchar(manifest_dir_opt)) missing_required <- c(missing_required, "PIPTM_MANIFEST_DIR")
+  if (!nzchar(registry_dir_opt)) missing_required <- c(missing_required, "PIPTM_REGISTRY_DIR")
+  if (length(missing_required) > 0) {
+    packageStartupMessage(
+      "[piptm] Missing environment variables: ",
+      paste(missing_required, collapse = ", "),
+      ". Copy .Renviron.example or run usethis::edit_r_environ() to configure paths."
+    )
+  }
+  if (!nzchar(data_dir_opt)) {
+    packageStartupMessage(
+      "[piptm] PIPTM_DATA_DIR is not set — integration tests that require survey fixtures will be skipped."
+    )
+  }
 
   # --- Arrow root ------------------------------------------------------------
   # Only assign if the resolved path actually exists on this machine.

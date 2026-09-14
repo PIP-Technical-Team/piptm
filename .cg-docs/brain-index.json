@@ -1,0 +1,3141 @@
+{
+  "edge_count": 35,
+  "edges": [
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
+      "target": "2026-03-16-data-pipeline-architecture.md",
+      "target_missing": true
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+      "target": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+      "target": ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-07-computation-engine.md",
+      "target": ".cg-docs/brainstorms/2026-04-07-computation-engine-design.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
+      "target": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+      "target": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target": ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-05-08-api-service-plumber.md",
+      "target": ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+      "target": ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
+      "target": ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+      "target": ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
+      "target": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
+      "target": ".cg-docs/plans/2026-04-07-computation-engine.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
+      "target": ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md",
+      "target": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-impl-review.md",
+      "target": "2026-05-11-api-service-plumber-v2.md",
+      "target_missing": true
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-review.md",
+      "target": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md",
+      "target": ".cg-docs/plans/2026-05-20-validate-parquet-wrapper.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
+      "target": ".cg-docs/plans/2026-05-20-validate-parquet-wrapper.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
+      "target": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
+      "target": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
+      "target": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+      "target": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
+      "target": ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
+      "target": ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+      "target": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
+      "target": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+      "target": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
+      "target": ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
+      "target": ".cg-docs/plans/2026-06-01-cell-share-measures.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
+      "target": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-07-31-survey-specific-variable-filtering.md",
+      "target": ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "target": "roadmap.json#arrow-vs-collapse-benchmark",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+      "target": "roadmap.json#pop-share-threshold-suppression",
+      "target_missing": false
+    }
+  ],
+  "entities": [
+    {
+      "date": "2026-03-16",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
+      "slug": "2026-03-16-data-pipeline-architecture",
+      "status": "decided",
+      "summary": "The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to clarify the data flow from {pipdata}'s clean survey datasets through Arrow partitions to {piptm}'s measure computations. Key decisions were needed around partition layout, manifest design, validation strategy, and how breakdown dimensions are handled.",
+      "tags": [
+        "architecture",
+        "data-pipeline",
+        "arrow",
+        "manifest",
+        "phase-0",
+        "phase-1"
+      ],
+      "title": "Data Pipeline Architecture — Ingestion, Manifest, and Computation Design",
+      "top_keywords": [
+        "manifest",
+        "manifest.json",
+        "approach",
+        "table_maker()",
+        "arrow::open_dataset()",
+        "lazy validation",
+        "computation",
+        "architecture",
+        "validation",
+        "manifest-first"
+      ]
+    },
+    {
+      "date": "2026-03-17",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
+      "slug": "2026-03-17-fgt-computation-design",
+      "status": "decided",
+      "summary": "Before implementing the computation engine, we needed to design the most efficient strategy for computing Foster-Greer-Thorbecke (FGT) poverty measures. These are the core poverty indicators: headcount (α=0), poverty gap (α=1), and poverty severity (α=2). The design must handle multiple poverty lines, multiple breakdown dimensions (cross-tabulated), and integrate cleanly with the broader measure orchestrator.",
+      "tags": [
+        "computation",
+        "poverty",
+        "fgt",
+        "data.table",
+        "performance",
+        "phase-1"
+      ],
+      "title": "Efficient FGT Poverty Measure Computation Design",
+      "top_keywords": [
+        "fgt",
+        "computation",
+        "approach",
+        "compute_fgt()",
+        "grouped aggregation",
+        "poverty",
+        "weight",
+        "grouped",
+        "welfare",
+        "aggregation"
+      ]
+    },
+    {
+      "date": "2026-03-17",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-03-17-multi-release-manifest-architecture.md",
+      "slug": "2026-03-17-multi-release-manifest-architecture",
+      "status": "decided",
+      "summary": "The original data pipeline architecture brainstorm (2026-03-16) established a Manifest-First with Lazy Validation approach where a single release manifest is loaded at startup. This follow-up brainstorm addresses the need to support **multiple PIP releases simultaneously**, since users may want to query results from different releases for reproducibility.",
+      "tags": [
+        "architecture",
+        "manifest",
+        "multi-release",
+        "reproducibility",
+        "phase-0",
+        "phase-1"
+      ],
+      "title": "Multi-Release Manifest Architecture",
+      "top_keywords": [
+        "release",
+        "manifest",
+        "multi-release",
+        "current_release.json",
+        "architecture",
+        "approach",
+        "release manifest registry",
+        "manifest_20250901.json",
+        "manifest_20260206.json",
+        "explicit"
+      ]
+    },
+    {
+      "date": "2026-04-02",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+      "slug": "2026-04-02-version-partition-and-manifest-resolution",
+      "status": "decided",
+      "summary": "The `prepare_for_arrow()` pipeline in `{pipdata}` now injects a `version` column (e.g. `\"v01_v04\"`, derived from `metadata$vermast` and `metadata$veralt`) into every survey data.table. Currently this column is stored inside the Parquet file but is **not** used for partitioning.",
+      "tags": [
+        "arrow",
+        "partitioning",
+        "versioning",
+        "manifest",
+        "pipdata",
+        "piptm"
+      ],
+      "title": "Version as partition key with manifest-based resolution",
+      "top_keywords": [
+        "version",
+        "{piptm}",
+        "arrow_generation.r",
+        "manifest_generation.r",
+        "file_path",
+        "education",
+        "version=",
+        "validate_parquet.r",
+        "{pipdata}",
+        "arrow::open_dataset()"
+      ]
+    },
+    {
+      "date": "2026-04-03",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
+      "slug": "2026-04-03-manifest-generation-version-partition",
+      "status": "decided",
+      "summary": "The March 17 brainstorm established the multi-release manifest architecture. Since then, the Arrow dataset partition layout has evolved: `version` is now a **partition variable** (subfolder) rather than being encoded in filenames. This changes how manifests are generated and how `{piptm}` loads data.",
+      "tags": [
+        "architecture",
+        "manifest",
+        "partitions",
+        "version",
+        "pipdata",
+        "piptm",
+        "phase-0"
+      ],
+      "title": "Manifest Generation and Version Partition Filtering",
+      "top_keywords": [
+        "{piptm}",
+        "version",
+        "manifest",
+        "{pipdata}",
+        "year",
+        "country_code",
+        "welfare_type",
+        "age",
+        "gender",
+        "area"
+      ]
+    },
+    {
+      "date": "2026-04-07",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-07-computation-engine-design.md",
+      "slug": "2026-04-07-computation-engine-design",
+      "status": "decided",
+      "summary": "With Phase 0 (Arrow dataset generation, manifest system, data loading) largely in place, the project needs to design the computation engine that takes partitioned survey microdata as input and produces poverty, inequality, and welfare statistics disaggregated across available dimensions.",
+      "tags": [
+        "computation",
+        "engine",
+        "orchestrator",
+        "measures",
+        "phase-1"
+      ],
+      "title": "Computation Engine Design — Family-Based Orchestrator",
+      "top_keywords": [
+        "sum",
+        "long",
+        "population",
+        "measure",
+        "is_poor",
+        "compute_poverty()",
+        "compute_inequality()",
+        "based orchestrator",
+        "computation",
+        "orchestrator"
+      ]
+    },
+    {
+      "date": "2026-04-16",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
+      "slug": "2026-04-16-dimension-prefilter-partial-match",
+      "status": "decided",
+      "summary": "The computation engine plan (Step 7, `table_maker()`) originally specified a strict dimension pre-filter: surveys missing **any** requested `by` dimension are dropped entirely before loading. This was deemed too strict — it silently excludes surveys that have partial dimension coverage, losing data unnecessarily.",
+      "tags": [
+        "computation",
+        "dimensions",
+        "table-maker",
+        "pre-filter"
+      ],
+      "title": "Dimension Pre-Filter: Partial Match with NA Fill",
+      "top_keywords": [
+        "na",
+        "table_maker()",
+        "compute_measures()",
+        "fill",
+        "pre-filter",
+        "per-survey",
+        "approach",
+        "dimension pre",
+        "partial match",
+        "dimension"
+      ]
+    },
+    {
+      "date": "2026-04-27",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md",
+      "slug": "2026-04-27-table-maker-input-parameters",
+      "status": "decided",
+      "summary": "The Step 7 plan defines `table_maker(country_code, year, welfare_type, ...)` with three separate vectors. Filtering the manifest via `country_code %in% .cc & year %in% .yr & welfare_type == .wt` produces a **Cartesian product** — requesting COL-2010 and BOL-2000 would also match COL-2000 and BOL-2010 if they exist. Users specify **exact tuples**, not independent filters. Additionally, `welfare_type` is a scalar in the plan but users may request mixed welfare types across surveys (e.g., COL-2010-INC + BOL-2000-CON).",
+      "tags": [
+        "table-maker",
+        "api",
+        "parameters",
+        "step-7"
+      ],
+      "title": "table_maker() Input Parameter Structure",
+      "top_keywords": [
+        "pip_id",
+        "pip_lookup()",
+        "table_maker()",
+        "approach",
+        "year",
+        "welfare_type",
+        "url",
+        "table_maker",
+        "api",
+        "country_code"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+      "slug": "2026-04-28-orchestration-benchmark",
+      "status": "decided",
+      "summary": "Step 8 of the computation engine plan (`2026-04-07-computation-engine.md`) proposes a per-slice vs grouped benchmark but is overengineered — it requires building a full alternative prototype just for comparison, uses an arbitrary 2× decision threshold, and may be answering the wrong question if I/O dominates runtime.",
+      "tags": [
+        "performance",
+        "benchmarking",
+        "orchestration",
+        "table-maker",
+        "collapse",
+        "nthreads"
+      ],
+      "title": "Orchestration Strategy Benchmark — Per-Slice vs Grouped vs nthreads",
+      "top_keywords": [
+        "lapply()",
+        "approach",
+        "rbindlist()",
+        "collapse",
+        "nthreads",
+        "pip_id",
+        "collapse::nthreads",
+        "load_surveys()",
+        "data.table",
+        "compute_measures()"
+      ]
+    },
+    {
+      "date": "2026-04-29",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "slug": "2026-04-29-arrow-vs-collapse-benchmark",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "performance",
+        "benchmarking",
+        "arrow",
+        "collapse",
+        "table-maker",
+        "io",
+        "parquet"
+      ],
+      "title": "Arrow vs Collapse End-to-End Benchmark",
+      "top_keywords": [
+        "arrow",
+        "collapse",
+        "approach",
+        "collect()",
+        "if approach",
+        "column-pruned",
+        "group_by() |> summarize()",
+        "select()",
+        "compute_inequality()",
+        "collapse end"
+      ]
+    },
+    {
+      "date": "2026-05-08",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md",
+      "slug": "2026-05-08-api-service-architecture",
+      "status": "decided",
+      "summary": "The computation engine (`table_maker()`) is complete and optimised. The next step is a Plumber-based API service layer that connects the PIP platform UI to the engine. The existing brainstorm (`2026-04-27-table-maker-input-parameters.md`) defined the `/table` and `/lookup` endpoint signatures and URL patterns. This brainstorm expands that to the full API surface.",
+      "tags": [
+        "api",
+        "plumber",
+        "endpoints",
+        "phase-4"
+      ],
+      "title": "API Service Architecture for Table Maker",
+      "top_keywords": [
+        "table_maker()",
+        "/lookup",
+        "plumber.r",
+        "helpers.r",
+        "/table",
+        "api",
+        "approach",
+        "piptm_current_release()",
+        "monolithic plumber router",
+        "release"
+      ]
+    },
+    {
+      "date": "2026-05-20",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
+      "slug": "2026-05-20-load-surveys-column-pruning",
+      "status": "decided",
+      "summary": "Benchmarking (50-iteration resample, 15 surveys over UNC share) showed that loading only the 6 needed columns instead of all 14 reduces Arrow I/O time from 1.658s to 0.524s — a **68% improvement**. Currently `load_surveys()` always loads all columns and `table_maker()` uses only what it needs.",
+      "tags": [
+        "performance",
+        "arrow",
+        "load_surveys",
+        "table_maker",
+        "column-pruning"
+      ],
+      "title": "Column pruning in load_surveys() for table_maker performance",
+      "top_keywords": [
+        "cols",
+        "load_surveys()",
+        "table_maker()",
+        "collect()",
+        "load_surveys",
+        "select()",
+        "table_maker",
+        "approach",
+        "cols = null",
+        "column"
+      ]
+    },
+    {
+      "date": "2026-05-21",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-05-21-remove-redundant-welfare-sort.md",
+      "slug": "2026-05-21-remove-redundant-welfare-sort",
+      "status": "decided",
+      "summary": "`compute_inequality()` sorts data by welfare within each group before computing Gini. However, the upstream data pipeline guarantees welfare-sorted row order:",
+      "tags": [
+        "performance",
+        "gini",
+        "sorting",
+        "contract",
+        "arrow"
+      ],
+      "title": "Remove redundant welfare sort in compute_inequality()",
+      "top_keywords": [
+        "sort",
+        "approach",
+        "compute_inequality()",
+        "setorder()",
+        "@param dt",
+        "contract",
+        "welfare",
+        "compute_inequality",
+        "redundant",
+        "upstream"
+      ]
+    },
+    {
+      "date": "2026-06-01",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
+      "slug": "2026-06-01-cell-share-measures",
+      "status": "decided",
+      "summary": "Need to add two new measures to the computation engine: - `obs_share` — proportion of total survey observations in each cross-tabulated cell - `pop_share` — proportion of total weighted survey population in each cell",
+      "tags": [
+        "measures",
+        "welfare",
+        "shares",
+        "compute-engine"
+      ],
+      "title": "Cell observation share and population share measures",
+      "top_keywords": [
+        "share",
+        "compute_welfare()",
+        "approach",
+        "obs_share",
+        "pop_share",
+        "measures",
+        "family",
+        "pip_id",
+        ".measure_registry",
+        "welfare"
+      ]
+    },
+    {
+      "date": "2026-06-01",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
+      "slug": "2026-06-01-pop-share-threshold-suppression",
+      "status": "decided",
+      "summary": "After adding `pop_share` and `obs_share` measures, we need a configurable suppression rule: if a cell's population share falls below a threshold, all other measures (except `pop_share` and `obs_share`) for that cell should be dropped from the output, with a warning explaining what was suppressed.",
+      "tags": [
+        "measures",
+        "pop_share",
+        "suppression",
+        "threshold",
+        "data-quality"
+      ],
+      "title": "Pop share threshold suppression for small cells",
+      "top_keywords": [
+        "pop_share",
+        "obs_share",
+        "suppression",
+        "table_maker()",
+        "threshold",
+        "pop_share_threshold",
+        "null",
+        "approach",
+        "0.01",
+        "cli_warn()"
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-07-02-pop-share-threshold-always-active.md",
+      "slug": "2026-07-02-pop-share-threshold-always-active",
+      "status": "decided",
+      "summary": "Follow-up to `2026-06-01-pop-share-threshold-suppression.md`.  That brainstorm implemented `pop_share_threshold` as a post-processing step in `table_maker()` Step 10.  However the implementation gated activation on `\"pop_share\" %in% measures`, making the safeguard accidentally opt-in: callers requesting only `\"mean\"` or `\"gini\"` by a dimension where one cell contains 0.2% of the survey receive unsuppressed results with no warning.",
+      "tags": [
+        "measures",
+        "pop_share",
+        "suppression",
+        "threshold",
+        "data-quality",
+        "table_maker"
+      ],
+      "title": "Pop-share threshold as always-active suppression guard",
+      "top_keywords": [
+        "pop_share",
+        "\"pop_share\"",
+        "measures",
+        "threshold",
+        "pop_share_threshold",
+        "target_within_group_share",
+        "compute_shares()",
+        "by = null",
+        "always-active",
+        "suppression"
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-07-31-api-deployment-documentation.md",
+      "slug": "2026-07-31-api-deployment-documentation",
+      "status": "decided",
+      "summary": "Currently, deployment knowledge for the Table Maker API exists only in one person's head. The team needs this documented so anyone can deploy to DEV/QA/PROD environments. Deployment involves running three Azure DevOps pipelines in sequence, with some conditional logic about when to run the data copy pipeline.",
+      "tags": [
+        "documentation",
+        "deployment",
+        "azure",
+        "devops"
+      ],
+      "title": "API Deployment Documentation",
+      "top_keywords": [
+        "readme.md",
+        "deployment",
+        "approach",
+        "documentation",
+        "vignette",
+        "deployment documentation",
+        "api",
+        "readme",
+        "section",
+        "verification"
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md",
+      "slug": "2026-07-31-session-storage-endpoints",
+      "status": "decided",
+      "summary": "UI team requested endpoints to \"store pip_ids\" to support crash recovery / page refresh resilience. If a user is in Step 2 (variable selection) and the page refreshes or crashes, they would lose their Step 1 survey selections without some form of persistence.",
+      "tags": [
+        "api",
+        "endpoints",
+        "session-storage",
+        "ui-integration"
+      ],
+      "title": "Session Storage Endpoints for Survey Selection Persistence",
+      "top_keywords": [
+        "pip_id",
+        "session_id",
+        "approach",
+        "session",
+        "plumber",
+        "post /session/surveys",
+        "memory environment storage",
+        "not found",
+        "storage",
+        "endpoints"
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-07-31-survey-specific-variable-filtering.md",
+      "slug": "2026-07-31-survey-specific-variable-filtering",
+      "status": "decided",
+      "summary": "The ITS UI development team requested a way to persist survey selections from Step 1 (survey grid) so that if Step 2 (variable selection) crashes or refreshes, users don't lose their work.",
+      "tags": [
+        "api",
+        "endpoints",
+        "ui-integration",
+        "filtering"
+      ],
+      "title": "Survey-Specific Variable Filtering for Step 2",
+      "top_keywords": [
+        "pip_id",
+        "/categories",
+        "/covariates",
+        "pip_id[]",
+        "approach",
+        "plumber.r",
+        "handler intersection logic",
+        "filtering",
+        "function",
+        "post /session/surveys"
+      ]
+    },
+    {
+      "date": "2026-08-26",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md",
+      "slug": "2026-08-26-description-endpoint-stress-test",
+      "status": "decided",
+      "summary": "The user attached a comprehensive technical specification for a new `/description` endpoint that generates factual, dynamically constructed natural-language descriptions of tabular results produced by `table_maker()`. The goal was to stress-test the design, identify gaps, and confirm all requirements are properly set up before planning begins.",
+      "tags": [
+        "description-endpoint",
+        "table_maker",
+        "api",
+        "cell-definition",
+        "metadata"
+      ],
+      "title": "/description Endpoint Design Stress Test",
+      "top_keywords": [
+        "table_maker()",
+        "/description",
+        "metadata",
+        "include_metadata",
+        "approach",
+        "inline metadata assembly",
+        "description_builder.r",
+        "description_renderer.r",
+        "/table?include_metadata=true",
+        "include_metadata = false"
+      ]
+    },
+    {
+      "date": "2026-03-17",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
+      "slug": "2026-03-17-arrow-data-preparation",
+      "status": "active",
+      "summary": "Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and generates validated, schema-consistent, partitioned Parquet datasets in the Master Arrow Repository. This work is a prerequisite for all downstream {piptm} functionality (manifest generation, data loading, and measure computation).",
+      "tags": [
+        "phase-0",
+        "arrow",
+        "parquet",
+        "data-preparation",
+        "pipdata",
+        "schema",
+        "validation"
+      ],
+      "title": "Arrow Data Preparation Pipeline",
+      "top_keywords": [
+        ".qs2",
+        "survey_id",
+        "arrow",
+        "implement",
+        "current_release.json",
+        "phase",
+        "utf8",
+        "gender",
+        "area",
+        "dictionary(int8, utf8)"
+      ]
+    },
+    {
+      "date": "2026-04-02",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+      "slug": "2026-04-02-version-partition-and-manifest-resolution",
+      "status": "active",
+      "summary": "Add `version` (e.g. `\"v01_v04\"`) as a 4th Hive partition key in the Arrow repository so that multiple survey versions coexist on disk. The release manifest's `file_path` field becomes the sole version-resolution mechanism for `{piptm}`. Also update the schema contract to replace the single `education` column with the original `educat4`, `educat5`, `educat7` columns preserved as-is from GMD data.",
+      "tags": [
+        "arrow",
+        "partitioning",
+        "versioning",
+        "manifest",
+        "pipdata",
+        "piptm",
+        "schema"
+      ],
+      "title": "Version as partition key with manifest-based resolution",
+      "top_keywords": [
+        "version",
+        "{piptm}",
+        "education",
+        "version=",
+        "{pipdata}",
+        "educat4/5/7",
+        "educat4",
+        "arrow_generation.r",
+        "manifest_generation.r",
+        "educat5"
+      ]
+    },
+    {
+      "date": "2026-04-03",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+      "slug": "2026-04-03-manifest-generation-version-partition",
+      "status": "active",
+      "summary": "Transition the manifest from storing physical `file_path` per entry to storing four logical partition filter keys (`country_code`, `year`, `welfare_type`, `version`). Update `{pipdata}` manifest generation to use the release inventory as the authoritative source, add dimension introspection, and produce the new JSON schema. Update `{piptm}` manifest loading and data access to use `open_dataset() |> filter()` with partition pushdown instead of `read_parquet(file_path)`.",
+      "tags": [
+        "manifest",
+        "partitions",
+        "version",
+        "pipdata",
+        "piptm",
+        "phase-0",
+        "arrow"
+      ],
+      "title": "Manifest Generation and Version Partition Filtering",
+      "top_keywords": [
+        "{piptm}",
+        "file_path",
+        "data.table",
+        "version",
+        "{pipdata}",
+        "dimensions",
+        ".onload()",
+        "test-manifest-generation.r",
+        "load_survey_microdata()",
+        "release"
+      ]
+    },
+    {
+      "date": "2026-04-07",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-07-computation-engine.md",
+      "slug": "2026-04-07-computation-engine",
+      "status": "active",
+      "summary": "Implement the core computation engine for {piptm}: a family-based measure orchestrator that computes indicators across three families (poverty, inequality, welfare) and disaggregation dimensions, returning long-format results ready for JSON serialization. The engine must be fast, correct, and cleanly integrated with the existing manifest → load pipeline.anifest → load pipeline.",
+      "tags": [
+        "computation",
+        "engine",
+        "orchestrator",
+        "measures",
+        "phase-1",
+        "performance"
+      ],
+      "title": "Computation Engine — Family-Based Orchestrator",
+      "top_keywords": [
+        "pip_id",
+        "table_maker()",
+        "country_code",
+        "compute_measures()",
+        "measures",
+        "population",
+        "measure",
+        "pip_lookup()",
+        ".bin_age()",
+        "compute_inequality()"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
+      "slug": "2026-04-28-orchestration-benchmark",
+      "status": "completed",
+      "summary": "Create a standalone benchmark script that compares orchestration strategies for `table_maker()`'s per-survey computation loop, measures I/O vs compute time separately, and determines whether the current per-slice `lapply()` approach should be kept or replaced. This plan supersedes Step 8 of the computation engine plan (`2026-04-07-computation-engine.md`).",
+      "tags": [
+        "performance",
+        "benchmarking",
+        "orchestration",
+        "table-maker",
+        "collapse",
+        "nthreads"
+      ],
+      "title": "Orchestration Strategy Benchmark",
+      "top_keywords": [
+        "pip_id",
+        "lapply()",
+        "compute_measures()",
+        "table_maker()",
+        "all.equal()",
+        "2026-04-07-computation-engine.md",
+        "grp",
+        "rbindlist()",
+        "load_surveys()",
+        "data.table"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+      "slug": "2026-04-28-table-maker-approach-b-refactor",
+      "status": "completed",
+      "summary": "Replace the per-survey `lapply()` loop in `table_maker()` (Steps 6–7) with Approach B's grouped collapse strategy: build a single compound `GRP(c(\"pip_id\", by))` across the full batch and dispatch directly to family functions. This eliminates 15× repeated GRP construction, dispatch overhead, and thread-lock acquisition, yielding a 72% speedup (0.12s vs 0.43s) as demonstrated by the orchestration benchmark.",
+      "tags": [
+        "performance",
+        "orchestration",
+        "table-maker",
+        "collapse",
+        "refactor"
+      ],
+      "title": "Refactor table_maker() to Approach B — Grouped Collapse Orchestration",
+      "top_keywords": [
+        "compute_measures()",
+        "table_maker()",
+        "lapply()",
+        "compute_poverty()",
+        ".onload()",
+        "test scenarios",
+        "refactor",
+        "pip_id",
+        "nthreads",
+        "compute_inequality()"
+      ]
+    },
+    {
+      "date": "2026-04-29",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+      "slug": "2026-04-29-arrow-vs-collapse-benchmark",
+      "status": "completed",
+      "summary": "Measure whether pushing column selection, filtering, or partial aggregation into Arrow (before `collect()`) speeds up the current collapse-based pipeline enough to justify the added complexity. The benchmark produces a data-driven recommendation with clear thresholds.",
+      "tags": [],
+      "title": "Arrow vs Collapse End-to-End Benchmark",
+      "top_keywords": [
+        "approach",
+        "min",
+        "est",
+        "orchestration-strategy.r",
+        "measures",
+        "gini",
+        "script",
+        "bench::mark()",
+        "benchmarks/arrow-vs-collapse.r",
+        "all.equal()"
+      ]
+    },
+    {
+      "date": "2026-05-08",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-08-api-service-plumber.md",
+      "slug": "2026-05-08-api-service-plumber",
+      "status": "superseded",
+      "summary": "Implement a Plumber-based API service that exposes `table_maker()` and supporting discovery functions to the PIP platform UI and public consumers. Eight thin endpoints, a structured response envelope, and a global error handler — all delegating to existing tested {piptm} functions.",
+      "tags": [
+        "api",
+        "plumber",
+        "endpoints",
+        "phase-4"
+      ],
+      "title": "API Service Layer — Plumber Endpoints",
+      "top_keywords": [
+        "/table",
+        "plumber",
+        "plumber.r",
+        "release",
+        "helpers.r",
+        "table_maker()",
+        "test scenarios",
+        "piptm_current_release()",
+        "inst/plumber/plumber.r",
+        "run.r"
+      ]
+    },
+    {
+      "date": "2026-05-11",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+      "slug": "2026-05-11-api-service-plumber-v2",
+      "status": "completed",
+      "summary": "Implement a Plumber-based API service that exposes `table_maker()` and supporting discovery functions to the PIP platform UI and public consumers. Eight thin endpoints, a structured response envelope, and a global error handler — all delegating to existing tested {piptm} functions.",
+      "tags": [
+        "api",
+        "plumber",
+        "endpoints",
+        "phase-4"
+      ],
+      "title": "API Service Layer — Plumber Endpoints (v2)",
+      "top_keywords": [
+        "/table",
+        "capture_with_warnings()",
+        "plumber",
+        "plumber.r",
+        "resolve_release()",
+        "/surveys",
+        "release",
+        "dimensions",
+        "piptm_current_release()",
+        "test scenarios"
+      ]
+    },
+    {
+      "date": "2026-05-20",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
+      "slug": "2026-05-20-load-surveys-column-pruning",
+      "status": "completed",
+      "summary": "Benchmarking showed loading only needed columns instead of all 14 gives a 68% I/O improvement (1.658s → 0.524s) over UNC share. The fix is to add a `cols` parameter to `load_surveys()` and pass the needed columns from `table_maker()`.",
+      "tags": [
+        "inline",
+        "performance",
+        "arrow",
+        "column-pruning"
+      ],
+      "title": "Column pruning in load_surveys() for table_maker performance",
+      "top_keywords": [
+        "cols",
+        "load_surveys()",
+        "table_maker()",
+        "load_surveys",
+        "target_col",
+        "cols = null",
+        "\"welfare\"",
+        "collect()",
+        "table_maker",
+        "column"
+      ]
+    },
+    {
+      "date": "2026-05-20",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-20-validate-parquet-wrapper.md",
+      "slug": "2026-05-20-validate-parquet-wrapper",
+      "status": "completed",
+      "summary": "Add a single-entry-point `validate_parquet()` function to `R/validate_parquet.R` that dispatches to the three existing validators based on a `check` argument. Eliminates the need for callers to pick the right low-level function.",
+      "tags": [
+        "inline"
+      ],
+      "title": "validate_parquet() unified wrapper",
+      "top_keywords": [
+        "\"consistency\"",
+        "validate_parquet",
+        "validate_parquet()",
+        "\"schema\"",
+        "tests",
+        "valid",
+        "r/validate_parquet.r",
+        "\"data\"",
+        "unified",
+        "wrapper"
+      ]
+    },
+    {
+      "date": "2026-05-28",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-28-remove-legacy-schema-load-surveys.md",
+      "slug": "2026-05-28-remove-legacy-schema-load-surveys",
+      "status": "completed",
+      "summary": "Refactor `load_surveys()` to assume all entries carry `welfare_vars` (new schema only). Remove all backward-compatibility handling for the retired single-`welfare` column schema.",
+      "tags": [
+        "inline"
+      ],
+      "title": "Remove legacy schema from load_surveys()",
+      "top_keywords": [
+        "welfare_vars",
+        "load_surveys",
+        "welfare",
+        "ppp_sort",
+        "load_surveys()",
+        "make_fixtures()",
+        "legacy",
+        "schema",
+        "tests",
+        "new_schema_mask"
+      ]
+    },
+    {
+      "date": "2026-05-29",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-29-dimension-filter-skip-partial-surveys.md",
+      "slug": "2026-05-29-dimension-filter-skip-partial-surveys",
+      "status": "completed",
+      "summary": "Change `table_maker()` so that surveys missing *any* requested breakdown dimension are skipped entirely (not loaded), rather than loaded with the missing dimension filled as NA.",
+      "tags": [
+        "inline"
+      ],
+      "title": "Dimension filter: skip partial-match surveys",
+      "top_keywords": [
+        "dimension",
+        "table_maker()",
+        "@return",
+        "surveys",
+        "partial-match",
+        "filter",
+        "skip",
+        "table_maker",
+        "loop",
+        "partial_idx"
+      ]
+    },
+    {
+      "date": "2026-05-29",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-05-29-ppp-default-refactor.md",
+      "slug": "2026-05-29-ppp-default-refactor",
+      "status": "completed",
+      "summary": "Remove the `ppp_sort` inference/fallback mechanism from both `load_survey_microdata()` and `load_surveys()`. Default `ppp` to `2021L` (configurable via the argument default). In `load_surveys()`, when a survey lacks the welfare column for the requested PPP, skip that survey with a warning instead of erroring — return the remaining surveys that do have it.",
+      "tags": [
+        "refactor",
+        "load-data",
+        "ppp"
+      ],
+      "title": "Refactor PPP handling: default to 2021, skip surveys missing welfare column",
+      "top_keywords": [
+        "ppp_sort",
+        "load_surveys()",
+        "ppp",
+        "load_survey_microdata()",
+        "ppp = null",
+        "refactor",
+        "2021l",
+        "ppp = 2021l",
+        "handling",
+        "tests"
+      ]
+    },
+    {
+      "date": "2026-06-01",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-01-cell-share-measures.md",
+      "slug": "2026-06-01-cell-share-measures",
+      "status": "completed",
+      "summary": "Based on brainstorm: `.cg-docs/brainstorms/2026-06-01-cell-share-measures.md`",
+      "tags": [
+        "inline",
+        "measures",
+        "welfare"
+      ],
+      "title": "Add obs_share and pop_share measures",
+      "top_keywords": [
+        "obs_share",
+        "pop_share",
+        "measures",
+        "compute_welfare",
+        "share",
+        ".measure_registry",
+        "compute_welfare()",
+        "by = null",
+        "pip_measures()",
+        "devtools::document()"
+      ]
+    },
+    {
+      "date": "2026-06-01",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+      "slug": "2026-06-01-pop-share-threshold-suppression",
+      "status": "active",
+      "summary": "Based on brainstorm: `.cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md`",
+      "tags": [
+        "inline"
+      ],
+      "title": "Pop share threshold suppression",
+      "top_keywords": [
+        "pop_share_threshold",
+        "table_maker()",
+        "suppression",
+        "threshold",
+        "pop",
+        "share",
+        "parameter",
+        "table_maker",
+        "null",
+        "tests"
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-11-expand-allowed-column-set.md",
+      "slug": "2026-06-11-expand-allowed-column-set",
+      "status": "completed",
+      "summary": "Add 18 new socioeconomic indicator columns (all `int32`, no extra standardisation required) to the canonical Arrow schema and propagate the change through every place that enforces the column allow-list.",
+      "tags": [],
+      "title": "Expand Allowed Column Set in PIP Arrow Pipeline",
+      "top_keywords": [
+        "pipdata",
+        "piptm",
+        "pip_arrow_schema()",
+        "integer",
+        "tests",
+        "hsize",
+        "lstatus",
+        "schema",
+        "age",
+        "optional_dims"
+      ]
+    },
+    {
+      "date": "2026-06-12",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-12-replace-pip-measures-with-tablemaker-measures.md",
+      "slug": "2026-06-12-replace-pip-measures-with-tablemaker-measures",
+      "status": "completed",
+      "summary": "Remove `pip_measures()` and replace it with `pip_tablemaker_measures()` — a richer, static catalogue of analysis variables for the Table Maker Step 2 UI.  Update the GET `/measures` plumber endpoint to serve the new catalogue.  Update all affected tests.",
+      "tags": [
+        "api",
+        "measures",
+        "endpoint",
+        "catalogue",
+        "ui"
+      ],
+      "title": "Replace pip_measures() with pip_tablemaker_measures() and update /measures endpoint",
+      "top_keywords": [
+        "pip_measures()",
+        "poverty_line_slider=false",
+        "/measures",
+        "pip_tablemaker_measures()",
+        "type=\"binary\"",
+        "available_stats=binary_stats",
+        ".classify_measures()",
+        "measures",
+        "test-measures.r",
+        "test-api-endpoints.r"
+      ]
+    },
+    {
+      "date": "2026-06-23",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-23-stage1-surveys-ui.md",
+      "slug": "2026-06-23-stage1-surveys-ui",
+      "status": "active",
+      "summary": "- Use `piptm_manifest()` and variable registry to assemble UI rows.",
+      "tags": [],
+      "title": "Stage 1: Surveys UI endpoint",
+      "top_keywords": [
+        "implement",
+        "/surveys-ui",
+        "piptm_surveys_ui()",
+        "manifest",
+        "testthat",
+        "existing",
+        "registry",
+        "piptm_surveys_ui",
+        "surveys-ui",
+        "route"
+      ]
+    },
+    {
+      "date": "2026-06-23",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-23-variable-registry.md",
+      "slug": "2026-06-23-variable-registry",
+      "status": "completed",
+      "summary": "Implement a release-specific variable registry that acts as the single source of truth for all variable-level metadata in the Table Maker system. The registry powers three plumber API metadata endpoints consumed by the Step 2 wizard UI. Remove the outdated static `pip_tablemaker_categories()` and `pip_tablemaker_covariates()` functions and replace them with registry-backed accessors.",
+      "tags": [
+        "registry",
+        "api",
+        "plumber",
+        "metadata",
+        "phase-4",
+        "categories",
+        "covariates"
+      ],
+      "title": "Variable Registry — Build, Load, and API Metadata Endpoints",
+      "top_keywords": [
+        "tm_variable_spec.yaml",
+        "pov_status",
+        "build_variable_registry()",
+        "age_group",
+        "pip_tablemaker_categories()",
+        "piptm_load_registry()",
+        "categories",
+        "get /analysis-variables",
+        "get /categories",
+        "get /covariates"
+      ]
+    },
+    {
+      "date": "2026-06-30",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-06-30-table-maker-filter-base-loading-path.md",
+      "slug": "2026-06-30-table-maker-filter-base-loading-path",
+      "status": "active",
+      "summary": "Add a `filter_base` feature that restricts the sample entering computation by filtering microdata in the loading path only (API endpoint → `table_maker()` → `load_surveys()`), with Arrow-side filtering applied before `collect()`.",
+      "tags": [
+        "table-maker",
+        "api",
+        "arrow",
+        "filtering",
+        "sample-base",
+        "load-surveys"
+      ],
+      "title": "Table Maker sample-base filtering (filter_base) in loading path",
+      "top_keywords": [
+        "filter_base",
+        "table_maker()",
+        "load_surveys()",
+        "cols",
+        "/table",
+        "needed_cols",
+        "filter_base = null",
+        "test scenarios",
+        "test-table-maker.r",
+        "collect()"
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-07-01-table-endpoint-computation-refactor.md",
+      "slug": "2026-07-01-table-endpoint-computation-refactor",
+      "status": "completed",
+      "summary": "Refactor the piptm computation engine and Plumber API to support multiple analysis variables (not just welfare) while maintaining backward compatibility with existing tests and architectural patterns. The refactor introduces a variable type system (`welfare`, `poverty`, `continuous`, `binary`) that routes requests to appropriate computation families (`summary_stats`, `inequality`, `poverty`, `shares`). All changes prioritize correctness (the specification takes precedence over existing code) and maintain the deterministic, reproducible outputs expected by downstream PIP platform consumers.",
+      "tags": [
+        "api",
+        "computation",
+        "refactor",
+        "multi-variable",
+        "welfare-analysis"
+      ],
+      "title": "Table Endpoint & Computation Layer Refactor — Multi-Analysis-Variable Support",
+      "top_keywords": [
+        "poverty_line",
+        "phase",
+        "validation",
+        "endpoint",
+        "test",
+        "poverty_lines",
+        "news.md",
+        "table",
+        "refactor",
+        "analysis_var"
+      ]
+    },
+    {
+      "date": "2026-07-24",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-07-24-exported-functions-test-sync.md",
+      "slug": "2026-07-24-exported-functions-test-sync",
+      "status": "active",
+      "summary": "Bring `tests/testthat` in sync with the current implementation in `R/` for exported functions, treating current function code as ground truth.",
+      "tags": [],
+      "title": "Sync testthat suite to current exported functions",
+      "top_keywords": [
+        "tests",
+        "current",
+        "exported",
+        "baseline",
+        "r/",
+        "functions",
+        "behavior",
+        "covr",
+        "phase",
+        "testthat"
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-07-31-api-deployment-readme.md",
+      "slug": "2026-07-31-api-deployment-readme",
+      "status": "completed",
+      "summary": "- Document API deployment workflow for PIP team in `README.md`. - Cover the 3 deployment pipelines and DEV/QA/PROD environment variants. - Clarify exact execution order and when the copy pipeline is required. - Keep data-preparation details out of scope. - Keep troubleshooting minimal.",
+      "tags": [],
+      "title": "README API deployment documentation",
+      "top_keywords": [
+        "readme.md",
+        "deployment",
+        "readme",
+        "verification",
+        "api",
+        "documentation",
+        "section",
+        "execution",
+        "order",
+        "scope"
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md",
+      "slug": "2026-07-31-survey-specific-variable-filtering",
+      "status": "active",
+      "summary": "Update API endpoints so Step 2 UI can pass selected `pip_id` values and receive only variables available across all selected surveys.",
+      "tags": [],
+      "title": "Implement survey-specific variable filtering endpoints",
+      "top_keywords": [
+        "pip_id",
+        "optional",
+        "support",
+        "/categories",
+        "/covariates",
+        "endpoints",
+        "implement",
+        "survey-specific",
+        "variable",
+        "filtering"
+      ]
+    },
+    {
+      "date": "2026-08-26",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+      "slug": "2026-08-26-description-endpoint-implementation",
+      "status": "completed",
+      "summary": "Implement a `/description` endpoint that generates factual, dynamically constructed natural-language descriptions of tabular results produced by `table_maker()`. The endpoint serves Step 3 of the PIP UI experience, providing researchers, economists, and data scientists with a human-readable overview of table contents, provenance, input specifications, execution details, and cell definitions.",
+      "tags": [
+        "description-endpoint",
+        "table_maker",
+        "api",
+        "cell-definition",
+        "metadata",
+        "renderer"
+      ],
+      "title": "/description Endpoint — Dynamic Table Description Generation",
+      "top_keywords": [
+        "/description",
+        "data.table",
+        "test scenarios",
+        "include_metadata = true",
+        "description_metadata",
+        "include_metadata",
+        "include_metadata = false",
+        "test-table-maker-metadata.r",
+        "table_maker()",
+        "build_description_model()"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
+      "slug": "2026-04-03-manifest-generation-version-partition-review",
+      "status": "",
+      "summary": "**Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always included) **Files reviewed**: `R/load_data.R`, `R/manifest.R`, `R/measures.R`, `R/zzz.R`, `R/schema.R`, `tests/testthat/test-load-data.R`, `tests/testthat/test-manifest.R` **Findings**: 2 P1 · 7 P2 · 6 P3",
+      "tags": [],
+      "title": "2026-04-03-manifest-generation-version-partition-review",
+      "top_keywords": [
+        "load_survey_microdata()",
+        "load_surveys()",
+        ".onload()",
+        "load_data.r",
+        "pip_id",
+        "r/zzz.r",
+        "zzz.r",
+        "r/load_data.r",
+        "list.files()",
+        "test-load-data.r"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
+      "slug": "2026-04-07-computation-engine-review",
+      "status": "",
+      "summary": "**Review depth**: targeted (performance + correctness focus on `compute_poverty.R`) **Files reviewed**: `R/compute_poverty.R`, `tests/testthat/test-compute-poverty.R` **Findings**: 0 P0, 1 P1, 3 P2, 2 P3",
+      "tags": [],
+      "title": "2026-04-07-computation-engine-review",
+      "top_keywords": [
+        "compute_measures.r",
+        "by = null",
+        "compute_inequality.r",
+        "test-compute-measures.r",
+        "compute_poverty.r",
+        "grp",
+        "review",
+        "fsum",
+        "important",
+        "test-compute-inequality.r"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
+      "slug": "2026-04-28-table-maker-approach-b-refactor-review",
+      "status": "",
+      "summary": "**Review depth**: Thorough (from `compound-gpid.local.md`) **Files reviewed**: 10 (`R/compute_measures.R`, `R/table_maker.R`, `R/zzz.R`, `tests/testthat/test-compute-measures.R`, `tests/testthat/test-table-maker.R`, `NAMESPACE`, `compound-gpid.md`, `man/compute_measures.Rd`, `man/table_maker.Rd`, `.cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md`) **Findings**: 8 (P0: 0, P1: 1, P2: 3, P3: 4) **Skill used**: `cg-skill-r-technical`, `cg-skill-r-analytical`, `cg-skill-r-testing`",
+      "tags": [],
+      "title": "2026-04-28-table-maker-approach-b-refactor-review",
+      "top_keywords": [
+        "table_maker.r",
+        "compute_measures.r",
+        "pip_id",
+        "na",
+        "compound-gpid.md",
+        "fix",
+        "population",
+        "r/zzz.r",
+        "tests/testthat/test-compute-measures.r",
+        "r/aaa.r"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md",
+      "slug": "2026-04-29-arrow-vs-collapse-benchmark-review",
+      "status": "",
+      "summary": "**Review depth**: Standard (+ auto-escalated: statistical aggregation functions, >200 non-test lines) **Files reviewed**: 1 (`benchmarks/arrow-vs-collapse.R`) **Findings**: 12 (P0: 0, P1: 2, P2: 6, P3: 4)",
+      "tags": [],
+      "title": "2026-04-29-arrow-vs-collapse-benchmark-review",
+      "top_keywords": [
+        "arrow-vs-collapse.r",
+        "bench::mark()",
+        "fix",
+        "by_dims",
+        "trycatch",
+        "benchmarks/arrow-vs-collapse.r",
+        "benchmarks/arrow-cache.rds",
+        "notimplemented: unifying differing dictionaries",
+        ".cast_dict_to_char()",
+        ".arrow_weighted_mean()"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-impl-review.md",
+      "slug": "2026-05-11-api-service-plumber-v2-impl-review",
+      "status": "fixed",
+      "summary": "Reviewed against the completed implementation of `.cg-docs/plans/2026-05-11-api-service-plumber-v2.md` (all 5 steps). This is an **implementation review**; the prior file `2026-05-11-api-service-plumber-v2-review.md` was a plan review and is separate.",
+      "tags": [],
+      "title": "2026-05-11-api-service-plumber-v2-impl-review",
+      "top_keywords": [
+        "description",
+        "rprojroot",
+        "run.r",
+        "plumber",
+        "test-api-endpoints.r",
+        "inst/plumber/run.r",
+        "quote()",
+        "helpers.r",
+        "inst",
+        "tests"
+      ]
+    },
+    {
+      "date": "2026-05-13",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-review.md",
+      "slug": "2026-05-11-api-service-plumber-v2-review",
+      "status": "",
+      "summary": "**Review depth**: thorough **Files reviewed**: 4 (`inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `tests/testthat/test-api-helpers.R`, `DESCRIPTION`) **Findings**: 34 (P0: 1, P1: 10, P2: 10, P3: 5)",
+      "tags": [],
+      "title": "2026-05-11-api-service-plumber-v2-review",
+      "top_keywords": [
+        "plumber.r",
+        "helpers.r",
+        "test-api-helpers.r",
+        "validate_table_input()",
+        "pip_id",
+        "na_integer_",
+        "capture_with_warnings()",
+        "meta.release",
+        "renv.lock",
+        "pip_measures()"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md",
+      "slug": "2026-05-20-validate-parquet-wrapper-review-2",
+      "status": "",
+      "summary": "**Review depth**: thorough **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findings**: 9 (P0: 0, P1: 1, P2: 5, P3: 3) **Focus**: `load_surveys()` — `cols` argument implementation",
+      "tags": [],
+      "title": "2026-05-20-validate-parquet-wrapper-review-2",
+      "top_keywords": [
+        "cols",
+        "weight",
+        "load_data.r",
+        "pip_id",
+        "welfare",
+        "welfare_vars",
+        "tests/testthat/test-load-data.r",
+        "\"welfare\"",
+        "\"weight\"",
+        "@param cols"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
+      "slug": "2026-05-20-validate-parquet-wrapper-review",
+      "status": "",
+      "summary": "**Review depth**: thorough **Files reviewed**: `R/compute_inequality.R`, `R/load_data.R`, `R/table_maker.R`, `R/schema.R`, `R/validate_parquet.R`, `man/` (Rd files), `tests/testthat/test-load-data.R`, `tests/testthat/test-table-maker.R` **Findings**: 25 (P0: 0, P1: 9, P2: 7, P3: 9) **Context**: Two changes reviewed together — (1) removal of redundant welfare sort in `compute_inequality()`, relying on upstream pre-sort contract; (2) `cols` parameter added to `load_surveys()` for Arrow column pruning.",
+      "tags": [],
+      "title": "2026-05-20-validate-parquet-wrapper-review",
+      "top_keywords": [
+        "cols",
+        "welfare",
+        "pip_id",
+        "r/load_data.r",
+        "compute_inequality.r",
+        "load_data.r",
+        "compute_inequality()",
+        "load_surveys()",
+        "dt",
+        "by = null"
+      ]
+    },
+    {
+      "date": "2026-05-25",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
+      "slug": "2026-05-20-validate-parquet-wrapper-verify-review",
+      "status": "",
+      "summary": "**Review depth**: light (verify mode) **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findings**: 2 (P0: 0, P1: 0, P2: 1, P3: 1)",
+      "tags": [],
+      "title": "2026-05-20-validate-parquet-wrapper-verify-review",
+      "top_keywords": [
+        "load_survey_microdata()",
+        "cols",
+        "find_ppp_col_wv",
+        "r/load_data.r",
+        "tests/testthat/test-load-data.r",
+        "load_data.r",
+        "test-load-data.r",
+        "pip_id",
+        "fix",
+        "startswith"
+      ]
+    },
+    {
+      "date": "2026-05-26",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
+      "slug": "2026-05-26-api-ppp-param-review",
+      "status": "",
+      "summary": "**Review depth**: thorough **Files reviewed**: 4 (`inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `tests/testthat/test-api-helpers.R`, `tests/testthat/test-api-endpoints.R`) **Findings**: 16 (P0: 1, P1: 8, P2: 3, P3: 5)",
+      "tags": [],
+      "title": "2026-05-26-api-ppp-param-review",
+      "top_keywords": [
+        "ppp",
+        "helpers.r",
+        "tests/testthat/test-api-helpers.r",
+        "coerced_ppp",
+        "inst/plumber/helpers.r",
+        "2017l",
+        "test-api-helpers.r",
+        "load_surveys()",
+        "inst/plumber/helpers.r:~258",
+        "\\n"
+      ]
+    },
+    {
+      "date": "2026-08-26",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
+      "slug": "2026-08-26-description-endpoint-implementation-review",
+      "status": "",
+      "summary": "**Review mode**: standard **Files reviewed**: 8 files (R/description_builder.R, R/table_maker.R, 6 test files) **Findings**: 67 (P0: 6, P1: 18, P2: 30, P3: 23)",
+      "tags": [],
+      "title": "2026-08-26-description-endpoint-implementation-review",
+      "top_keywords": [
+        "description_builder.r",
+        "return()",
+        "table_maker.r",
+        "@keywords internal",
+        "test-cell-definition.r",
+        "test-table-maker-metadata.r",
+        "test-description-metadata.r",
+        "build_description_model()",
+        "paste()",
+        "test-description-helpers.r"
+      ]
+    },
+    {
+      "date": "2026-08-27",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+      "slug": "2026-08-27-phase5-standard-review",
+      "status": "active",
+      "summary": "Comprehensive standard review of Phase 5 (API Integration) implementation for the `/description` endpoint. Review conducted across 5 dimensions:",
+      "tags": [
+        "description-endpoint",
+        "api-integration",
+        "phase5-review",
+        "data-quality",
+        "performance"
+      ],
+      "title": "Phase 5 Standard Code Review — /description Endpoint API Integration",
+      "top_keywords": [
+        "description_builder.r",
+        "findings",
+        "null",
+        "/description",
+        "plumber.r",
+        "missing",
+        "vapply()",
+        "data quality",
+        "helpers.r",
+        "error_json()"
+      ]
+    },
+    {
+      "date": "2026-08-27",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
+      "slug": "2026-08-27-phase5-standard-verify-review-2",
+      "status": "",
+      "summary": "**Verification mode**: Second verify pass following test coverage additions to address gaps from first verification review (`2026-08-27-phase5-standard-verify-review.md`).",
+      "tags": [],
+      "title": "2026-08-27-phase5-standard-verify-review-2",
+      "top_keywords": [
+        "test",
+        "findings",
+        "ui_label",
+        "varname",
+        "loaded_list",
+        ".build_filters_content()",
+        "test-description-builder-schema-validation.r",
+        "missing",
+        "review",
+        "quality"
+      ]
+    },
+    {
+      "date": "2026-08-27",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
+      "slug": "2026-08-27-phase5-standard-verify-review",
+      "status": "",
+      "summary": "**Verification mode**: Light-depth review following fix-triage of P0/P1 findings from `2026-08-27-phase5-standard-review.md`.",
+      "tags": [],
+      "title": "2026-08-27-phase5-standard-verify-review",
+      "top_keywords": [
+        "description_builder.r",
+        "test",
+        "test-description-builder.r",
+        "missing",
+        "selected_labels",
+        "tests/testthat/test-description-builder.r",
+        "schema",
+        "coverage",
+        "findings",
+        "fcoalesce()"
+      ]
+    },
+    {
+      "date": "2026-04-03",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-03-null-allowed-cols-gen-validate-for-write.md",
+      "slug": "2026-04-03-null-allowed-cols-gen-validate-for-write",
+      "status": "",
+      "summary": "`generate_arrow_dataset()` returned an `\"error\"` row for every survey with this message:",
+      "tags": [
+        "arrow",
+        "pipdata",
+        "piptm",
+        "onLoad",
+        "schema",
+        "validation",
+        "load_all",
+        "devtools"
+      ],
+      "title": "NULL .ALLOWED_COLS_GEN causes .validate_for_write() to reject all schema-valid columns",
+      "top_keywords": [
+        "null",
+        ".onload()",
+        "aaa.r",
+        "piptm",
+        "trycatch",
+        ".validate_for_write()",
+        "survey_id",
+        "education",
+        "prepare_for_arrow()",
+        "piptm::"
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-14-datatable-column-shadows-function-argument.md",
+      "slug": "2026-04-14-datatable-column-shadows-function-argument",
+      "status": "",
+      "summary": "`load_survey_microdata(\"COL\", 2010L, \"INC\")` returned all rows from the manifest instead of the single matching row. The filter appeared to work (it returned *a* row) but was semantically wrong: it was comparing the column to itself rather than to the caller's argument, so it would have returned all rows if the manifest contained multiple entries.",
+      "tags": [
+        "data.table",
+        "NSE",
+        "scoping",
+        "filter",
+        "column-shadowing",
+        "piptm",
+        "load_data"
+      ],
+      "title": "data.table column name shadows function argument in filter expression",
+      "top_keywords": [
+        "data.table",
+        "country_code",
+        "filter",
+        ".env",
+        "table",
+        "column",
+        "function",
+        "argument",
+        "shadows",
+        "expression"
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
+      "slug": "2026-04-14-load-surveys-silent-partial-miss",
+      "status": "",
+      "summary": "When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a result that silently omitted the missing survey — no error, no warning. The returned `data.table` contained fewer rows than expected with no indication that any surveys had been dropped.",
+      "tags": [
+        "arrow",
+        "parquet",
+        "load_surveys",
+        "partial-miss",
+        "hive-partitioning",
+        "data-loading",
+        "piptm"
+      ],
+      "title": "load_surveys() silently skips missing partitions when path helper is not shared",
+      "top_keywords": [
+        "load_surveys()",
+        "load_survey_microdata()",
+        "load_surveys",
+        "cli::cli_abort()",
+        "list.files()",
+        ".build_parquet_paths()",
+        "no parquet",
+        "missing",
+        "silently",
+        "partitions"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-28-age-binning-by-vector-mutated-before-validate.md",
+      "slug": "2026-04-28-age-binning-by-vector-mutated-before-validate",
+      "status": "",
+      "summary": "Calling `table_maker(..., by = \"age\")` threw:",
+      "tags": [
+        "age-binning",
+        "by-vector",
+        "compute_measures",
+        "validate_by",
+        "dimension",
+        "age_group",
+        "table_maker"
+      ],
+      "title": "Age binning: mutating 'by' vector before compute_measures causes unknown-dimension error",
+      "top_keywords": [
+        "age",
+        "compute_measures",
+        "\"age\"",
+        "\"age_group\"",
+        "compute_measures()",
+        ".validate_by()",
+        "age_group",
+        "rbindlist",
+        "table_maker(..., by = \"age\")",
+        "dt"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-28-cli-dot-prefix-glue-expression-rejected.md",
+      "slug": "2026-04-28-cli-dot-prefix-glue-expression-rejected",
+      "status": "",
+      "summary": "A `cli_abort()` call threw an error instead of the intended message:",
+      "tags": [
+        "cli",
+        "glue",
+        "dot-prefix",
+        "cli_abort",
+        "cli_warn",
+        "NSE",
+        "interpolation"
+      ],
+      "title": "cli >= 3.4.0 rejects glue expressions starting with a dot",
+      "top_keywords": [
+        "cli",
+        "option",
+        ".ids",
+        "dot",
+        "glue",
+        "ids",
+        "parentheses",
+        "{(.ids)}",
+        "starting",
+        "expressions"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-04-28-fsetdiff-wrong-namespace-collapse-vs-datatable.md",
+      "slug": "2026-04-28-fsetdiff-wrong-namespace-collapse-vs-datatable",
+      "status": "",
+      "summary": "At runtime, calling `pip_lookup()` with an unmatched triplet threw:",
+      "tags": [
+        "data.table",
+        "collapse",
+        "namespace",
+        "fsetdiff",
+        "importFrom",
+        "NAMESPACE",
+        "roxygen2"
+      ],
+      "title": "fsetdiff attributed to collapse namespace — function does not exist there",
+      "top_keywords": [
+        "fsetdiff",
+        "namespace",
+        "collapse",
+        "devtools::document()",
+        "@importfrom",
+        "funique",
+        "wrong",
+        "forder",
+        "attributed",
+        "data.table"
+      ]
+    },
+    {
+      "date": "2026-05-21",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
+      "slug": "2026-05-21-arrow-multifile-partition-sort-violation",
+      "status": "",
+      "summary": "The `{piptm}` pipeline relies on a **pre-sort contract**: welfare values in each survey's microdata are sorted ascending before `compute_inequality()` is called. `compute_inequality()` was refactored to remove its internal `setorder()`, trusting this contract entirely. The contract holds when each partition directory contains exactly one Parquet file — the `{pipdata}` pipeline writes exactly one file per partition under normal operation. However, if a partition directory were to contain two files (retried write, manual copy, pipeline shard, test artefact), `open_dataset()` on that directory concatenates the files in file-system order. The result is: `compute_inequality()` receives this combined vector, the `is.unsorted()` guard fires only on...",
+      "tags": [
+        "arrow",
+        "parquet",
+        "sort-contract",
+        "open_dataset",
+        "hive-partitioning",
+        "gini",
+        "compute_inequality",
+        "multi-file",
+        "pre-sort-contract"
+      ],
+      "title": "Arrow open_dataset on multiple Parquet files silently breaks within-survey welfare sort",
+      "top_keywords": [
+        "compute_inequality()",
+        ".build_parquet_paths()",
+        "setorder()",
+        "open_dataset()",
+        "sort",
+        "arrow",
+        "tests",
+        "{pipdata}",
+        "is.unsorted()",
+        ".cg-docs/solutions/performance-issues/2026-04-30-arrow-io-and-compute-lessons.md"
+      ]
+    },
+    {
+      "date": "2026-05-21",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
+      "slug": "2026-05-21-collapse-silent-na-drop-in-statistics",
+      "status": "",
+      "summary": "`compute_inequality()` calls `collapse::fsum()`, `collapse::fcumsum()`, and `collapse::fmean()` on `welfare` and `weight` vectors. When either vector contains `NA`, the functions silently exclude those rows from all calculations because `collapse` defaults to `na.rm = TRUE` everywhere. The visible symptom is wrong — but numerically plausible — Gini and MLD values. No error, no warning. The bias is proportional to the share of NA rows and their welfare values. On a survey with 0.5% NA rows near the top of the distribution the Gini can be understated by ~0.01 without any diagnostic signal.",
+      "tags": [
+        "collapse",
+        "fsum",
+        "fcumsum",
+        "NA",
+        "gini",
+        "mld",
+        "silent-bias",
+        "na.rm",
+        "compute_inequality",
+        "fail-loudly"
+      ],
+      "title": "collapse::fsum/fcumsum silently drops NA rows, biasing weighted statistics",
+      "top_keywords": [
+        "collapse",
+        "na",
+        "compute_inequality()",
+        "na.rm = true",
+        "na.rm = false",
+        "fcumsum",
+        "welfare",
+        "weight",
+        "why",
+        "aggregates"
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/data-quality/2026-06-11-arrow-schema-expansion-propagation-pattern.md",
+      "slug": "2026-06-11-arrow-schema-expansion-propagation-pattern",
+      "status": "",
+      "summary": "When new optional columns are added to the PIP Arrow schema (e.g. household size, infrastructure indicators, labour variables), the pipeline raises false \"extra column\" errors like: This happens even when the column is genuinely schema-conformant, because the new name was added to `pip_arrow_schema()` but not propagated to every allow-list that enforces it.",
+      "tags": [
+        "arrow",
+        "parquet",
+        "schema",
+        "pip_arrow_schema",
+        "prepare_for_arrow",
+        "validate_for_write",
+        "validate_pre_write",
+        "optional_dim_cols",
+        "int32",
+        "pipdata",
+        "piptm",
+        "schema-evolution"
+      ],
+      "title": "Arrow schema expansion: all 5 propagation points must be updated together",
+      "top_keywords": [
+        "prepare_for_arrow()",
+        "schema",
+        "arrow_generation.r",
+        "int32",
+        "optional_dim_cols",
+        "pip_arrow_schema()",
+        "pip_allowed_cols()",
+        ".validate_for_write()",
+        "pipdata",
+        "expansion"
+      ]
+    },
+    {
+      "date": "2026-08-27",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md",
+      "slug": "2026-08-27-json-roundtrip-defensive-coding",
+      "status": "",
+      "summary": "An API endpoint accepting `description_metadata` from JSON crashed with malformed inputs because: 1. Code assumed `data.table` structures but `jsonlite::fromJSON()` returns `data.frame` 2. Empty data.tables became `list()` (not `NULL` or empty `data.frame`) 3. List-column elements could be `NULL`, integers, or wrong types after deserialization 4. Missing columns weren't validated before access **Symptoms**: - Silent crashes: `loaded$country_code` on `NULL` → error - Type errors: `vapply()` over `NULL` elements in list-column → `character(0)` violates contract - Malformed data passed schema checks → downstream crashes **Impact**: P0 data corruption / crash risk when JSON metadata bypasses validation. ---",
+      "tags": [
+        "json-deserialization",
+        "schema-validation",
+        "data.table",
+        "defensive-programming",
+        "test-coverage",
+        "api-safety"
+      ],
+      "title": "JSON Round-Trip Defensive Coding: Schema Validation + Test Coverage Strategy",
+      "top_keywords": [
+        "null",
+        "test",
+        "fifelse()",
+        "vapply()",
+        "description_builder",
+        "defensive",
+        "schema",
+        "validation",
+        "coverage",
+        "vapply"
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/environment-issues/2026-04-14-hardcoded-paths-in-onload.md",
+      "slug": "2026-04-14-hardcoded-paths-in-onload",
+      "status": "",
+      "summary": "The `piptm` package loaded correctly on the original developer's machine (where `Y:/` was mapped to the PIP network share) but failed silently or with unexpected errors on:",
+      "tags": [
+        "onLoad",
+        "zzz.R",
+        "Renviron",
+        "Sys.getenv",
+        "network-paths",
+        "portability",
+        "piptm",
+        "ci"
+      ],
+      "title": "Hardcoded network paths in .onLoad() break portability across machines",
+      "top_keywords": [
+        "onload",
+        "readme.md",
+        ".onload()",
+        "set_arrow_root()",
+        "dir.exists()",
+        "hardcoded",
+        "zzz.r",
+        "portability",
+        "piptm_arrow_root",
+        "fix"
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md",
+      "slug": "2026-04-28-orchestration-benchmark-results",
+      "status": "completed",
+      "summary": "- **R version**: R version 4.5.2 (2025-10-31 ucrt) - **Platform**: Windows Server 2022 x64 (build 20348) / x86_64-w64-mingw32/x64 - **Logical cores**: 16 - **Physical cores**: 16 - **collapse version**: 2.1.6 - **data.table version**: 1.18.2.1 - **bench version**: 1.1.4",
+      "tags": [
+        "performance",
+        "orchestration",
+        "table-maker",
+        "benchmark"
+      ],
+      "title": "Orchestration Strategy Benchmark Results",
+      "top_keywords": [
+        "benchmark",
+        "results",
+        "orchestration",
+        "orchestration strategy benchmark results",
+        "strategy",
+        "compute",
+        "correctness",
+        "environment",
+        "dataset",
+        "profile"
+      ]
+    },
+    {
+      "date": "2026-04-29",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md",
+      "slug": "2026-04-29-arrow-vs-collapse-results",
+      "status": "completed",
+      "summary": "- **R version**: R version 4.5.2 (2025-10-31 ucrt) - **Platform**: Windows Server 2022 x64 (build 20348) / x86_64-w64-mingw32/x64 - **Logical cores**: 16 - **Physical cores**: 16 - **arrow version**: 23.0.1.2 - **collapse version**: 2.1.6 - **data.table version**: 1.18.2.1 - **bench version**: 1.1.4",
+      "tags": [
+        "performance",
+        "arrow",
+        "io",
+        "benchmark"
+      ],
+      "title": "Arrow I/O Strategy Benchmark Results",
+      "top_keywords": [
+        "results",
+        "arrow",
+        "benchmark",
+        "gender",
+        "area",
+        "strategy benchmark results",
+        "strategy",
+        "version",
+        "column",
+        "pruning"
+      ]
+    },
+    {
+      "date": "2026-04-29",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md",
+      "slug": "2026-04-29-pipeline-comparison-results",
+      "status": "completed",
+      "summary": "- **R version**: R version 4.5.2 (2025-10-31 ucrt) - **Platform**: Windows Server 2022 x64 (build 20348) / x86_64-w64-mingw32/x64 - **Logical cores**: 16 - **arrow version**: 23.0.1.2 - **collapse version**: 2.1.6 - **data.table version**: 1.18.2.1",
+      "tags": [
+        "performance",
+        "arrow",
+        "io",
+        "benchmark",
+        "pipeline"
+      ],
+      "title": "Pipeline Comparison Benchmark Results",
+      "top_keywords": [
+        "compute_measures()",
+        "results",
+        "pipeline",
+        "benchmark",
+        "select(6 cols)",
+        "pipeline comparison benchmark results",
+        "arrow",
+        "comparison",
+        "sum",
+        "median"
+      ]
+    },
+    {
+      "date": "2026-04-30",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/performance-issues/2026-04-30-arrow-io-and-compute-lessons.md",
+      "slug": "2026-04-30-arrow-io-and-compute-lessons",
+      "status": "",
+      "summary": "The `table_maker()` pipeline was meeting a 3s compute target in isolation but its real-world performance was unknown when I/O (network reads from a UNC share) was included. Multiple optimization ideas existed (column pruning, Arrow aggregation push-down, Arrow pre-sort) but none had been measured. ---",
+      "tags": [
+        "arrow",
+        "parquet",
+        "io",
+        "push-down",
+        "column-pruning",
+        "compute",
+        "benchmark",
+        "network-io",
+        "unc-share"
+      ],
+      "title": "Arrow I/O and Compute Strategy: Lessons from Benchmarking",
+      "top_keywords": [
+        "arrow",
+        "collect()",
+        "arrow-vs-collapse.r",
+        "collect",
+        "load_surveys()",
+        "push-down",
+        "share",
+        "educat5",
+        "educat7",
+        "select()"
+      ]
+    },
+    {
+      "date": "2026-05-21",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/performance-issues/2026-05-21-load-surveys-column-pruning-implementation.md",
+      "slug": "2026-05-21-load-surveys-column-pruning-implementation",
+      "status": "",
+      "summary": "`load_surveys()` always called `open_dataset() |> collect()` without any `select()`, loading all 14 schema columns into memory. `table_maker()` then used only the handful it needed (welfare, weight, by-dimensions). The unused columns were transferred over the UNC network share but immediately discarded. Benchmark result (50-iteration resample, 15 surveys): - All 14 columns: **1.658s** median I/O - 6 needed columns: **0.524s** median — **68% faster**",
+      "tags": [
+        "arrow",
+        "parquet",
+        "column-pruning",
+        "load_surveys",
+        "table_maker",
+        "io",
+        "network-io",
+        "select-before-collect"
+      ],
+      "title": "Column Pruning in load_surveys(): Implementation Pattern",
+      "top_keywords": [
+        "cols",
+        "select()",
+        "collect()",
+        "load_surveys",
+        "target_col",
+        "load_surveys()",
+        "table_maker()",
+        "open_dataset()",
+        "column pruning",
+        "implementation pattern"
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-04-14-partial-miss-regression-test-batch-loaders.md",
+      "slug": "2026-04-14-partial-miss-regression-test-batch-loaders",
+      "status": "",
+      "summary": "A batch loading function (`load_surveys()`) silently dropped surveys when their partition directories were missing from disk. The full-happy-path test suite passed because every fixture was present. There was no test that intentionally omitted one fixture to verify the error path.",
+      "tags": [
+        "testthat",
+        "arrow",
+        "parquet",
+        "batch-loading",
+        "regression-test",
+        "partial-miss",
+        "fixtures",
+        "piptm"
+      ],
+      "title": "Partial-miss regression test pattern for batch data loaders",
+      "top_keywords": [
+        "test",
+        "partial-miss",
+        "withr::local_tempdir()",
+        "batch",
+        "pattern",
+        "regression",
+        "loaders",
+        "fixture",
+        "catches",
+        "related"
+      ]
+    },
+    {
+      "date": "2026-05-13",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-05-13-plumber-programmatic-testing-with-fixtures.md",
+      "slug": "2026-05-13-plumber-programmatic-testing-with-fixtures",
+      "status": "",
+      "summary": "Testing a plumber API without a running HTTP server is non-trivial. Three concrete issues emerged when writing integration tests for the `{piptm}` plumber endpoints: 1. **Plumber crashes (500) instead of returning 400** when a required function parameter (no default) is absent from the query string — the error fires _before_ the handler body runs, bypassing `validate_*()` → `api_error()`. 2. **`pr$errorHandler` is not a public field** in plumber ≥ 1.3.x. Tests that check `is.function(pr$errorHandler)` fail with `FALSE`; the error handler is stored in a private R5 field. 3. **`jsonlite` serializes empty character vectors and `NULL` differently depending on context.** `character(0)` in...",
+      "tags": [
+        "plumber",
+        "testthat",
+        "api",
+        "integration-test",
+        "pr-call",
+        "fixtures",
+        "hive",
+        "arrow",
+        "withr",
+        "piptm"
+      ],
+      "title": "Programmatic plumber endpoint testing with pr$call() and Hive fixtures",
+      "top_keywords": [
+        "null",
+        "plumber",
+        "hive",
+        "character",
+        "errorhandler",
+        "jsonlite",
+        "field",
+        "private",
+        "fix",
+        "issue"
+      ]
+    },
+    {
+      "date": "2026-05-21",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-05-21-testing-pre-sort-contracts.md",
+      "slug": "2026-05-21-testing-pre-sort-contracts",
+      "status": "",
+      "summary": "`compute_inequality()` was refactored to remove its internal `setorder()` call, relying instead on a documented pre-sort contract: callers must supply welfare data sorted ascending. All existing tests passed — but none of them would have caught a regression where the upstream pipeline stopped sorting welfare. If `pipdata::generate_arrow_dataset()` ever dropped its sort, `load_surveys()` would return unsorted data, and `compute_inequality()` would produce silently wrong Gini values with every existing test still green.",
+      "tags": [
+        "gini",
+        "sort-contract",
+        "testing",
+        "compute_inequality",
+        "pre-sort",
+        "contract-testing",
+        "is.unsorted",
+        "welfare"
+      ],
+      "title": "Testing pre-sort contracts: verify the contract is required, not just that it holds",
+      "top_keywords": [
+        "is.unsorted()",
+        "pattern",
+        "contracts",
+        "pre-sort",
+        "testing",
+        "unsorted",
+        "test",
+        "negative-case",
+        "compute_inequality()",
+        "load_surveys()"
+      ]
+    },
+    {
+      "date": "2026-06-01",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-06-01-adding-measures-registry-pattern.md",
+      "slug": "2026-06-01-adding-measures-registry-pattern",
+      "status": "",
+      "summary": "Need to extend the computation engine with new measures (`obs_share`, `pop_share`) without breaking existing consumers (API endpoints, validators, tests, orchestrator).",
+      "tags": [
+        "measures",
+        "registry",
+        "extensibility",
+        "compute-welfare",
+        "collapse",
+        "GRP"
+      ],
+      "title": "Adding new measures to the computation engine via the registry pattern",
+      "top_keywords": [
+        "measures",
+        ".measure_registry",
+        "survey",
+        "obs_share",
+        "grp",
+        "engine",
+        "adding",
+        "computation",
+        "via",
+        "test-measures.r"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#version-partition-key",
+      "slug": "version-partition-key",
+      "status": "done",
+      "summary": "Version as partition key with manifest-based resolution",
+      "tags": [],
+      "title": "Version as partition key with manifest-based resolution",
+      "top_keywords": [
+        "arrow dataset generation",
+        "version",
+        "partition",
+        "manifest-based",
+        "resolution",
+        "feature",
+        "milestone",
+        "phase",
+        "arrow",
+        "dataset"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#manifest-generation-partition-filter",
+      "slug": "manifest-generation-partition-filter",
+      "status": "done",
+      "summary": "Manifest generation and partition-filter loading",
+      "tags": [],
+      "title": "Manifest generation and partition-filter loading",
+      "top_keywords": [
+        "arrow dataset generation",
+        "generation",
+        "manifest",
+        "partition-filter",
+        "loading",
+        "feature",
+        "milestone",
+        "phase",
+        "arrow",
+        "dataset"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#measure-registry",
+      "slug": "measure-registry",
+      "status": "done",
+      "summary": "Measure registry and input validation",
+      "tags": [],
+      "title": "Measure registry and input validation",
+      "top_keywords": [
+        "computation engine",
+        "measure",
+        "registry",
+        "validation",
+        "feature",
+        "milestone",
+        "phase",
+        "computation",
+        "engine"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#family-compute-functions",
+      "slug": "family-compute-functions",
+      "status": "done",
+      "summary": "Family-level compute functions",
+      "tags": [],
+      "title": "Family-level compute functions",
+      "top_keywords": [
+        "computation engine",
+        "family-level",
+        "compute",
+        "functions",
+        "feature",
+        "milestone",
+        "phase",
+        "computation",
+        "engine"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#computation-engine-family-orchestrator",
+      "slug": "computation-engine-family-orchestrator",
+      "status": "done",
+      "summary": "Family-based computation orchestrator (compute_measures)",
+      "tags": [],
+      "title": "Family-based computation orchestrator (compute_measures)",
+      "top_keywords": [
+        "computation engine",
+        "computation",
+        "family-based",
+        "orchestrator",
+        "compute_measures",
+        "feature",
+        "milestone",
+        "phase",
+        "engine"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#dimension-disaggregation",
+      "slug": "dimension-disaggregation",
+      "status": "done",
+      "summary": "Disaggregation across dimensions (gender, area, education, age)",
+      "tags": [],
+      "title": "Disaggregation across dimensions (gender, area, education, age)",
+      "top_keywords": [
+        "computation engine",
+        "disaggregation",
+        "across",
+        "dimensions",
+        "gender",
+        "area",
+        "education",
+        "age",
+        "feature",
+        "milestone"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#table-maker-dual-input",
+      "slug": "table-maker-dual-input",
+      "status": "done",
+      "summary": "table_maker() with dual input patterns (pip_id and triplets)",
+      "tags": [],
+      "title": "table_maker() with dual input patterns (pip_id and triplets)",
+      "top_keywords": [
+        "table_maker",
+        "dual",
+        "patterns",
+        "pip_id",
+        "triplets",
+        "feature",
+        "milestone",
+        "phase",
+        "top-level",
+        "api"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#pip-lookup-triplet-resolver",
+      "slug": "pip-lookup-triplet-resolver",
+      "status": "done",
+      "summary": "pip_lookup() triplet-to-pip_id resolver",
+      "tags": [],
+      "title": "pip_lookup() triplet-to-pip_id resolver",
+      "top_keywords": [
+        "pip_lookup",
+        "triplet-to-pip_id",
+        "resolver",
+        "feature",
+        "milestone",
+        "phase",
+        "table_maker",
+        "top-level",
+        "api"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#load-surveys-data-loading",
+      "slug": "load-surveys-data-loading",
+      "status": "done",
+      "summary": "load_surveys() data loading with manifest resolution",
+      "tags": [],
+      "title": "load_surveys() data loading with manifest resolution",
+      "top_keywords": [
+        "load_surveys",
+        "loading",
+        "manifest",
+        "resolution",
+        "feature",
+        "milestone",
+        "phase",
+        "table_maker",
+        "top-level",
+        "api"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#orchestration-batch-vs-per-survey",
+      "slug": "orchestration-batch-vs-per-survey",
+      "status": "done",
+      "summary": "Orchestration: batch vs. per-survey optimization",
+      "tags": [],
+      "title": "Orchestration: batch vs. per-survey optimization",
+      "top_keywords": [
+        "orchestration",
+        "batch",
+        "per-survey",
+        "optimization",
+        "feature",
+        "milestone",
+        "phase",
+        "table_maker",
+        "top-level",
+        "api"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#arrow-vs-collapse-benchmark",
+      "slug": "arrow-vs-collapse-benchmark",
+      "status": "done",
+      "summary": "Arrow push-down vs. in-memory compute benchmark",
+      "tags": [],
+      "title": "Arrow push-down vs. in-memory compute benchmark",
+      "top_keywords": [
+        "arrow",
+        "push-down",
+        "in-memory",
+        "compute",
+        "benchmark",
+        "feature",
+        "milestone",
+        "phase",
+        "table_maker",
+        "top-level"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#parquet-validation-schema-data",
+      "slug": "parquet-validation-schema-data",
+      "status": "active",
+      "summary": "Parquet file validation (schema + data checks)",
+      "tags": [],
+      "title": "Parquet file validation (schema + data checks)",
+      "top_keywords": [
+        "validation",
+        "parquet",
+        "schema",
+        "feature",
+        "milestone",
+        "phase",
+        "testing",
+        "quality"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#unit-test-coverage",
+      "slug": "unit-test-coverage",
+      "status": "active",
+      "summary": "Unit test suite (≥90% coverage)",
+      "tags": [],
+      "title": "Unit test suite (≥90% coverage)",
+      "top_keywords": [
+        "unit",
+        "test",
+        "suite",
+        "coverage",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing",
+        "quality"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#performance-profiling",
+      "slug": "performance-profiling",
+      "status": "active",
+      "summary": "Performance benchmarking and profiling",
+      "tags": [],
+      "title": "Performance benchmarking and profiling",
+      "top_keywords": [
+        "performance",
+        "benchmarking",
+        "profiling",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing",
+        "quality"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#data-quality-contracts",
+      "slug": "data-quality-contracts",
+      "status": "done",
+      "summary": "Data quality contracts and multi-file guard",
+      "tags": [],
+      "title": "Data quality contracts and multi-file guard",
+      "top_keywords": [
+        "quality",
+        "contracts",
+        "multi-file",
+        "guard",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#dimension-partial-match-exclusion",
+      "slug": "dimension-partial-match-exclusion",
+      "status": "done",
+      "summary": "Dimension pre-filter: exclude partial-match surveys",
+      "tags": [],
+      "title": "Dimension pre-filter: exclude partial-match surveys",
+      "top_keywords": [
+        "dimension",
+        "pre-filter",
+        "exclude",
+        "partial-match",
+        "surveys",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#documentation-api-dev",
+      "slug": "documentation-api-dev",
+      "status": "planned",
+      "summary": "Documentation: API reference and developer guide",
+      "tags": [],
+      "title": "Documentation: API reference and developer guide",
+      "top_keywords": [
+        "documentation",
+        "api",
+        "reference",
+        "developer",
+        "guide",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#cran-readiness",
+      "slug": "cran-readiness",
+      "status": "planned",
+      "summary": "CRAN readiness (devtools::check clean)",
+      "tags": [],
+      "title": "CRAN readiness (devtools::check clean)",
+      "top_keywords": [
+        "cran",
+        "readiness",
+        "devtools",
+        "clean",
+        "feature",
+        "milestone",
+        "phase",
+        "validation",
+        "testing",
+        "quality"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#plumber-table-endpoint",
+      "slug": "plumber-table-endpoint",
+      "status": "done",
+      "summary": "Plumber /table endpoint (GET/POST)",
+      "tags": [],
+      "title": "Plumber /table endpoint (GET/POST)",
+      "top_keywords": [
+        "service layer",
+        "plumber",
+        "table",
+        "endpoint",
+        "post",
+        "feature",
+        "milestone",
+        "phase",
+        "api",
+        "service"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#plumber-lookup-endpoint",
+      "slug": "plumber-lookup-endpoint",
+      "status": "done",
+      "summary": "Plumber /lookup endpoint",
+      "tags": [],
+      "title": "Plumber /lookup endpoint",
+      "top_keywords": [
+        "service layer",
+        "plumber",
+        "lookup",
+        "endpoint",
+        "feature",
+        "milestone",
+        "phase",
+        "api",
+        "service",
+        "layer"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#error-handling-logging",
+      "slug": "error-handling-logging",
+      "status": "active",
+      "summary": "Error handling, logging, and request tracing",
+      "tags": [],
+      "title": "Error handling, logging, and request tracing",
+      "top_keywords": [
+        "service layer",
+        "error",
+        "handling",
+        "logging",
+        "request",
+        "tracing",
+        "feature",
+        "milestone",
+        "phase",
+        "api"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#description-endpoint-cache-key-generation",
+      "slug": "description-endpoint-cache-key-generation",
+      "status": "idea",
+      "summary": "Description endpoint cache key generation",
+      "tags": [],
+      "title": "Description endpoint cache key generation",
+      "top_keywords": [
+        "service layer",
+        "description",
+        "endpoint",
+        "cache",
+        "generation",
+        "feature",
+        "milestone",
+        "phase",
+        "api",
+        "service"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#description-endpoint-dynamic-table-description",
+      "slug": "description-endpoint-dynamic-table-description",
+      "status": "done",
+      "summary": "/description Endpoint — Dynamic Table Description Generation",
+      "tags": [],
+      "title": "/description Endpoint — Dynamic Table Description Generation",
+      "top_keywords": [
+        "description",
+        "dynamic table description generation\nmilestone",
+        "service layer",
+        "endpoint",
+        "dynamic",
+        "table",
+        "generation",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#ppp-load-data-resolution",
+      "slug": "ppp-load-data-resolution",
+      "status": "done",
+      "summary": "PPP welfare column resolution in load_surveys() / load_survey_microdata()",
+      "tags": [],
+      "title": "PPP welfare column resolution in load_surveys() / load_survey_microdata()",
+      "top_keywords": [
+        "parameter handling",
+        "ppp",
+        "welfare",
+        "column",
+        "resolution",
+        "load_surveys",
+        "load_survey_microdata",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#ppp-api-input-validation",
+      "slug": "ppp-api-input-validation",
+      "status": "done",
+      "summary": "API PPP parameter validation refactor",
+      "tags": [],
+      "title": "API PPP parameter validation refactor",
+      "top_keywords": [
+        "parameter handling",
+        "ppp",
+        "parameter",
+        "refactor",
+        "api",
+        "validation",
+        "feature",
+        "milestone",
+        "phase",
+        "handling"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#ppp-edge-case-test-coverage",
+      "slug": "ppp-edge-case-test-coverage",
+      "status": "done",
+      "summary": "PPP edge-case test coverage",
+      "tags": [],
+      "title": "PPP edge-case test coverage",
+      "top_keywords": [
+        "parameter handling",
+        "ppp",
+        "edge-case",
+        "test",
+        "coverage",
+        "feature",
+        "milestone",
+        "phase",
+        "parameter",
+        "handling"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#obs-share-pop-share",
+      "slug": "obs-share-pop-share",
+      "status": "done",
+      "summary": "obs_share and pop_share measures",
+      "tags": [],
+      "title": "obs_share and pop_share measures",
+      "top_keywords": [
+        "cell share measures",
+        "measures",
+        "obs_share",
+        "pop_share",
+        "feature",
+        "milestone",
+        "phase",
+        "cell",
+        "share"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#pop-share-threshold-suppression",
+      "slug": "pop-share-threshold-suppression",
+      "status": "done",
+      "summary": "pop_share_threshold parameter and cell suppression logic",
+      "tags": [],
+      "title": "pop_share_threshold parameter and cell suppression logic",
+      "top_keywords": [
+        "population share threshold",
+        "based suppression",
+        "suppression",
+        "pop_share_threshold",
+        "parameter",
+        "cell",
+        "logic",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#api-threshold-validation",
+      "slug": "api-threshold-validation",
+      "status": "done",
+      "summary": "API validation and plumber endpoint integration",
+      "tags": [],
+      "title": "API validation and plumber endpoint integration",
+      "top_keywords": [
+        "population share threshold",
+        "based suppression",
+        "api",
+        "validation",
+        "plumber",
+        "endpoint",
+        "integration",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    }
+  ],
+  "entity_count": 109,
+  "generated": "2026-08-27",
+  "schema_version": "0.2.0",
+  "topic_count": 3,
+  "topics": [
+    {
+      "entity_count": 59,
+      "entity_paths": [
+        ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
+        ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
+        ".cg-docs/brainstorms/2026-03-17-multi-release-manifest-architecture.md",
+        ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
+        ".cg-docs/brainstorms/2026-04-03-manifest-generation-version-partition.md",
+        ".cg-docs/brainstorms/2026-04-07-computation-engine-design.md",
+        ".cg-docs/brainstorms/2026-04-16-dimension-prefilter-partial-match.md",
+        ".cg-docs/brainstorms/2026-04-27-table-maker-input-parameters.md",
+        ".cg-docs/brainstorms/2026-04-28-orchestration-benchmark.md",
+        ".cg-docs/brainstorms/2026-04-29-arrow-vs-collapse-benchmark.md",
+        ".cg-docs/brainstorms/2026-05-08-api-service-architecture.md",
+        ".cg-docs/brainstorms/2026-05-20-load-surveys-column-pruning.md",
+        ".cg-docs/brainstorms/2026-05-21-remove-redundant-welfare-sort.md",
+        ".cg-docs/brainstorms/2026-06-01-cell-share-measures.md",
+        ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
+        ".cg-docs/brainstorms/2026-07-02-pop-share-threshold-always-active.md",
+        ".cg-docs/brainstorms/2026-07-31-api-deployment-documentation.md",
+        ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md",
+        ".cg-docs/brainstorms/2026-07-31-survey-specific-variable-filtering.md",
+        ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md",
+        ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
+        ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
+        ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
+        ".cg-docs/plans/2026-04-07-computation-engine.md",
+        ".cg-docs/plans/2026-04-28-orchestration-benchmark.md",
+        ".cg-docs/plans/2026-04-28-table-maker-approach-b-refactor.md",
+        ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
+        ".cg-docs/plans/2026-05-08-api-service-plumber.md",
+        ".cg-docs/plans/2026-05-11-api-service-plumber-v2.md",
+        ".cg-docs/plans/2026-05-20-load-surveys-column-pruning.md",
+        ".cg-docs/plans/2026-05-29-ppp-default-refactor.md",
+        ".cg-docs/plans/2026-06-01-cell-share-measures.md",
+        ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+        ".cg-docs/plans/2026-06-23-stage1-surveys-ui.md",
+        ".cg-docs/plans/2026-06-30-table-maker-filter-base-loading-path.md",
+        ".cg-docs/plans/2026-07-24-exported-functions-test-sync.md",
+        ".cg-docs/plans/2026-07-31-api-deployment-readme.md",
+        ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md",
+        ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+        ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
+        ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
+        ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
+        ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-impl-review.md",
+        ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-review.md",
+        ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md",
+        ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
+        ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
+        ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
+        ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
+        ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
+        ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
+        ".cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md",
+        ".cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md",
+        ".cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md",
+        ".cg-docs/solutions/performance-issues/2026-04-30-arrow-io-and-compute-lessons.md",
+        ".cg-docs/solutions/performance-issues/2026-05-21-load-surveys-column-pruning-implementation.md",
+        ".cg-docs/solutions/testing-patterns/2026-04-14-partial-miss-regression-test-batch-loaders.md",
+        ".cg-docs/solutions/testing-patterns/2026-05-21-testing-pre-sort-contracts.md",
+        ".cg-docs/solutions/testing-patterns/2026-06-01-adding-measures-registry-pattern.md"
+      ],
+      "keywords": [
+        "table_maker()",
+        "pip_id",
+        "version"
+      ],
+      "label": "Table_Maker() / Pip_Id / Version",
+      "slug": "table-maker-pip-id-version"
+    },
+    {
+      "entity_count": 21,
+      "entity_paths": [
+        "roadmap.json#version-partition-key",
+        "roadmap.json#manifest-generation-partition-filter",
+        "roadmap.json#measure-registry",
+        "roadmap.json#family-compute-functions",
+        "roadmap.json#computation-engine-family-orchestrator",
+        "roadmap.json#dimension-disaggregation",
+        "roadmap.json#load-surveys-data-loading",
+        "roadmap.json#arrow-vs-collapse-benchmark",
+        "roadmap.json#parquet-validation-schema-data",
+        "roadmap.json#unit-test-coverage",
+        "roadmap.json#documentation-api-dev",
+        "roadmap.json#plumber-table-endpoint",
+        "roadmap.json#plumber-lookup-endpoint",
+        "roadmap.json#error-handling-logging",
+        "roadmap.json#description-endpoint-cache-key-generation",
+        "roadmap.json#description-endpoint-dynamic-table-description",
+        "roadmap.json#ppp-load-data-resolution",
+        "roadmap.json#ppp-api-input-validation",
+        "roadmap.json#ppp-edge-case-test-coverage",
+        "roadmap.json#pop-share-threshold-suppression",
+        "roadmap.json#api-threshold-validation"
+      ],
+      "keywords": [
+        "service layer",
+        "computation engine",
+        "endpoint"
+      ],
+      "label": "Service Layer / Computation Engine / Endpoint",
+      "slug": "service-layer-computation-engine-endpoint"
+    },
+    {
+      "entity_count": 5,
+      "entity_paths": [
+        ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
+        ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md"
+      ],
+      "keywords": [
+        "description_builder.r",
+        "null",
+        "test"
+      ],
+      "label": "Description_Builder.R / Null / Test",
+      "slug": "description-builder-r-null-test"
+    }
+  ]
+}

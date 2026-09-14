@@ -1,0 +1,10 @@
+{
+    "schemaVersion":  1,
+    "source":  ".kilo/instructions",
+    "files":  {
+                  "powershell.instructions.md":  "2e6f63f7585e6af368d77876419d934b2abad2b95df079277616cf5911db0bfc",
+                  "r.instructions.md":  "f2722788ca70581828997daebbd024f2ea2924ebc66cfa789da66bc9db8e0d62",
+                  "stata.instructions.md":  "854e38351f1504b8354c8b5aacae9d0cacb41c536321efe0095fff5ca8a6d5ae",
+                  "python.instructions.md":  "4bcb147fc750c1b66b012c24b53cc8b1418c5d68bd61f5a7db510ecd9bd3092a"
+              }
+}

@@ -1,0 +1,16 @@
+{
+    "schemaVersion":  1,
+    "source":  ".kilo/shared",
+    "files":  {
+                  "target-mapping.json":  "eeb80c3eb527219411aaf97a6bc753bbc00a868db72897cf7f1846ac8444b9d4",
+                  "retrieval-backends.json":  "387655ef361c2f5b4b859b566172ff5e47ddcd10707c8b307dc8a3f1f37470b6",
+                  "context-loading.contract.md":  "1a2bedd59b8d1de9d1354accedf434db2b6572fb377b034ade64a894ffc4cb62",
+                  "model-advisory.contract.md":  "1ebc3ace65f3d43ed360415227ec8b3420dd299564d32d04ec3c2eca556c4cca",
+                  "snapshot-research-modes.json":  "300d5661936fd88a813d6a637e6fda371c974e463c9f26e73063ea9cad966d57",
+                  "review-routing.contract.md":  "a69a44806364bd7a495e922e881534dfa4e71effac8004be3933994278251dbc",
+                  "model-advisory-examples.json":  "5eb6e2de19b8e1c69815f14f0b9dfc3659028c79bafce183184a756fa00c2b5a",
+                  "goal-execution.contract.md":  "2be0c6735294c8621fbd99254947636d263bf09f2161883ffe999a27d2c96581",
+                  "artifact-view.contract.md":  "c3452666eca6f6f9bc49bcfa5500478a59cd5337b86d1e6140c88fc178dd98f2",
+                  "active-state.contract.md":  "ca8559dcfdb690669e1688d82edb0d41eed6d912567e20ace9ddf4e4143297a1"
+              }
+}
