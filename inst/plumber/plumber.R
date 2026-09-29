@@ -236,8 +236,8 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 #* Supplying BOTH `description_metadata` and table parameters returns HTTP 400.
 #*
 #* Optional `format` field in the JSON body controls the response format:
-#* `"markdown"` (default; unchanged behavior, `Content-Type: text/plain`) or
-#* `"html"` (inline-styled HTML, `Content-Type: text/html; charset=utf-8`).
+#* `"html"` (default; inline-styled HTML, `Content-Type: text/html; charset=utf-8`)
+#* or `"markdown"` (plain Markdown, `Content-Type: text/plain`).
 #* Any other value returns HTTP 400.
 #*
 #* @param body:object Request body (JSON object)
@@ -276,7 +276,7 @@ function(req, body = NULL, res) {
     return(error_json(check$errors, 400L, res))
   }
 
-  format <- body$format %||% "markdown"
+  format <- body$format %||% "html"
   format <- tolower(trimws(as.character(format)[1]))
   has_metadata <- identical(check$mode, "metadata")
 
@@ -284,7 +284,8 @@ function(req, body = NULL, res) {
   # `@serializer text` default on the installed plumber version (>= 1.1.0) --
   # see the Step 4 spike in .cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md
   # and the regression guard in tests/testthat/test-api-description.R.
-  # format == "markdown" leaves Content-Type as text/plain (unchanged behavior).
+  # format == "markdown" leaves Content-Type as text/plain; format defaults to
+  # "html" (Content-Type: text/html; charset=utf-8) when omitted.
   render_description <- function(model) {
     if (identical(format, "html")) {
       piptm::render_description_html(model)

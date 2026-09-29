@@ -135,7 +135,29 @@ if (!nzchar(.desc_plumber_path) || !file.exists(.desc_plumber_path)) {
 # Block 1: Fast path returns Markdown
 # =============================================================================
 
-test_that("POST /description fast path returns Markdown (200)", {
+test_that("POST /description fast path returns Markdown (200) when format=markdown", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+
+  meta <- .make_desc_metadata()
+  res  <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description",
+    body = list(
+      format = "markdown",
+      description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE))
+    )
+  ))
+
+  expect_equal(res$status, 200L)
+  expect_identical(res$headers[["Content-Type"]], "text/plain; charset=UTF-8")
+  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
+  expect_type(body, "character")
+  expect_true(grepl("## Table Overview", body, fixed = TRUE))
+  expect_true(grepl("## Cell Definition", body, fixed = TRUE))
+  expect_true(grepl("The Mean of Welfare", body, fixed = TRUE))
+})
+
+test_that("POST /description fast path defaults to HTML when format is omitted", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
@@ -146,11 +168,12 @@ test_that("POST /description fast path returns Markdown (200)", {
   ))
 
   expect_equal(res$status, 200L)
+  expect_identical(res$headers[["Content-Type"]], "text/html; charset=utf-8")
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
   expect_type(body, "character")
-  expect_true(grepl("## Table Overview", body, fixed = TRUE))
-  expect_true(grepl("## Cell Definition", body, fixed = TRUE))
-  expect_true(grepl("The Mean of Welfare", body, fixed = TRUE))
+  expect_true(grepl("<h2", body, fixed = TRUE))
+  expect_true(grepl("Table Overview", body, fixed = TRUE))
+  expect_false(grepl("## Table Overview", body, fixed = TRUE))
 })
 
 test_that("POST /description fast path returns HTML when format=html in body", {
