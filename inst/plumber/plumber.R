@@ -559,7 +559,7 @@ function(pip_id = NULL, release = NULL, res) {
     } else {
       mf <- piptm::piptm_manifest(rel)
       requested_ids <- unique(as.character(unlist(pip_id, use.names = FALSE)))
-      matched <- mf[pip_id %chin% requested_ids]
+      matched <- mf[data.table::`%chin%`(pip_id, requested_ids)]
 
       if (nrow(matched) == 0L) {
         result <- list(
@@ -633,7 +633,7 @@ function(pip_id = NULL, release = NULL, res) {
     } else {
       mf <- piptm::piptm_manifest(rel)
       requested_ids <- unique(as.character(unlist(pip_id, use.names = FALSE)))
-      matched <- mf[pip_id %chin% requested_ids]
+      matched <- mf[data.table::`%chin%`(pip_id, requested_ids)]
 
       if (nrow(matched) == 0L) {
         result <- list(

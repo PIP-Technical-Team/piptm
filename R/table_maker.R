@@ -1,4 +1,4 @@
-#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff
+#' @importFrom data.table is.data.table data.table setcolorder set fsetdiff %chin%
 #' @importFrom cli cli_abort cli_warn
 #' @importFrom collapse GRP
 NULL
