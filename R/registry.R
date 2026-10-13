@@ -79,28 +79,28 @@ NULL
     ))
   }
 
-  inline_categories <- spec_var$categories
-  if (!is.null(inline_categories) && length(inline_categories) > 0L) {
-    categories <- lapply(inline_categories, function(entry) {
-      list(
-        code  = as.character(entry$code),
-        label = as.character(entry$label)
-      )
-    })
-
-    return(list(
-      varname      = varname,
-      ui_label     = as.character(spec_var$ui_label),
-      tm_type      = "categorical",
-      roles        = as.character(unlist(spec_var$roles, use.names = FALSE)),
-      stat_groups  = stat_groups,
-      n_categories = as.integer(length(categories)),
-      categories   = categories
-    ))
-  }
-
   pip_var <- pip_vars[[varname]]
+  inline_categories <- spec_var$categories
   if (is.null(pip_var)) {
+    if (!is.null(inline_categories) && length(inline_categories) > 0L) {
+      categories <- lapply(inline_categories, function(entry) {
+        list(
+          code  = as.character(entry$code),
+          label = as.character(entry$label)
+        )
+      })
+
+      return(list(
+        varname      = varname,
+        ui_label     = as.character(spec_var$ui_label),
+        tm_type      = "categorical",
+        roles        = as.character(unlist(spec_var$roles, use.names = FALSE)),
+        stat_groups  = stat_groups,
+        n_categories = as.integer(length(categories)),
+        categories   = categories
+      ))
+    }
+
     cli::cli_warn(
       c(
         "Variable {.val {varname}} is in tm_variable_spec.yaml but absent in pipdata recode spec.",
@@ -125,7 +125,7 @@ if (pip_type == "numeric") {
 } else if (pip_type == "factor") {
   if (recode_type == "binary_map") {
     tm_type <- "binary"
-  } else if (recode_type == "haven_labels" | recode_type == "binned_from_continuous") {
+  } else if (recode_type %in% c("haven_labels", "binned_from_continuous", "quantile_from_continuous")) {
     tm_type <- "categorical"
   }
 }
@@ -138,7 +138,9 @@ if (is.null(tm_type)) {
       "*" = "{.val {'numeric'}} + {.val {'range_clamp'}} -> {.val {'continuous'}}",
       "*" = "{.val {'numeric'}} + {.val {'indicator'}} -> {.val {'binary'}}",
       "*" = "{.val {'factor'}} + {.val {'binary_map'}} -> {.val {'binary'}}",
-      "*" = "{.val {'factor'}} + {.val {'haven_labels'}} -> {.val {'categorical'}}"
+      "*" = "{.val {'factor'}} + {.val {'haven_labels'}} -> {.val {'categorical'}}",
+      "*" = "{.val {'factor'}} + {.val {'binned_from_continuous'}} -> {.val {'categorical'}}",
+      "*" = "{.val {'factor'}} + {.val {'quantile_from_continuous'}} -> {.val {'categorical'}}"
     )
   )
 }
