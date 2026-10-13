@@ -259,7 +259,12 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
       }
       selected_labels <- vapply(selected_codes, function(code) {
         code_char <- as.character(code)
-        subcat_map[[code_char]] %||% code_char
+        resolved <- subcat_map[code_char]
+        if (length(resolved) == 0L || is.na(resolved[[1L]]) || !nzchar(resolved[[1L]])) {
+          code_char
+        } else {
+          unname(resolved[[1L]])
+        }
       }, character(1))
       if (length(selected_labels) == 0L) {
         cli_abort(
@@ -1005,4 +1010,3 @@ table_maker <- function(pip_id        = NULL,
     return(result[])
   }
 }
-
