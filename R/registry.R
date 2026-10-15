@@ -15,6 +15,40 @@ NULL
 .SPECIAL_CASE_VARNAMES <- c("welfare", "pov_status", "weight")
 
 
+#' Convert labels to sentence case
+#'
+#' First character upper case, all remaining characters lower case.
+#'
+#' @param x Character vector (or `NULL`).
+#' @return Character vector of the same length; `NA` and `NULL` preserved.
+#' @keywords internal
+.sentence_case <- function(x) {
+  if (is.null(x) || length(x) == 0L) return(x)
+  x   <- trimws(as.character(x))
+  out <- paste0(toupper(substr(x, 1L, 1L)), tolower(substring(x, 2L)))
+  out[is.na(x)] <- NA_character_
+  out
+}
+
+
+#' Recursively sentence-case every `label` field in a nested list
+#'
+#' @param x Nested list.
+#' @return `x` with all character `label` elements sentence-cased.
+#' @keywords internal
+.sentence_case_labels <- function(x) {
+  if (!is.list(x)) return(x)
+  for (nm in seq_along(x)) {
+    if (identical(names(x)[nm], "label") && is.character(x[[nm]])) {
+      x[[nm]] <- .sentence_case(x[[nm]])
+    } else if (is.list(x[[nm]])) {
+      x[[nm]] <- .sentence_case_labels(x[[nm]])
+    }
+  }
+  x
+}
+
+
 #' Convert a named mapping list to code-label category entries
 #'
 #' @param mapping Named list where names are codes and values are labels.
@@ -150,6 +184,33 @@ if (is.null(tm_type)) {
     categories <- .mapping_to_categories(pip_var$mapping)
     if (!is.null(categories)) {
       n_categories <- as.integer(length(categories))
+
+      # pipdata labels: harmonise casing
+      categories <- lapply(categories, function(cat) {
+        cat$label <- .sentence_case(cat$label)
+        cat
+      })
+
+      # YAML labels take precedence (matched by code, written as-is)
+      if (length(inline_categories) > 0L) {
+        yaml_labels <- stats::setNames(
+          vapply(inline_categories, function(e) as.character(e$label), ""),
+          vapply(inline_categories, function(e) as.character(e$code), "")
+        )
+        pip_codes <- vapply(categories, function(cat) cat$code, "")
+        unmatched <- setdiff(names(yaml_labels), pip_codes)
+        if (length(unmatched) > 0L) {
+          cli::cli_warn(
+            "YAML categories for {.val {varname}} have code(s) absent in pipdata: {.val {unmatched}}."
+          )
+        }
+        categories <- lapply(categories, function(cat) {
+          if (cat$code %in% names(yaml_labels)) {
+            cat$label <- unname(yaml_labels[[cat$code]])
+          }
+          cat
+        })
+      }
     }
   }
 
@@ -297,6 +358,14 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   names(registry) <- varnames_to_build
   registry        <- Filter(Negate(is.null), registry)
 
+  # Harmonise label casing (sources mix styles: yaml, pipdata mappings)
+  registry <- lapply(registry, function(entry) {
+    # Category labels are cased in .build_registry_entry() (pipdata only;
+    # YAML-provided labels are kept as written).
+    entry$ui_label <- .sentence_case(entry$ui_label)
+    entry
+  })
+
     # --- Load measure spec and embed into registry ----------------------------
   measure_spec_path <- system.file("extdata", "tm_measure_spec.yaml", package = "piptm")
   if (!nzchar(measure_spec_path) || !file.exists(measure_spec_path)) {
@@ -309,7 +378,7 @@ build_variable_registry <- function(release, registry_dir = NULL, verbose = TRUE
   } else {
     measure_spec <- yaml::read_yaml(measure_spec_path)
     if (!is.null(measure_spec$stat_groups) && length(measure_spec$stat_groups) > 0L) {
-      registry[["measure_spec"]] <- measure_spec$stat_groups
+      registry[["measure_spec"]] <- .sentence_case_labels(measure_spec$stat_groups)
     } else {
       cli::cli_warn(
         c(

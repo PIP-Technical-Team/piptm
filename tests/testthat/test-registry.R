@@ -84,3 +84,41 @@ test_that("registry view accessors exist and error on missing release", {
   expect_error(piptm::piptm_filter_categories("BOGUS_RELEASE"), "No variable registry found")
   expect_error(piptm::piptm_layout_covariates("BOGUS_RELEASE"), "No variable registry found")
 })
+
+test_that(".sentence_case uppercases first letter and lowercases the rest", {
+  ns <- asNamespace("piptm")
+  f <- get(".sentence_case", envir = ns)
+  expect_equal(f(c("male", "Paid Employee", "  YES ")), c("Male", "Paid employee", "Yes"))
+  expect_true(is.na(f(NA_character_)))
+  expect_null(f(NULL))
+})
+
+test_that("YAML category labels override pipdata labels by code; pipdata labels are cased", {
+  ns <- asNamespace("piptm")
+  build <- get(".build_registry_entry", envir = ns)
+  pip_vars <- list(
+    wquintile = list(
+      type = "factor", recode_type = "quantile_from_continuous",
+      mapping = list(`1` = "quintile1", `2` = "quintile2")
+    ),
+    gender = list(
+      type = "factor", recode_type = "binary_map",
+      mapping = list(`0` = "female", `1` = "male")
+    )
+  )
+  spec_q <- list(
+    ui_label = "Welfare quintile", roles = list("filter"),
+    categories = list(
+      list(code = "1", label = "Q1 (bottom 20%)"),
+      list(code = "2", label = "Q2")
+    )
+  )
+  spec_g <- list(ui_label = "Gender", roles = list("filter"))
+
+  q <- build("wquintile", spec_q, pip_vars)
+  expect_equal(vapply(q$categories, `[[`, "", "label"), c("Q1 (bottom 20%)", "Q2"))
+  expect_equal(vapply(q$categories, `[[`, "", "code"), c("1", "2"))
+
+  g <- build("gender", spec_g, pip_vars)
+  expect_equal(vapply(g$categories, `[[`, "", "label"), c("Female", "Male"))
+})
