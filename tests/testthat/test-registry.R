@@ -122,3 +122,13 @@ test_that("YAML category labels override pipdata labels by code; pipdata labels 
   g <- build("gender", spec_g, pip_vars)
   expect_equal(vapply(g$categories, `[[`, "", "label"), c("Female", "Male"))
 })
+
+test_that("numeric indicator variables get standard No/Yes categories", {
+  build <- get(".build_registry_entry", envir = asNamespace("piptm"))
+  pip_vars <- list(employed = list(type = "numeric", recode_type = "indicator", mapping = NULL))
+  e <- build("employed", list(ui_label = "Employed", roles = list("filter")), pip_vars)
+  expect_equal(vapply(e$categories, `[[`, "", "code"), c("0", "1"))
+  expect_equal(vapply(e$categories, `[[`, "", "label"), c("No", "Yes"))
+  expect_identical(e$n_categories, 2L)
+  expect_equal(e$tm_type, "binary")
+})

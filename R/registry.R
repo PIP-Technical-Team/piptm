@@ -182,6 +182,10 @@ if (is.null(tm_type)) {
   n_categories <- NULL
   if (!identical(tm_type, "continuous")) {
     categories <- .mapping_to_categories(pip_var$mapping)
+    # Numeric 0/1 indicators carry no pipdata mapping: use standard No/Yes.
+    if (is.null(categories) && identical(recode_type, "indicator")) {
+      categories <- .mapping_to_categories(list(`0` = "No", `1` = "Yes"))
+    }
     if (!is.null(categories)) {
       n_categories <- as.integer(length(categories))
 
