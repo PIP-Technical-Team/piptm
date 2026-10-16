@@ -220,6 +220,90 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   )
 }
 
+# -- POST /table/download ------------------------------------------------------
+
+#* Convert an already-computed `/table` result into a CSV or RDS download.
+#*
+#* Stateless: no recomputation, no Arrow access. The client sends back the
+#* `data` rows it received from `/table`.
+#*
+#* Request body (JSON): `{"format": "csv" | "rds", "data": [ {row}, ... ]}`.
+#* Errors are returned as the standard JSON error envelope (400 / 413).
+#*
+#* @param body:object Request body (JSON object)
+#* @parser text
+#* @serializer null
+#* @post /table/download
+function(req, body = NULL, res) {
+  err <- function(msg, code) {
+    res$setHeader("Content-Type", "application/json")
+    charToRaw(as.character(error_json(msg, code, res)))
+  }
+
+  max_bytes <- 25 * 1024 * 1024
+  clen <- suppressWarnings(as.numeric(req$CONTENT_LENGTH))
+  if (length(clen) == 1L && !is.na(clen) && clen > max_bytes) {
+    return(err("Request body too large (max 25 MB).", 413L))
+  }
+
+  raw_body <- tryCatch(
+    if (!is.null(body) && nzchar(body)) {
+      body
+    } else if (!is.null(req$postBody)) {
+      req$postBody
+    } else {
+      req$rook.input$read_lines()
+    },
+    error = function(e) NULL
+  )
+  if (!is.null(raw_body) && nzchar(raw_body) &&
+      nchar(raw_body, type = "bytes") > max_bytes) {
+    return(err("Request body too large (max 25 MB).", 413L))
+  }
+
+  body <- if (is.null(raw_body) || !nzchar(raw_body)) {
+    NULL
+  } else {
+    tryCatch(jsonlite::fromJSON(raw_body), error = function(e) NULL)
+  }
+  if (is.null(body) || !is.list(body) || length(body) == 0L) {
+    return(err("Request body must be a non-empty JSON object.", 400L))
+  }
+
+  fmt <- tolower(trimws(as.character(body$format %||% "csv")[1L]))
+  if (is.na(fmt) || !fmt %in% c("csv", "rds")) {
+    return(err("`format` must be one of: csv, rds.", 400L))
+  }
+
+  tbl <- tryCatch(
+    data.table::as.data.table(
+      if (is.data.frame(body$data)) body$data else data.table::rbindlist(body$data, fill = TRUE)
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(tbl) || nrow(tbl) == 0L) {
+    return(err("`data` must be a non-empty array of row objects.", 400L))
+  }
+
+  for (col in intersect(c("value", "population", "poverty_line"), names(tbl))) {
+    data.table::set(tbl, j = col, value = suppressWarnings(as.numeric(tbl[[col]])))
+  }
+
+  tmp <- tempfile(fileext = paste0(".", fmt))
+  on.exit(unlink(tmp), add = TRUE)
+  if (identical(fmt, "csv")) {
+    data.table::fwrite(tbl, tmp)
+    ctype <- "text/csv; charset=utf-8"
+  } else {
+    saveRDS(as.data.frame(tbl), tmp)
+    ctype <- "application/octet-stream"
+  }
+
+  res$setHeader("Content-Type", ctype)
+  res$setHeader("Content-Disposition", sprintf('attachment; filename="table.%s"', fmt))
+  readBin(tmp, "raw", n = file.size(tmp))
+}
+
 # ── POST /description ─────────────────────────────────────────────────────────
 
 #* Render a natural-language description of a table from metadata (fast path)
