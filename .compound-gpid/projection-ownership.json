@@ -1,0 +1,6 @@
+{
+  "entries": {},
+  "generated": "2026-09-30T17:21:53-04:00@89b2730495b7",
+  "note": "Mutable projection ownership state: per-file expected/current checksums, preservation state, and stale-deletion authorization only. Drift here never invalidates selection.",
+  "schemaVersion": 1
+}

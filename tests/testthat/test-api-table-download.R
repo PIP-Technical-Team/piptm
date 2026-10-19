@@ -21,6 +21,7 @@ if (!nzchar(.dl_path) || !file.exists(.dl_path)) {
   req$QUERY_STRING   <- ""
   req$HTTP_ACCEPT    <- "*/*"
   req$CONTENT_TYPE   <- "application/json"
+  req$HTTP_CONTENT_TYPE <- "application/json"
   req$CONTENT_LENGTH <- as.character(length(raw_body))
   req$HTTP_HOST      <- "localhost"
   req$rook.input     <- list(
