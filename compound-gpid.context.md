@@ -145,3 +145,9 @@ See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-v
 - A1 Current (all cols): 2.370s
 - A2 Column-pruned: 1.675s — **29% faster**
 - A3 Arrow push-down (genuine, 2 scans): TBD — script updated, not yet re-run
+
+---
+
+## Workspace Notes
+
+- **pipdata**: The pipdata package is a data preparation and validation pipeline that transforms raw household survey data from Datalibweb (DLW) into cleaned, versioned, and analysis-ready datasets. It also prepares inputs for table maker project: creates arrow files, manifest documents and variable specifications.

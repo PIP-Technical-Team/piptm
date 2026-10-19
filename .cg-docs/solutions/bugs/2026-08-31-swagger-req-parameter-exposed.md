@@ -184,4 +184,4 @@ This is a **documentation contract bug** — the implementation works correctly,
 4. **Documentation-driven bugs are silent**: Unlike runtime bugs that cause test failures or exceptions, documentation bugs only affect users interacting with Swagger UI. They require explicit schema inspection tests to catch.
 
 ## Related
-None.
+- `.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md` — same root cause (missing `@param` annotation) recurred on `/table/download`; confirms this is a repeating pattern worth a standing checklist item.

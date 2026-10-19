@@ -131,13 +131,14 @@ Rscript inst/plumber/run.R
 | `/covariates` | GET | Layout covariates for table slicing |
 | `/lookup` | GET | Resolve triplets to `pip_id` |
 | `/table` | GET, POST | Compute table output |
+| `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
 | `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
 | `/session/surveys` | POST | Create a session and store a survey selection |
 | `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 
-All endpoints return a common envelope:
+Most endpoints return a common envelope:
 
 ```json
 {
@@ -152,8 +153,14 @@ All endpoints return a common envelope:
 Error status conventions:
 
 - `400`: request validation failures
+- `413`: payload too large (`POST /table/download`, body > 25 MB)
 - `422`: domain/processing failures (including unknown release)
 - `500`: uncaught internal errors
+
+Success-response exceptions:
+
+- `POST /description`: returns rendered Markdown/HTML text, not the JSON envelope.
+- `POST /table/download`: returns file bytes (`text/csv` or `application/octet-stream`), not the JSON envelope.
 
 ## Insomnia collection
 

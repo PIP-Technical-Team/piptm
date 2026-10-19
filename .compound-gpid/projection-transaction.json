@@ -1,0 +1,6 @@
+{
+  "note": "Durable per-root publication journal used to recover interrupted projection publication.",
+  "schemaVersion": 1,
+  "state": "empty",
+  "transactionId": null
+}

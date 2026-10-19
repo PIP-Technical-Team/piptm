@@ -1,5 +1,5 @@
 {
-  "edge_count": 35,
+  "edge_count": 49,
   "edges": [
     {
       "edge_type": "decided_from",
@@ -65,6 +65,30 @@
       "edge_type": "decided_from",
       "source": ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
       "target": ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+      "target": ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+      "target": ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md",
+      "target": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "target": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
       "target_missing": false
     },
     {
@@ -152,6 +176,30 @@
       "target_missing": false
     },
     {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-08-31-api-contract-openapi-review.md",
+      "target": ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
+      "target": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
+      "target": ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
+      "target": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "target_missing": false
+    },
+    {
       "edge_type": "references",
       "source": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
       "target": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
@@ -200,6 +248,24 @@
       "target_missing": false
     },
     {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
+      "target": ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
+      "target": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
+      "target": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "target_missing": false
+    },
+    {
       "edge_type": "implements",
       "source": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
       "target": "roadmap.json#arrow-vs-collapse-benchmark",
@@ -209,6 +275,24 @@
       "edge_type": "implements",
       "source": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
       "target": "roadmap.json#pop-share-threshold-suppression",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+      "target": "roadmap.json#api-contract-openapi",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+      "target": "roadmap.json#html-description-renderer-wording-quality-improvements",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "target": "roadmap.json#structured-cell-definition-table-for-share-measures",
       "target_missing": false
     }
   ],
@@ -774,6 +858,94 @@
         "description_renderer.r",
         "/table?include_metadata=true",
         "include_metadata = false"
+      ]
+    },
+    {
+      "date": "2026-08-31",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
+      "slug": "2026-08-31-api-contract-openapi",
+      "status": "decided",
+      "summary": "The Table Maker API (`piptm`) has 14+ Plumber endpoints implemented in `inst/plumber/plumber.R`. A separate UI/IT team will consume this API to build the PIP platform frontend. The team needs clear documentation to understand all available endpoints, their inputs and outputs, and how each endpoint maps to the UI steps and components.",
+      "tags": [
+        "api",
+        "openapi",
+        "documentation",
+        "handoff",
+        "phase-4",
+        "markdown"
+      ],
+      "title": "Table Maker API Contract — Markdown with OpenAPI-Style Schemas",
+      "top_keywords": [
+        "docs/api-contract.md",
+        "style schemas",
+        "openapi",
+        "markdown",
+        "openapi.yaml",
+        "api-contract.md",
+        "approach",
+        "markdown contract",
+        "contract",
+        "api"
+      ]
+    },
+    {
+      "date": "2026-09-08",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
+      "slug": "2026-09-08-description-html-renderer-and-wording",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "description-endpoint",
+        "html-renderer",
+        "api",
+        "table-maker",
+        "wording",
+        "ux"
+      ],
+      "title": "HTML Description Renderer + Wording Quality Improvements",
+      "top_keywords": [
+        "/description",
+        "description_renderer_html.r",
+        "approach",
+        "htmltools",
+        "build_description_model()",
+        "table_maker()",
+        "html",
+        "renderer",
+        "wording",
+        "description_renderer.r"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
+      "slug": "2026-09-14-shares-cell-definition-structured-table",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "description-endpoint",
+        "cell-definition",
+        "shares",
+        "table-maker",
+        "api",
+        "ux",
+        "accuracy"
+      ],
+      "title": "Structured Cell Definition table for share measures",
+      "top_keywords": [
+        "measure_interpretation",
+        "target_within_group_share",
+        "pop_share",
+        "cell_definition",
+        "2026-09-08-description-html-renderer-and-wording.md",
+        "build_cell_definition()",
+        "description_renderer_html.r",
+        "prose",
+        "shares_table",
+        "target_survey_share"
       ]
     },
     {
@@ -1458,6 +1630,174 @@
       ]
     },
     {
+      "date": "2026-08-31",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+      "slug": "2026-08-31-api-contract-openapi",
+      "status": "completed",
+      "summary": "Create a single Markdown file (`docs/api-contract.md`) documenting all 15 Table Maker API endpoints with OpenAPI-style schemas, inline UI mapping, structured response envelopes, error handling, and input validation rules. This serves as the internal handoff document for the UI/IT team to build against the existing API.",
+      "tags": [
+        "api",
+        "openapi",
+        "documentation",
+        "handoff",
+        "phase-4",
+        "markdown"
+      ],
+      "title": "API Contract — Markdown with OpenAPI-Style Schemas",
+      "top_keywords": [
+        "/table",
+        "docs/api-contract.md",
+        "/categories",
+        "/covariates",
+        "/lookup",
+        "/description",
+        "api",
+        "markdown",
+        "implementation",
+        "document"
+      ]
+    },
+    {
+      "date": "2026-09-08",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+      "slug": "2026-09-08-description-html-renderer-and-wording",
+      "status": "completed",
+      "summary": "Add an HTML rendering option to the `/description` endpoint (inline styles only, all dynamic content escaped), selectable via a `format` field in the JSON request body that defaults to the current Markdown behavior; and fix awkward auto-generated sentence wording in the description model's templates before building the HTML renderer, so neither output format carries forward known poor phrasing.",
+      "tags": [
+        "description-endpoint",
+        "html-renderer",
+        "api",
+        "table-maker",
+        "wording",
+        "ux"
+      ],
+      "title": "HTML Description Renderer + Wording Quality Improvements",
+      "top_keywords": [
+        "format",
+        "description_builder.r",
+        "/description",
+        "test-api-description.r",
+        "test-description-helpers.r",
+        "content-type",
+        "test scenarios",
+        "description_renderer_html.r",
+        "@serializer text",
+        "description_renderer.r"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-09-14-layout-category-labels.md",
+      "slug": "2026-09-14-layout-category-labels",
+      "status": "completed",
+      "summary": "**Outcome**: The description endpoint's layout section shows both the count and the category labels for each \"by\" dimension. Example: `gender` currently renders as `2` under Categories; after this change it renders as `2: male, female`. `pov_status` renders as `2: poor, non-poor`.",
+      "tags": [],
+      "title": "Add category labels to layout dimensions in description",
+      "top_keywords": [
+        "pov_status",
+        "n_categories",
+        "tests/testthat/test-description-builder-schema-validation.r",
+        ".build_layout_content()",
+        "\"n: label1, label2\"",
+        "\"2: poor, non-poor\"",
+        "test-description-helpers.r",
+        "test-description-builder-schema-validation.r",
+        "piptm_variable_registry",
+        "gender"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-09-14-rework-plain-meaning-wording-shares.md",
+      "slug": "2026-09-14-rework-plain-meaning-wording-shares",
+      "status": "completed",
+      "summary": "Replace the abstract \"this cell\" / \"total weighted survey population\" plain-meaning templates for the three share measures (`pop_share`, `target_within_group_share`, `target_survey_share`) in `build_cell_definition()` with concrete \"Among X, what fraction...\" phrasing built from the actual filter clause, group label, and target-variable label already used elsewhere in the description, while keeping an honest, simple statement for the `pop_share` degenerate case (`by = NULL`).",
+      "tags": [
+        "description-endpoint",
+        "cell-definition",
+        "shares",
+        "wording",
+        "ux"
+      ],
+      "title": "Rework plain-meaning wording for share measures",
+      "top_keywords": [
+        "target_within_group_share",
+        "pop_share",
+        "target_survey_share",
+        "plain_meaning",
+        "population_scope",
+        "by = null",
+        "build_cell_definition()",
+        "docs/description-endpoint-spec.md",
+        "test-cell-definition.r",
+        "measure"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md",
+      "slug": "2026-09-14-shares-cell-definition-structured-table-revised",
+      "status": "completed",
+      "summary": "Replace ambiguous prose for `pop_share`, `target_within_group_share`, and `target_survey_share` in the `/description` endpoint's Cell Definition section with a structured four-column table: Measure, Denominator, Numerator, and Plain meaning. Render the table in Markdown and HTML while preserving existing non-share behavior.",
+      "tags": [
+        "description-endpoint",
+        "cell-definition",
+        "shares",
+        "table-maker",
+        "api",
+        "ux",
+        "accuracy"
+      ],
+      "title": "Structured Cell Definition table for share measures (revised)",
+      "top_keywords": [
+        "docs/description-endpoint-spec.md",
+        "test scenarios",
+        "structured",
+        "test-cell-definition.r",
+        "description-endpoint-spec.md",
+        "base_pop",
+        "tests/testthat/test-cell-definition.r",
+        "compute_shares.r",
+        "devtools::check()",
+        "measure"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "slug": "2026-09-14-shares-cell-definition-structured-table",
+      "status": "active",
+      "summary": "Replace the ambiguous, near-identical prose sentences generated for the three share measures (`pop_share`, `target_within_group_share`, `target_survey_share`) in the `/description` endpoint's Cell Definition section with a structured four-column table (Measure, Denominator, Numerator, Plain meaning), rendered in both Markdown and HTML, while leaving non-share measures and all other description sections unchanged.",
+      "tags": [
+        "description-endpoint",
+        "cell-definition",
+        "shares",
+        "table-maker",
+        "api",
+        "ux",
+        "accuracy"
+      ],
+      "title": "Structured Cell Definition table for share measures",
+      "top_keywords": [
+        "measure_interpretation",
+        "build_cell_definition()",
+        "compute_shares.r",
+        "shares_table",
+        "shares_footer",
+        "base_pop",
+        "by = null",
+        "prose",
+        "pop_share",
+        "full_pop"
+      ]
+    },
+    {
       "date": "",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
@@ -1772,6 +2112,116 @@
       ]
     },
     {
+      "date": "2026-08-31",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-08-31-api-contract-openapi-review.md",
+      "slug": "2026-08-31-api-contract-openapi-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 4 **Findings**: 10 (P0: 0, P1: 0, P2: 6, P3: 4) + 7 advisory",
+      "tags": [],
+      "title": "2026-08-31-api-contract-openapi-review",
+      "top_keywords": [
+        "cg-code-quality",
+        "api-contract",
+        "api-contract.md",
+        "response",
+        "missing",
+        "/table",
+        "shared schemas",
+        "readme.md",
+        "session",
+        "documented"
+      ]
+    },
+    {
+      "date": "2026-09-10",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
+      "slug": "2026-09-08-description-html-renderer-and-wording-review",
+      "status": "",
+      "summary": "**Review mode**: standard (explicit user request; diff also matches the `architecture-risk` auto-routing trigger — new public API-contract field on `/description` — kept at standard per explicit-mode precedence, noted here as focus emphasis for `@cg-architecture`) **Files reviewed**: 9 (`R/description_builder.R`, `R/description_renderer_html.R`, `R/description_renderer.R`, `inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `NAMESPACE`, `tests/testthat/test-api-description.R`, `tests/testthat/test-cell-definition.R`, `tests/testthat/test-description-builder.R`, `tests/testthat/test-description-renderer-html.R`) **Scope**: `git diff 391502e^..HEAD` — the 4 commits implementing `.cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md` **Findings**: 32 (P0: 0, P1: 4, P2: 13, P3: 15) **Brain findings applied**: `.cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md` — this exact endpoint previously had P0 JSON round-trip type bugs; used to focus `@cg-data-quality`/`@cg-testing` review on the new `format` field and `analysis_var_label`/`type` coercion paths.",
+      "tags": [],
+      "title": "2026-09-08-description-html-renderer-and-wording-review",
+      "top_keywords": [
+        "format",
+        "description_renderer_html.r",
+        "r/description_renderer_html.r",
+        "inst/plumber/plumber.r",
+        "poverty_line",
+        "render_description_html()",
+        "description_builder.r",
+        "plumber.r",
+        "analysis_var_label",
+        "pov_status"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
+      "slug": "2026-09-08-description-html-renderer-and-wording-verify-review",
+      "status": "",
+      "summary": "**Review mode**: verify (light depth, forced per `mode:verify`) **Files reviewed**: 7 uncommitted working-tree changes (`R/description_builder.R`, `R/description_renderer.R`, `R/description_renderer_html.R`, `inst/plumber/plumber.R`, `tests/testthat/test-cell-definition.R`, `tests/testthat/test-description-builder.R`, `tests/testthat/test-description-renderer.R`) **Findings**: 6 (P0: 0, P1: 1, P2: 4, P3: 1) **Parent review**: `.cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md` **Verified as resolved**: `P1.1` (vector `poverty_line` crash), `P1.2` (untested JSON-list coercion), `P1.3` (missing endpoint doc), `P1.4` (Markdown/HTML label divergence — partially; see new P1.1 below), `P2.2` (missing Content-Type comment), `P2.4` (missing cross-reference comment), `P2.13` (unnecessary `rep()`), `P3.16` (duplicated format-dispatch logic) **Brain findings applied**: `.cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md` — used to verify both the multi-threshold `poverty_line` fix and the list/empty-list coercion test coverage against the documented defensive-coding pattern for this...",
+      "tags": [],
+      "title": "2026-09-08-description-html-renderer-and-wording-verify-review",
+      "top_keywords": [
+        "test-cell-definition.r",
+        "description_renderer_html.r",
+        "description_renderer.r",
+        "shares",
+        "poverty_line",
+        "poverty_line_text",
+        "r/description_renderer.r",
+        "r/description_renderer_html.r",
+        ".display_label_markdown()",
+        "build_cell_definition()"
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
+      "slug": "2026-09-14-shares-cell-definition-structured-table-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 3 **Findings**: 5 (P0: 0, P1: 0, P2: 4, P3: 1)",
+      "tags": [],
+      "title": "2026-09-14-shares-cell-definition-structured-table-review",
+      "top_keywords": [
+        "test-api-table-download.r",
+        "plumber.r",
+        "fix",
+        "status",
+        "review",
+        "content-length",
+        "content-type",
+        "warnings",
+        "errors",
+        "report"
+      ]
+    },
+    {
+      "date": "2026-09-29",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-09-29-review.md",
+      "slug": "2026-09-29-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 2 **Findings**: 5 (P0: 0, P1: 0, P2: 2, P3: 3)",
+      "tags": [],
+      "title": "2026-09-29-review",
+      "top_keywords": [
+        "null",
+        "format",
+        "test-api-description.r",
+        "format = \"\"",
+        "fix",
+        "minor",
+        "review",
+        "report",
+        "important",
+        "nice"
+      ]
+    },
+    {
       "date": "2026-04-03",
       "entity_type": "solution",
       "path": ".cg-docs/solutions/bugs/2026-04-03-null-allowed-cols-gen-validate-for-write.md",
@@ -1950,6 +2400,186 @@
         "forder",
         "attributed",
         "data.table"
+      ]
+    },
+    {
+      "date": "2026-08-31",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md",
+      "slug": "2026-08-31-swagger-req-parameter-exposed",
+      "status": "",
+      "summary": "The POST /description endpoint appeared in Swagger UI with an incorrect interface:",
+      "tags": [
+        "plumber",
+        "openapi",
+        "swagger",
+        "api",
+        "documentation",
+        "roxygen"
+      ],
+      "title": "Swagger incorrectly exposes req as query parameter in POST /description",
+      "top_keywords": [
+        "req",
+        "@param",
+        "@param req",
+        "res",
+        "pr$getapispec()",
+        "swagger",
+        "test-api-description.r",
+        "body",
+        "test",
+        "description_metadata"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md",
+      "slug": "2026-09-14-ansi-escape-codes-in-description-warnings",
+      "status": "",
+      "summary": "When a `table_maker()` call triggers cell suppression (`pop_share_threshold`), the resulting warning surfaced in the `/description` endpoint's metadata (`execution$warnings`) contained raw ANSI escape codes instead of clean, readable text. For example:",
+      "tags": [
+        "cli",
+        "ansi",
+        "warnings",
+        "description-endpoint",
+        "table_maker",
+        "api"
+      ],
+      "title": "ANSI escape codes leak into /description endpoint warning text",
+      "top_keywords": [
+        "/description",
+        "cli_warn()",
+        "r/table_maker.r",
+        "ansi",
+        "test",
+        "execution$warnings",
+        "cli::ansi_strip()",
+        "conditionmessage()",
+        "table_maker.r",
+        "warning"
+      ]
+    },
+    {
+      "date": "2026-10-13",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md",
+      "slug": "2026-10-13-hsize-group-filter-category-codes",
+      "status": "",
+      "summary": "`GET /table` with `filter_base={\"hsize_group\":[2]}` and `include_metadata=true` returned correct data rows but failed metadata generation with:",
+      "tags": [
+        "registry",
+        "tm_variable_spec",
+        "recode_spec",
+        "filter_base",
+        "table_maker",
+        "metadata",
+        "hsize_group",
+        "age_group",
+        "subscript-out-of-bounds"
+      ],
+      "title": "hsize_group/age_group filter metadata crash from stale inline category codes shadowing recode_spec mapping",
+      "top_keywords": [
+        "hsize_group",
+        "tm_variable_spec.yaml",
+        "age_group",
+        "categories:",
+        "r/registry.r",
+        "mapping",
+        "pip_vars",
+        ".build_registry_entry()",
+        ".build_description_metadata()",
+        "r/table_maker.r"
+      ]
+    },
+    {
+      "date": "2026-10-13",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md",
+      "slug": "2026-10-13-quantile-from-continuous-registry-mapping",
+      "status": "",
+      "summary": "`build_variable_registry()` aborted during registry generation for release `20260401_TEST` with:",
+      "tags": [
+        "registry",
+        "build_variable_registry",
+        "recode_spec",
+        "wquintile",
+        "quantile_from_continuous",
+        "tm_type"
+      ],
+      "title": "Registry build abort on factor + quantile_from_continuous (wquintile)",
+      "top_keywords": [
+        "wquintile",
+        "quantile_from_continuous",
+        ".build_registry_entry()",
+        "factor",
+        "registry",
+        "test",
+        "binned_from_continuous",
+        "r/registry.r",
+        "factor + quantile_from_continuous",
+        "tm_type"
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md",
+      "slug": "2026-10-16-table-download-parser-and-size-guard",
+      "status": "",
+      "summary": "A new binary download endpoint (`POST /table/download`) was added to convert already-computed `/table` rows into CSV or RDS. Two reliability issues appeared during hardening: 1. Some malformed JSON request bodies could reach plumber/parser failure paths and return HTTP 500 instead of the endpoint's expected JSON error envelope with HTTP 400. 2. The size cap (`25 MB`) was enforced only via `Content-Length`, so requests with missing/invalid headers could still parse oversized bodies in memory. Symptoms: - Inconsistent error behavior for invalid payloads. - Risk of memory pressure if a large body is accepted without a trustworthy header.",
+      "tags": [
+        "plumber",
+        "api",
+        "json",
+        "parser",
+        "content-length",
+        "download",
+        "regression-tests"
+      ],
+      "title": "POST /table/download malformed JSON 500s and size-guard bypass",
+      "top_keywords": [
+        "content-length",
+        "json",
+        "download",
+        "content-type",
+        ".cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md",
+        "malformed",
+        "table",
+        "post",
+        "bypass",
+        "size-guard"
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md",
+      "slug": "2026-10-16-table-download-serializer-and-swagger-body",
+      "status": "",
+      "summary": "While manually verifying `POST /table/download` against a live, running API (not just `pr$call()` unit tests), two defects surfaced that unit tests had not caught: 1. **Duplicate `Content-Type` header** on every response (success and error). Raw HTTP output looked like: ``` Content-Type: text/csv; charset=utf-8 Content-Disposition: attachment; filename=\"table.csv\" Content-Type: application/octet-stream ``` Two `Content-Type` headers in one response is technically invalid HTTP and risky for client parsers that read only the last/first value inconsistently. 2. **Swagger/OpenAPI misrepresented the request body.** `pr$getApiSpec()$paths[[\"/table/download\"]][[\"post\"]]` showed: ```r requestBody present: FALSE parameters count: 1 # name=\"body\", in=\"query\", type=\"string\" ``` Swagger UI would have rendered `body` as a string...",
+      "tags": [
+        "plumber",
+        "api",
+        "openapi",
+        "swagger",
+        "serializer",
+        "content-type",
+        "download",
+        "regression"
+      ],
+      "title": "POST /table/download: serializer-induced duplicate Content-Type and Swagger body-as-query-param",
+      "top_keywords": [
+        "pr$call()",
+        "body",
+        "content-type",
+        "@serializer null",
+        "serializer",
+        "requestbody",
+        "/description",
+        "@serializer contenttype",
+        "@serializer",
+        "download"
       ]
     },
     {
@@ -2882,6 +3512,72 @@
     {
       "date": "",
       "entity_type": "feature",
+      "path": "roadmap.json#api-contract-openapi",
+      "slug": "api-contract-openapi",
+      "status": "idea",
+      "summary": "API Contract — Markdown with OpenAPI-Style Schemas",
+      "tags": [],
+      "title": "API Contract — Markdown with OpenAPI-Style Schemas",
+      "top_keywords": [
+        "style schemas\nmilestone",
+        "service layer",
+        "api",
+        "contract",
+        "markdown",
+        "openapi-style",
+        "schemas",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#html-description-renderer-wording-quality-improvements",
+      "slug": "html-description-renderer-wording-quality-improvements",
+      "status": "done",
+      "summary": "HTML Description Renderer + Wording Quality Improvements",
+      "tags": [],
+      "title": "HTML Description Renderer + Wording Quality Improvements",
+      "top_keywords": [
+        "description renderer",
+        "wording quality improvements\nmilestone",
+        "service layer",
+        "html",
+        "description",
+        "renderer",
+        "wording",
+        "quality",
+        "improvements",
+        "feature"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#structured-cell-definition-table-for-share-measures",
+      "slug": "structured-cell-definition-table-for-share-measures",
+      "status": "done",
+      "summary": "Structured Cell Definition table for share measures",
+      "tags": [],
+      "title": "Structured Cell Definition table for share measures",
+      "top_keywords": [
+        "structured cell definition",
+        "service layer",
+        "structured",
+        "cell",
+        "definition",
+        "table",
+        "share",
+        "measures",
+        "feature",
+        "milestone"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
       "path": "roadmap.json#ppp-load-data-resolution",
       "slug": "ppp-load-data-resolution",
       "status": "done",
@@ -3011,13 +3707,13 @@
       ]
     }
   ],
-  "entity_count": 109,
-  "generated": "2026-08-27",
+  "entity_count": 132,
+  "generated": "2026-10-16",
   "schema_version": "0.2.0",
-  "topic_count": 3,
+  "topic_count": 4,
   "topics": [
     {
-      "entity_count": 59,
+      "entity_count": 71,
       "entity_paths": [
         ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
         ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
@@ -3039,6 +3735,9 @@
         ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md",
         ".cg-docs/brainstorms/2026-07-31-survey-specific-variable-filtering.md",
         ".cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md",
+        ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
+        ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
+        ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
         ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
         ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
         ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
@@ -3058,6 +3757,11 @@
         ".cg-docs/plans/2026-07-31-api-deployment-readme.md",
         ".cg-docs/plans/2026-07-31-survey-specific-variable-filtering.md",
         ".cg-docs/plans/2026-08-26-description-endpoint-implementation.md",
+        ".cg-docs/plans/2026-08-31-api-contract-openapi.md",
+        ".cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md",
+        ".cg-docs/plans/2026-09-14-rework-plain-meaning-wording-shares.md",
+        ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md",
+        ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
         ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
         ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
         ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
@@ -3067,6 +3771,10 @@
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
         ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
+        ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
+        ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
+        ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
+        ".cg-docs/reviews/2026-09-29-review.md",
         ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
         ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
         ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
@@ -3088,7 +3796,7 @@
       "slug": "table-maker-pip-id-version"
     },
     {
-      "entity_count": 21,
+      "entity_count": 24,
       "entity_paths": [
         "roadmap.json#version-partition-key",
         "roadmap.json#manifest-generation-partition-filter",
@@ -3106,6 +3814,9 @@
         "roadmap.json#error-handling-logging",
         "roadmap.json#description-endpoint-cache-key-generation",
         "roadmap.json#description-endpoint-dynamic-table-description",
+        "roadmap.json#api-contract-openapi",
+        "roadmap.json#html-description-renderer-wording-quality-improvements",
+        "roadmap.json#structured-cell-definition-table-for-share-measures",
         "roadmap.json#ppp-load-data-resolution",
         "roadmap.json#ppp-api-input-validation",
         "roadmap.json#ppp-edge-case-test-coverage",
@@ -3119,6 +3830,24 @@
       ],
       "label": "Service Layer / Computation Engine / Endpoint",
       "slug": "service-layer-computation-engine-endpoint"
+    },
+    {
+      "entity_count": 6,
+      "entity_paths": [
+        ".cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md",
+        ".cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md",
+        ".cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md",
+        ".cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md",
+        ".cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md",
+        ".cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md"
+      ],
+      "keywords": [
+        "req",
+        "body",
+        "pr$call()"
+      ],
+      "label": "Req / Body / Pr$Call()",
+      "slug": "req-body-pr-call"
     },
     {
       "entity_count": 5,

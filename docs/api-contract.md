@@ -59,7 +59,7 @@ components:
 |---------|-------------|-----------|
 | Step 1 — Survey selection | Discover releases, manifest rows, categories, and persist selections | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup`, `/session/surveys`, `/session/<id>/surveys` |
 | Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions` |
-| Step 3 — Results | Run computations, render descriptions, fetch metadata | `/table` (GET+POST), `/description` |
+| Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
 
 ---
@@ -193,6 +193,36 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 
 ---
 
+### `/table/download` — POST (Step 3)
+
+- **Purpose:** Convert an already-computed `/table` result into downloadable CSV or RDS bytes without recomputation.
+- **Body:**
+  ```json
+  {
+    "format": "csv",
+    "data": [
+      {
+        "pip_id": "COL_2019_GEIH_INC_ALL",
+        "measure": "mean",
+        "value": 123.45,
+        "population": 1000
+      }
+    ]
+  }
+  ```
+  - `format` *(optional, string)* — `csv` (default) or `rds`.
+  - `data` *(required, non-empty array of row objects)* — typically copied from `/table` response `data`.
+- **Responses:**
+  - `200 OK` (`format=csv`) — raw CSV bytes; `Content-Type: text/csv; charset=utf-8`; `Content-Disposition: attachment; filename="table.csv"`.
+  - `200 OK` (`format=rds`) — raw RDS bytes; `Content-Type: application/octet-stream`; `Content-Disposition: attachment; filename="table.rds"`.
+  - `400` — malformed/empty JSON body, unsupported `format`, or invalid/empty `data` payload.
+  - `413` — request payload exceeds 25 MB.
+- **Notes:**
+  - This endpoint is stateless and does not call `table_maker()`.
+  - Error responses use the standard JSON envelope with `Content-Type: application/json`.
+
+---
+
 ### `/description` — POST (Step 3)
 
 - **Purpose:** Render a natural-language table description either from cached metadata or by recomputing.
@@ -259,6 +289,7 @@ DescriptionMetadata:
 7. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
 8. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.01`, `include_metadata="false"`, `release=<current>`.
 9. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
+10. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
 
 ## Session Management Details
 
@@ -284,6 +315,7 @@ Access-Control-Allow-Headers: Content-Type
 | Endpoint | Methods | Typical Use |
 |----------|---------|-------------|
 | `/table` | GET, POST | Execute tables for selected surveys |
+| `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
 | `/description` | POST | Render natural-language table description |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |

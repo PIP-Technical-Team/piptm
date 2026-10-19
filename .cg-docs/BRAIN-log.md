@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-08-27 · 80 artifacts (newest first) + 29 roadmap features_
+_Generated 2026-10-16 · 100 artifacts (newest first) + 32 roadmap features_
 
 ## undated
 
@@ -18,6 +18,67 @@ _Generated 2026-08-27 · 80 artifacts (newest first) + 29 roadmap features_
   > **Review depth**: thorough **Files reviewed**: `R/compute_inequality.R`, `R/load_data.R`, `R/table_maker.R`, `R/schem…
 - **[2026-05-20-validate-parquet-wrapper-review-2](.cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md)** · `review` · _—_ · `—`
   > **Review depth**: thorough **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findings**: 9 (P0…
+
+## 2026-10-16
+
+- **[2026-09-14-shares-cell-definition-structured-table-review](.cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md)** · `review` · _—_ · `2026-10-16`
+  > **Review mode**: light **Files reviewed**: 3 **Findings**: 5 (P0: 0, P1: 0, P2: 4, P3: 1)
+- **[POST /table/download malformed JSON 500s and size-guard bypass](.cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md)** · `solution` · _—_ · `2026-10-16`
+  > A new binary download endpoint (`POST /table/download`) was added to convert already-computed `/table` rows into CSV …
+- **[POST /table/download: serializer-induced duplicate Content-Type and Swagger body-as-query-param](.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md)** · `solution` · _—_ · `2026-10-16`
+  > While manually verifying `POST /table/download` against a live, running API (not just `pr$call()` unit tests), two de…
+
+## 2026-10-13
+
+- **[hsize_group/age_group filter metadata crash from stale inline category codes shadowing recode_spec mapping](.cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md)** · `solution` · _—_ · `2026-10-13`
+  > `GET /table` with `filter_base={"hsize_group":[2]}` and `include_metadata=true` returned correct data rows but failed…
+- **[Registry build abort on factor + quantile_from_continuous \(wquintile\)](.cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md)** · `solution` · _—_ · `2026-10-13`
+  > `build_variable_registry()` aborted during registry generation for release `20260401_TEST` with:
+
+## 2026-09-29
+
+- **[2026-09-29-review](.cg-docs/reviews/2026-09-29-review.md)** · `review` · _—_ · `2026-09-29`
+  > **Review mode**: light **Files reviewed**: 2 **Findings**: 5 (P0: 0, P1: 0, P2: 2, P3: 3)
+
+## 2026-09-14
+
+- **[2026-09-08-description-html-renderer-and-wording-verify-review](.cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md)** · `review` · _—_ · `2026-09-14`
+  > **Review mode**: verify (light depth, forced per `mode:verify`) **Files reviewed**: 7 uncommitted working-tree change…
+- **[Add category labels to layout dimensions in description](.cg-docs/plans/2026-09-14-layout-category-labels.md)** · `plan` · _completed_ · `2026-09-14`
+  > **Outcome**: The description endpoint's layout section shows both the count and the category labels for each "by" dim…
+- **[ANSI escape codes leak into /description endpoint warning text](.cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md)** · `solution` · _—_ · `2026-09-14`
+  > When a `table_maker()` call triggers cell suppression (`pop_share_threshold`), the resulting warning surfaced in the …
+- **[Rework plain-meaning wording for share measures](.cg-docs/plans/2026-09-14-rework-plain-meaning-wording-shares.md)** · `plan` · _completed_ · `2026-09-14`
+  > Replace the abstract "this cell" / "total weighted survey population" plain-meaning templates for the three share mea…
+- **[Structured Cell Definition table for share measures](.cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md)** · `brainstorm` · _decided_ · `2026-09-14`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Structured Cell Definition table for share measures](.cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md)** · `plan` · _active_ · `2026-09-14`
+  > Replace the ambiguous, near-identical prose sentences generated for the three share measures (`pop_share`, `target_wi…
+- **[Structured Cell Definition table for share measures \(revised\)](.cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md)** · `plan` · _completed_ · `2026-09-14`
+  > Replace ambiguous prose for `pop_share`, `target_within_group_share`, and `target_survey_share` in the `/description`…
+
+## 2026-09-10
+
+- **[2026-09-08-description-html-renderer-and-wording-review](.cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md)** · `review` · _—_ · `2026-09-10`
+  > **Review mode**: standard (explicit user request; diff also matches the `architecture-risk` auto-routing trigger — ne…
+
+## 2026-09-08
+
+- **[HTML Description Renderer + Wording Quality Improvements](.cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md)** · `brainstorm` · _decided_ · `2026-09-08`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[HTML Description Renderer + Wording Quality Improvements](.cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md)** · `plan` · _completed_ · `2026-09-08`
+  > Add an HTML rendering option to the `/description` endpoint (inline styles only, all dynamic content escaped), select…
+
+## 2026-08-31
+
+- **[2026-08-31-api-contract-openapi-review](.cg-docs/reviews/2026-08-31-api-contract-openapi-review.md)** · `review` · _—_ · `2026-08-31`
+  > **Review mode**: light **Files reviewed**: 4 **Findings**: 10 (P0: 0, P1: 0, P2: 6, P3: 4) + 7 advisory
+- **[API Contract — Markdown with OpenAPI-Style Schemas](.cg-docs/plans/2026-08-31-api-contract-openapi.md)** · `plan` · _completed_ · `2026-08-31`
+  > Create a single Markdown file (`docs/api-contract.md`) documenting all 15 Table Maker API endpoints with OpenAPI-styl…
+- **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
+  > The POST /description endpoint appeared in Swagger UI with an incorrect interface:
+- **[Table Maker API Contract — Markdown with OpenAPI-Style Schemas](.cg-docs/brainstorms/2026-08-31-api-contract-openapi.md)** · `brainstorm` · _decided_ · `2026-08-31`
+  > The Table Maker API (`piptm`) has 14+ Plumber endpoints implemented in `inst/plumber/plumber.R`. A separate UI/IT tea…
 
 ## 2026-08-27
 
@@ -260,6 +321,8 @@ _Generated 2026-08-27 · 80 artifacts (newest first) + 29 roadmap features_
 
 ## Roadmap Features
 
+- **[API Contract — Markdown with OpenAPI-Style Schemas](roadmap.json#api-contract-openapi)** · `feature` · _idea_ · `—`
+  > API Contract — Markdown with OpenAPI-Style Schemas
 - **[API validation and plumber endpoint integration](roadmap.json#api-threshold-validation)** · `feature` · _done_ · `—`
   > API validation and plumber endpoint integration
 - **[Arrow push-down vs. in-memory compute benchmark](roadmap.json#arrow-vs-collapse-benchmark)** · `feature` · _done_ · `—`
@@ -284,6 +347,8 @@ _Generated 2026-08-27 · 80 artifacts (newest first) + 29 roadmap features_
   > Error handling, logging, and request tracing
 - **[Family-level compute functions](roadmap.json#family-compute-functions)** · `feature` · _done_ · `—`
   > Family-level compute functions
+- **[HTML Description Renderer + Wording Quality Improvements](roadmap.json#html-description-renderer-wording-quality-improvements)** · `feature` · _done_ · `—`
+  > HTML Description Renderer + Wording Quality Improvements
 - **[load_surveys\(\) data loading with manifest resolution](roadmap.json#load-surveys-data-loading)** · `feature` · _done_ · `—`
   > load_surveys() data loading with manifest resolution
 - **[Manifest generation and partition-filter loading](roadmap.json#manifest-generation-partition-filter)** · `feature` · _done_ · `—`
@@ -312,6 +377,8 @@ _Generated 2026-08-27 · 80 artifacts (newest first) + 29 roadmap features_
   > PPP edge-case test coverage
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
+- **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
+  > Structured Cell Definition table for share measures
 - **[table_maker\(\) with dual input patterns \(pip_id and triplets\)](roadmap.json#table-maker-dual-input)** · `feature` · _done_ · `—`
   > table_maker() with dual input patterns (pip_id and triplets)
 - **[Unit test suite \(≥90% coverage\)](roadmap.json#unit-test-coverage)** · `feature` · _active_ · `—`

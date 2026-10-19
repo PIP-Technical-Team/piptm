@@ -1,10 +1,10 @@
 # 🧠 Project Brain — Part 1
 
-_Generated 2026-08-27_
+_Generated 2026-10-16_
 
 ## Table_Maker\(\) / Pip_Id / Version
 
-_Keywords: `table_maker()` · `pip_id` · `version`_ · 59 entities
+_Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -46,6 +46,12 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 59 entities
   > The ITS UI development team requested a way to persist survey selections from Step 1 (survey grid) so that if Step 2 …
 - **[/description Endpoint Design Stress Test](.cg-docs/brainstorms/2026-08-26-description-endpoint-stress-test.md)** · `brainstorm` · _decided_ · `2026-08-26`
   > The user attached a comprehensive technical specification for a new `/description` endpoint that generates factual, d…
+- **[Table Maker API Contract — Markdown with OpenAPI-Style Schemas](.cg-docs/brainstorms/2026-08-31-api-contract-openapi.md)** · `brainstorm` · _decided_ · `2026-08-31`
+  > The Table Maker API (`piptm`) has 14+ Plumber endpoints implemented in `inst/plumber/plumber.R`. A separate UI/IT tea…
+- **[HTML Description Renderer + Wording Quality Improvements](.cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md)** · `brainstorm` · _decided_ · `2026-09-08`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Structured Cell Definition table for share measures](.cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md)** · `brainstorm` · _decided_ · `2026-09-14`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
 - **[Version as partition key with manifest-based resolution](.cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md)** · `plan` · _active_ · `2026-04-02`
@@ -84,6 +90,16 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 59 entities
   > Update API endpoints so Step 2 UI can pass selected `pip_id` values and receive only variables available across all s…
 - **[/description Endpoint — Dynamic Table Description Generation](.cg-docs/plans/2026-08-26-description-endpoint-implementation.md)** · `plan` · _completed_ · `2026-08-26`
   > Implement a `/description` endpoint that generates factual, dynamically constructed natural-language descriptions of …
+- **[API Contract — Markdown with OpenAPI-Style Schemas](.cg-docs/plans/2026-08-31-api-contract-openapi.md)** · `plan` · _completed_ · `2026-08-31`
+  > Create a single Markdown file (`docs/api-contract.md`) documenting all 15 Table Maker API endpoints with OpenAPI-styl…
+- **[HTML Description Renderer + Wording Quality Improvements](.cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md)** · `plan` · _completed_ · `2026-09-08`
+  > Add an HTML rendering option to the `/description` endpoint (inline styles only, all dynamic content escaped), select…
+- **[Rework plain-meaning wording for share measures](.cg-docs/plans/2026-09-14-rework-plain-meaning-wording-shares.md)** · `plan` · _completed_ · `2026-09-14`
+  > Replace the abstract "this cell" / "total weighted survey population" plain-meaning templates for the three share mea…
+- **[Structured Cell Definition table for share measures \(revised\)](.cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md)** · `plan` · _completed_ · `2026-09-14`
+  > Replace ambiguous prose for `pop_share`, `target_within_group_share`, and `target_survey_share` in the `/description`…
+- **[Structured Cell Definition table for share measures](.cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md)** · `plan` · _active_ · `2026-09-14`
+  > Replace the ambiguous, near-identical prose sentences generated for the three share measures (`pop_share`, `target_wi…
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
   > **Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always include…
 - **[2026-04-07-computation-engine-review](.cg-docs/reviews/2026-04-07-computation-engine-review.md)** · `review` · _—_ · `—`
@@ -102,6 +118,14 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 59 entities
   > **Review depth**: light (verify mode) **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findin…
 - **[2026-05-26-api-ppp-param-review](.cg-docs/reviews/2026-05-26-api-ppp-param-review.md)** · `review` · _—_ · `2026-05-26`
   > **Review depth**: thorough **Files reviewed**: 4 (`inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `tests/testthat…
+- **[2026-09-08-description-html-renderer-and-wording-review](.cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md)** · `review` · _—_ · `2026-09-10`
+  > **Review mode**: standard (explicit user request; diff also matches the `architecture-risk` auto-routing trigger — ne…
+- **[2026-09-08-description-html-renderer-and-wording-verify-review](.cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md)** · `review` · _—_ · `2026-09-14`
+  > **Review mode**: verify (light depth, forced per `mode:verify`) **Files reviewed**: 7 uncommitted working-tree change…
+- **[2026-09-14-shares-cell-definition-structured-table-review](.cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md)** · `review` · _—_ · `2026-10-16`
+  > **Review mode**: light **Files reviewed**: 3 **Findings**: 5 (P0: 0, P1: 0, P2: 4, P3: 1)
+- **[2026-09-29-review](.cg-docs/reviews/2026-09-29-review.md)** · `review` · _—_ · `2026-09-29`
+  > **Review mode**: light **Files reviewed**: 2 **Findings**: 5 (P0: 0, P1: 0, P2: 2, P3: 3)
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
 - **[Arrow open_dataset on multiple Parquet files silently breaks within-survey welfare sort](.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md)** · `solution` · _—_ · `2026-05-21`
@@ -127,7 +151,7 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 59 entities
 
 ## Service Layer / Computation Engine / Endpoint
 
-_Keywords: `service layer` · `computation engine` · `endpoint`_ · 21 entities
+_Keywords: `service layer` · `computation engine` · `endpoint`_ · 24 entities
 
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`
   > Version as partition key with manifest-based resolution
@@ -161,6 +185,12 @@ _Keywords: `service layer` · `computation engine` · `endpoint`_ · 21 entities
   > Description endpoint cache key generation
 - **[/description Endpoint — Dynamic Table Description Generation](roadmap.json#description-endpoint-dynamic-table-description)** · `feature` · _done_ · `—`
   > /description Endpoint — Dynamic Table Description Generation
+- **[API Contract — Markdown with OpenAPI-Style Schemas](roadmap.json#api-contract-openapi)** · `feature` · _idea_ · `—`
+  > API Contract — Markdown with OpenAPI-Style Schemas
+- **[HTML Description Renderer + Wording Quality Improvements](roadmap.json#html-description-renderer-wording-quality-improvements)** · `feature` · _done_ · `—`
+  > HTML Description Renderer + Wording Quality Improvements
+- **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
+  > Structured Cell Definition table for share measures
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[API PPP parameter validation refactor](roadmap.json#ppp-api-input-validation)** · `feature` · _done_ · `—`
@@ -171,6 +201,23 @@ _Keywords: `service layer` · `computation engine` · `endpoint`_ · 21 entities
   > pop_share_threshold parameter and cell suppression logic
 - **[API validation and plumber endpoint integration](roadmap.json#api-threshold-validation)** · `feature` · _done_ · `—`
   > API validation and plumber endpoint integration
+
+## Req / Body / Pr$Call\(\)
+
+_Keywords: `req` · `body` · `pr$call()`_ · 6 entities
+
+- **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
+  > The POST /description endpoint appeared in Swagger UI with an incorrect interface:
+- **[ANSI escape codes leak into /description endpoint warning text](.cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md)** · `solution` · _—_ · `2026-09-14`
+  > When a `table_maker()` call triggers cell suppression (`pop_share_threshold`), the resulting warning surfaced in the …
+- **[hsize_group/age_group filter metadata crash from stale inline category codes shadowing recode_spec mapping](.cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md)** · `solution` · _—_ · `2026-10-13`
+  > `GET /table` with `filter_base={"hsize_group":[2]}` and `include_metadata=true` returned correct data rows but failed…
+- **[Registry build abort on factor + quantile_from_continuous \(wquintile\)](.cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md)** · `solution` · _—_ · `2026-10-13`
+  > `build_variable_registry()` aborted during registry generation for release `20260401_TEST` with:
+- **[POST /table/download malformed JSON 500s and size-guard bypass](.cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md)** · `solution` · _—_ · `2026-10-16`
+  > A new binary download endpoint (`POST /table/download`) was added to convert already-computed `/table` rows into CSV …
+- **[POST /table/download: serializer-induced duplicate Content-Type and Swagger body-as-query-param](.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md)** · `solution` · _—_ · `2026-10-16`
+  > While manually verifying `POST /table/download` against a live, running API (not just `pr$call()` unit tests), two de…
 
 ## Description_Builder.R / Null / Test
 

@@ -11,17 +11,27 @@
 #' listening for HTTP requests.  This is a blocking call — the function
 #' does not return until the server is stopped (Ctrl+C / SIGINT).
 #'
-#' The router exposes eight endpoints:
+#' The router exposes API endpoints for compute, discovery, session, and
+#' download flows.
 #'
 #' | Endpoint | Method | Description |
 #' |---|---|---|
 #' | `/table` | GET, POST | Compute poverty / inequality / welfare measures |
+#' | `/table/download` | POST | Convert `/table` rows sent in the body (`{format, data}`) into a `csv` or `rds` file |
+#' | `/description` | POST | Render a table description as HTML or Markdown |
 #' | `/lookup` | GET | Resolve country-year-welfare triplets to pip_ids |
 #' | `/surveys` | GET | Full manifest rows for a release |
 #' | `/releases` | GET | List all loaded release IDs and current release |
-#' | `/measures` | GET | List measure names and computation families |
+#' | `/analysis-variables` | GET | List analysis variables and UI metadata |
+#' | `/statistics` | GET | List statistical groups and measures |
 #' | `/dimensions` | GET | List valid disaggregation dimension names |
 #' | `/categories` | GET | Full catalogue of categorical variables for the sample-base filter panel |
+#' | `/covariates` | GET | Full catalogue of layout covariates for slicing |
+#' | `/countries` | GET | Country code/name metadata from manifest |
+#' | `/regions` | GET | Region metadata with country memberships |
+#' | `/surveys-ui` | GET | UI-ready survey catalog |
+#' | `/session/surveys` | POST | Create a short-lived survey selection session |
+#' | `/session/<id>/surveys` | GET | Retrieve survey IDs from a session |
 #' | `/health` | GET | Server health check |
 #'
 #' All responses follow a structured envelope:

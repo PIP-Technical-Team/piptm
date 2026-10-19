@@ -21,7 +21,8 @@ Navigate to: http://localhost:8080/__docs__/
 
 ## Response envelope
 
-Every JSON endpoint (all endpoints except `POST /description`) returns the
+Every JSON endpoint (all endpoints except `POST /description` and
+`POST /table/download`) returns the
 same envelope shape:
 
 ```json
@@ -42,10 +43,14 @@ same envelope shape:
 - `meta` commonly includes `release`; some endpoints add `filtered` and
   `n_surveys` (see `/categories` and `/covariates`).
 
-`POST /description` is the one exception: its serializer is `text`, so a
+`POST /description` is one exception: its serializer is `text`, so a
 successful response body is raw HTML or Markdown (not the JSON envelope), and
 only its error responses are JSON-encoded strings using the same envelope
 shape.
+
+`POST /table/download` is the other exception: successful responses are file
+bytes (`text/csv` or `application/octet-stream`) with attachment headers;
+error responses remain JSON envelopes.
 
 ## Endpoint reference
 
@@ -146,6 +151,42 @@ Optional `format` field (either mode): `"html"` (default —
 Click **Execute** → the response body is the rendered description directly
 (HTML or Markdown text), not a JSON envelope. Validation and runtime failures
 return a JSON-encoded error string with status `400` or `422`.
+
+### `POST /table/download` — convert an existing table result to CSV/RDS
+
+Converts already-computed `/table` rows into downloadable file bytes.
+This endpoint is stateless and does not recompute via `table_maker()`.
+
+Request body (JSON):
+
+```json
+{
+  "format": "csv",
+  "data": [
+    {
+      "pip_id": "BIH_2011_HBS_CON_ALL",
+      "country_code": "BIH",
+      "surveyid_year": 2011,
+      "welfare_type": "CON",
+      "poverty_line": 3,
+      "measure": "headcount",
+      "value": 0.0092,
+      "population": 3168295.7285
+    }
+  ]
+}
+```
+
+- `format` is optional and defaults to `csv`; allowed values: `csv`, `rds`.
+- `data` is required and must be a non-empty array of row objects (normally
+  copied from `/table` response `data`).
+
+Expected responses:
+
+- `200` + `Content-Type: text/csv; charset=utf-8` + `Content-Disposition: attachment; filename="table.csv"`
+- `200` + `Content-Type: application/octet-stream` + `Content-Disposition: attachment; filename="table.rds"`
+- `400` for malformed body / invalid `format` / empty `data`
+- `413` for payloads larger than 25 MB
 
 ### `GET /lookup` — resolve country/year/welfare_type to pip_id
 
@@ -275,15 +316,15 @@ other endpoints.
 | Step 2, Decision 1 — sample base | `GET /categories` |
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |
-| Step 2 footer / Step 3 results | `GET|POST /table`, `POST /description` |
+| Step 2 footer / Step 3 results | `GET|POST /table`, `POST /description`, `POST /table/download` |
 | Cross-cutting | `GET /releases`, `GET /health`, `GET /dimensions` |
 
 ## Key points
 
 1. All JSON endpoints return the envelope described above; check `status`
    before reading `data`.
-2. `POST /description` is the only endpoint that does not use the envelope on
-   success — its body is the rendered HTML/Markdown itself.
+2. `POST /description` and `POST /table/download` do not use the JSON envelope
+   on success — they return rendered text and file bytes respectively.
 3. `filter_base` encoding differs by endpoint: on `/table` (a query-string
    endpoint) it is a **JSON-encoded string** that the server parses with
    `jsonlite::fromJSON()` — a malformed string returns `422`, not `400`. On
@@ -295,3 +336,6 @@ other endpoints.
    intersection-filtering behavior — pass the Step 1 selection to narrow
    Decision 1 / Decision 3 options to variables common to all selected
    surveys.
+6. For `/table/download`, submit only `{format, data}` where `data` is the
+   array from `/table`; do not include envelope fields (`status`, `warnings`,
+   `errors`, `meta`).
