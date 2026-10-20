@@ -238,6 +238,14 @@
           "title": "Structured Cell Definition table for share measures",
           "status": "done",
           "plan": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md"
+        },
+        {
+          "id": "table-response-format-layout-slot-assignment",
+          "title": "/table response format: layout slot assignment for the UI",
+          "description": "Redesign the /table response to a uniform flat cells[] array with fixed slot keys (superRow, row, superColumn, column) plus a per-survey layout block, so the UI can place each covariate correctly. Slot assignment is positional from the `by` parameter (1=columns, 2=rows, 3=super columns, 4=super rows). Breaking response change; request signature unchanged. /table/download stays flat. Includes replacing the dead registry-driven slot lookup at R/table_maker.R:309-327 (cov_entry$slot, never returned by piptm_layout_covariates()) with positional derivation from `by`.",
+          "status": "idea",
+          "brainstorm": ".cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
+          "plan": null
         }
       ]
     },

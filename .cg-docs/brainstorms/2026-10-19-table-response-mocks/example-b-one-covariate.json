@@ -1,0 +1,43 @@
+{
+  "status": ["success"],
+  "data": [
+    {
+      "pip_id": "COL_2008_GEIH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2008,
+      "welfare_type": "INC",
+      "poverty_line": null,
+      "analysis_var": "welfare",
+      "measures": ["mean"],
+
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            { "code": 0, "label": "Female" },
+            { "code": 1, "label": "Male" }
+          ]
+        },
+        "rows": null,
+        "superColumns": null,
+        "superRows": null
+      },
+
+      "cells": [
+        { "superRow": null, "row": null, "superColumn": null,
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 13.3906 }, "population": 20894143 },
+        { "superRow": null, "row": null, "superColumn": null,
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 13.6468 }, "population": 20088273 }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "meta": {
+    "release": ["20260401_TEST"],
+    "n_surveys": [1]
+  }
+}
