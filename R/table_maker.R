@@ -690,8 +690,7 @@ table_maker <- function(pip_id        = NULL,
     if (nrow(entries) == 0L) {
       cli_abort(
         c(
-          "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}}).",
-          "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
+          "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}})."
         )
       )
     }
