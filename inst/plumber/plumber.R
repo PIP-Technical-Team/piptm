@@ -172,13 +172,6 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 
     rel  <- resolve_release(release)
 
-    rel_parts <- strsplit(rel, "_", fixed = TRUE)[[1L]]
-    pipfun::setup_working_release(
-      release  = rel_parts[1L],
-      identity = paste(rel_parts[-1L], collapse = "_"),
-      verbose  = FALSE
-    )
-
     data <- piptm::table_maker(
       pip_id        = pip_id,
       analysis_var  = analysis_var,
