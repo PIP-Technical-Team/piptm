@@ -287,7 +287,17 @@ function(req, body = NULL, res) {
     return(err("`data` must be a non-empty array of row objects.", 400L))
   }
 
-  for (col in intersect(c("value", "population", "poverty_line"), names(tbl))) {
+  # NOTE: `value` is intentionally excluded from numeric coercion below.
+  # Since the /table formatting change, `value` may already be a formatted
+  # display string (e.g. "45.67" for a scaled percentage, or the "NR"
+  # suppression sentinel for masked cells). Coercing it with as.numeric()
+  # here would silently turn "NR" into NA (destroying the disclosure-control
+  # signal) and would not "undo" the x100 percentage scaling already applied
+  # by format_table_output(). Payloads that already carry a raw numeric
+  # `value` (e.g. hand-built row objects, not copied from /table) are left
+  # untouched as-is, since JSON numeric values round-trip as numeric without
+  # needing explicit coercion.
+  for (col in intersect(c("population", "poverty_line"), names(tbl))) {
     data.table::set(tbl, j = col, value = suppressWarnings(as.numeric(tbl[[col]])))
   }
 

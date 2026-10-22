@@ -156,3 +156,24 @@ test_that("/table/download rejects oversized payloads with 413", {
   expect_equal(payload$status, "error")
   expect_true(length(payload$errors) >= 1L)
 })
+
+test_that("/table/download preserves 'value' verbatim when it arrives as a formatted /table string (NR sentinel, scaled percentage)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.dl_router), "Router could not be created")
+
+  # Rows shaped like the current /table response: `value` is already a
+  # formatted display string (per format_table_output()), not a raw number.
+  formatted_rows <- list(
+    list(pip_id = "AAA_2020", measure = "gini", value = "NR", poverty_line = NULL),
+    list(pip_id = "AAA_2020", measure = "headcount", value = "45.67", poverty_line = NULL)
+  )
+
+  res <- .dl_router$call(.dl_req(.dl_json("csv", data = formatted_rows)))
+  expect_equal(res$status, 200L)
+  df <- data.table::fread(text = rawToChar(res$body), colClasses = "character")
+  expect_equal(nrow(df), 2L)
+  # The "NR" sentinel must survive untouched, not be silently coerced to NA.
+  expect_equal(df$value[df$measure == "gini"], "NR")
+  # The already-scaled percentage string must not be re-interpreted/rescaled.
+  expect_equal(df$value[df$measure == "headcount"], "45.67")
+})

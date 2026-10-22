@@ -492,7 +492,7 @@ table_maker <- function(pip_id        = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                         pop_share_threshold = 0.001,
+                        pop_share_threshold = 0.001,
                         include_metadata = FALSE) {
 
   # ── 0. Validate metadata parameter ─────────────────────────────────────────
