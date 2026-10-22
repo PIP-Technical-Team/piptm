@@ -255,17 +255,18 @@ If out-of-scope ideas surfaced, ask whether any should be added to the roadmap. 
 After approval:
 
 1. Compute the default implementation command from the saved plan shape:
-   - If the saved plan contains any `## Phase N:` headers, the default start command is `/cg-work phase1`.
+   - Count `## Phase N:` headers in the saved canonical Markdown (ignoring fenced code blocks).
+   - If the saved plan contains one or more phase headers, the default start command is `/cg-work phase1` and the output must report the resolved phase count. `## Phase` headers are authoritative; `phases:` frontmatter is only a convenience hint.
    - Otherwise the default start command is `/cg-work`.
 2. Emit a compact **Execution controls** block before the next-action menu:
-   - `Phase`: say whether the plan is phased. For phased plans, note that `/cg-work phaseN` runs only that phase and that `## Phase` headers, not `phases:` frontmatter, are authoritative.
-   - `Review`: state that `/cg-work` defaults to `review:manual`, and list the accepted review controls: `review:none`, `review:manual`, `review:auto`, `review:light`, `review:standard`, `review:data-risk`, `review:architecture`, `review:full`.
-   - `Deviation`: state the stored `deviation-policy` from plan frontmatter and note that `/cg-work deviate:ask|auto|autonomous|strict` can override it for a single run, with `auto` and `autonomous` both mapping to `autonomous`.
-3. Include 2-4 concrete command examples tailored to the saved plan:
+   - `Phase`: for non-phased plans, say `non-phased (all steps run together)`. For phased plans, say `phased (N phases)` and that `/cg-work phaseN` runs only the selected phase. State that `## Phase` headers, not `phases:` frontmatter, are authoritative.
+   - `Review`: state that `/cg-work` defaults to `review:manual` and list the accepted controls exactly as `review:none`, `review:manual`, `review:auto`, `review:light`, `review:standard`, `review:data-risk`, `review:architecture`, and `review:full`. Explain that these controls apply to the implementation handoff and do not alter the saved plan.
+   - `Deviation`: state the resolved stored `deviation-policy` (`ask`, `autonomous`, or `strict`) and note that `/cg-work deviate:ask|auto|autonomous|strict` overrides it for one run; `auto` and `autonomous` both resolve to `autonomous`.
+3. Include 2-4 concrete command examples tailored to the saved plan. Use the resolved default command, not a placeholder:
    - Start now with the default command.
-   - Start a later phase for phased plans (for example `/cg-work phase2`).
+   - For phased plans with more than one phase, start a later phase (for example `/cg-work phase2`). Do not show a nonexistent phase.
    - Start with automatic review routing (for example `<default-command> review:auto`).
-   - Start with an explicit deviation override different from the stored value (for example `<default-command> deviate:strict`).
+   - Start with an explicit deviation override different from the stored value (for example `<default-command> deviate:strict`); if the stored value is `strict`, use `deviate:ask` instead.
 
 Read `.kilo/shared/model-advisory.contract.md` and use the `planning` stage
 for the next `/cg-work` transition. Emit a compact advisory recommendation with
@@ -277,15 +278,15 @@ or set a model or reasoning effort.
 > Plan saved to `.cg-docs/plans/<filename>`.
 >
 > Before the next-action menu, include an **Execution controls** section that names:
-> - whether the plan is phased and, if so, that `/cg-work phaseN` runs a specific phase and `## Phase` headers are authoritative;
+> - whether the plan is phased, the resolved number of phases, and, if phased, that `/cg-work phaseN` runs a specific phase and `## Phase` headers are authoritative;
 > - that `/cg-work` defaults to `review:manual`, with optional `review:none`, `review:manual`, `review:auto`, `review:light`, `review:standard`, `review:data-risk`, `review:architecture`, and `review:full`;
-> - the stored `deviation-policy` and the optional per-run override `deviate:ask|auto|autonomous|strict`.
+> - the resolved stored `deviation-policy` and the optional per-run override `deviate:ask|auto|autonomous|strict`, including the `auto` to `autonomous` mapping.
 >
 > Then include a **Suggested commands** list with concrete commands for this saved plan:
 > - the default start command (`/cg-work` or `/cg-work phase1` for phased plans);
 > - the same command with `review:auto`;
 > - the same command with a non-default `deviate:` override;
-> - for phased plans only, one later-phase example such as `/cg-work phase2`.
+> - for phased plans with at least two phases, one valid later-phase example such as `/cg-work phase2`.
 >
 > **What would you like to do next?**
 > 1. **`/cg-work` or `phase1` variant for phased plans** -- Start implementing this plan immediately

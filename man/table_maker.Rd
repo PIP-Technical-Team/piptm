@@ -13,7 +13,7 @@ table_maker(
   filter_base = NULL,
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0.01,
+  pop_share_threshold = 0.001,
   include_metadata = FALSE
 )
 }
@@ -50,14 +50,12 @@ to the current release as returned by \code{\link[=piptm_current_release]{piptm_
 
 \item{pop_share_threshold}{Numeric scalar in (0, 1) or \code{NULL}.  When
 non-NULL, cells whose population share falls below this threshold have all
-non-share measures suppressed (dropped from output), regardless of whether
+measures masked with \code{value = NA_real_} and \code{flag = "NR"}, regardless of whether
 \code{"pop_share"} was requested.  If \code{"pop_share"} is not among the requested
 \code{measures}, it is computed internally and used solely for threshold
-evaluation — it does not appear in the output.  Share-family measures
-(\code{pop_share}, \code{target_within_group_share}, \code{target_survey_share}) are
-always retained so callers can inspect the distribution of suppressed
-groups.  Has no effect when \code{by = NULL} (aggregate mode: each cell is a
-full survey with pop_share = 1.0).  Default: \code{0.01} (1\%).}
+evaluation — it does not appear in the output. Has no effect when \code{by = NULL}
+(aggregate mode: each cell is a full survey with pop_share = 1.0).
+Default: \code{0.001} (0.1\%).}
 
 \item{include_metadata}{Logical scalar (default \code{FALSE}). When \code{FALSE}, returns
 a \code{\link[data.table:data.table]{data.table::data.table()}} directly (default behavior). When \code{TRUE}, returns
@@ -81,11 +79,9 @@ breakdown columns.}
 rows and \code{NA} for non-poverty rows.}
 \item{\code{measure}}{Measure name (e.g. \code{"headcount"}, \code{"gini"}).}
 \item{\code{value}}{Computed statistic.}
-\item{\code{population}}{Total weighted population in the group.  For surveys
-where a requested dimension is absent (partial-match), this reflects the
-weighted count of respondents in the non-\code{NA} grouping cells only; rows
-with \code{NA} in the missing dimension still carry the correct weighted count
-for their observed group.}
+\item{\code{flag}}{Character suppression flag. \code{"NR"} identifies cells masked
+because their population share is below \code{pop_share_threshold}; otherwise
+the value is \code{NA}.}
 }
 When \code{include_metadata = TRUE}: A list with elements:
 \describe{

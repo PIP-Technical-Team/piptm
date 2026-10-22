@@ -9,6 +9,9 @@ estimated-effort: "medium"
 deviation-policy: "ask"
 artifact-schema-version: 1
 phases: 2
+completed-phases: [1]
+current-phase: 2
+execution-report: .cg-docs/work-reports/2026-10-22-pop-share-nr-masking.md
 tags: [table_maker, pop_share_threshold, suppression, api, formatting]
 ---
 
@@ -37,7 +40,7 @@ at `plumber.R:288`.
 | R3 | No rows dropped; below-threshold cells masked: `value = NA_real_`, `flag = "NR"` | D3, D15 |
 | R4 | All measures masked, including share measures | D4 |
 | R5 | Masked values never present in API output | D5 |
-| R6 | API `value` is character: formatted number or `"NR"`; genuine NA -> `null` | D6 |
+| R6 | API `value` is character: formatted number or `"NR"`; genuine NA -> `null` (UI confirmed string is acceptable) | D6 |
 | R7 | Masking uses unrounded share | D7 |
 | R8 | `population` removed from `table_maker()` output | D8 |
 | R9 | Warning kept with per-cell pop_share; reworded to "Reporting N cells as NR" | D9 |
@@ -108,7 +111,7 @@ phases: 2  # convenience hint -- may be stale; always recount from ## Phase head
   -Inf -> NA, negative values, large numbers no scientific notation, empty
   table); error (missing `flag`/`value` column aborts).
 - **Tests**: `tests/testthat/test-format-table-output.R`; 1M-row timing snippet.
-- **Acceptance criteria**: V2 passes; V6 < 2 s.
+- **Acceptance criteria**: V2 passes; V7 < 2 s (non-blocking).
 
 ### 4. Plumber wiring
 - **Requirements**: R1, R5, R6, R17
@@ -147,7 +150,7 @@ via existing plumber router harness; full suite and R CMD check at end.
 ## Risks & Mitigations
 | Risk | Mitigation |
 |------|------------|
-| UI breaks on string `value` | Confirm with UI team before release; formatter isolated so switching to numeric+flag is local |
+| UI breaks on string `value` | UI team confirmed (2026-10-22) string `value` is acceptable; formatter stays isolated so a later switch to numeric+flag is local |
 | `formatC` emits "NA" or scientific notation | Explicit NA handling; `format = "f"`; tests |
 | Hidden consumers of `population` | Grep before removal; blocked-stop if found |
 | Download silently numeric-coerces "NR" (deferred; tracked for follow-up) | Documented as out of scope in this plan |
@@ -196,7 +199,6 @@ values (x100 proportions, 2 dp, whole-number counts, `"NR"` for masked cells).
 3. Max 2 fix rounds per verification item, then stop and report.
 
 ### Blocked-Stop Conditions
-- UI team rejects string `value` (D6).
 - Another main `/table` code path depends on `population`.
 - Formatter cannot distinguish NR from genuine missing values or cannot map errors to 422.
 - R CMD check fails for reasons unrelated to this change.

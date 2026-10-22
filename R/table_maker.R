@@ -414,14 +414,12 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   to the current release as returned by [piptm_current_release()].
 #' @param pop_share_threshold Numeric scalar in (0, 1) or `NULL`.  When
 #'   non-NULL, cells whose population share falls below this threshold have all
-#'   non-share measures suppressed (dropped from output), regardless of whether
+#'   measures masked with `value = NA_real_` and `flag = "NR"`, regardless of whether
 #'   `"pop_share"` was requested.  If `"pop_share"` is not among the requested
 #'   `measures`, it is computed internally and used solely for threshold
-#'   evaluation — it does not appear in the output.  Share-family measures
-#'   (`pop_share`, `target_within_group_share`, `target_survey_share`) are
-#'   always retained so callers can inspect the distribution of suppressed
-#'   groups.  Has no effect when `by = NULL` (aggregate mode: each cell is a
-#'   full survey with pop_share = 1.0).  Default: `0.01` (1%).
+#'   evaluation — it does not appear in the output. Has no effect when `by = NULL`
+#'   (aggregate mode: each cell is a full survey with pop_share = 1.0).
+#'   Default: `0.001` (0.1%).
 #' @param include_metadata Logical scalar (default `FALSE`). When `FALSE`, returns
 #'   a [data.table::data.table()] directly (default behavior). When `TRUE`, returns
 #'   a list with two elements: `data` (the data.table) and `description_metadata`
@@ -443,11 +441,9 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'     rows and `NA` for non-poverty rows.}
 #'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
 #'   \item{`value`}{Computed statistic.}
-#'   \item{`population`}{Total weighted population in the group.  For surveys
-#'     where a requested dimension is absent (partial-match), this reflects the
-#'     weighted count of respondents in the non-`NA` grouping cells only; rows
-#'     with `NA` in the missing dimension still carry the correct weighted count
-#'     for their observed group.}
+#'   \item{`flag`}{Character suppression flag. `"NR"` identifies cells masked
+#'     because their population share is below `pop_share_threshold`; otherwise
+#'     the value is `NA`.}
 #' }
 #'   When `include_metadata = TRUE`: A list with elements:
 #' \describe{
@@ -496,7 +492,7 @@ table_maker <- function(pip_id        = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.01,
+                         pop_share_threshold = 0.001,
                         include_metadata = FALSE) {
 
   # ── 0. Validate metadata parameter ─────────────────────────────────────────
@@ -870,7 +866,11 @@ table_maker <- function(pip_id        = NULL,
 
     meta_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
     dim_cols  <- if (!is.null(by)) by else character(0L)
-    tail_cols <- c("poverty_line", "measure", "value", "population")
+    if (!"flag" %in% names(result)) {
+      result[, flag := NA_character_]
+    }
+    result[, population := NULL]
+    tail_cols <- c("poverty_line", "measure", "value", "flag")
     col_order <- intersect(c(meta_cols, dim_cols, tail_cols), names(result))
     data.table::setcolorder(result, col_order)
 
@@ -898,16 +898,13 @@ table_maker <- function(pip_id        = NULL,
         }
 
         cell_keys  <- c("pip_id", dim_cols)
-        suppressed <- pop_rows[value < pop_share_threshold]
+        suppressed <- pop_rows[is.na(value) | value < pop_share_threshold]
 
         if (include_metadata && nrow(suppressed) > 0L) {
           suppressed_cells <- suppressed
         }
 
         if (nrow(suppressed) > 0L) {
-          share_measures <- names(Filter(function(f) f == "shares",
-                                         .MEASURE_REGISTRY))
-
           sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
             dims <- paste(
               vapply(cell_keys, function(k)
@@ -919,16 +916,14 @@ table_maker <- function(pip_id        = NULL,
 
           cli_warn(
             c(
-              "Suppressing non-share measures for {nrow(suppressed)} cell{?s} with pop_share < {pop_share_threshold}:",
+              "Reporting {nrow(suppressed)} cell{?s} as NR (population share < {pop_share_threshold}):",
               "i" = "{sup_labels}"
             )
           )
 
           sup_keys <- suppressed[, ..cell_keys]
-          result[, .suppress := FALSE]
           idx <- result[sup_keys, on = cell_keys, which = TRUE, nomatch = NULL]
-          result[idx, .suppress := !(measure %chin% share_measures)]
-          result <- result[(.suppress) == FALSE][, .suppress := NULL]
+          result[idx, `:=`(value = NA_real_, flag = "NR")]
         }
       }
     }

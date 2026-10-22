@@ -188,5 +188,6 @@ test_that("table_maker v2 output serializes", {
   parsed <- jsonlite::fromJSON(txt)
 
   expect_true(is.data.frame(parsed))
-  expect_true(all(c("measure", "value", "population") %in% names(parsed)))
+  expect_true(all(c("measure", "value", "flag") %in% names(parsed)))
+  expect_false("population" %in% names(parsed))
 })
