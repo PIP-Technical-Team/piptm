@@ -135,6 +135,7 @@ result <- table_maker(
 }
 \seealso{
 Other api: 
+\code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
 \code{\link{run_api}()}
 }

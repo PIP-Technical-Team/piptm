@@ -134,7 +134,7 @@ function(req) {
 #* @param filter_base:character JSON-encoded sample-base filter object
 #*   (optional), for example `{"gender":[0],"age_group":[1,2]}`.
 #* @param pop_share_threshold:numeric Optional cell-suppression threshold
-#*   (default `0.01`). Use null/empty to disable suppression.
+#*   (default `0.001`). Use null/empty to disable suppression.
 #* @param release:character Release ID (optional; defaults to current release).
 #* @param include_metadata:character When `"true"`, returns the table plus
 #*   assembled `description_metadata` in the response `meta` field.
@@ -143,7 +143,7 @@ function(req) {
 #* @get /table
 #* @post /table
 function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
-         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
+         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.001,
          release = NULL, include_metadata = "false", res) {
 
   check <- validate_table_input(
@@ -193,6 +193,8 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
       result_data <- data
       description_metadata <- NULL
     }
+
+    result_data <- piptm::format_table_output(result_data)
 
     list(
       data = result_data,

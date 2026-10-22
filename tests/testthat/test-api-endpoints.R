@@ -1173,3 +1173,49 @@ test_that("Error envelope has empty warnings and non-empty errors", {
   # jsonlite drops NULL fields from serialized lists — data absent or empty
   expect_true(is.null(body$data) || length(body$data) == 0L)
 })
+
+# =============================================================================
+# Block 11: /table API formatting contract & suppression masking
+# =============================================================================
+
+test_that("GET /table returns string values, no population or flag, and formatted measures", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = c("gini", "mean")
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  df <- body$data
+  expect_true(is.data.frame(df))
+  expect_type(df$value, "character")
+  expect_false("population" %in% names(df))
+  expect_false("flag" %in% names(df))
+})
+
+test_that("GET /table returns 422 envelope when formatter fails", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  testthat::with_mocked_bindings(
+    format_table_output = function(...) stop("simulated schema formatting failure"),
+    .package = "piptm",
+    {
+      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+        pip_id       = "COL_2010_ECH_INC_ALL",
+        analysis_var = "welfare",
+        measures     = "mean"
+      )))
+      expect_equal(res$status, 422L)
+      body <- parse_api_res(res)
+      expect_equal(body$status, "error")
+      expect_true(any(grepl("simulated schema formatting failure", unlist(body$errors))))
+    }
+  )
+})

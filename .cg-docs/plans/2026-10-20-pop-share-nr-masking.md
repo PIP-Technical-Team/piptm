@@ -1,7 +1,8 @@
 ---
 date: 2026-10-20
 title: "Population share threshold: NR masking and API value formatting"
-status: active
+status: completed
+completed-date: 2026-10-22
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md"
 language: "R"
@@ -9,8 +10,7 @@ estimated-effort: "medium"
 deviation-policy: "ask"
 artifact-schema-version: 1
 phases: 2
-completed-phases: [1]
-current-phase: 2
+completed-phases: [1, 2]
 execution-report: .cg-docs/work-reports/2026-10-22-pop-share-nr-masking.md
 tags: [table_maker, pop_share_threshold, suppression, api, formatting]
 ---
