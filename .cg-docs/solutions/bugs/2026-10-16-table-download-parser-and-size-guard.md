@@ -78,3 +78,4 @@ Why: header check is cheap early rejection; byte-length check catches missing/in
 - `.cg-docs/solutions/testing-patterns/2026-05-13-plumber-programmatic-testing-with-fixtures.md`
 - `.cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md`
 - `.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md` — follow-up fix for a serializer-induced duplicate `Content-Type` header and a Swagger body-as-query-parameter bug found when manually verifying this endpoint against a live Swagger UI/OpenAPI spec.
+- `.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md` — a third, independent bug class on this same endpoint: silent data corruption from blindly coercing the `value` field to numeric after `/table`'s output contract changed to formatted display strings.

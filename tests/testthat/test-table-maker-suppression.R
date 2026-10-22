@@ -3,20 +3,15 @@ library(arrow)
 
 # ── Fixture helpers ────────────────────────────────────────────────────────────
 
-reset_piptm_env_sup <- function() {
-  env <- piptm:::.piptm_env
-  env$manifest_dir    <- NULL
-  env$arrow_root      <- NULL
-  env$manifests       <- list()
-  env$current_release <- NULL
-}
+# See helper-fixtures.R: reset_piptm_env_tm() is the single shared
+# implementation; kept as an alias here so existing call sites are unaffected.
+reset_piptm_env_sup <- reset_piptm_env_tm
 
 #' Fixture with strongly unequal cell weights.
 #'
-#' gender = 0 (male):  10 rows × weight 0.01  → total weight ≈ 0.10
-#' gender = 1 (female): 10 rows × weight 1000 → total weight = 10000
-#' gender=0 pop_share ≈ 0.001 %  (well below the default 1 % threshold)
-#' gender=1 pop_share ≈ 99.999 %
+#' Thin wrapper around the shared `write_fixture_nr_masking_survey()` helper
+#' (see helper-fixtures.R) that also allocates the temp dirs and returns them
+#' for `activate_sup_fixture()`.
 #'
 #' gender is stored as an integer 0/1 so it doubles as a binary analysis_var
 #' for shares-family measures.
@@ -24,43 +19,8 @@ make_sup_fixture <- function(env = parent.frame()) {
   tmp_arrow    <- withr::local_tempdir(.local_envir = env)
   tmp_manifest <- withr::local_tempdir(.local_envir = env)
 
-  n <- 20L
-  dt_raw <- data.table(
-    country_code           = "TST",
-    surveyid_year          = 2020L,
-    welfare_type           = "INC",
-    version                = "v01_v01",
-    pip_id                 = "TST_2020_ECH_INC_ALL",
-    welfare_ppp_2021_01_02 = seq(1, by = 0.5, length.out = n),
-    weight                 = rep_len(c(0.01, 1000), n),
-    gender                 = rep_len(c(0L, 1L), n)
-  )
+  write_fixture_nr_masking_survey(tmp_arrow, tmp_manifest)
 
-  dir_path <- file.path(
-    tmp_arrow,
-    "country_code=TST",
-    "surveyid_year=2020",
-    "welfare_type=INC",
-    "version=v01_v01"
-  )
-  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
-  arrow::write_parquet(dt_raw, file.path(dir_path, "data.parquet"))
-
-  entries <- list(list(
-    pip_id         = "TST_2020_ECH_INC_ALL",
-    survey_id      = "S1",
-    country_code   = "TST",
-    year           = 2020L,
-    welfare_type   = "INC",
-    version        = "v01_v01",
-    survey_acronym = "ECH",
-    module         = "ALL",
-    dimensions     = list("gender"),
-    welfare_vars   = list("welfare_ppp_2021_01_02"),
-    ppp_sort       = 2021L
-  ))
-
-  write_fixture_manifest_tm(tmp_manifest, "20260401_TEST", entries)
   list(tmp_arrow = tmp_arrow, tmp_manifest = tmp_manifest)
 }
 
@@ -101,6 +61,36 @@ test_that("threshold fires without pop_share in measures (primary bug fix)", {
 
   # pop_share must NOT appear in output (was not requested by caller)
   expect_false("pop_share" %in% res$measure)
+})
+
+test_that("all groups masked when threshold exceeds every cell's pop_share (all-cells-suppressed edge case)", {
+  fx <- make_sup_fixture()
+  activate_sup_fixture(fx)
+  withr::defer(reset_piptm_env_sup())
+
+  # gender=0 pop_share ~ 9.999e-6; gender=1 pop_share ~ 0.999990. A threshold
+  # above both (but still < 1) masks every group in this two-group survey —
+  # no row survives unmasked. This guards against any code path (e.g.
+  # setcolorder/column-ordering logic) that implicitly assumed at least one
+  # surviving unmasked row.
+  expect_warning(
+    res <- piptm::table_maker(
+      pip_id              = "TST_2020_ECH_INC_ALL",
+      analysis_var        = "welfare",
+      measures            = "mean",
+      by                  = "gender",
+      ppp                 = 2021L,
+      pop_share_threshold = 0.9999999
+    ),
+    "Reporting"
+  )
+
+  # Rows are retained (not dropped) for every group.
+  expect_equal(nrow(res), 2L)
+  expect_equal(res$gender, c(0L, 1L))
+  expect_true(all(c("value", "flag") %in% names(res)))
+  expect_true(all(is.na(res$value)))
+  expect_true(all(res$flag == "NR"))
 })
 
 test_that("pop_share_threshold = NULL disables suppression entirely", {
@@ -170,10 +160,12 @@ test_that("all measures are masked for suppressed cell when explicitly requested
   expect_equal(nrow(res[res$gender == 1L, ]), 2L)
 })
 
-test_that("all share-family measures retained for suppressed cells", {
+test_that("share-family measures are masked, not exempted, for suppressed cells", {
   # Regression for the share_measures <- 'pop_share' hardcoding bug:
   # target_survey_share (and any future share-family measure) must be
-  # retained even when the cell is below the threshold.
+  # masked like every other measure when the cell is below the threshold —
+  # share-family measures are no longer exempted from suppression (see
+  # NEWS.md "Breaking changes").
   fx <- make_sup_fixture()
   activate_sup_fixture(fx)
   withr::defer(reset_piptm_env_sup())
@@ -191,7 +183,7 @@ test_that("all share-family measures retained for suppressed cells", {
     "Reporting"
   )
 
-  # gender=0 (suppressed cell): BOTH share-family rows must be retained
+  # gender=0 (suppressed cell): BOTH share-family rows are masked, not dropped
   g0 <- res[res$gender == 0L, ]
   expect_true("pop_share"          %in% g0$measure)
   expect_true("target_survey_share" %in% g0$measure)
@@ -341,4 +333,82 @@ test_that("NA dimension key cell is masked when below threshold", {
   expect_equal(nrow(na_row), 1L)
   expect_true(is.na(na_row$value))
   expect_equal(na_row$flag, "NR")
+})
+
+test_that("multi-dimension by with independent NA keys masks only the intended cells (no cross-contamination)", {
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  # Three disjoint cells across two dimensions:
+  #  - gender=0,    area=NA   (small weight -> masked)
+  #  - gender=NA,   area=0    (small weight -> masked, independently of the above)
+  #  - gender=1,    area=1    (large weight -> unmasked)
+  # Both masked cells carry an NA in a *different* dimension column. A
+  # regression in the multi-column NA-join used for masking could either
+  # under-mask (miss one of them) or conflate them into a single masked
+  # group; this test pins the correct, independent behavior.
+  dt_raw <- data.table(
+    country_code           = "TST",
+    surveyid_year          = 2020L,
+    welfare_type           = "INC",
+    version                = "v01_v01",
+    pip_id                 = "TST_2020_ECH_INC_ALL",
+    welfare_ppp_2021_01_02 = c(rep(1.0, 5L), rep(2.0, 5L), rep(3.0, 5L)),
+    weight                 = c(rep(0.01, 5L), rep(0.01, 5L), rep(1000, 5L)),
+    gender                 = c(rep(0L, 5L), rep(NA_integer_, 5L), rep(1L, 5L)),
+    area                   = c(rep(NA_integer_, 5L), rep(0L, 5L), rep(1L, 5L))
+  )
+  dir_path <- file.path(tmp_arrow, "country_code=TST", "surveyid_year=2020",
+                        "welfare_type=INC", "version=v01_v01")
+  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+  arrow::write_parquet(dt_raw, file.path(dir_path, "data.parquet"))
+
+  entries <- list(list(
+    pip_id         = "TST_2020_ECH_INC_ALL",
+    survey_id      = "S1",
+    country_code   = "TST",
+    year           = 2020L,
+    welfare_type   = "INC",
+    version        = "v01_v01",
+    survey_acronym = "ECH",
+    module         = "ALL",
+    dimensions     = list("gender", "area"),
+    welfare_vars   = list("welfare_ppp_2021_01_02"),
+    ppp_sort       = 2021L
+  ))
+  write_fixture_manifest_tm(tmp_manifest, "20260401_TEST", entries)
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(reset_piptm_env_sup())
+
+  expect_warning(
+    res <- piptm::table_maker(
+      pip_id              = "TST_2020_ECH_INC_ALL",
+      analysis_var        = "welfare",
+      measures            = "mean",
+      by                  = c("gender", "area"),
+      ppp                 = 2021L,
+      pop_share_threshold = 0.001
+    ),
+    "Reporting"
+  )
+
+  expect_equal(nrow(res), 3L)
+
+  cell_a <- res[gender == 0L & is.na(area)]
+  cell_b <- res[is.na(gender) & area == 0L]
+  cell_c <- res[gender == 1L & area == 1L]
+
+  expect_equal(nrow(cell_a), 1L)
+  expect_equal(nrow(cell_b), 1L)
+  expect_equal(nrow(cell_c), 1L)
+
+  expect_true(is.na(cell_a$value))
+  expect_equal(cell_a$flag, "NR")
+
+  expect_true(is.na(cell_b$value))
+  expect_equal(cell_b$flag, "NR")
+
+  expect_false(is.na(cell_c$value))
+  expect_true(is.na(cell_c$flag))
 })

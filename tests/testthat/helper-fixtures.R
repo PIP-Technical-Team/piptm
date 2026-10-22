@@ -97,6 +97,94 @@ write_fixture_manifest_tm <- function(manifest_dir, release, entries,
 }
 
 # ---------------------------------------------------------------------------
+# reset_piptm_env_tm()
+# ---------------------------------------------------------------------------
+
+#' Reset `.piptm_env` to a clean state between fixture-based tests.
+#'
+#' Clears `arrow_root`, `manifest_dir`, `manifests`, and `current_release`.
+#' Several test files previously carried their own byte-identical copy of
+#' this reset logic (`reset_piptm_env_sup`, `reset_piptm_env_v2`,
+#' `.reset_piptm_env`); those names are kept as thin aliases for this shared
+#' implementation so existing `withr::defer(...)` call sites are unaffected.
+#'
+#' @return Invisibly returns `NULL`.
+reset_piptm_env_tm <- function() {
+  env <- getNamespace("piptm")$.piptm_env
+  env$arrow_root      <- NULL
+  env$manifest_dir    <- NULL
+  env$manifests       <- list()
+  env$current_release <- NULL
+  invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# write_fixture_nr_masking_survey()
+# ---------------------------------------------------------------------------
+
+#' Write the shared "two-weight-group TST survey" NR-masking fixture.
+#'
+#' A single survey (`TST_2020_ECH_INC_ALL`) with one tiny-weight `gender`
+#' group and one large-weight `gender` group, used across multiple test
+#' files to exercise `pop_share_threshold` masking: the tiny-weight group's
+#' population share falls well below any reasonable threshold while the
+#' large-weight group's does not.
+#'
+#' gender = 0: 10 rows x weight 0.01  -> total weight ~= 0.10
+#' gender = 1: 10 rows x weight 1000  -> total weight = 10000
+#' gender=0 pop_share ~= 0.001% (well below the default 0.1% threshold)
+#' gender=1 pop_share ~= 99.999%
+#'
+#' Writes both the Parquet data file and the fixture manifest; does not set
+#' `manifest_dir`/`arrow_root` on `.piptm_env` (callers activate explicitly).
+#'
+#' @param tmp_arrow Directory to receive the Hive-partitioned Parquet file.
+#' @param tmp_manifest Directory to receive the fixture manifest JSON.
+#' @param n Integer row count (default `20L`), split evenly between the two
+#'   `gender` groups via `rep_len()`.
+#'
+#' @return Invisibly returns `NULL`.
+write_fixture_nr_masking_survey <- function(tmp_arrow, tmp_manifest, n = 20L) {
+  dt_raw <- data.table(
+    country_code           = "TST",
+    surveyid_year          = 2020L,
+    welfare_type           = "INC",
+    version                = "v01_v01",
+    pip_id                 = "TST_2020_ECH_INC_ALL",
+    welfare_ppp_2021_01_02 = seq(1, by = 0.5, length.out = n),
+    weight                 = rep_len(c(0.01, 1000), n),
+    gender                 = rep_len(c(0L, 1L), n)
+  )
+
+  dir_path <- file.path(
+    tmp_arrow,
+    "country_code=TST",
+    "surveyid_year=2020",
+    "welfare_type=INC",
+    "version=v01_v01"
+  )
+  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+  arrow::write_parquet(dt_raw, file.path(dir_path, "data.parquet"))
+
+  entries <- list(list(
+    pip_id         = "TST_2020_ECH_INC_ALL",
+    survey_id      = "S1",
+    country_code   = "TST",
+    year           = 2020L,
+    welfare_type   = "INC",
+    version        = "v01_v01",
+    survey_acronym = "ECH",
+    module         = "ALL",
+    dimensions     = list("gender"),
+    welfare_vars   = list("welfare_ppp_2021_01_02"),
+    ppp_sort       = 2021L
+  ))
+  write_fixture_manifest_tm(tmp_manifest, "20260401_TEST", entries)
+
+  invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
 # activate_test_registry()
 # ---------------------------------------------------------------------------
 

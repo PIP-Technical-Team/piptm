@@ -151,3 +151,24 @@ See `.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-v
 ## Workspace Notes
 
 - **pipdata**: The pipdata package is a data preparation and validation pipeline that transforms raw household survey data from Datalibweb (DLW) into cleaned, versioned, and analysis-ready datasets. It also prepares inputs for table maker project: creates arrow files, manifest documents and variable specifications.
+
+## API Endpoint Contract Conventions
+
+### Cross-endpoint payload-shape coupling (established 2026-10-22)
+
+`/table/download` accepts rows "shaped like the `/table` response" without
+any enforced type/schema link between the two endpoints — this coupling is
+documented only informally in `docs/api-contract.md`, not via a shared
+function call or type. When `/table`'s `value` field changed from raw
+numeric to a formatted display string (scaled percentages, the `"NR"`
+masking sentinel), `/table/download`'s blind `as.numeric(value)` coercion
+silently corrupted both the sentinel and the scale (see
+`.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md`).
+
+**Rule for future endpoint changes**: whenever a producing endpoint's
+*output shape* (not just its values) changes, grep every other endpoint
+documented as consuming "a payload shaped like \<producing endpoint\>'s
+response," not just direct function callers — format contracts between
+Plumber endpoints are not enforced by the type system and will not surface
+in a dependency/call-graph search.
+

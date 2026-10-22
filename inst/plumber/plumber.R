@@ -297,6 +297,10 @@ function(req, body = NULL, res) {
   # `value` (e.g. hand-built row objects, not copied from /table) are left
   # untouched as-is, since JSON numeric values round-trip as numeric without
   # needing explicit coercion.
+  # `population` is retained here only for legacy client payloads built
+  # before the column was removed from table_maker()/`/table` output (see
+  # NEWS.md); it is a harmless no-op when absent. `poverty_line` remains a
+  # genuine numeric field in current /table output.
   for (col in intersect(c("population", "poverty_line"), names(tbl))) {
     data.table::set(tbl, j = col, value = suppressWarnings(as.numeric(tbl[[col]])))
   }

@@ -1,10 +1,10 @@
 # 🧠 Project Brain — Part 1
 
-_Generated 2026-10-16_
+_Generated 2026-10-22_
 
 ## Table_Maker\(\) / Pip_Id / Version
 
-_Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
+_Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -51,6 +51,12 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
 - **[HTML Description Renderer + Wording Quality Improvements](.cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md)** · `brainstorm` · _decided_ · `2026-09-08`
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Structured Cell Definition table for share measures](.cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md)** · `brainstorm` · _decided_ · `2026-09-14`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[/table response format: layout slot assignment for the UI](.cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md)** · `brainstorm` · _decided_ · `2026-10-19`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[README](.cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md)** · `brainstorm` · _—_ · `—`
+  > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
+- **[Population share threshold: NR cell masking and API value formatting](.cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md)** · `brainstorm` · _decided_ · `2026-10-20`
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
@@ -100,12 +106,16 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
   > Replace ambiguous prose for `pop_share`, `target_within_group_share`, and `target_survey_share` in the `/description`…
 - **[Structured Cell Definition table for share measures](.cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md)** · `plan` · _active_ · `2026-09-14`
   > Replace the ambiguous, near-identical prose sentences generated for the three share measures (`pop_share`, `target_wi…
+- **[Population share threshold: NR masking and API value formatting](.cg-docs/plans/2026-10-20-pop-share-nr-masking.md)** · `plan` · _completed_ · `2026-10-20`
+  > Replace row-dropping suppression in `table_maker()` with cell-level NR masking at a 0.1% default threshold, remove th…
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
   > **Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always include…
 - **[2026-04-07-computation-engine-review](.cg-docs/reviews/2026-04-07-computation-engine-review.md)** · `review` · _—_ · `—`
   > **Review depth**: targeted (performance + correctness focus on `compute_poverty.R`) **Files reviewed**: `R/compute_po…
 - **[2026-04-28-table-maker-approach-b-refactor-review](.cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md)** · `review` · _—_ · `—`
   > **Review depth**: Thorough (from `compound-gpid.local.md`) **Files reviewed**: 10 (`R/compute_measures.R`, `R/table_m…
+- **[2026-04-29-arrow-vs-collapse-benchmark-review](.cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md)** · `review` · _—_ · `—`
+  > **Review depth**: Standard (+ auto-escalated: statistical aggregation functions, >200 non-test lines) **Files reviewe…
 - **[2026-05-11-api-service-plumber-v2-impl-review](.cg-docs/reviews/2026-05-11-api-service-plumber-v2-impl-review.md)** · `review` · _fixed_ · `—`
   > Reviewed against the completed implementation of `.cg-docs/plans/2026-05-11-api-service-plumber-v2.md` (all 5 steps).…
 - **[2026-05-11-api-service-plumber-v2-review](.cg-docs/reviews/2026-05-11-api-service-plumber-v2-review.md)** · `review` · _—_ · `2026-05-13`
@@ -126,8 +136,18 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
   > **Review mode**: light **Files reviewed**: 3 **Findings**: 5 (P0: 0, P1: 0, P2: 4, P3: 1)
 - **[2026-09-29-review](.cg-docs/reviews/2026-09-29-review.md)** · `review` · _—_ · `2026-09-29`
   > **Review mode**: light **Files reviewed**: 2 **Findings**: 5 (P0: 0, P1: 0, P2: 2, P3: 3)
+- **[2026-10-20-pop-share-nr-masking-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: data-risk **Scope**: diff `e6eae4b..HEAD` (branch `new_pop_threshold`), implementing `.cg-docs/plans…
+- **[2026-10-20-pop-share-nr-masking-verify-review-2](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-2.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage — second pass, covering the P1 and P2 fix-triage rounds cumulati…
+- **[2026-10-20-pop-share-nr-masking-verify-review-3](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-3.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage — third pass, covering the full cumulative P1/P2/P3 fix-triage d…
+- **[2026-10-20-pop-share-nr-masking-verify-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-ma…
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
+- **[/table/download silently corrupts data when a sibling endpoint's output format changes](.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md)** · `solution` · _—_ · `2026-10-22`
+  > While implementing cell-level `NR` masking and API value formatting for `table_maker()`/`format_table_output()` (plan…
 - **[Arrow open_dataset on multiple Parquet files silently breaks within-survey welfare sort](.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md)** · `solution` · _—_ · `2026-05-21`
   > The `{piptm}` pipeline relies on a **pre-sort contract**: welfare values in each survey's microdata are sorted ascend…
 - **[collapse::fsum/fcumsum silently drops NA rows, biasing weighted statistics](.cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md)** · `solution` · _—_ · `2026-05-21`
@@ -149,9 +169,9 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 71 entities
 - **[Adding new measures to the computation engine via the registry pattern](.cg-docs/solutions/testing-patterns/2026-06-01-adding-measures-registry-pattern.md)** · `solution` · _—_ · `2026-06-01`
   > Need to extend the computation engine with new measures (`obs_share`, `pop_share`) without breaking existing consumer…
 
-## Service Layer / Computation Engine / Endpoint
+## Service Layer / Computation Engine / Api
 
-_Keywords: `service layer` · `computation engine` · `endpoint`_ · 24 entities
+_Keywords: `service layer` · `computation engine` · `api`_ · 26 entities
 
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`
   > Version as partition key with manifest-based resolution
@@ -191,6 +211,8 @@ _Keywords: `service layer` · `computation engine` · `endpoint`_ · 24 entities
   > HTML Description Renderer + Wording Quality Improvements
 - **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
   > Structured Cell Definition table for share measures
+- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _idea_ · `—`
+  > /table response format: layout slot assignment for the UI
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[API PPP parameter validation refactor](roadmap.json#ppp-api-input-validation)** · `feature` · _done_ · `—`
@@ -201,6 +223,8 @@ _Keywords: `service layer` · `computation engine` · `endpoint`_ · 24 entities
   > pop_share_threshold parameter and cell suppression logic
 - **[API validation and plumber endpoint integration](roadmap.json#api-threshold-validation)** · `feature` · _done_ · `—`
   > API validation and plumber endpoint integration
+- **[API value formatting and string NR response contract](roadmap.json#api-value-formatting-nr-response-contract)** · `feature` · _idea_ · `—`
+  > API value formatting and string NR response contract
 
 ## Req / Body / Pr$Call\(\)
 

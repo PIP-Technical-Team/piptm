@@ -24,9 +24,27 @@
 #' @return A new [data.table::data.table()] with `value` formatted as character
 #'   and `flag` removed. The input table is never modified by reference.
 #'
+#' @section Architectural boundary with table_maker():
+#' Cell-level **masking** (deciding which cells are suppressed and setting
+#' `value = NA_real_` / `flag = "NR"`) lives inside [table_maker()] because it
+#' needs row-level access to per-cell `pop_share` and grouping context that is
+#' only available during that computation. Presentation **formatting**
+#' (scaling, rounding, converting masked/non-finite cells to display strings)
+#' is kept in this separate function instead, since it is purely a function of
+#' already-computed `measure`/`value`/`flag` columns and has no need for the
+#' original microdata. Do not assume all presentation-like logic belongs here;
+#' masking decisions are made upstream and are not reconsidered by this
+#' function.
+#'
 #' @family api
 #' @export
 #' @examples
+#' dt <- data.table::data.table(
+#'   measure = c("gini", "mean", "pop_poverty"),
+#'   value   = c(0.067, 15.234, 123456.7),
+#'   flag    = c(NA_character_, "NR", NA_character_)
+#' )
+#' format_table_output(dt)
 #' \dontrun{
 #' res <- table_maker(pip_id = "COL_2010_ECH_INC_ALL", analysis_var = "welfare", measures = "gini")
 #' formatted <- format_table_output(res)
@@ -68,7 +86,7 @@ format_table_output <- function(dt) {
   if (any(is_finite)) {
     meas <- out$measure
 
-    idx_whole <- is_finite & (meas %chin% c("pop_poverty", "nobs"))
+    idx_whole <- is_finite & (meas %chin% .WHOLE_NUMBER_MEASURES)
     idx_pct   <- is_finite & (meas %chin% .PCT_MEASURES)
     idx_other <- is_finite & !idx_whole & !idx_pct
 

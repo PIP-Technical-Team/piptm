@@ -22,3 +22,14 @@ compound-gpid.local.md
 
 benchmarks/arrow-cache.rds
 benchmarks/*.rds
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python (tooling scripts, if ever added locally)
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/

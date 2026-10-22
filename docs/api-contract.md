@@ -163,7 +163,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `by` *(optional, array)* — Dimensions (≤4 entries) returned by `/dimensions`; requests with more than four entries are rejected server-side.
   - `ppp` *(optional, integer)* — PPP reference year. Default `2021`.
   - `filter_base` *(optional, JSON object)* — Keys are categorical variables; values are arrays of allowed codes (e.g., `{ "gender": [0], "age_group": [1,2] }`).
-  - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables suppression.
+  - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables masking.
   - `release` *(optional)* — Defaults to current release.
   - `include_metadata` *(optional, string)* — Case-insensitive; any spelling of `"true"` (`"true"`, `"True"`, `"TRUE"`) returns description metadata alongside table output. Any other value (or omission) disables metadata.
   _HTTP transport note_: Query parameters arrive as strings; the types above describe the server-side coercion performed before validation.
@@ -243,7 +243,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - Proportions and percentage measures (`gini`, `headcount`, `poverty_gap`, `severity`, `pop_share`, `target_within_group_share`, `target_survey_share`) are scaled by 100 with 2 decimal places (e.g. `"6.70"`).
 - Counts (`pop_poverty`, `nobs`) are formatted as whole numbers.
 - Other continuous measures (`mean`, `median`, `sd`, `var`, `min`, `max`, `p10`, `p25`, `p75`, `p90`, `sum`, `mld`, `watts`) are formatted with 2 decimal places.
-- Below-threshold cells masked with population share < `pop_share_threshold` have `value = "NR"`.
+- Below-threshold cells, and cells whose population share could not be computed (`NA`, e.g. a zero-denominator group), are masked with `value = "NR"`.
 - Genuine missing or non-finite values (`NA`, `NaN`, `Inf`, `-Inf`) are serialized as `null`.
 - The `population` column is removed from `/table` output.
 

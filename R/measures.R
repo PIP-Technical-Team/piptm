@@ -51,6 +51,15 @@ NULL
   "target_survey_share"
 )
 
+#' Measures formatted as whole numbers (0 decimal places) in API output
+#'
+#' @keywords internal
+#' @noRd
+.WHOLE_NUMBER_MEASURES <- c(
+  "pop_poverty",
+  "nobs"
+)
+
 # ── Exported helpers ──────────────────────────────────────────────────────────
 
 #' Valid disaggregation dimension names

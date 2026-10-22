@@ -99,6 +99,32 @@ test_that("format_table_output sets value = 'NR' for masked rows", {
   expect_equal(res$value, c("NR", "NR", "NR"))
 })
 
+test_that("format_table_output pins exact behavior at the x.xx5 rounding boundary", {
+  # Floating-point representation can make a half-way decimal value round
+  # either direction once formatC() sees its actual binary value. These
+  # assertions pin the *currently observed* behavior (not an idealized
+  # "correct" rounding rule) so a future change to the rounding engine
+  # (e.g. switching formatC() for round()/sprintf()/scales::number()) is
+  # caught rather than silently shifting displayed values at the boundary.
+  dt_other <- data.table(
+    measure = c("mean", "sd", "median"),
+    value   = c(0.145, 1.005, 2.675),
+    flag    = rep(NA_character_, 3L)
+  )
+  res_other <- format_table_output(dt_other)
+  expect_equal(res_other$value, c("0.14", "1.00", "2.67"))
+
+  # Percentage-family measures are scaled by 100 before the same 2-decimal
+  # formatC() rounding is applied; this pins a boundary case post-scaling.
+  dt_pct <- data.table(
+    measure = "gini",
+    value   = 0.12345,
+    flag    = NA_character_
+  )
+  res_pct <- format_table_output(dt_pct)
+  expect_equal(res_pct$value, "12.35")
+})
+
 test_that("format_table_output converts NA, NaN, Inf, -Inf to NA_character_", {
   dt <- data.table(
     measure = c("mean", "gini", "sd", "mld"),
@@ -138,4 +164,29 @@ test_that("format_table_output handles empty tables", {
   expect_equal(nrow(res), 0L)
   expect_type(res$value, "character")
   expect_false("flag" %in% names(res))
+})
+
+test_that(".PCT_MEASURES stays a subset of .MEASURE_REGISTRY (registry sync guard)", {
+  pct_measures <- piptm:::.PCT_MEASURES
+  registry     <- piptm:::.MEASURE_REGISTRY
+
+  # Every percentage-scaled measure name must be a real registered measure;
+  # a typo or a stale entry here would silently exclude or misclassify a
+  # measure without any test ever failing.
+  expect_true(all(pct_measures %in% names(registry)))
+})
+
+test_that("format_table_output falls through to the generic 2-decimal path for an unregistered/future measure name", {
+  dt <- data.table(
+    measure = "custom_future_measure",
+    value   = 12.345,
+    flag    = NA_character_
+  )
+
+  res <- format_table_output(dt)
+
+  # Not in .PCT_MEASURES (no x100 scaling) and not in the whole-number set,
+  # so it must land in the generic 2-decimal formatting bucket rather than
+  # silently producing NA or an empty string.
+  expect_equal(res$value, "12.35")
 })

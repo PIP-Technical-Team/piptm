@@ -415,8 +415,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' @param pop_share_threshold Numeric scalar in (0, 1) or `NULL`.  When
 #'   non-NULL, cells whose population share falls below this threshold have all
 #'   measures masked with `value = NA_real_` and `flag = "NR"`, regardless of whether
-#'   `"pop_share"` was requested.  If `"pop_share"` is not among the requested
-#'   `measures`, it is computed internally and used solely for threshold
+#'   `"pop_share"` was requested. Cells whose population share cannot be computed
+#'   (`NA`, e.g. a zero-denominator or all-`NA` group) are also masked as `"NR"`,
+#'   in addition to cells below the threshold. If `"pop_share"` is not among the
+#'   requested `measures`, it is computed internally and used solely for threshold
 #'   evaluation — it does not appear in the output. Has no effect when `by = NULL`
 #'   (aggregate mode: each cell is a full survey with pop_share = 1.0).
 #'   Default: `0.001` (0.1%).
@@ -440,10 +442,10 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   \item{`poverty_line`}{Poverty threshold; populated for poverty-family
 #'     rows and `NA` for non-poverty rows.}
 #'   \item{`measure`}{Measure name (e.g. `"headcount"`, `"gini"`).}
-#'   \item{`value`}{Computed statistic.}
+#'   \item{`value`}{Computed statistic. `NA_real_` when `flag == "NR"` (masked).}
 #'   \item{`flag`}{Character suppression flag. `"NR"` identifies cells masked
-#'     because their population share is below `pop_share_threshold`; otherwise
-#'     the value is `NA`.}
+#'     because their population share is below `pop_share_threshold` (or could
+#'     not be computed); otherwise the value is `NA`.}
 #' }
 #'   When `include_metadata = TRUE`: A list with elements:
 #' \describe{
@@ -460,6 +462,19 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' }
 #'
 #'
+#' @section Downstream formatting:
+#' Suppressed cells are returned as raw `value = NA_real_` with
+#' `flag = "NR"` — `table_maker()` itself never coerces `value` to character
+#' and never distinguishes masked `NA` from genuinely missing `NA` beyond the
+#' `flag` column. Any caller that displays results to end users, or otherwise
+#' needs to tell "masked" apart from "not computed", must pass this table
+#' through [format_table_output()] (or equivalent logic) before use; treating
+#' `value == NA` alone as ordinary missing data will silently conflate masked
+#' and unmasked-missing cells.
+#'
+#' @seealso [format_table_output()] for converting this table's raw
+#'   `value`/`flag` columns into the formatted, `flag`-free display
+#'   representation used by the `/table` API.
 #' @family api
 #' @export
 #' @examples
@@ -866,6 +881,18 @@ table_maker <- function(pip_id        = NULL,
 
     meta_cols <- c("pip_id", "country_code", "surveyid_year", "welfare_type")
     dim_cols  <- if (!is.null(by)) by else character(0L)
+    cell_keys <- c("pip_id", dim_cols)
+
+    # Capture the per-cell `population` already computed by compute_measures()
+    # before it is dropped from the output below. When `pop_share` is not
+    # among the requested measures, this lets threshold evaluation reuse
+    # these values via a cheap lookup/join instead of re-aggregating the raw
+    # microdata a second time through compute_shares()/GRP().
+    pop_lookup <- NULL
+    if (length(dim_cols) > 0L && "population" %in% names(result)) {
+      pop_lookup <- unique(result[, c(cell_keys, "population"), with = FALSE], by = cell_keys)
+    }
+
     if (!"flag" %in% names(result)) {
       result[, flag := NA_character_]
     }
@@ -890,6 +917,16 @@ table_maker <- function(pip_id        = NULL,
         caller_requested_pop_share <- "pop_share" %in% measures
         if (caller_requested_pop_share) {
           pop_rows <- result[measure == "pop_share"]
+        } else if (!is.null(pop_lookup)) {
+          # Reuse the per-cell population captured above: pop_share is this
+          # cell's population divided by its survey's total population
+          # (summed across all cells sharing the same pip_id) — identical
+          # math to .shares_setup()'s denom_survey computation, without a
+          # second GRP()/fsum() pass over the raw microdata.
+          denom_lookup <- pop_lookup[, list(denom_survey = collapse::fsum(population)), by = "pip_id"]
+          pop_rows <- pop_lookup[denom_lookup, on = "pip_id"]
+          pop_rows[, value := population / denom_survey]
+          pop_rows[, c("population", "denom_survey") := NULL]
         } else {
           batch_by_ps <- c("pip_id", dim_cols)
           grp_ps      <- collapse::GRP(dt, by = batch_by_ps)
@@ -897,7 +934,6 @@ table_maker <- function(pip_id        = NULL,
                                         measures = "pop_share", grp = grp_ps)
         }
 
-        cell_keys  <- c("pip_id", dim_cols)
         suppressed <- pop_rows[is.na(value) | value < pop_share_threshold]
 
         if (include_metadata && nrow(suppressed) > 0L) {
@@ -905,14 +941,27 @@ table_maker <- function(pip_id        = NULL,
         }
 
         if (nrow(suppressed) > 0L) {
-          sup_labels <- vapply(seq_len(nrow(suppressed)), function(i) {
-            dims <- paste(
-              vapply(cell_keys, function(k)
-                paste0(k, "=", suppressed[[k]][[i]]), character(1L)),
-              collapse = ", "
+          # Vectorized label construction (no row-wise vapply): build one
+          # "key=value" character vector per cell_keys column, paste them
+          # together column-wise, then append the rounded pop_share. This
+          # keeps the whole labeling step O(rows) in vectorized operations
+          # instead of a nested per-row loop, which matters when many small
+          # cells are masked across a large batch.
+          key_parts  <- lapply(cell_keys, function(k) paste0(k, "=", suppressed[[k]]))
+          dims_vec   <- do.call(paste, c(key_parts, list(sep = ", ")))
+          sup_labels <- paste0(dims_vec, " (pop_share=", round(suppressed[["value"]], 4L), ")")
+
+          # Cap the number of labels shown in the warning; this is a
+          # diagnostic message, not a data structure, so truncating it for
+          # very large suppressed sets keeps the warning readable without
+          # affecting which cells are actually masked.
+          max_labels <- 20L
+          if (length(sup_labels) > max_labels) {
+            sup_labels <- c(
+              sup_labels[seq_len(max_labels)],
+              sprintf("... and %d more", length(sup_labels) - max_labels)
             )
-            paste0(dims, " (pop_share=", round(suppressed[["value"]][[i]], 4L), ")")
-          }, character(1L))
+          }
 
           cli_warn(
             c(

@@ -71,7 +71,7 @@ Query parameters (works identically as a POST form body):
 | `by` | string[] | no | repeatable; disaggregation dimensions from `GET /dimensions` (supports up to the 4 Decision‑3 layout slots) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
-| `pop_share_threshold` | number | no | cell-suppression threshold in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
+| `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
 | `release` | string | no | defaults to the current release |
 | `include_metadata` | string | no | `"true"` to also return `description_metadata` in `meta` (used to power `POST /description` fast path); default `"false"` |
 

@@ -85,3 +85,4 @@ op <- spec$paths[["/table/download"]][["post"]]
 - `.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md` — identical root cause (missing `@param` annotation) for a different endpoint (`/description`).
 - `.cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md` — original hardening pass for this same endpoint; this entry's fix supersedes that entry's serializer choice (`@serializer contentType` → `@serializer null`).
 - `.cg-docs/solutions/testing-patterns/2026-05-13-plumber-programmatic-testing-with-fixtures.md` — `pr$call()` testing patterns; note the limitation this entry adds (serializer/header bugs need live-server verification).
+- `.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md` — a third, independent bug class found later on this same endpoint: silent data corruption from blindly coercing `value` to numeric after a sibling endpoint's output contract changed.
