@@ -134,7 +134,7 @@ function(req) {
 #* @param filter_base:character JSON-encoded sample-base filter object
 #*   (optional), for example `{"gender":[0],"age_group":[1,2]}`.
 #* @param pop_share_threshold:numeric Optional cell-suppression threshold
-#*   (default `0.01`). Use null/empty to disable suppression.
+#*   (default `0.001`). Use null/empty to disable suppression.
 #* @param release:character Release ID (optional; defaults to current release).
 #* @param include_metadata:character When `"true"`, returns the table plus
 #*   assembled `description_metadata` in the response `meta` field.
@@ -143,7 +143,7 @@ function(req) {
 #* @get /table
 #* @post /table
 function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
-         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.01,
+         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.001,
          release = NULL, include_metadata = "false", res) {
 
   check <- validate_table_input(
@@ -194,6 +194,8 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
       result_data <- data
       description_metadata <- NULL
     }
+
+    result_data <- piptm::format_table_output(result_data)
 
     list(
       data = result_data,
@@ -286,7 +288,21 @@ function(req, body = NULL, res) {
     return(err("`data` must be a non-empty array of row objects.", 400L))
   }
 
-  for (col in intersect(c("value", "population", "poverty_line"), names(tbl))) {
+  # NOTE: `value` is intentionally excluded from numeric coercion below.
+  # Since the /table formatting change, `value` may already be a formatted
+  # display string (e.g. "45.67" for a scaled percentage, or the "NR"
+  # suppression sentinel for masked cells). Coercing it with as.numeric()
+  # here would silently turn "NR" into NA (destroying the disclosure-control
+  # signal) and would not "undo" the x100 percentage scaling already applied
+  # by format_table_output(). Payloads that already carry a raw numeric
+  # `value` (e.g. hand-built row objects, not copied from /table) are left
+  # untouched as-is, since JSON numeric values round-trip as numeric without
+  # needing explicit coercion.
+  # `population` is retained here only for legacy client payloads built
+  # before the column was removed from table_maker()/`/table` output (see
+  # NEWS.md); it is a harmless no-op when absent. `poverty_line` remains a
+  # genuine numeric field in current /table output.
+  for (col in intersect(c("population", "poverty_line"), names(tbl))) {
     data.table::set(tbl, j = col, value = suppressWarnings(as.numeric(tbl[[col]])))
   }
 

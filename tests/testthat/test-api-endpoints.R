@@ -152,13 +152,9 @@ if (!nzchar(.ep_plumber_path)) {
   invisible(fname)
 }
 
-.reset_piptm_env <- function() {
-  env <- getNamespace("piptm")$.piptm_env
-  env$arrow_root      <- NULL
-  env$manifest_dir    <- NULL
-  env$manifests       <- list()
-  env$current_release <- NULL
-}
+# See helper-fixtures.R: reset_piptm_env_tm() is the single shared
+# implementation; kept as an alias here so existing call sites are unaffected.
+.reset_piptm_env <- reset_piptm_env_tm
 
 # Build 3-survey fixture (COL 2010, BOL 2000, COL 2015) in temp dirs and
 # activate them in .piptm_env. Returns list(tmp_arrow, tmp_manifest, release).
@@ -1172,4 +1168,128 @@ test_that("Error envelope has empty warnings and non-empty errors", {
   expect_true(length(body$errors) > 0L)
   # jsonlite drops NULL fields from serialized lists — data absent or empty
   expect_true(is.null(body$data) || length(body$data) == 0L)
+})
+
+# =============================================================================
+# Block 11: /table API formatting contract & suppression masking
+# =============================================================================
+
+test_that("GET /table returns string values, no population or flag, and formatted measures", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = c("gini", "mean")
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  df <- body$data
+  expect_true(is.data.frame(df))
+  expect_type(df$value, "character")
+  expect_false("population" %in% names(df))
+  expect_false("flag" %in% names(df))
+})
+
+test_that("GET /table returns 422 envelope when formatter fails", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  testthat::with_mocked_bindings(
+    format_table_output = function(...) stop("simulated schema formatting failure"),
+    .package = "piptm",
+    {
+      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+        pip_id       = "COL_2010_ECH_INC_ALL",
+        analysis_var = "welfare",
+        measures     = "mean"
+      )))
+      expect_equal(res$status, 422L)
+      body <- parse_api_res(res)
+      expect_equal(body$status, "error")
+      expect_true(any(grepl("simulated schema formatting failure", unlist(body$errors))))
+    }
+  )
+})
+
+test_that("GET /table returns 422 when format_table_output() genuinely throws on malformed table_maker() output (not a mocked formatter)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  # Only `table_maker()` is mocked here, to simulate a future regression that
+  # drops a required column from its output. `format_table_output()` itself
+  # runs unmocked and must genuinely raise its real validation error for the
+  # endpoint's error handler to convert into a 422 envelope.
+  malformed_table <- data.table::data.table(
+    pip_id  = "COL_2010_ECH_INC_ALL",
+    measure = "mean",
+    value   = 1.5
+    # `flag` deliberately omitted — table_maker() always produces it in
+    # practice; this simulates a schema regression upstream.
+  )
+
+  testthat::with_mocked_bindings(
+    table_maker = function(...) malformed_table,
+    .package = "piptm",
+    {
+      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+        pip_id       = "COL_2010_ECH_INC_ALL",
+        analysis_var = "welfare",
+        measures     = "mean"
+      )))
+      expect_equal(res$status, 422L)
+      body <- parse_api_res(res)
+      expect_equal(body$status, "error")
+      expect_true(any(grepl("flag", unlist(body$errors), ignore.case = TRUE)))
+    }
+  )
+})
+
+test_that("GET /table surfaces 'NR' end-to-end for a masked cell through the real request -> table_maker() -> format_table_output() -> JSON pipeline", {
+  skip_if_not_installed("plumber")
+  skip_if_not_installed("arrow")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  # Self-contained fixture (not .make_ep_fixtures(), which uses uniform
+  # per-row weights): one tiny-weight gender group and one large-weight
+  # gender group, so the small group is masked by the default
+  # pop_share_threshold while the large group is not. This drives the
+  # masking end-to-end through the live API, rather than unit-testing
+  # table_maker() and format_table_output() in isolation. Uses the shared
+  # write_fixture_nr_masking_survey() helper (see helper-fixtures.R) so the
+  # same fixture definition is not duplicated across test files.
+  tmp_arrow    <- withr::local_tempdir()
+  tmp_manifest <- withr::local_tempdir()
+
+  write_fixture_nr_masking_survey(tmp_arrow, tmp_manifest)
+  piptm::set_manifest_dir(tmp_manifest)
+  piptm::set_arrow_root(tmp_arrow)
+  withr::defer(.reset_piptm_env())
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "TST_2020_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    by           = "gender"
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+
+  df <- body$data
+  expect_true(is.data.frame(df))
+  expect_false("population" %in% names(df))
+  expect_false("flag" %in% names(df))
+
+  masked_row   <- df[df$gender == 0L, ]
+  unmasked_row <- df[df$gender == 1L, ]
+  expect_equal(nrow(masked_row), 1L)
+  expect_equal(nrow(unmasked_row), 1L)
+  expect_equal(masked_row$value, "NR")
+  expect_false(identical(unmasked_row$value, "NR"))
 })

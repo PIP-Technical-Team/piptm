@@ -1,0 +1,138 @@
+{
+  "status": ["success"],
+  "data": [
+    {
+      "pip_id": "COL_2008_GEIH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2008,
+      "welfare_type": "INC",
+      "poverty_line": null,
+      "analysis_var": "welfare",
+      "measures": ["mean"],
+
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            { "code": 0, "label": "Female" },
+            { "code": 1, "label": "Male" }
+          ]
+        },
+        "rows": {
+          "varname": "educat4",
+          "label": "Education level",
+          "categories": [
+            { "code": 1, "label": "None" },
+            { "code": 2, "label": "Primary" },
+            { "code": 3, "label": "Secondary" },
+            { "code": 4, "label": "Tertiary" },
+            { "code": null, "label": "Unknown" }
+          ]
+        },
+        "superColumns": {
+          "varname": "area",
+          "label": "Urban / Rural",
+          "categories": [
+            { "code": 0, "label": "Rural" },
+            { "code": 1, "label": "Urban" }
+          ]
+        },
+        "superRows": null
+      },
+
+      "cells": [
+        { "superRow": null, "row": { "code": 1, "label": "None" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 4.4965 }, "population": 806371 },
+        { "superRow": null, "row": { "code": 1, "label": "None" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 5.1455 }, "population": 897726 },
+        { "superRow": null, "row": { "code": 1, "label": "None" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 9.3964 }, "population": 1380661 },
+        { "superRow": null, "row": { "code": 1, "label": "None" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 9.5799 }, "population": 1329288 },
+
+        { "superRow": null, "row": { "code": 2, "label": "Primary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 5.4371 }, "population": 2228477 },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 6.0411 }, "population": 2577526 },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 10.6746 }, "population": 4609251 },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 10.4928 }, "population": 4239466 },
+
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 6.7405 }, "population": 1282671 },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 7.4746 }, "population": 1232360 },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 13.3256 }, "population": 6527877 },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 13.6483 }, "population": 6049374 },
+
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 19.7614 }, "population": 111060 },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 27.2911 }, "population": 90850 },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 32.7174 }, "population": 2890294 },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 35.9631 }, "population": 2568378 },
+
+        { "superRow": null, "row": { "code": null, "label": "Unknown" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 4.7541 }, "population": 291583 },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" },
+          "superColumn": { "code": 0, "label": "Rural" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 4.7366 }, "population": 306678 },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": 10.5641 }, "population": 765898 },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" },
+          "superColumn": { "code": 1, "label": "Urban" },
+          "column": { "code": 1, "label": "Male" },
+          "measures": { "mean": 10.8691 }, "population": 796627 }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "meta": {
+    "release": ["20260401_TEST"],
+    "n_surveys": [1]
+  }
+}

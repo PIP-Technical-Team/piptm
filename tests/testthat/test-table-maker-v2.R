@@ -2,13 +2,9 @@ library(data.table)
 library(arrow)
 library(jsonlite)
 
-reset_piptm_env_v2 <- function() {
-  env <- getNamespace("piptm")$.piptm_env
-  env$arrow_root <- NULL
-  env$manifest_dir <- NULL
-  env$manifests <- list()
-  env$current_release <- NULL
-}
+# See helper-fixtures.R: reset_piptm_env_tm() is the single shared
+# implementation; kept as an alias here so existing call sites are unaffected.
+reset_piptm_env_v2 <- reset_piptm_env_tm
 
 make_tm_fixtures_v2 <- function(env = parent.frame()) {
   tmp_arrow <- withr::local_tempdir(.local_envir = env)
@@ -188,5 +184,6 @@ test_that("table_maker v2 output serializes", {
   parsed <- jsonlite::fromJSON(txt)
 
   expect_true(is.data.frame(parsed))
-  expect_true(all(c("measure", "value", "population") %in% names(parsed)))
+  expect_true(all(c("measure", "value", "flag") %in% names(parsed)))
+  expect_false("population" %in% names(parsed))
 })

@@ -5,6 +5,7 @@ status: decided
 scope: "Lightweight"
 chosen-approach: "Always-active internal pop_share evaluation"
 tags: [measures, pop_share, suppression, threshold, data-quality, table_maker]
+superseded-by: .cg-docs/plans/2026-10-20-pop-share-nr-masking.md
 ---
 
 # Pop-Share Threshold as Always-Active Suppression Guard

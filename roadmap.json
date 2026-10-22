@@ -238,6 +238,14 @@
           "title": "Structured Cell Definition table for share measures",
           "status": "done",
           "plan": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md"
+        },
+        {
+          "id": "table-response-format-layout-slot-assignment",
+          "title": "/table response format: layout slot assignment for the UI",
+          "description": "Redesign the /table response to a uniform flat cells[] array with fixed slot keys (superRow, row, superColumn, column) plus a per-survey layout block, so the UI can place each covariate correctly. Slot assignment is positional from the `by` parameter (1=columns, 2=rows, 3=super columns, 4=super rows). Breaking response change; request signature unchanged. /table/download stays flat. Includes replacing the dead registry-driven slot lookup at R/table_maker.R:309-327 (cov_entry$slot, never returned by piptm_layout_covariates()) with positional derivation from `by`.",
+          "status": "idea",
+          "brainstorm": ".cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
+          "plan": null
         }
       ]
     },
@@ -290,7 +298,8 @@
       "id": "phase-7-pop-share-threshold",
       "title": "Phase 7 — Population Share Threshold-Based Suppression",
       "description": "Implement configurable population share suppression rule that removes non-share measures from cells where pop_share falls below a threshold. Integrated into table_maker() API and plumber /table endpoint.",
-      "status": "done",
+      "objective": "Implement configurable population share suppression and its API response contract.",
+      "status": "in-progress",
       "features": [
         {
           "id": "pop-share-threshold-suppression",
@@ -298,7 +307,7 @@
           "description": "Add pop_share_threshold parameter to table_maker() (default 0.01). Validate threshold is NULL or numeric in (0, 1). In Step 10, extract pop_share rows, identify below-threshold cells, tag matching non-share rows with .suppress=TRUE, filter and emit warning. Anti-join pattern for efficient row matching.",
           "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-06-01-pop-share-threshold-suppression.md",
-          "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md",
+          "plan": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
           "review": ".cg-docs/reviews/2026-06-01-pop-share-threshold-suppression-review.md"
         },
         {
@@ -307,6 +316,13 @@
           "description": "Update validate_table_input() to validate pop_share_threshold parameter (coerce from character, reject invalid/out-of-bounds values, return NULL for empty/null). Update /table endpoint to accept and pass threshold to table_maker(). Plumber annotation documents the new parameter.",
           "status": "done",
           "plan": ".cg-docs/plans/2026-06-01-pop-share-threshold-suppression.md"
+        },
+        {
+          "id": "api-value-formatting-nr-response-contract",
+          "title": "API value formatting and string NR response contract",
+          "description": "Define the adjacent /table API contract for formatted string values, including percentage scaling, decimal precision, null handling, and NR responses for masked cells.",
+          "status": "idea",
+          "plan": null
         }
       ]
     }

@@ -127,7 +127,8 @@ test_that("phase4: table_maker welfare analysis by gender/area works", {
   )
 
   expect_true(all(c("gini", "mean") %in% out$measure))
-  expect_true(all(c("gender", "area", "population") %in% names(out)))
+  expect_true(all(c("gender", "area", "flag") %in% names(out)))
+  expect_false("population" %in% names(out))
 })
 
 test_that("phase4: table_maker poverty analysis with pov_status uses poverty_line", {

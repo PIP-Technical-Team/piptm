@@ -163,7 +163,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `by` *(optional, array)* — Dimensions (≤4 entries) returned by `/dimensions`; requests with more than four entries are rejected server-side.
   - `ppp` *(optional, integer)* — PPP reference year. Default `2021`.
   - `filter_base` *(optional, JSON object)* — Keys are categorical variables; values are arrays of allowed codes (e.g., `{ "gender": [0], "age_group": [1,2] }`).
-  - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.01`; `null` disables suppression.
+  - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables masking.
   - `release` *(optional)* — Defaults to current release.
   - `include_metadata` *(optional, string)* — Case-insensitive; any spelling of `"true"` (`"true"`, `"True"`, `"TRUE"`) returns description metadata alongside table output. Any other value (or omission) disables metadata.
   _HTTP transport note_: Query parameters arrive as strings; the types above describe the server-side coercion performed before validation.
@@ -239,7 +239,13 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 
 ### Table Output Rows
 
-`/table` produces long-format records similar to:
+`/table` produces long-format records formatted for API presentation. Numeric values are formatted as strings:
+- Proportions and percentage measures (`gini`, `headcount`, `poverty_gap`, `severity`, `pop_share`, `target_within_group_share`, `target_survey_share`) are scaled by 100 with 2 decimal places (e.g. `"6.70"`).
+- Counts (`pop_poverty`, `nobs`) are formatted as whole numbers.
+- Other continuous measures (`mean`, `median`, `sd`, `var`, `min`, `max`, `p10`, `p25`, `p75`, `p90`, `sum`, `mld`, `watts`) are formatted with 2 decimal places.
+- Below-threshold cells, and cells whose population share could not be computed (`NA`, e.g. a zero-denominator group), are masked with `value = "NR"`.
+- Genuine missing or non-finite values (`NA`, `NaN`, `Inf`, `-Inf`) are serialized as `null`.
+- The `population` column is removed from `/table` output.
 
 ```yaml
 TableRow:
@@ -249,12 +255,14 @@ TableRow:
     pip_id: { type: string }
     analysis_var: { type: string }
     measure: { type: string }
-    value: { type: number }
+    value:
+      type: string
+      nullable: true
+      description: Formatted number string, "NR" for masked cells, or null for genuine missing.
     by:
       type: object
       description: Key/value map of selected dimensions.
     poverty_line: { type: number, nullable: true }
-    population: { type: number, nullable: true }
     warnings: { type: array, items: { type: string } }
 ```
 
@@ -287,7 +295,7 @@ DescriptionMetadata:
 5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 400.
 6. **Sessions:** Stored process-locally; expire after 3600 seconds; retrieval after expiry returns 404.
 7. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
-8. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.01`, `include_metadata="false"`, `release=<current>`.
+8. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `include_metadata="false"`, `release=<current>`.
 9. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
 10. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
 

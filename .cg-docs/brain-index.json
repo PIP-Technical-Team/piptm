@@ -1,5 +1,5 @@
 {
-  "edge_count": 49,
+  "edge_count": 55,
   "edges": [
     {
       "edge_type": "decided_from",
@@ -89,6 +89,12 @@
       "edge_type": "decided_from",
       "source": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
       "target": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
+      "target": ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md",
       "target_missing": false
     },
     {
@@ -200,6 +206,30 @@
       "target_missing": false
     },
     {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+      "target": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-2.md",
+      "target": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-3.md",
+      "target": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md",
+      "target": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+      "target_missing": false
+    },
+    {
       "edge_type": "references",
       "source": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
       "target": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
@@ -263,6 +293,12 @@
       "edge_type": "references",
       "source": ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
       "target": ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md",
+      "target": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
       "target_missing": false
     },
     {
@@ -946,6 +982,87 @@
         "prose",
         "shares_table",
         "target_survey_share"
+      ]
+    },
+    {
+      "date": "2026-10-19",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
+      "slug": "2026-10-19-table-endpoint-layout-slot-response-format",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "api",
+        "table-endpoint",
+        "response-format",
+        "layout-slots",
+        "ui-contract",
+        "table-maker",
+        "breaking-change"
+      ],
+      "title": "/table response format: layout slot assignment for the UI",
+      "top_keywords": [
+        "layout",
+        "/table",
+        "slot",
+        "/table/download",
+        "null",
+        "measures",
+        "varname",
+        "ui-description.md",
+        "validate_table_input()",
+        "data.table"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md",
+      "slug": "README",
+      "status": "",
+      "summary": "Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-19-table-endpoint-layout-slot-response-format.md`.",
+      "tags": [],
+      "title": "README",
+      "top_keywords": [
+        "layout",
+        "varname",
+        "measures",
+        "null",
+        "cells",
+        "/table",
+        "categories",
+        "superrow",
+        "by=gender&by=educat4&by=area",
+        "{code, label}"
+      ]
+    },
+    {
+      "date": "2026-10-20",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md",
+      "slug": "2026-10-20-pop-share-nr-masking",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "table_maker",
+        "pop_share_threshold",
+        "suppression",
+        "api",
+        "json",
+        "formatting"
+      ],
+      "title": "Population share threshold: NR cell masking and API value formatting",
+      "top_keywords": [
+        "table_maker()",
+        "\"nr\"",
+        "population",
+        "flag",
+        "mean",
+        "approach",
+        "masking",
+        "formatting",
+        "null",
+        "nobs"
       ]
     },
     {
@@ -1798,6 +1915,34 @@
       ]
     },
     {
+      "date": "2026-10-20",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
+      "slug": "2026-10-20-pop-share-nr-masking",
+      "status": "completed",
+      "summary": "Replace row-dropping suppression in `table_maker()` with cell-level NR masking at a 0.1% default threshold, remove the `population` column, and format the main `/table` API values as strings (x100 for proportion/Gini measures, 2 decimals, whole numbers for counts, `\"NR\"` for masked cells). Download and description changes are deferred to a follow-up plan.",
+      "tags": [
+        "table_maker",
+        "pop_share_threshold",
+        "suppression",
+        "api",
+        "formatting"
+      ],
+      "title": "Population share threshold: NR masking and API value formatting",
+      "top_keywords": [
+        "population",
+        "/table",
+        "table_maker()",
+        "\"nr\"",
+        "na",
+        "swagger_guide.md",
+        "news.md",
+        "flag",
+        "test scenarios",
+        "masking"
+      ]
+    },
+    {
       "date": "",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
@@ -2222,6 +2367,94 @@
       ]
     },
     {
+      "date": "2026-10-22",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+      "slug": "2026-10-20-pop-share-nr-masking-review",
+      "status": "",
+      "summary": "**Review mode**: data-risk **Scope**: diff `e6eae4b..HEAD` (branch `new_pop_threshold`), implementing `.cg-docs/plans/2026-10-20-pop-share-nr-masking.md` (Phases 1 and 2) **Files reviewed**: 27 (core: `R/table_maker.R`, `R/format_table_output.R`, `R/measures.R`, `inst/plumber/plumber.R`; tests: 5 files; docs: `docs/api-contract.md`, `SWAGGER_GUIDE.md`, `NEWS.md`, `man/*.Rd`; plan/roadmap/active-state artifacts) **Findings**: 30 (P0: 1, P1: 9, P2: 14, P3: 6)",
+      "tags": [],
+      "title": "2026-10-20-pop-share-nr-masking-review",
+      "top_keywords": [
+        "table_maker()",
+        "format_table_output()",
+        "r/table_maker.r",
+        "news.md",
+        "table_maker.r",
+        "na",
+        "/table/download",
+        "population",
+        "pop_share_threshold",
+        "pop_share"
+      ]
+    },
+    {
+      "date": "2026-10-22",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-2.md",
+      "slug": "2026-10-20-pop-share-nr-masking-verify-review-2",
+      "status": "",
+      "summary": "**Review mode**: verify (light, following fix-triage — second pass, covering the P1 and P2 fix-triage rounds cumulatively) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md` **Resolved findings being verified**: P0.1, P1.1–P1.9, P2.1–P2.6, P2.10–P2.14 (fixed); P2.7–P2.9 (skipped, branch already pushed) **Files reviewed**: 13 (`R/table_maker.R`, `R/format_table_output.R`, `inst/plumber/plumber.R`, `README.md`, `SWAGGER_GUIDE.md`, `docs/api-contract.md`, `NEWS.md`, `man/table_maker.Rd`, `man/format_table_output.Rd`, `tests/testthat/test-table-maker-suppression.R`, `tests/testthat/test-format-table-output.R`, `tests/testthat/test-api-endpoints.R`, `tests/testthat/helper-fixtures.R`) **Findings**: 4 (P0: 0, P1: 0, P2: 3, P3: 1)",
+      "tags": [],
+      "title": "2026-10-20-pop-share-nr-masking-verify-review-2",
+      "top_keywords": [
+        "helper-fixtures.r",
+        "tests/testthat/helper-fixtures.r",
+        "r/table_maker.r",
+        "tests/testthat/test-table-maker-suppression.r",
+        "tests/testthat/test-api-endpoints.r",
+        "table_maker.r",
+        "fix",
+        "vapply",
+        "pop_rows",
+        "r/format_table_output.r"
+      ]
+    },
+    {
+      "date": "2026-10-22",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-3.md",
+      "slug": "2026-10-20-pop-share-nr-masking-verify-review-3",
+      "status": "",
+      "summary": "**Review mode**: verify (light, following fix-triage — third pass, covering the full cumulative P1/P2/P3 fix-triage diff) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md` **Resolved findings being verified**: all 30 original findings (26 fixed, 4 skipped) — this pass focuses primarily on P3.1, P3.2, P3.4, the newest changes since the round-2 verify pass **Files reviewed**: 17 (full cumulative diff; primary focus: `R/measures.R`, `R/format_table_output.R`, `man/format_table_output.Rd`, `.gitignore`) **Findings**: 1 (P0: 0, P1: 0, P2: 0, P3: 1)",
+      "tags": [],
+      "title": "2026-10-20-pop-share-nr-masking-verify-review-3",
+      "top_keywords": [
+        ".gitignore",
+        ".whole_number_measures",
+        "fix",
+        "r/measures.r",
+        "r/format_table_output.r",
+        "2026-10-20-pop-share-nr-masking-review.md",
+        "measures.r",
+        "format_table_output.r",
+        "review",
+        "pop_poverty"
+      ]
+    },
+    {
+      "date": "2026-10-22",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md",
+      "slug": "2026-10-20-pop-share-nr-masking-verify-review",
+      "status": "",
+      "summary": "**Review mode**: verify (light, following fix-triage) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md` **Resolved findings being verified**: P0.1, P1.1, P1.2, P1.3, P1.4, P1.5, P1.6, P1.7, P1.8, P1.9, P2.1 **Files reviewed**: 6 (`R/table_maker.R`, `man/table_maker.Rd`, `NEWS.md`, `docs/api-contract.md`, `tests/testthat/test-table-maker-suppression.R`, `tests/testthat/test-api-endpoints.R`) **Findings**: 0 (P0: 0, P1: 0, P2: 0, P3: 0)",
+      "tags": [],
+      "title": "2026-10-20-pop-share-nr-masking-verify-review",
+      "top_keywords": [
+        "news.md",
+        "fixed",
+        "pop_share",
+        ".shares_setup()",
+        "population",
+        "pip_id",
+        "fix",
+        "r/table_maker.r",
+        "man/table_maker.rd",
+        "docs/api-contract.md"
+      ]
+    },
+    {
       "date": "2026-04-03",
       "entity_type": "solution",
       "path": ".cg-docs/solutions/bugs/2026-04-03-null-allowed-cols-gen-validate-for-write.md",
@@ -2579,6 +2812,38 @@
         "/description",
         "@serializer contenttype",
         "@serializer",
+        "download"
+      ]
+    },
+    {
+      "date": "2026-10-22",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md",
+      "slug": "2026-10-22-table-download-format-contract-leakage",
+      "status": "",
+      "summary": "While implementing cell-level `NR` masking and API value formatting for `table_maker()`/`format_table_output()` (plan: `.cg-docs/plans/2026-10-20-pop-share-nr-masking.md`), a `data-risk` review surfaced a P0 finding in a completely different, unmodified-by-this-plan endpoint: `POST /table/download`. `/table/download` is designed to accept rows \"typically copied from the `/table` response\" (per `docs/api-contract.md`) and convert them to CSV/RDS. Before this session's work, `/table`'s `value` field was always a raw numeric. After this session's work, `/table`'s `value` field became a **formatted character string**: scaled-and-rounded percentages (e.g. `\"45.67\"`), whole-number counts, or the literal sentinel `\"NR\"` for masked (disclosure-controlled) cells. `/table/download`'s existing code did: `as.numeric(\"NR\")` silently returns `NA` — indistinguishable from genuine missing data,...",
+      "tags": [
+        "plumber",
+        "api",
+        "format-contract",
+        "type-coercion",
+        "data-corruption",
+        "masking",
+        "suppression",
+        "download",
+        "regression-tests"
+      ],
+      "title": "/table/download silently corrupts data when a sibling endpoint's output format changes",
+      "top_keywords": [
+        "/table",
+        "/table/download",
+        "numeric",
+        "table",
+        "already",
+        ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
+        "\"nr\"",
+        "silently",
+        "2026-10-20-pop-share-nr-masking.md",
         "download"
       ]
     },
@@ -3578,6 +3843,28 @@
     {
       "date": "",
       "entity_type": "feature",
+      "path": "roadmap.json#table-response-format-layout-slot-assignment",
+      "slug": "table-response-format-layout-slot-assignment",
+      "status": "idea",
+      "summary": "/table response format: layout slot assignment for the UI",
+      "tags": [],
+      "title": "/table response format: layout slot assignment for the UI",
+      "top_keywords": [
+        "service layer",
+        "table",
+        "response",
+        "format",
+        "layout",
+        "slot",
+        "assignment",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
       "path": "roadmap.json#ppp-load-data-resolution",
       "slug": "ppp-load-data-resolution",
       "status": "done",
@@ -3673,15 +3960,15 @@
       "title": "pop_share_threshold parameter and cell suppression logic",
       "top_keywords": [
         "population share threshold",
-        "based suppression",
+        "based suppression\nobjective",
         "suppression",
         "pop_share_threshold",
         "parameter",
         "cell",
         "logic",
-        "feature",
-        "milestone",
-        "phase"
+        "population",
+        "share",
+        "feature"
       ]
     },
     {
@@ -3695,25 +3982,47 @@
       "title": "API validation and plumber endpoint integration",
       "top_keywords": [
         "population share threshold",
-        "based suppression",
+        "based suppression\nobjective",
         "api",
         "validation",
         "plumber",
         "endpoint",
         "integration",
-        "feature",
-        "milestone",
-        "phase"
+        "population",
+        "share",
+        "suppression"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#api-value-formatting-nr-response-contract",
+      "slug": "api-value-formatting-nr-response-contract",
+      "status": "idea",
+      "summary": "API value formatting and string NR response contract",
+      "tags": [],
+      "title": "API value formatting and string NR response contract",
+      "top_keywords": [
+        "population share threshold",
+        "based suppression\nobjective",
+        "api",
+        "response",
+        "contract",
+        "formatting",
+        "string",
+        "population",
+        "share",
+        "suppression"
       ]
     }
   ],
-  "entity_count": 132,
-  "generated": "2026-10-16",
+  "entity_count": 143,
+  "generated": "2026-10-22",
   "schema_version": "0.2.0",
   "topic_count": 4,
   "topics": [
     {
-      "entity_count": 71,
+      "entity_count": 81,
       "entity_paths": [
         ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
         ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
@@ -3738,6 +4047,9 @@
         ".cg-docs/brainstorms/2026-08-31-api-contract-openapi.md",
         ".cg-docs/brainstorms/2026-09-08-description-html-renderer-and-wording.md",
         ".cg-docs/brainstorms/2026-09-14-shares-cell-definition-structured-table.md",
+        ".cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
+        ".cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md",
+        ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md",
         ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
         ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
         ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
@@ -3762,9 +4074,11 @@
         ".cg-docs/plans/2026-09-14-rework-plain-meaning-wording-shares.md",
         ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table-revised.md",
         ".cg-docs/plans/2026-09-14-shares-cell-definition-structured-table.md",
+        ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
         ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
         ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
         ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
+        ".cg-docs/reviews/2026-04-29-arrow-vs-collapse-benchmark-review.md",
         ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-impl-review.md",
         ".cg-docs/reviews/2026-05-11-api-service-plumber-v2-review.md",
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md",
@@ -3775,7 +4089,12 @@
         ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
         ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
         ".cg-docs/reviews/2026-09-29-review.md",
+        ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md",
+        ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-2.md",
+        ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-3.md",
+        ".cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md",
         ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
+        ".cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md",
         ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
         ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
         ".cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md",
@@ -3796,7 +4115,7 @@
       "slug": "table-maker-pip-id-version"
     },
     {
-      "entity_count": 24,
+      "entity_count": 26,
       "entity_paths": [
         "roadmap.json#version-partition-key",
         "roadmap.json#manifest-generation-partition-filter",
@@ -3817,19 +4136,21 @@
         "roadmap.json#api-contract-openapi",
         "roadmap.json#html-description-renderer-wording-quality-improvements",
         "roadmap.json#structured-cell-definition-table-for-share-measures",
+        "roadmap.json#table-response-format-layout-slot-assignment",
         "roadmap.json#ppp-load-data-resolution",
         "roadmap.json#ppp-api-input-validation",
         "roadmap.json#ppp-edge-case-test-coverage",
         "roadmap.json#pop-share-threshold-suppression",
-        "roadmap.json#api-threshold-validation"
+        "roadmap.json#api-threshold-validation",
+        "roadmap.json#api-value-formatting-nr-response-contract"
       ],
       "keywords": [
         "service layer",
         "computation engine",
-        "endpoint"
+        "api"
       ],
-      "label": "Service Layer / Computation Engine / Endpoint",
-      "slug": "service-layer-computation-engine-endpoint"
+      "label": "Service Layer / Computation Engine / Api",
+      "slug": "service-layer-computation-engine-api"
     },
     {
       "entity_count": 6,

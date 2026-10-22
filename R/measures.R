@@ -30,11 +30,34 @@ NULL
   p75         = "summary_stats",
   p90         = "summary_stats",
   sum         = "summary_stats",
-  # Shares  family
-    # Shares family
+  # Shares family
   pop_share                 = "shares",
   target_within_group_share = "shares",
   target_survey_share       = "shares"
+)
+
+#' Measures representing proportions/percentages formatted as percentage (x100)
+#' in API output
+#'
+#' @keywords internal
+#' @noRd
+.PCT_MEASURES <- c(
+  "gini",
+  "headcount",
+  "poverty_gap",
+  "severity",
+  "pop_share",
+  "target_within_group_share",
+  "target_survey_share"
+)
+
+#' Measures formatted as whole numbers (0 decimal places) in API output
+#'
+#' @keywords internal
+#' @noRd
+.WHOLE_NUMBER_MEASURES <- c(
+  "pop_poverty",
+  "nobs"
 )
 
 # ── Exported helpers ──────────────────────────────────────────────────────────

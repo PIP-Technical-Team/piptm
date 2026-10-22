@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-10-16 · 100 artifacts (newest first) + 32 roadmap features_
+_Generated 2026-10-22 · 109 artifacts (newest first) + 34 roadmap features_
 
 ## undated
 
@@ -18,6 +18,33 @@ _Generated 2026-10-16 · 100 artifacts (newest first) + 32 roadmap features_
   > **Review depth**: thorough **Files reviewed**: `R/compute_inequality.R`, `R/load_data.R`, `R/table_maker.R`, `R/schem…
 - **[2026-05-20-validate-parquet-wrapper-review-2](.cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review-2.md)** · `review` · _—_ · `—`
   > **Review depth**: thorough **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findings**: 9 (P0…
+- **[README](.cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md)** · `brainstorm` · _—_ · `—`
+  > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
+
+## 2026-10-22
+
+- **[/table/download silently corrupts data when a sibling endpoint's output format changes](.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md)** · `solution` · _—_ · `2026-10-22`
+  > While implementing cell-level `NR` masking and API value formatting for `table_maker()`/`format_table_output()` (plan…
+- **[2026-10-20-pop-share-nr-masking-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: data-risk **Scope**: diff `e6eae4b..HEAD` (branch `new_pop_threshold`), implementing `.cg-docs/plans…
+- **[2026-10-20-pop-share-nr-masking-verify-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-ma…
+- **[2026-10-20-pop-share-nr-masking-verify-review-2](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-2.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage — second pass, covering the P1 and P2 fix-triage rounds cumulati…
+- **[2026-10-20-pop-share-nr-masking-verify-review-3](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review-3.md)** · `review` · _—_ · `2026-10-22`
+  > **Review mode**: verify (light, following fix-triage — third pass, covering the full cumulative P1/P2/P3 fix-triage d…
+
+## 2026-10-20
+
+- **[Population share threshold: NR cell masking and API value formatting](.cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md)** · `brainstorm` · _decided_ · `2026-10-20`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Population share threshold: NR masking and API value formatting](.cg-docs/plans/2026-10-20-pop-share-nr-masking.md)** · `plan` · _completed_ · `2026-10-20`
+  > Replace row-dropping suppression in `table_maker()` with cell-level NR masking at a 0.1% default threshold, remove th…
+
+## 2026-10-19
+
+- **[/table response format: layout slot assignment for the UI](.cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md)** · `brainstorm` · _decided_ · `2026-10-19`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 
 ## 2026-10-16
 
@@ -325,6 +352,8 @@ _Generated 2026-10-16 · 100 artifacts (newest first) + 32 roadmap features_
   > API Contract — Markdown with OpenAPI-Style Schemas
 - **[API validation and plumber endpoint integration](roadmap.json#api-threshold-validation)** · `feature` · _done_ · `—`
   > API validation and plumber endpoint integration
+- **[API value formatting and string NR response contract](roadmap.json#api-value-formatting-nr-response-contract)** · `feature` · _idea_ · `—`
+  > API value formatting and string NR response contract
 - **[Arrow push-down vs. in-memory compute benchmark](roadmap.json#arrow-vs-collapse-benchmark)** · `feature` · _done_ · `—`
   > Arrow push-down vs. in-memory compute benchmark
 - **[Family-based computation orchestrator \(compute_measures\)](roadmap.json#computation-engine-family-orchestrator)** · `feature` · _done_ · `—`
@@ -381,6 +410,8 @@ _Generated 2026-10-16 · 100 artifacts (newest first) + 32 roadmap features_
   > Structured Cell Definition table for share measures
 - **[table_maker\(\) with dual input patterns \(pip_id and triplets\)](roadmap.json#table-maker-dual-input)** · `feature` · _done_ · `—`
   > table_maker() with dual input patterns (pip_id and triplets)
+- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _idea_ · `—`
+  > /table response format: layout slot assignment for the UI
 - **[Unit test suite \(≥90% coverage\)](roadmap.json#unit-test-coverage)** · `feature` · _active_ · `—`
   > Unit test suite (≥90% coverage)
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`

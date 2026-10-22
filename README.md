@@ -54,7 +54,7 @@ Core inputs:
 - `by`: optional disaggregation dimensions
 - `poverty_line`: required when `analysis_var = "pov_status"` or `by` includes `pov_status`
 - `ppp`: PPP year (defaults to `2021L`)
-- `pop_share_threshold`: suppression threshold in `(0, 1)` (default `0.01`; set `NULL` to disable)
+- `pop_share_threshold`: masking threshold in `(0, 1)` (default `0.001`; set `NULL` to disable)
 - `release`: optional release ID (defaults to current release)
 
 Example:
@@ -67,7 +67,7 @@ res <- piptm::table_maker(
   by = c("gender", "area"),
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0.01
+  pop_share_threshold = 0.001
 )
 res
 ```

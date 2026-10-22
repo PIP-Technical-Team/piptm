@@ -28,15 +28,25 @@ listening for HTTP requests.  This is a blocking call — the function
 does not return until the server is stopped (Ctrl+C / SIGINT).
 }
 \details{
-The router exposes eight endpoints:\tabular{lll}{
+The router exposes API endpoints for compute, discovery, session, and
+download flows.\tabular{lll}{
    Endpoint \tab Method \tab Description \cr
    \verb{/table} \tab GET, POST \tab Compute poverty / inequality / welfare measures \cr
+   \verb{/table/download} \tab POST \tab Convert \verb{/table} rows sent in the body (\verb{\{format, data\}}) into a \code{csv} or \code{rds} file \cr
+   \verb{/description} \tab POST \tab Render a table description as HTML or Markdown \cr
    \verb{/lookup} \tab GET \tab Resolve country-year-welfare triplets to pip_ids \cr
    \verb{/surveys} \tab GET \tab Full manifest rows for a release \cr
    \verb{/releases} \tab GET \tab List all loaded release IDs and current release \cr
-   \verb{/measures} \tab GET \tab List measure names and computation families \cr
+   \verb{/analysis-variables} \tab GET \tab List analysis variables and UI metadata \cr
+   \verb{/statistics} \tab GET \tab List statistical groups and measures \cr
    \verb{/dimensions} \tab GET \tab List valid disaggregation dimension names \cr
    \verb{/categories} \tab GET \tab Full catalogue of categorical variables for the sample-base filter panel \cr
+   \verb{/covariates} \tab GET \tab Full catalogue of layout covariates for slicing \cr
+   \verb{/countries} \tab GET \tab Country code/name metadata from manifest \cr
+   \verb{/regions} \tab GET \tab Region metadata with country memberships \cr
+   \verb{/surveys-ui} \tab GET \tab UI-ready survey catalog \cr
+   \verb{/session/surveys} \tab POST \tab Create a short-lived survey selection session \cr
+   \verb{/session/<id>/surveys} \tab GET \tab Retrieve survey IDs from a session \cr
    \verb{/health} \tab GET \tab Server health check \cr
 }
 
@@ -73,6 +83,7 @@ piptm::run_api(port = 9000L, host = "127.0.0.1")
 }
 \seealso{
 Other api: 
+\code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
 \code{\link{table_maker}()}
 }

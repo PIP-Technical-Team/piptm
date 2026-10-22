@@ -13,7 +13,7 @@ table_maker(
   filter_base = NULL,
   ppp = 2021L,
   release = NULL,
-  pop_share_threshold = 0.01,
+  pop_share_threshold = 0.001,
   include_metadata = FALSE
 )
 }
@@ -50,14 +50,14 @@ to the current release as returned by \code{\link[=piptm_current_release]{piptm_
 
 \item{pop_share_threshold}{Numeric scalar in (0, 1) or \code{NULL}.  When
 non-NULL, cells whose population share falls below this threshold have all
-non-share measures suppressed (dropped from output), regardless of whether
-\code{"pop_share"} was requested.  If \code{"pop_share"} is not among the requested
-\code{measures}, it is computed internally and used solely for threshold
-evaluation — it does not appear in the output.  Share-family measures
-(\code{pop_share}, \code{target_within_group_share}, \code{target_survey_share}) are
-always retained so callers can inspect the distribution of suppressed
-groups.  Has no effect when \code{by = NULL} (aggregate mode: each cell is a
-full survey with pop_share = 1.0).  Default: \code{0.01} (1\%).}
+measures masked with \code{value = NA_real_} and \code{flag = "NR"}, regardless of whether
+\code{"pop_share"} was requested. Cells whose population share cannot be computed
+(\code{NA}, e.g. a zero-denominator or all-\code{NA} group) are also masked as \code{"NR"},
+in addition to cells below the threshold. If \code{"pop_share"} is not among the
+requested \code{measures}, it is computed internally and used solely for threshold
+evaluation — it does not appear in the output. Has no effect when \code{by = NULL}
+(aggregate mode: each cell is a full survey with pop_share = 1.0).
+Default: \code{0.001} (0.1\%).}
 
 \item{include_metadata}{Logical scalar (default \code{FALSE}). When \code{FALSE}, returns
 a \code{\link[data.table:data.table]{data.table::data.table()}} directly (default behavior). When \code{TRUE}, returns
@@ -80,12 +80,10 @@ breakdown columns.}
 \item{\code{poverty_line}}{Poverty threshold; populated for poverty-family
 rows and \code{NA} for non-poverty rows.}
 \item{\code{measure}}{Measure name (e.g. \code{"headcount"}, \code{"gini"}).}
-\item{\code{value}}{Computed statistic.}
-\item{\code{population}}{Total weighted population in the group.  For surveys
-where a requested dimension is absent (partial-match), this reflects the
-weighted count of respondents in the non-\code{NA} grouping cells only; rows
-with \code{NA} in the missing dimension still carry the correct weighted count
-for their observed group.}
+\item{\code{value}}{Computed statistic. \code{NA_real_} when \code{flag == "NR"} (masked).}
+\item{\code{flag}}{Character suppression flag. \code{"NR"} identifies cells masked
+because their population share is below \code{pop_share_threshold} (or could
+not be computed); otherwise the value is \code{NA}.}
 }
 When \code{include_metadata = TRUE}: A list with elements:
 \describe{
@@ -114,6 +112,18 @@ an explicit \code{analysis_var} that determines routing.
 When \code{"pov_status"} appears in \code{by}, it is computed as
 \code{as.integer(welfare < poverty_line)} after survey loading.
 }
+\section{Downstream formatting}{
+
+Suppressed cells are returned as raw \code{value = NA_real_} with
+\code{flag = "NR"} — \code{table_maker()} itself never coerces \code{value} to character
+and never distinguishes masked \code{NA} from genuinely missing \code{NA} beyond the
+\code{flag} column. Any caller that displays results to end users, or otherwise
+needs to tell "masked" apart from "not computed", must pass this table
+through \code{\link[=format_table_output]{format_table_output()}} (or equivalent logic) before use; treating
+\code{value == NA} alone as ordinary missing data will silently conflate masked
+and unmasked-missing cells.
+}
+
 \examples{
 \dontrun{
 set_manifest_dir("//server/manifests")
@@ -138,7 +148,12 @@ result <- table_maker(
 }
 }
 \seealso{
+\code{\link[=format_table_output]{format_table_output()}} for converting this table's raw
+\code{value}/\code{flag} columns into the formatted, \code{flag}-free display
+representation used by the \verb{/table} API.
+
 Other api: 
+\code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
 \code{\link{run_api}()}
 }
