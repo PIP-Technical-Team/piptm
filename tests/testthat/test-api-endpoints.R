@@ -1408,6 +1408,29 @@ test_that("POST /table handles scalar, length-1 array, and rejects length > 1 ar
   body_object <- parse_api_res(res_object)
   expect_equal(body_object$status, "error")
   expect_true(any(grepl("character string or flat array", body_object$errors)))
+
+  # Nested JSON array (e.g. [["gender"]]): rejects with 400, exercised through
+  # Plumber's own JSON decoder rather than a hand-built R list.
+  res_nested <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = list(list("gender"))
+  )))
+  expect_equal(res_nested$status, 400L)
+  body_nested <- parse_api_res(res_nested)
+  expect_equal(body_nested$status, "error")
+  expect_true(any(grepl("character string or flat array", body_nested$errors)))
+
+  # Empty JSON object {}: rejects with 400, not treated as an omitted slot.
+  res_empty_object <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = setNames(list(), character(0))
+  )))
+  expect_equal(res_empty_object$status, 400L)
+  body_empty_object <- parse_api_res(res_empty_object)
+  expect_equal(body_empty_object$status, "error")
+  expect_true(any(grepl("character string or flat array", body_empty_object$errors)))
 })
 
 test_that("GET /table rejects duplicate variable across slots with 400", {

@@ -601,6 +601,60 @@ test_that("validate_table_input() accepts flat arrays and rejects objects or nes
   expect_false(nested_list$valid)
   expect_true(any(grepl("character string or flat array", nested_list$errors)))
 
+  matrix_wrapped <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = matrix("gender", nrow = 1L, ncol = 1L)
+  )
+  expect_false(matrix_wrapped$valid)
+  expect_true(any(grepl("character string or flat array", matrix_wrapped$errors)))
+
+  nested_arr_dim <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = list(matrix("gender", nrow = 1L, ncol = 1L))
+  )
+  expect_false(nested_arr_dim$valid)
+  expect_true(any(grepl("character string or flat array", nested_arr_dim$errors)))
+
+  # Exercise the actual jsonlite-decoded shapes rather than hand-built R lists,
+  # since jsonlite's simplification can differ subtly from manual construction.
+  decoded_empty_object <- jsonlite::fromJSON('{"column": {}}', simplifyVector = TRUE)
+  empty_object <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = decoded_empty_object$column
+  )
+  expect_false(empty_object$valid)
+  expect_true(any(grepl("character string or flat array", empty_object$errors)))
+
+  decoded_blank_key_object <- jsonlite::fromJSON('{"column": {"": "gender"}}', simplifyVector = TRUE)
+  blank_key_object <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = decoded_blank_key_object$column
+  )
+  expect_false(blank_key_object$valid)
+  expect_true(any(grepl("character string or flat array", blank_key_object$errors)))
+
+  decoded_nested_array <- jsonlite::fromJSON('{"column": [["gender"]]}', simplifyVector = TRUE)
+  decoded_nested <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = decoded_nested_array$column
+  )
+  expect_false(decoded_nested$valid)
+  expect_true(any(grepl("character string or flat array", decoded_nested$errors)))
+
+  decoded_empty_array <- jsonlite::fromJSON('{"column": []}', simplifyVector = TRUE)
+  empty_array <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = decoded_empty_array$column
+  )
+  expect_true(empty_array$valid)
+  expect_null(empty_array$by)
+
   empty_list <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",

@@ -401,12 +401,22 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
 
   for (slot_name in slot_order) {
     value <- raw_slots[[slot_name]]
-    if (is.null(value) || length(value) == 0L) {
+    if (is.null(value)) {
+      next
+    }
+    if (!is.null(dim(value))) {
+      invalid_names <- c(invalid_names, slot_name)
+      errors <- c(
+        errors,
+        paste0("`", slot_name, "` must be a character string or flat array.")
+      )
       next
     }
     if (is.list(value)) {
-      is_json_object <- !is.null(names(value)) && any(nzchar(names(value)))
-      is_nested_list <- any(vapply(value, is.list, logical(1)))
+      is_json_object <- !is.null(names(value))
+      is_nested_list <- any(vapply(
+        value, function(v) is.list(v) || !is.null(dim(v)), logical(1)
+      ))
       if (is_json_object || is_nested_list) {
         invalid_names <- c(invalid_names, slot_name)
         errors <- c(
@@ -415,10 +425,15 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
         )
         next
       }
+      if (length(value) == 0L) {
+        next
+      }
       value <- unlist(value, recursive = TRUE, use.names = FALSE)
       if (is.null(value) || length(value) == 0L) {
         next
       }
+    } else if (length(value) == 0L) {
+      next
     }
     if (!is.character(value) && !all(is.na(value))) {
       invalid_names <- c(invalid_names, slot_name)
