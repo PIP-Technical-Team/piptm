@@ -279,6 +279,11 @@ test_that("validate_description_input distinguishes fast vs fallback modes", {
   expect_true(params_only$valid)
   expect_identical(params_only$mode, "fallback")
 
+  slots_only <- vdd(list(pip_id = "COL_2010_ECH_INC_ALL", analysis_var = "welfare",
+                         measures = "mean", column = "gender"))
+  expect_true(slots_only$valid)
+  expect_identical(slots_only$mode, "fallback")
+
   both <- vdd(list(
     description_metadata = meta,
     pip_id = "COL_2010_ECH_INC_ALL"
@@ -414,27 +419,58 @@ test_that("POST /description returns 422 for metadata with invalid resolved_labe
 # Block 6: P1-2 Fallback path test
 # =============================================================================
 
-test_that("POST /description fallback path recomputes via table_maker", {
+test_that("POST /description fallback path accepts slot parameters and disaggregates", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
   skip_if_not_installed("arrow")
-  
-  # Use fixtures from test-api-endpoints.R if available
-  # This test requires Arrow data fixtures to work
-  skip("Requires full Arrow fixtures from .make_ep_fixtures() - add when fixtures are available")
-  
-  # When fixtures are available, uncomment:
-  # res <- .desc_router$call(make_api_req(
-  #   method = "POST", path = "/description",
-  #   body = list(
-  #     pip_id = "COL_2010_ECH_INC_ALL",
-  #     analysis_var = "welfare",
-  #     measures = "mean"
-  #   )
-  # ))
-  # 
-  # expect_equal(res$status, 200L)
-  # body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  # expect_true(grepl("## Table Overview", body, fixed = TRUE))
-  # expect_true(grepl("## Cell Definition", body, fixed = TRUE))
+
+  activate_single_col_survey_fixture()
+
+  res <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      format = "markdown"
+    )
+  ))
+
+  expect_equal(res$status, 200L)
+  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
+  expect_match(body, "gender", ignore.case = TRUE)
+
+  # Legacy 'by'-only body is not recognized as a fallback table parameter (400)
+  res_legacy <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description",
+    body = list(by = "gender")
+  ))
+  expect_equal(res_legacy$status, 400L)
+
+  # Gapped slots on fallback path are rejected with 400
+  res_gap <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      superColumn = "area"
+    )
+  ))
+  expect_equal(res_gap$status, 400L)
+
+  # Duplicate slot variable on fallback path is rejected with 400
+  res_dup <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      row = "gender"
+    )
+  ))
+  expect_equal(res_dup$status, 400L)
 })

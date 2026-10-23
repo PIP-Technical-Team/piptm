@@ -1,0 +1,24 @@
+{
+  "request": {
+    "path": "/table",
+    "query": {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "measures": "mean"
+    },
+    "by_order": []
+  },
+  "data": [
+    {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2010,
+      "welfare_type": "INC",
+      "measure": "mean",
+      "value": "5.50"
+    }
+  ],
+  "meta": {
+    "release": "20260206_EP_TEST",
+    "n_surveys": 1
+  }
+}

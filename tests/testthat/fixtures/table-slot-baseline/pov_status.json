@@ -1,0 +1,41 @@
+{
+  "request": {
+    "path": "/table",
+    "query": {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "analysis_var": "welfare",
+      "measures": "headcount",
+      "poverty_line": "2.15",
+      "by": "pov_status"
+    },
+    "by_order": [
+      "pov_status"
+    ]
+  },
+  "data": [
+    {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2010,
+      "welfare_type": "INC",
+      "pov_status": 0,
+      "poverty_line": 2.15,
+      "measure": "headcount",
+      "value": "0.00"
+    },
+    {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2010,
+      "welfare_type": "INC",
+      "pov_status": 1,
+      "poverty_line": 2.15,
+      "measure": "headcount",
+      "value": "100.00"
+    }
+  ],
+  "meta": {
+    "release": "20260206_EP_TEST",
+    "n_surveys": 1
+  }
+}

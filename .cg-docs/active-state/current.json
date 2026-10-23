@@ -1,25 +1,30 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-10-22T16:10:00Z",
+  "updatedAt": "2026-10-23T19:55:00Z",
   "workflow": "/cg-work",
   "status": "completed",
-  "branch": null,
-  "plan": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md",
-  "executionReport": ".cg-docs/work-reports/2026-10-22-pop-share-nr-masking.md",
-  "currentPhase": null,
+  "branch": "DEV",
+  "plan": ".cg-docs/plans/2026-10-22-table-explicit-slot-parameters-revised.md",
+  "executionReport": ".cg-docs/work-reports/2026-10-22-table-explicit-slot-parameters-revised.md",
+  "completedPhases": [1, 2],
   "evidenceStatus": [
-    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-table-maker-suppression.R"},
-    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-format-table-output.R"},
+    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
+    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
     {"id": "V3", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
     {"id": "V4", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
-    {"id": "V5", "status": "passed", "artifact": "devtools::test()"},
-    {"id": "V6", "status": "passed", "artifact": "devtools::check(document = TRUE)"},
-    {"id": "V7", "status": "passed", "artifact": "benchmark (0.53s)"}
+    {"id": "V5", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
+    {"id": "V6", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
+    {"id": "V7", "status": "passed", "artifact": "tests/testthat/test-api-helpers.R"},
+    {"id": "V8", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
+    {"id": "V9", "status": "passed", "artifact": "tests/testthat/test-api-helpers.R"},
+    {"id": "V10", "status": "passed", "artifact": "tests/testthat/test-api-helpers.R"},
+    {"id": "V11", "status": "passed", "artifact": "tests/testthat/test-api-description.R"},
+    {"id": "V12", "status": "passed", "artifact": "tests/testthat/"},
+    {"id": "V13", "status": "passed", "artifact": "docs/api-contract.md"}
   ],
   "unresolvedDecisions": [],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-10-20-pop-share-nr-masking.md", "status": "completed"},
-    {"kind": "execution-report", "path": ".cg-docs/work-reports/2026-10-22-pop-share-nr-masking.md", "status": "completed"}
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-10-22-table-explicit-slot-parameters-revised.md", "status": "completed"}
   ],
-  "nextCommand": "/cg-review"
+  "nextCommand": null
 }

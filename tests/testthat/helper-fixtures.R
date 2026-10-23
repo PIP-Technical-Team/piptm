@@ -279,6 +279,21 @@ activate_test_registry <- function(release = NULL, .local_envir = parent.frame()
         list(code = "4", label = "Q4"),
         list(code = "5", label = "Q5")
       )
+    ),
+    measure_spec = list(
+      summary_stats = list(
+        label = "Summary Statistics",
+        measures = list(
+          mean   = list(label = "Mean"),
+          median = list(label = "Median")
+        )
+      ),
+      poverty = list(
+        label = "Poverty",
+        measures = list(
+          headcount = list(label = "Headcount")
+        )
+      )
     )
   )
 
@@ -294,4 +309,67 @@ activate_test_registry <- function(release = NULL, .local_envir = parent.frame()
   }, envir = .local_envir)
 
   invisible(release)
+}
+
+# Shared single-survey fixture builder for COL_2010_ECH_INC_ALL
+activate_single_col_survey_fixture <- function(release = "20260206_DESC_TEST",
+                                               .local_envir = parent.frame()) {
+  tmp_arrow    <- withr::local_tempdir(.local_envir = .local_envir)
+  tmp_manifest <- withr::local_tempdir(.local_envir = .local_envir)
+
+  dir_path <- file.path(
+    tmp_arrow,
+    "country_code=COL",
+    "surveyid_year=2010",
+    "welfare_type=INC",
+    "version=v01_v01"
+  )
+  dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+  n_rows <- 10L
+  dt <- data.table::data.table(
+    country_code = rep("COL", n_rows),
+    surveyid_year = rep(2010L, n_rows),
+    welfare_type = rep("INC", n_rows),
+    version = rep("v01_v01", n_rows),
+    pip_id = rep("COL_2010_ECH_INC_ALL", n_rows),
+    survey_acronym = rep("ECH", n_rows),
+    welfare_ppp_2021_01_02 = as.numeric(seq_len(n_rows)),
+    weight = rep(1.0, n_rows),
+    gender = factor(rep_len(c("male", "female"), n_rows), levels = c("male", "female"))
+  )
+  arrow::write_parquet(dt, file.path(dir_path, "data.parquet"))
+
+  entries <- list(list(
+    pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1",
+    country_code = "COL", country_name = "Colombia",
+    region_code = "LCN", region_name = "Latin America & Caribbean",
+    year = 2010L, welfare_type = "INC",
+    version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+    dimensions = list("gender"),
+    welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
+  ))
+  manifest <- list(
+    release = release,
+    generated_at = "2026-01-01T00:00:00Z",
+    entries = entries
+  )
+  jsonlite::write_json(
+    manifest,
+    file.path(tmp_manifest, paste0("manifest_", release, ".json")),
+    auto_unbox = TRUE
+  )
+  jsonlite::write_json(
+    list(current_release = release),
+    file.path(tmp_manifest, "current_release.json"),
+    auto_unbox = TRUE
+  )
+
+  suppressMessages({
+    piptm::set_manifest_dir(tmp_manifest)
+    piptm::set_arrow_root(tmp_arrow)
+  })
+  activate_test_registry(release, .local_envir = .local_envir)
+  withr::defer(reset_piptm_env_tm(), envir = .local_envir)
+
+  invisible(list(arrow_root = tmp_arrow, manifest_dir = tmp_manifest, release = release))
 }

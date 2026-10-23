@@ -1,0 +1,38 @@
+{
+  "request": {
+    "path": "/table",
+    "query": {
+      "pip_id": "TST_2020_ECH_INC_ALL",
+      "analysis_var": "welfare",
+      "measures": "mean",
+      "by": "gender"
+    },
+    "by_order": [
+      "gender"
+    ]
+  },
+  "data": [
+    {
+      "pip_id": "TST_2020_ECH_INC_ALL",
+      "country_code": "TST",
+      "surveyid_year": 2020,
+      "welfare_type": "INC",
+      "gender": 0,
+      "measure": "mean",
+      "value": "NR"
+    },
+    {
+      "pip_id": "TST_2020_ECH_INC_ALL",
+      "country_code": "TST",
+      "surveyid_year": 2020,
+      "welfare_type": "INC",
+      "gender": 1,
+      "measure": "mean",
+      "value": "6.00"
+    }
+  ],
+  "meta": {
+    "release": "20260401_TEST",
+    "n_surveys": 1
+  }
+}

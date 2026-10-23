@@ -22,6 +22,7 @@
 .SESSION_TTL_SECONDS <- 3600L
 .SESSION_STORE <- new.env(parent = emptyenv())
 .PIP_ID_PATTERN <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
+.SLOT_NAMES <- c("column", "row", "superColumn", "superRow")
 
 #' Build a structured success response envelope
 #'
@@ -225,48 +226,71 @@ resolve_release <- function(release) {
 
 #' Validate inputs for the /table endpoint
 #'
-#' Checks all user-supplied parameters for the `/table` endpoint.  Returns a
+#' Checks all user-supplied parameters for the `/table` endpoint. Returns a
 #' list so the handler can act on the validation result and use the coerced
-#' `poverty_line` and `ppp` values without re-coercing.
+#' `poverty_line`, `ppp`, `pop_share_threshold`, and assembled `by` values
+#' without re-coercing.
 #'
 #' Checks performed:
 #' \itemize{
 #'   \item `pip_id` is a non-NULL character vector of length 1–15
 #'   \item `measures` is a non-NULL character vector with all elements in
-#'   \'\' elements in [piptm:::.MEASURE_REGISTRY]
+#'     [piptm:::.MEASURE_REGISTRY]
 #'   \item `analysis_var` is a single non-empty character value
 #'   \item `poverty_line`, if not `NULL`, coerces cleanly to a single numeric
 #'     value and is positive and finite
 #'   \item `poverty_line` is required when `analysis_var == "pov_status"` or
-#'     when `"pov_status"` is included in `by`
-#'   \item `by`, if not `NULL`, is a subset of [piptm::.VALID_DIMENSIONS]
+#'     when `"pov_status"` is assigned to any layout slot
+#'   \item Layout slots (`column`, `row`, `superColumn`, `superRow`) each
+#'     contain at most one dimension in [piptm::pip_valid_dimensions()], are
+#'     filled in order without gaps, and contain no duplicate variables
 #'   \item `ppp`, if not `NULL`, is a single value coercible to a positive
 #'     integer (PPP reference year, e.g. `2017`)
+#'   \item `pop_share_threshold`, if not `NULL` or `""`, coerces to a numeric
+#'     value strictly in `(0, 1)`
 #' }
 #'
 #' Note: `release` validation is handled separately by [resolve_release()].
 #'
-#' @param analysis_var Character scalar analysis variable name.
-#' @param pip_id       Character vector of survey identifiers.
-#' @param measures     Character vector of measure names.
-#' @param poverty_line Numeric (or coercible) scalar poverty line, or `NULL`.
-#' @param by           Character vector of disaggregation dimensions, or
+#' @param analysis_var        Character scalar analysis variable name.
+#' @param pip_id              Character vector of survey identifiers.
+#' @param measures            Character vector of measure names.
+#' @param poverty_line        Numeric (or coercible) scalar poverty line, or
 #'   `NULL`.
-#' @param ppp          Integer scalar PPP reference year (e.g. `2017`), or
-#'   `NULL` to use the manifest default.  Must be a single positive integer
+#' @param column              Character scalar variable for the Columns slot,
+#'   or `NULL`.
+#' @param row                 Character scalar variable for the Rows slot, or
+#'   `NULL`.
+#' @param superColumn         Character scalar variable for the Super Columns
+#'   slot, or `NULL`.
+#' @param superRow            Character scalar variable for the Super Rows
+#'   slot, or `NULL`.
+#' @param ppp                 Integer scalar PPP reference year (e.g. `2017`),
+#'   or `NULL` to use the manifest default. Must be a single positive integer
 #'   value when provided.
+#' @param pop_share_threshold Numeric (or coercible) scalar cell-suppression
+#'   threshold in `(0, 1)`, or `NULL`/`""` to disable suppression.
 #'
 #' @return A named list:
 #'   \describe{
 #'     \item{`valid`}{`TRUE` when all checks pass; `FALSE` otherwise.}
 #'     \item{`errors`}{Character vector of error messages (empty when valid).}
-#'     \item{`poverty_line`}{The coerced numeric scalar, or `NULL`.  Use this
+#'     \item{`poverty_line`}{The coerced numeric scalar, or `NULL`. Use this
 #'       in the handler rather than the original input.}
-#'     \item{`ppp`}{The coerced integer scalar, or `NULL`.  Use this in the
+#'     \item{`ppp`}{The coerced integer scalar, or `NULL`. Use this in the
 #'       handler rather than the original input.}
+#'     \item{`pop_share_threshold`}{The coerced numeric scalar in `(0, 1)`, or
+#'       `NULL` when suppression is disabled.}
+#'     \item{`by`}{Character vector of filled layout slot variables in slot
+#'       order (`column`, `row`, `superColumn`, `superRow`), or `NULL` when no
+#'       slots are filled.}
+#'     \item{`slots`}{Named list with keys `column`, `row`, `superColumn`, and
+#'       `superRow`, each holding the trimmed variable name or `NULL`.}
 #'   }
 validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_line = NULL,
-                                 by = NULL, ppp = NULL,
+                                 column = NULL, row = NULL,
+                                 superColumn = NULL, superRow = NULL,
+                                 ppp = NULL,
                                  pop_share_threshold = NULL) {
   errors <- character()
 
@@ -362,7 +386,98 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     }
   }
 
-  # ── by ──────────────────────────────────────────────────────────────────────────────
+  # ── layout slots ───────────────────────────────────────────────────────────
+  # Order is the contract. Do not sort.
+  slot_order <- .SLOT_NAMES
+  raw_slots <- list(
+    column = column,
+    row = row,
+    superColumn = superColumn,
+    superRow = superRow
+  )
+  slots <- stats::setNames(vector("list", length(slot_order)), slot_order)
+  filled_names <- character()
+  invalid_names <- character()
+
+  for (slot_name in slot_order) {
+    value <- raw_slots[[slot_name]]
+    if (is.null(value) || length(value) == 0L) {
+      next
+    }
+    if (is.list(value)) {
+      value <- unlist(value, recursive = TRUE, use.names = FALSE)
+      if (is.null(value) || length(value) == 0L) {
+        next
+      }
+    }
+    if (!is.character(value) && !all(is.na(value))) {
+      invalid_names <- c(invalid_names, slot_name)
+      errors <- c(
+        errors,
+        paste0("`", slot_name, "` must be a character string.")
+      )
+      next
+    }
+    if (length(value) > 1L) {
+      invalid_names <- c(invalid_names, slot_name)
+      errors <- c(
+        errors,
+        paste0(
+          "`", slot_name, "` accepts a single variable; ",
+          length(value), " values were supplied."
+        )
+      )
+      next
+    }
+    if (is.na(value)) {
+      next
+    }
+    trimmed <- trimws(as.character(value))
+    if (!nzchar(trimmed)) {
+      next
+    }
+    slots[[slot_name]] <- trimmed
+    filled_names <- c(filled_names, slot_name)
+  }
+
+  # Arity failures are excluded so a repeated slot is never described as empty.
+  gap_order <- setdiff(slot_order, invalid_names)
+  if (length(filled_names) > 0L) {
+    expected_prefix <- gap_order[seq_along(filled_names)]
+    if (!identical(filled_names, expected_prefix)) {
+      missing_earlier <- setdiff(expected_prefix, filled_names)
+      errors <- c(
+        errors,
+        paste0(
+          "Layout slots must be filled in order (column, row, ",
+          "superColumn, superRow). `", missing_earlier[[1L]],
+          "` is empty but a later slot is filled."
+        )
+      )
+    }
+    dup_idx <- anyDuplicated(unlist(slots[filled_names], use.names = FALSE))
+    if (dup_idx > 0L) {
+      dup_value <- unlist(slots[filled_names], use.names = FALSE)[[dup_idx]]
+      dup_slots <- filled_names[vapply(
+        slots[filled_names],
+        function(x) identical(x, dup_value),
+        logical(1)
+      )]
+      errors <- c(
+        errors,
+        paste0(
+          "Variable `", dup_value, "` is assigned to more than one slot: ",
+          paste(dup_slots, collapse = ", "), "."
+        )
+      )
+    }
+  }
+
+  by <- unname(unlist(Filter(Negate(is.null), slots), use.names = FALSE))
+  if (length(by) == 0L) {
+    by <- NULL
+  }
+
   if (!is.null(by)) {
     valid_dims <- piptm::pip_valid_dimensions()
     by_check <- setdiff(by, "pov_status")
@@ -379,6 +494,18 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
         )
       )
     }
+  }
+
+  # ── cross-validation: analysis_var cannot also be a disaggregation slot ──
+  if (!is.null(by) && !is.null(analysis_var) && is.character(analysis_var) &&
+      length(analysis_var) == 1L && trimws(analysis_var) %in% by) {
+    errors <- c(
+      errors,
+      paste0(
+        "`analysis_var` (`", trimws(analysis_var),
+        "`) cannot also be used as a disaggregation layout slot."
+      )
+    )
   }
 
   # ── cross-validation: poverty_line required for pov_status usage ─────────
@@ -509,7 +636,9 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     errors              = errors,
     poverty_line        = coerced_pl,
     ppp                 = coerced_ppp,
-    pop_share_threshold = coerced_threshold
+    pop_share_threshold = coerced_threshold,
+    by                  = by,
+    slots               = slots
   )
 }
 
@@ -550,7 +679,8 @@ validate_description_input <- function(body) {
   has_metadata <- "description_metadata" %in% names(body)
   param_fields <- intersect(
     names(body),
-    c("pip_id", "analysis_var", "measures", "poverty_line", "by",
+    c("pip_id", "analysis_var", "measures", "poverty_line",
+      .SLOT_NAMES,
       "filter_base", "ppp", "release", "pop_share_threshold")
   )
   has_params <- length(param_fields) > 0L

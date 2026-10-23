@@ -77,7 +77,7 @@ test_that("phase2: validate_table_input() requires poverty_line when by includes
     analysis_var = "welfare",
     pip_id = "COL_2010_ECH_INC_ALL",
     measures = "mean",
-    by = "pov_status"
+    column = "pov_status"
   )
 
   expect_false(result$valid)

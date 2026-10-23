@@ -159,8 +159,11 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `pip_id` *(required, array ≤15)* — Canonical survey IDs.
   - `analysis_var` *(required, string)* — `welfare`, `pov_status`, or entries from `/analysis-variables`.
   - `measures` *(required, array)* — Names from `/statistics`.
-  - `poverty_line` *(required when `analysis_var` == `pov_status` or `by` includes `pov_status`)* — Positive numeric.
-  - `by` *(optional, array)* — Dimensions (≤4 entries) returned by `/dimensions`; requests with more than four entries are rejected server-side.
+  - `poverty_line` *(required when `analysis_var` == `pov_status` or any slot includes `pov_status`)* — Positive numeric.
+  - `column` *(optional, string)* — Variable placed in the Columns slot. Exactly one variable name returned by `/dimensions`.
+  - `row` *(optional, string)* — Variable placed in the Rows slot. Exactly one variable name returned by `/dimensions`.
+  - `superColumn` *(optional, string)* — Variable placed in the Super Columns slot. Exactly one variable name returned by `/dimensions`.
+  - `superRow` *(optional, string)* — Variable placed in the Super Rows slot. Exactly one variable name returned by `/dimensions`.
   - `ppp` *(optional, integer)* — PPP reference year. Default `2021`.
   - `filter_base` *(optional, JSON object)* — Keys are categorical variables; values are arrays of allowed codes (e.g., `{ "gender": [0], "age_group": [1,2] }`).
   - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables masking.
@@ -173,6 +176,12 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `400` — Validation failure (e.g., too many surveys, missing poverty line, invalid PPP).
   - `422` — Domain failure (manifest mismatch, computation error).
 - **Notes:**
+  - **Layout slot rules**:
+    - Query parameters are case-sensitive camelCase (`column`, `row`, `superColumn`, `superRow`).
+    - Slots must be filled in order (`column` → `row` → `superColumn` → `superRow`). A gapped assignment (e.g. `column=gender&superRow=area` without `row`) returns HTTP 400. Even though `column=gender&superRow=area` groups the same underlying observations as `column=gender&row=area`, the rejection is a deliberate layout rule that prevents degenerate table headers (super-axis bands with no child axis).
+    - Each slot accepts a single variable name; repeating a slot parameter returns HTTP 400.
+    - Assigning the same variable to multiple slots returns HTTP 400.
+    - The four slots structurally cap `/table` disaggregation to four dimensions. Direct callers of R package function `table_maker(by = ...)` are capped at `length(by) <= 4` via defensive assertion.
   - `filter_base` JSON must be parsable; invalid JSON returns HTTP 400.
   - `pip_id` and `measures` arrays must be non-empty; size >15 returns HTTP 400.
   - All requests are sample-weighted; the poverty line is always PPP USD per day.
@@ -184,7 +193,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   "pip_id": ["COL_2019_GEIH_INC_ALL"],
   "analysis_var": "welfare",
   "measures": ["mean", "gini"],
-  "by": ["gender"],
+  "column": "gender",
   "ppp": 2021,
   "filter_base": {"area":["URB"]},
   "include_metadata": "false"
@@ -259,9 +268,9 @@ TableRow:
       type: string
       nullable: true
       description: Formatted number string, "NR" for masked cells, or null for genuine missing.
-    by:
-      type: object
-      description: Key/value map of selected dimensions.
+    "<dimension>":
+      type: string
+      description: Top-level column per filled disaggregation slot variable (e.g. gender, area).
     poverty_line: { type: number, nullable: true }
     warnings: { type: array, items: { type: string } }
 ```

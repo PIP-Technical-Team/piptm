@@ -128,7 +128,12 @@ function(req) {
 #* @param measures:[character] Measure names (required, repeatable).
 #* @param poverty_line:numeric Poverty line value (required when
 #*   `analysis_var = "pov_status"`).
-#* @param by:[character] Disaggregation dimensions (optional, repeatable).
+#* @param column:character Variable placed in the Columns slot (optional).
+#* @param row:character Variable placed in the Rows slot (optional).
+#* @param superColumn:character Variable placed in the Super Columns slot (optional).
+#* @param superRow:character Variable placed in the Super Rows slot (optional).
+#*   Layout slots must be filled in order (column, row, superColumn, superRow);
+#*   gaps and repeated variables are rejected with HTTP 400.
 #* @param ppp:integer PPP reference year (optional; default `2021`). Must be a
 #*   positive integer; invalid values return HTTP 400.
 #* @param filter_base:character JSON-encoded sample-base filter object
@@ -142,7 +147,8 @@ function(req) {
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
-function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL, by = NULL,
+function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL,
+         column = NULL, row = NULL, superColumn = NULL, superRow = NULL,
          ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.001,
          release = NULL, include_metadata = "false", res) {
 
@@ -151,7 +157,10 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
     pip_id = pip_id,
     measures = measures,
     poverty_line = poverty_line,
-    by = by,
+    column = column,
+    row = row,
+    superColumn = superColumn,
+    superRow = superRow,
     ppp = ppp,
     pop_share_threshold = pop_share_threshold
   )
@@ -159,6 +168,7 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   poverty_line        <- check$poverty_line
   ppp                 <- check$ppp
   pop_share_threshold <- check$pop_share_threshold
+  by                  <- check$by
 
   # Parse include_metadata ("true"/"false"; anything else defaults to FALSE).
   include_meta <- identical(tolower(include_metadata), "true")
@@ -330,7 +340,8 @@ function(req, body = NULL, res) {
 #* - Fast path: `{"description_metadata": <metadata object>}` — render only,
 #*   no recomputation.
 #* - Fallback path: `{"pip_id": [...], "analysis_var": "...", "measures": [...],
-#*   "poverty_line": ..., "by": [...], "filter_base": {...}, "ppp": ...,
+#*   "poverty_line": ..., "column": "...", "row": "...", "superColumn": "...",
+#*   "superRow": "...", "filter_base": {...}, "ppp": ...,
 #*   "release": "...", "pop_share_threshold": ...}` — recomputes via
 #*   `table_maker(include_metadata = TRUE)`.
 #*
@@ -395,6 +406,24 @@ function(req, body = NULL, res) {
     }
   }
 
+  fcheck <- NULL
+  if (!has_metadata) {
+    raw_threshold <- if ("pop_share_threshold" %in% names(body)) body$pop_share_threshold else 0.001
+    fcheck <- validate_table_input(
+      analysis_var = body$analysis_var %||% NULL,
+      pip_id = body$pip_id %||% NULL,
+      measures = body$measures %||% NULL,
+      poverty_line = body$poverty_line %||% NULL,
+      column = body$column %||% NULL,
+      row = body$row %||% NULL,
+      superColumn = body$superColumn %||% NULL,
+      superRow = body$superRow %||% NULL,
+      ppp = body$ppp %||% NULL,
+      pop_share_threshold = raw_threshold
+    )
+    if (!fcheck$valid) return(error_json(fcheck$errors, 400L, res))
+  }
+
   out <- capture_with_warnings({
     if (has_metadata) {
       description_metadata <- body$description_metadata
@@ -414,17 +443,6 @@ function(req, body = NULL, res) {
       list(content = rendered)
     } else {
       # Fallback path: recompute via table_maker(include_metadata = TRUE).
-      fcheck <- validate_table_input(
-        analysis_var = body$analysis_var %||% NULL,
-        pip_id = body$pip_id %||% NULL,
-        measures = body$measures %||% NULL,
-        poverty_line = body$poverty_line %||% NULL,
-        by = body$by %||% NULL,
-        ppp = body$ppp %||% NULL,
-        pop_share_threshold = body$pop_share_threshold %||% NULL
-      )
-      if (!fcheck$valid) cli::cli_abort(paste(fcheck$errors, collapse = "; "))
-
       parsed_filter_base <- body$filter_base
 
       rel <- resolve_release(body$release %||% NULL)
@@ -433,8 +451,8 @@ function(req, body = NULL, res) {
         analysis_var  = body$analysis_var,
         measures      = body$measures,
         poverty_line  = fcheck$poverty_line,
-        by            = body$by,
-        ppp           = fcheck$ppp,
+        by            = fcheck$by,
+        ppp           = fcheck$ppp %||% 2021L,
         filter_base   = parsed_filter_base,
         release       = rel,
         pop_share_threshold = fcheck$pop_share_threshold,

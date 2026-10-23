@@ -33,3 +33,18 @@ __pycache__/
 *.pyc
 .venv/
 .ipynb_checkpoints/
+
+# R package build artifacts
+*.Rcheck/
+*.tar.gz
+.Ruserdata
+
+# IDE
+.vscode/
+.idea/
+
+# Scratch and temporary outputs
+check_out*.txt
+.kilo_tmp_*.R
+.cg-docs/tmp/
+example_description_output*.html

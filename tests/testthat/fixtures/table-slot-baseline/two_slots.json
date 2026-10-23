@@ -1,0 +1,40 @@
+{
+  "request": {
+    "path": "/table",
+    "query": {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "measures": "mean",
+      "by": ["gender", "area"]
+    },
+    "by_order": [
+      "gender",
+      "area"
+    ]
+  },
+  "data": [
+    {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2010,
+      "welfare_type": "INC",
+      "gender": "male",
+      "area": "urban",
+      "measure": "mean",
+      "value": "5.00"
+    },
+    {
+      "pip_id": "COL_2010_ECH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2010,
+      "welfare_type": "INC",
+      "gender": "female",
+      "area": "rural",
+      "measure": "mean",
+      "value": "6.00"
+    }
+  ],
+  "meta": {
+    "release": "20260206_EP_TEST",
+    "n_surveys": 1
+  }
+}

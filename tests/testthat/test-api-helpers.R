@@ -20,10 +20,6 @@ source(helpers_path)
   if (is.null(args$analysis_var)) {
     args$analysis_var <- "welfare"
   }
-  if (!is.null(args$poverty_lines) && is.null(args$poverty_line)) {
-    args$poverty_line <- args$poverty_lines
-  }
-  args$poverty_lines <- NULL
   do.call(validate_table_input, args)
 }
 
@@ -196,23 +192,26 @@ test_that("validate_table_input() rejects non-positive poverty_line", {
   expect_true(any(grepl("positive", result$errors)))
 })
 
-test_that("validate_table_input() rejects unknown dimension in `by`", {
+test_that("validate_table_input() rejects unknown dimension in a slot", {
   result <- .vti(
-    pip_id   = "ARM_2012_ILCS_CON_ALL",
-    measures = "mean",
-    by       = c("gender", "not_a_dim")
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "gender",
+    row         = "not_a_dim"
   )
   expect_false(result$valid)
   expect_true(any(grepl("not_a_dim", result$errors)))
 })
 
-test_that("validate_table_input() accepts valid `by` dimensions", {
+test_that("validate_table_input() accepts valid slot dimensions", {
   result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
-    by       = c("gender", "area")
+    column   = "gender",
+    row      = "area"
   )
   expect_true(result$valid)
+  expect_identical(result$by, c("gender", "area"))
 })
 
 test_that("validate_table_input() rejects NULL pip_id", {
@@ -350,12 +349,16 @@ test_that("validate_table_input() rejects decimal string ppp '2017.5'", {
 })
 
 # P2.3 — return list shape contract
-test_that("validate_table_input() return list has the expected 4-field shape", {
+test_that("validate_table_input() return list has the expected field shape", {
   result <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean"
   )
-  expect_named(result, c("valid", "errors", "poverty_line", "ppp", "pop_share_threshold"), ignore.order = FALSE)
+  expect_named(
+    result,
+    c("valid", "errors", "poverty_line", "ppp", "pop_share_threshold", "by", "slots"),
+    ignore.order = FALSE
+  )
 })
 
 # P1.1 digit-only guard: hex strings must be rejected (not silently accepted as 2047L).
@@ -419,6 +422,194 @@ test_that("validate_lookup_input() rejects NULL country_code", {
     welfare_type = "CON"
   )
   expect_false(result$valid)
+})
+
+# ── validate_table_input() — slot assembly ────────────────────────────────────
+
+.slot_names <- c("column", "row", "superColumn", "superRow")
+
+.expected_by <- function(slots) {
+  filled <- Filter(Negate(is.null), slots)
+  by <- unname(unlist(filled, use.names = FALSE))
+  if (length(by) == 0L) NULL else by
+}
+
+test_that("validate_table_input() returns a fixed four-key slots list", {
+  result <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender"
+  )
+  expect_identical(names(result$slots), .slot_names)
+  expect_identical(result$slots$column, "gender")
+  expect_null(result$slots$row)
+  expect_null(result$slots$superColumn)
+  expect_null(result$slots$superRow)
+  expect_identical(result$by, .expected_by(result$slots))
+})
+
+test_that("validate_table_input() treats all-empty slots as a national request", {
+  result <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean"
+  )
+  expect_true(result$valid)
+  expect_null(result$by)
+  expect_identical(names(result$slots), .slot_names)
+  expect_true(all(vapply(result$slots, is.null, logical(1))))
+})
+
+test_that("validate_table_input() rejects a repeated slot value", {
+  result <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = c("gender", "area")
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("column", result$errors, ignore.case = TRUE)))
+  expect_true(any(grepl("single variable", result$errors)))
+})
+
+test_that("validate_table_input() rejects the same variable in two slots", {
+  result <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "gender"
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("gender", result$errors)))
+})
+
+test_that("validate_table_input() rejects a gapped slot assignment", {
+  gapped <- .vti(
+    pip_id       = "ARM_2012_ILCS_CON_ALL",
+    measures     = "mean",
+    column       = "gender",
+    superColumn  = "area"
+  )
+  expect_false(gapped$valid)
+  expect_true(any(grepl("row", gapped$errors)))
+
+  contiguous <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "area"
+  )
+  expect_true(contiguous$valid)
+  expect_identical(contiguous$by, c("gender", "area"))
+})
+
+test_that("validate_table_input() does not describe a repeated slot as empty", {
+  result <- .vti(
+    pip_id       = "ARM_2012_ILCS_CON_ALL",
+    measures     = "mean",
+    column       = c("gender", "area"),
+    superColumn  = "educat4"
+  )
+  expect_false(result$valid)
+  expect_true(any(grepl("single variable", result$errors)))
+  expect_false(any(grepl("`column` is empty", result$errors, ignore.case = TRUE)))
+})
+
+test_that("validate_table_input() trims slot values and treats whitespace as unfilled", {
+  padded <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = " gender "
+  )
+  expect_true(padded$valid)
+  expect_identical(padded$slots$column, "gender")
+  expect_identical(padded$by, "gender")
+
+  blank <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "  "
+  )
+  expect_true(blank$valid)
+  expect_null(blank$by)
+  expect_null(blank$slots$column)
+})
+
+test_that("validate_table_input() preserves exact slot order for 3 and 4 slots and checks non-adjacent gaps/duplicates", {
+  three_slots <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "wquintile",
+    row         = "gender",
+    superColumn = "educat4"
+  )
+  expect_true(three_slots$valid)
+  expect_identical(three_slots$by, c("wquintile", "gender", "educat4"))
+
+  four_slots <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "wquintile",
+    row         = "gender",
+    superColumn = "educat4",
+    superRow    = "area"
+  )
+  expect_true(four_slots$valid)
+  expect_identical(four_slots$by, c("wquintile", "gender", "educat4", "area"))
+
+  gap_supercol <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "area",
+    superRow = "educat4"
+  )
+  expect_false(gap_supercol$valid)
+  expect_true(any(grepl("`superColumn` is empty", gap_supercol$errors)))
+
+  dup_nonadj <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "gender",
+    row         = "area",
+    superColumn = "gender"
+  )
+  expect_false(dup_nonadj$valid)
+  expect_true(any(grepl("column, superColumn", dup_nonadj$errors)))
+})
+
+test_that("validate_table_input() unboxes nested lists and rejects non-character slot values", {
+  nested_arr2 <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = list(c("gender", "area"))
+  )
+  expect_false(nested_arr2$valid)
+  expect_true(any(grepl("single variable", nested_arr2$errors)))
+
+  empty_list <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = list(character(0))
+  )
+  expect_true(empty_list$valid)
+  expect_null(empty_list$by)
+
+  non_char <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = 123L
+  )
+  expect_false(non_char$valid)
+  expect_true(any(grepl("character string", non_char$errors)))
+
+  dup_analysis <- .vti(
+    analysis_var = "pov_status",
+    pip_id       = "ARM_2012_ILCS_CON_ALL",
+    measures     = "headcount",
+    poverty_line = 2.15,
+    column       = "pov_status"
+  )
+  expect_false(dup_analysis$valid)
+  expect_true(any(grepl("analysis_var.*cannot also be used", dup_analysis$errors)))
 })
 
 # ── capture_with_warnings() ────────────────────────────────────────────────────

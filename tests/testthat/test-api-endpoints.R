@@ -28,8 +28,11 @@ library(jsonlite)
 #   → QUERY_STRING = "pip_id=A&pip_id=B&measures=mean"
 make_api_req <- function(method = "GET", path = "/",
                          query = list(), body = NULL) {
-  if (identical(path, "/table") && is.null(query$analysis_var)) {
+  if (identical(path, "/table") && is.null(body) && is.null(query$analysis_var)) {
     query$analysis_var <- "welfare"
+  }
+  if (identical(path, "/table") && !is.null(body) && is.list(body) && is.null(body$analysis_var)) {
+    body$analysis_var <- "welfare"
   }
 
   qs <- if (length(query) > 0L) {
@@ -661,13 +664,13 @@ test_that("GET /table with negative poverty_line returns 400", {
   expect_equal(body$status, "error")
 })
 
-test_that("GET /table with unknown dimension in 'by' returns 400", {
+test_that("GET /table with unknown dimension in slot returns 400", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   res <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id   = "COL_2010_ECH_INC_ALL",
     measures = "mean",
-    by       = "not_a_valid_dimension"
+    column   = "not_a_valid_dimension"
   )))
   expect_equal(res$status, 400L)
 })
@@ -1275,7 +1278,7 @@ test_that("GET /table surfaces 'NR' end-to-end for a masked cell through the rea
     pip_id       = "TST_2020_ECH_INC_ALL",
     analysis_var = "welfare",
     measures     = "mean",
-    by           = "gender"
+    column       = "gender"
   )))
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
@@ -1292,4 +1295,205 @@ test_that("GET /table surfaces 'NR' end-to-end for a masked cell through the rea
   expect_equal(nrow(unmasked_row), 1L)
   expect_equal(masked_row$value, "NR")
   expect_false(identical(unmasked_row$value, "NR"))
+})
+
+# =============================================================================
+# Block 12: Explicit slot parameters (contract and baseline equivalence)
+# =============================================================================
+
+test_that("OpenAPI spec for /table advertises slot parameters and removes 'by'", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+  slot_keys <- c("column", "row", "superColumn", "superRow")
+
+  for (method in c("get", "post")) {
+    op <- spec$paths[["/table"]][[method]]
+    expect_false(is.null(op), info = paste("Path /table missing method:", method))
+    params <- op$parameters
+    param_names <- vapply(params, function(p) p$name %||% "", character(1))
+
+    expect_false("by" %in% param_names, info = paste("Param 'by' still present in:", method))
+
+    for (k in slot_keys) {
+      expect_true(k %in% param_names, info = paste("Missing slot param", k, "in", method))
+      p_obj <- params[[which(param_names == k)]]
+      expect_equal(p_obj$`in`, "query", info = paste("Slot", k, "not in query for", method))
+      schema_type <- p_obj$schema$type %||% p_obj$type
+      expect_equal(schema_type, "string", info = paste("Slot", k, "not string schema for", method))
+    }
+  }
+})
+
+test_that("GET /table with wrong-cased parameter (supercolumn) does not disaggregate", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  activate_test_registry(fx$release)
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2010_ECH_INC_ALL",
+    measures    = "mean",
+    supercolumn = "gender"
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  expect_equal(nrow(body$data), 1L)
+  expect_false("gender" %in% names(body$data))
+})
+
+test_that("GET /table rejects repeated slot parameters with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = c("gender", "area")
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(any(grepl("single variable", body$errors)))
+})
+
+test_that("POST /table handles scalar, length-1 array, and rejects length > 1 array", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  activate_test_registry(fx$release)
+
+  # Scalar in POST JSON
+  res_scalar <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender"
+  )))
+  expect_equal(res_scalar$status, 200L)
+  body_scalar <- parse_api_res(res_scalar)
+  expect_equal(body_scalar$status, "success")
+  expect_true("gender" %in% names(body_scalar$data))
+
+  # Length-1 array in POST JSON: unboxes / accepts
+  res_arr1 <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = list("gender")
+  )))
+  expect_equal(res_arr1$status, 200L)
+  body_arr1 <- parse_api_res(res_arr1)
+  expect_equal(body_arr1$status, "success")
+  expect_true("gender" %in% names(body_arr1$data))
+
+  # Length-2 array in POST JSON: rejects with 400, never 500
+  res_arr2 <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = list("gender", "area")
+  )))
+  expect_equal(res_arr2$status, 400L)
+  body_arr2 <- parse_api_res(res_arr2)
+  expect_equal(body_arr2$status, "error")
+  expect_true(any(grepl("single variable", body_arr2$errors)))
+})
+
+test_that("GET /table rejects duplicate variable across slots with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "gender"
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(any(grepl("gender", body$errors)))
+})
+
+test_that("GET /table rejects gapped slot assignment with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2010_ECH_INC_ALL",
+    measures    = "mean",
+    column      = "gender",
+    superColumn = "area"
+  )))
+  expect_equal(res$status, 400L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "error")
+  expect_true(any(grepl("row", body$errors)))
+})
+
+test_that("GET /table with all slots omitted returns 200 national table, not 500", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  activate_test_registry(fx$release)
+
+  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean"
+  )))
+  expect_equal(res$status, 200L)
+  body <- parse_api_res(res)
+  expect_equal(body$status, "success")
+  expect_equal(nrow(body$data), 1L)
+})
+
+test_that("GET /table responses match pre-change baseline fixtures (semantic equality)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  baseline_dir <- testthat::test_path("fixtures", "table-slot-baseline")
+  skip_if(!dir.exists(baseline_dir), "Baseline fixtures directory not found")
+
+  fx_files <- sort(list.files(baseline_dir, pattern = "\\.json$", full.names = TRUE))
+  skip_if(length(fx_files) == 0L, "No baseline fixtures found")
+
+  for (fx_file in fx_files) {
+    local({
+      fx_obj <- jsonlite::fromJSON(fx_file, simplifyVector = TRUE)
+      b_name <- basename(fx_file)
+
+      if (grepl("nr_masking", b_name)) {
+        tmp_arrow    <- withr::local_tempdir()
+        tmp_manifest <- withr::local_tempdir()
+        write_fixture_nr_masking_survey(tmp_arrow, tmp_manifest)
+        piptm::set_manifest_dir(tmp_manifest)
+        piptm::set_arrow_root(tmp_arrow)
+        withr::defer(.reset_piptm_env())
+      } else {
+        fx <- .make_ep_fixtures()
+        activate_test_registry(fx$release)
+      }
+
+      # Map query from baseline: replace 'by' with corresponding slot params
+      q <- fx_obj$request$query
+      by_order <- unlist(fx_obj$request$by_order)
+      q$by <- NULL
+      slot_names <- c("column", "row", "superColumn", "superRow")
+      if (length(by_order) > 0L) {
+        for (i in seq_along(by_order)) {
+          q[[slot_names[[i]]]] <- by_order[[i]]
+        }
+      }
+
+      res <- .ep_router$call(make_api_req("GET", "/table", query = q))
+      expect_equal(res$status, 200L, info = paste("Failed fixture:", b_name))
+      body <- parse_api_res(res)
+      expect_equal(body$status, "success", info = paste("Failed fixture:", b_name))
+
+      # Compare data and meta semantically
+      canon <- function(x) jsonlite::toJSON(x, auto_unbox = TRUE, digits = 10, null = "null")
+      expect_equal(canon(body$data), canon(fx_obj$data), info = paste("Data mismatch on:", b_name))
+      expect_equal(canon(body$meta), canon(fx_obj$meta), info = paste("Meta mismatch on:", b_name))
+    })
+  }
 })
