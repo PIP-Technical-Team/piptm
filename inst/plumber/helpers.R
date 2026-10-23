@@ -405,6 +405,16 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
       next
     }
     if (is.list(value)) {
+      is_json_object <- !is.null(names(value)) && any(nzchar(names(value)))
+      is_nested_list <- any(vapply(value, is.list, logical(1)))
+      if (is_json_object || is_nested_list) {
+        invalid_names <- c(invalid_names, slot_name)
+        errors <- c(
+          errors,
+          paste0("`", slot_name, "` must be a character string or flat array.")
+        )
+        next
+      }
       value <- unlist(value, recursive = TRUE, use.names = FALSE)
       if (is.null(value) || length(value) == 0L) {
         next

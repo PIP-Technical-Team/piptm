@@ -576,7 +576,7 @@ test_that("validate_table_input() preserves exact slot order for 3 and 4 slots a
   expect_true(any(grepl("column, superColumn", dup_nonadj$errors)))
 })
 
-test_that("validate_table_input() unboxes nested lists and rejects non-character slot values", {
+test_that("validate_table_input() accepts flat arrays and rejects objects or nested arrays", {
   nested_arr2 <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
@@ -584,6 +584,22 @@ test_that("validate_table_input() unboxes nested lists and rejects non-character
   )
   expect_false(nested_arr2$valid)
   expect_true(any(grepl("single variable", nested_arr2$errors)))
+
+  json_object <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = list(value = "gender")
+  )
+  expect_false(json_object$valid)
+  expect_true(any(grepl("character string or flat array", json_object$errors)))
+
+  nested_list <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = list(list("gender"))
+  )
+  expect_false(nested_list$valid)
+  expect_true(any(grepl("character string or flat array", nested_list$errors)))
 
   empty_list <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
