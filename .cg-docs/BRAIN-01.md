@@ -4,7 +4,7 @@ _Generated 2026-10-26_
 
 ## Table_Maker\(\) / /Table / Pip_Id
 
-_Keywords: `table_maker()` · `/table` · `pip_id`_ · 90 entities
+_Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -60,6 +60,8 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 90 entities
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[/table request contract: explicit slot parameters replacing ordered by](.cg-docs/brainstorms/2026-10-22-table-endpoint-explicit-slot-parameters.md)** · `brainstorm` · _decided_ · `2026-10-22`
   > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[/table/download input & output shape under Approach C](.cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md)** · `brainstorm` · _decided_ · `2026-10-26`
+  > `/table/download` (`inst/plumber/plumber.R:247-343`) is a stateless `POST` endpoint that converts an already-computed…
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
 - **[Version as partition key with manifest-based resolution](.cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md)** · `plan` · _active_ · `2026-04-02`
@@ -114,6 +116,8 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 90 entities
   > Replace the repeatable `by` parameter on `/table` with four named slot parameters — `column`, `row`, `superColumn`, `…
 - **[/table explicit slot parameters replacing ordered by](.cg-docs/plans/2026-10-22-table-explicit-slot-parameters.md)** · `plan` · _active_ · `2026-10-22`
   > Replace the single repeatable `by` parameter on `/table` with four explicit, named slot parameters - `column`, `row`,…
+- **[/table/download Approach C stateless flattening \(Shape A\)](.cg-docs/plans/2026-10-26-table-download-approach-c-flattening.md)** · `plan` · _completed_ · `2026-10-26`
+  > Update `POST /table/download` so it accepts the **Approach C** `data[]` payload returned by `/table` (per-survey obje…
 - **[/table response format: layout + observed cells\[\] \(Approach C\)](.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md)** · `plan` · _completed_ · `2026-10-26`
   > Reshape the `/table` response (with `include_metadata` off) from flat long-format rows into **Approach C**: `data[]` …
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
@@ -160,12 +164,28 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 90 entities
   > **Review mode**: light (`mode:verify`) **Files reviewed**: current uncommitted working-tree diff (parent commit `83ac…
 - **[2026-10-22-table-explicit-slot-parameters-revised-verify-review](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review.md)** · `review` · _—_ · `2026-10-23`
   > **Review mode**: light (`mode:verify`) **Files reviewed**: committed implementation diff `HEAD^..HEAD`, focused on AP…
+- **[2026-10-26-table-download-approach-c-flattening-review](.cg-docs/reviews/2026-10-26-table-download-approach-c-flattening-review.md)** · `review` · _—_ · `2026-10-26`
+  > **Review mode**: architecture (explicit; mandatory emphasis on `@cg-architecture` and `@cg-performance`) **Scope**: `…
 - **[2026-10-26-table-layout-cells-response-format-review](.cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md)** · `review` · _—_ · `2026-10-26`
   > **Review mode**: architecture (explicit) **Files reviewed**: `R/table_response.R` (new), `R/registry.R`, `inst/plumbe…
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
+- **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
+  > The POST /description endpoint appeared in Swagger UI with an incorrect interface:
+- **[ANSI escape codes leak into /description endpoint warning text](.cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md)** · `solution` · _—_ · `2026-09-14`
+  > When a `table_maker()` call triggers cell suppression (`pop_share_threshold`), the resulting warning surfaced in the …
+- **[hsize_group/age_group filter metadata crash from stale inline category codes shadowing recode_spec mapping](.cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md)** · `solution` · _—_ · `2026-10-13`
+  > `GET /table` with `filter_base={"hsize_group":[2]}` and `include_metadata=true` returned correct data rows but failed…
+- **[Registry build abort on factor + quantile_from_continuous \(wquintile\)](.cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md)** · `solution` · _—_ · `2026-10-13`
+  > `build_variable_registry()` aborted during registry generation for release `20260401_TEST` with:
+- **[POST /table/download malformed JSON 500s and size-guard bypass](.cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md)** · `solution` · _—_ · `2026-10-16`
+  > A new binary download endpoint (`POST /table/download`) was added to convert already-computed `/table` rows into CSV …
+- **[POST /table/download: serializer-induced duplicate Content-Type and Swagger body-as-query-param](.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md)** · `solution` · _—_ · `2026-10-16`
+  > While manually verifying `POST /table/download` against a live, running API (not just `pr$call()` unit tests), two de…
 - **[/table/download silently corrupts data when a sibling endpoint's output format changes](.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md)** · `solution` · _—_ · `2026-10-22`
   > While implementing cell-level `NR` masking and API value formatting for `table_maker()`/`format_table_output()` (plan…
+- **[POST /table/download Approach C flattening and boundary validation](.cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md)** · `solution` · _—_ · `2026-10-26`
+  > The `/table` endpoint changed from flat rows to Approach C payloads: each survey contains header metadata, a four-slo…
 - **[Arrow open_dataset on multiple Parquet files silently breaks within-survey welfare sort](.cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md)** · `solution` · _—_ · `2026-05-21`
   > The `{piptm}` pipeline relies on a **pre-sort contract**: welfare values in each survey's microdata are sorted ascend…
 - **[collapse::fsum/fcumsum silently drops NA rows, biasing weighted statistics](.cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md)** · `solution` · _—_ · `2026-05-21`
@@ -233,7 +253,7 @@ _Keywords: `service layer` · `table` · `computation engine`_ · 28 entities
   > /table response format: layout slot assignment for the UI
 - **[/table request contract: explicit slot parameters replacing ordered by](roadmap.json#table-request-contract-explicit-slot-parameters-replacing-ordered-by)** · `feature` · _done_ · `—`
   > /table request contract: explicit slot parameters replacing ordered by
-- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _idea_ · `—`
+- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _done_ · `—`
   > /table/download has no flat rows to receive under the new cells[] response format
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
@@ -247,23 +267,6 @@ _Keywords: `service layer` · `table` · `computation engine`_ · 28 entities
   > API validation and plumber endpoint integration
 - **[API value formatting and string NR response contract](roadmap.json#api-value-formatting-nr-response-contract)** · `feature` · _idea_ · `—`
   > API value formatting and string NR response contract
-
-## Req / Body / Pr$Call\(\)
-
-_Keywords: `req` · `body` · `pr$call()`_ · 6 entities
-
-- **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
-  > The POST /description endpoint appeared in Swagger UI with an incorrect interface:
-- **[ANSI escape codes leak into /description endpoint warning text](.cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md)** · `solution` · _—_ · `2026-09-14`
-  > When a `table_maker()` call triggers cell suppression (`pop_share_threshold`), the resulting warning surfaced in the …
-- **[hsize_group/age_group filter metadata crash from stale inline category codes shadowing recode_spec mapping](.cg-docs/solutions/bugs/2026-10-13-hsize-group-filter-category-codes.md)** · `solution` · _—_ · `2026-10-13`
-  > `GET /table` with `filter_base={"hsize_group":[2]}` and `include_metadata=true` returned correct data rows but failed…
-- **[Registry build abort on factor + quantile_from_continuous \(wquintile\)](.cg-docs/solutions/bugs/2026-10-13-quantile-from-continuous-registry-mapping.md)** · `solution` · _—_ · `2026-10-13`
-  > `build_variable_registry()` aborted during registry generation for release `20260401_TEST` with:
-- **[POST /table/download malformed JSON 500s and size-guard bypass](.cg-docs/solutions/bugs/2026-10-16-table-download-parser-and-size-guard.md)** · `solution` · _—_ · `2026-10-16`
-  > A new binary download endpoint (`POST /table/download`) was added to convert already-computed `/table` rows into CSV …
-- **[POST /table/download: serializer-induced duplicate Content-Type and Swagger body-as-query-param](.cg-docs/solutions/bugs/2026-10-16-table-download-serializer-and-swagger-body.md)** · `solution` · _—_ · `2026-10-16`
-  > While manually verifying `POST /table/download` against a live, running API (not just `pr$call()` unit tests), two de…
 
 ## Description_Builder.R / Null / Test
 

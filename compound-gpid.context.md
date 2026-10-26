@@ -188,3 +188,12 @@ a silent corruption this time, because the 2026-10-22 rule above was
 consulted during planning — confirming the rule is worth checking on every
 `/table` shape change until the two endpoints share an enforced contract.
 
+### Approach C download boundary hardening (established 2026-10-26)
+
+`POST /table/download` now uses the exported, registry-free
+`flatten_table_response()` boundary to convert Approach C payloads into Shape
+A export rows. Keep this flattener separate from registry-backed `/table`
+serialization, validate JSON values rather than only key presence, reject
+duplicate/reserved column-name collisions before named-list assignment, and
+preserve formatted measure strings such as `"NR"` verbatim. See
+`.cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md`.

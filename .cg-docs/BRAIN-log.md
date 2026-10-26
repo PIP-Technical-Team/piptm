@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-10-26 · 119 artifacts (newest first) + 36 roadmap features_
+_Generated 2026-10-26 · 123 artifacts (newest first) + 36 roadmap features_
 
 ## undated
 
@@ -25,10 +25,18 @@ _Generated 2026-10-26 · 119 artifacts (newest first) + 36 roadmap features_
 
 - **[/table response format: layout + observed cells\[\] \(Approach C\)](.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md)** · `plan` · _completed_ · `2026-10-26`
   > Reshape the `/table` response (with `include_metadata` off) from flat long-format rows into **Approach C**: `data[]` …
+- **[/table/download Approach C stateless flattening \(Shape A\)](.cg-docs/plans/2026-10-26-table-download-approach-c-flattening.md)** · `plan` · _completed_ · `2026-10-26`
+  > Update `POST /table/download` so it accepts the **Approach C** `data[]` payload returned by `/table` (per-survey obje…
+- **[/table/download input & output shape under Approach C](.cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md)** · `brainstorm` · _decided_ · `2026-10-26`
+  > `/table/download` (`inst/plumber/plumber.R:247-343`) is a stateless `POST` endpoint that converts an already-computed…
+- **[2026-10-26-table-download-approach-c-flattening-review](.cg-docs/reviews/2026-10-26-table-download-approach-c-flattening-review.md)** · `review` · _—_ · `2026-10-26`
+  > **Review mode**: architecture (explicit; mandatory emphasis on `@cg-architecture` and `@cg-performance`) **Scope**: `…
 - **[2026-10-26-table-layout-cells-response-format-review](.cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md)** · `review` · _—_ · `2026-10-26`
   > **Review mode**: architecture (explicit) **Files reviewed**: `R/table_response.R` (new), `R/registry.R`, `inst/plumbe…
 - **[data.table by= silently uses names\(\), not values\(\), of a named character vector](.cg-docs/solutions/bugs/2026-10-26-data-table-by-named-vector-silent-bug.md)** · `solution` · _—_ · `2026-10-26`
   > While optimizing `serialize_table_response()` in `R/table_response.R` (piptm) to replace an O(n_cells × nrow) per-cel…
+- **[POST /table/download Approach C flattening and boundary validation](.cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md)** · `solution` · _—_ · `2026-10-26`
+  > The `/table` endpoint changed from flat rows to Approach C payloads: each survey contains header metadata, a four-slo…
 
 ## 2026-10-23
 
@@ -434,7 +442,7 @@ _Generated 2026-10-26 · 119 artifacts (newest first) + 36 roadmap features_
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
   > Structured Cell Definition table for share measures
-- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _idea_ · `—`
+- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _done_ · `—`
   > /table/download has no flat rows to receive under the new cells[] response format
 - **[table_maker\(\) with dual input patterns \(pip_id and triplets\)](roadmap.json#table-maker-dual-input)** · `feature` · _done_ · `—`
   > table_maker() with dual input patterns (pip_id and triplets)

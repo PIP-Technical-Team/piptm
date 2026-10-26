@@ -22,6 +22,13 @@ load).
   resulting columns to the vector's names, rather than erroring — always
   `unname()` a programmatically-built variable-name vector before using it
   as `by=`.
+- 2026-10-26 — `POST /table/download` now accepts Approach C `/table` payloads
+  and exports deterministic Shape A rows through the stateless
+  `flatten_table_response()` module in `R/table_flatten.R`. Boundary
+  validation rejects malformed scalar headers, duplicate or reserved names,
+  invalid cell slots, and cross-survey schema mismatches; formatted measure
+  strings (including `"NR"` and JSON `null`) are preserved and malformed
+  requests receive the standard HTTP 400 JSON error envelope.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)

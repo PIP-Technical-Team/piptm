@@ -19,6 +19,11 @@
   C): one object per survey with a dense `cells` array instead of flat
   rows. Uses a grouped `data.table` split (`by = dim_varnames`) to build
   unique cell groupings efficiently.
+- `flatten_table_response()` (`R/table_flatten.R`) — validates and flattens
+  an Approach C `/table` payload into deterministic Shape A rows for
+  `POST /table/download`. It preserves formatted measure strings (including
+  `"NR"` and JSON `null`), validates headers, layouts, cell slots, name
+  collisions, and cross-survey schema equality, and is registry-free.
 <!-- cg:auto:end -->
 
 <!-- cg:auto:parameters -->
@@ -41,7 +46,11 @@ Refer to each function's roxygen2 documentation (`?table_maker`,
 
 `table_maker()` and `compute_measures()` return structured, cross-tabulated
 measure outputs conforming to the schemas expected by downstream PIP
-platform consumers (see `inst/schema/arrow-schema.json`).
+platform consumers (see `inst/schema/arrow-schema.json`). The `/table` API
+uses Approach C (per-survey `layout` plus dense `cells[]`), while
+`POST /table/download` accepts that payload and exports deterministic Shape A
+rows. Malformed payloads are rejected at the boundary with the standard HTTP
+400 JSON error envelope rather than being silently coerced.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)
