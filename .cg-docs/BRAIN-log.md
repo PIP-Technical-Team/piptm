@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-10-22 · 109 artifacts (newest first) + 34 roadmap features_
+_Generated 2026-10-26 · 119 artifacts (newest first) + 36 roadmap features_
 
 ## undated
 
@@ -21,8 +21,34 @@ _Generated 2026-10-22 · 109 artifacts (newest first) + 34 roadmap features_
 - **[README](.cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md)** · `brainstorm` · _—_ · `—`
   > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
 
+## 2026-10-26
+
+- **[/table response format: layout + observed cells\[\] \(Approach C\)](.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md)** · `plan` · _completed_ · `2026-10-26`
+  > Reshape the `/table` response (with `include_metadata` off) from flat long-format rows into **Approach C**: `data[]` …
+- **[2026-10-26-table-layout-cells-response-format-review](.cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md)** · `review` · _—_ · `2026-10-26`
+  > **Review mode**: architecture (explicit) **Files reviewed**: `R/table_response.R` (new), `R/registry.R`, `inst/plumbe…
+- **[data.table by= silently uses names\(\), not values\(\), of a named character vector](.cg-docs/solutions/bugs/2026-10-26-data-table-by-named-vector-silent-bug.md)** · `solution` · _—_ · `2026-10-26`
+  > While optimizing `serialize_table_response()` in `R/table_response.R` (piptm) to replace an O(n_cells × nrow) per-cel…
+
+## 2026-10-23
+
+- **[2026-10-22-table-explicit-slot-parameters-revised-review](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-review.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `docs/api-contra…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: committed implementation diff `HEAD^..HEAD`, focused on AP…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review-2](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review-2.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: current working-tree object-slot fix in `inst/plumber/help…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review-3](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review-3.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: current uncommitted working-tree diff (parent commit `83ac…
+
 ## 2026-10-22
 
+- **[/table explicit slot parameters replacing ordered by](.cg-docs/plans/2026-10-22-table-explicit-slot-parameters.md)** · `plan` · _active_ · `2026-10-22`
+  > Replace the single repeatable `by` parameter on `/table` with four explicit, named slot parameters - `column`, `row`,…
+- **[/table explicit slot parameters replacing ordered by \(revised\)](.cg-docs/plans/2026-10-22-table-explicit-slot-parameters-revised.md)** · `plan` · _completed_ · `2026-10-22`
+  > Replace the repeatable `by` parameter on `/table` with four named slot parameters — `column`, `row`, `superColumn`, `…
+- **[/table request contract: explicit slot parameters replacing ordered by](.cg-docs/brainstorms/2026-10-22-table-endpoint-explicit-slot-parameters.md)** · `brainstorm` · _decided_ · `2026-10-22`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[/table/download silently corrupts data when a sibling endpoint's output format changes](.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md)** · `solution` · _—_ · `2026-10-22`
   > While implementing cell-level `NR` masking and API value formatting for `table_maker()`/`format_table_output()` (plan…
 - **[2026-10-20-pop-share-nr-masking-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-review.md)** · `review` · _—_ · `2026-10-22`
@@ -408,9 +434,13 @@ _Generated 2026-10-22 · 109 artifacts (newest first) + 34 roadmap features_
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
   > Structured Cell Definition table for share measures
+- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _idea_ · `—`
+  > /table/download has no flat rows to receive under the new cells[] response format
 - **[table_maker\(\) with dual input patterns \(pip_id and triplets\)](roadmap.json#table-maker-dual-input)** · `feature` · _done_ · `—`
   > table_maker() with dual input patterns (pip_id and triplets)
-- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _idea_ · `—`
+- **[/table request contract: explicit slot parameters replacing ordered by](roadmap.json#table-request-contract-explicit-slot-parameters-replacing-ordered-by)** · `feature` · _done_ · `—`
+  > /table request contract: explicit slot parameters replacing ordered by
+- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _done_ · `—`
   > /table response format: layout slot assignment for the UI
 - **[Unit test suite \(≥90% coverage\)](roadmap.json#unit-test-coverage)** · `feature` · _active_ · `—`
   > Unit test suite (≥90% coverage)

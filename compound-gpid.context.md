@@ -172,3 +172,19 @@ response," not just direct function callers — format contracts between
 Plumber endpoints are not enforced by the type system and will not surface
 in a dependency/call-graph search.
 
+### Second confirming instance (2026-10-26): `/table` Approach C reshape
+
+The same cross-endpoint coupling risk fired again, as the rule above
+predicted: when `/table`'s response was reshaped from flat rows to Approach
+C (per-survey `layout` + dense `cells[]`, see
+`.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md`),
+`/table/download`'s `rbindlist()` of an array of flat row objects was
+knowingly left unmodified and now throws a `500 Internal server error` when
+handed a nested payload (pinned via a characterization test in
+`tests/testthat/test-api-table-download.R`). This was treated as an
+accepted, documented, temporary incompatibility (tracked by roadmap feature
+`table-download-has-no-flat-rows-under-cells-response-format`) rather than
+a silent corruption this time, because the 2026-10-22 rule above was
+consulted during planning — confirming the rule is worth checking on every
+`/table` shape change until the two endpoints share an enforced contract.
+

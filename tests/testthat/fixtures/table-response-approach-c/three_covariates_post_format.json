@@ -1,0 +1,73 @@
+{
+  "request": {
+    "column": "gender",
+    "row": "educat4",
+    "superColumn": "area",
+    "superRow": null,
+    "analysis_var": "welfare",
+    "measures": ["mean"]
+  },
+  "data": [
+    {
+      "pip_id": "COL_2008_GEIH_INC_ALL",
+      "country_code": "COL",
+      "surveyid_year": 2008,
+      "welfare_type": "INC",
+      "poverty_line": null,
+      "analysis_var": "welfare",
+      "measures": ["mean"],
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            { "code": 0, "label": "Female" },
+            { "code": 1, "label": "Male" }
+          ]
+        },
+        "rows": {
+          "varname": "educat4",
+          "label": "Education level",
+          "categories": [
+            { "code": 1, "label": "None" },
+            { "code": 2, "label": "Primary" },
+            { "code": 3, "label": "Secondary" },
+            { "code": 4, "label": "Tertiary" },
+            { "code": null, "label": "Unknown" }
+          ]
+        },
+        "superColumns": {
+          "varname": "area",
+          "label": "Urban / Rural",
+          "categories": [
+            { "code": 0, "label": "Rural" },
+            { "code": 1, "label": "Urban" }
+          ]
+        },
+        "superRows": null
+      },
+      "cells": [
+        { "superRow": null, "row": { "code": 1, "label": "None" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "4.50" } },
+        { "superRow": null, "row": { "code": 1, "label": "None" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "5.15" } },
+        { "superRow": null, "row": { "code": 1, "label": "None" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "9.40" } },
+        { "superRow": null, "row": { "code": 1, "label": "None" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "9.58" } },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "5.44" } },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "6.04" } },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "10.67" } },
+        { "superRow": null, "row": { "code": 2, "label": "Primary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "10.49" } },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "6.74" } },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "7.47" } },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "13.33" } },
+        { "superRow": null, "row": { "code": 3, "label": "Secondary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "13.65" } },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "19.76" } },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "27.29" } },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "32.72" } },
+        { "superRow": null, "row": { "code": 4, "label": "Tertiary" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "35.96" } },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "4.75" } },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" }, "superColumn": { "code": 0, "label": "Rural" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "4.74" } },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 0, "label": "Female" }, "measures": { "mean": "10.56" } },
+        { "superRow": null, "row": { "code": null, "label": "Unknown" }, "superColumn": { "code": 1, "label": "Urban" }, "column": { "code": 1, "label": "Male" }, "measures": { "mean": "10.87" } }
+      ]
+    }
+  ]
+}

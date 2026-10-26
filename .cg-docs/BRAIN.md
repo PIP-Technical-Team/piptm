@@ -1,6 +1,6 @@
 # 🧠 Project Brain
 
-_Generated 2026-10-22 · 143 entities · 4 topics · 55 edges_
+_Generated 2026-10-26 · 155 entities · 4 topics · 64 edges_
 
 ## How to Use
 
@@ -13,8 +13,8 @@ _Generated 2026-10-22 · 143 entities · 4 topics · 55 edges_
 
 | # | Topic | Entities | File |
 |---|-------|----------|------|
-| 1 | [Table_Maker\(\) / Pip_Id / Version](BRAIN-01.md#table-maker-pip-id-version) | 81 | BRAIN-01.md |
-| 2 | [Service Layer / Computation Engine / Api](BRAIN-01.md#service-layer-computation-engine-api) | 26 | BRAIN-01.md |
+| 1 | [Table_Maker\(\) / /Table / Pip_Id](BRAIN-01.md#table-maker-table-pip-id) | 90 | BRAIN-01.md |
+| 2 | [Service Layer / Table / Computation Engine](BRAIN-01.md#service-layer-table-computation-engine) | 28 | BRAIN-01.md |
 | 3 | [Req / Body / Pr$Call\(\)](BRAIN-01.md#req-body-pr-call) | 6 | BRAIN-01.md |
 | 4 | [Description_Builder.R / Null / Test](BRAIN-01.md#description-builder-r-null-test) | 5 | BRAIN-01.md |
 
@@ -22,20 +22,20 @@ _Generated 2026-10-22 · 143 entities · 4 topics · 55 edges_
 
 | Type | Count |
 |------|-------|
-| brainstorm | 26 |
-| feature | 34 |
-| plan | 33 |
-| review | 23 |
-| solution | 27 |
+| brainstorm | 27 |
+| feature | 36 |
+| plan | 36 |
+| review | 28 |
+| solution | 28 |
 
-_25 entities not assigned to any topic_
+_26 entities not assigned to any topic_
 
 ## Relationship Summary
 
 | Edge Type | Count |
 |-----------|-------|
-| decided_from | 16 |
-| implements | 5 |
+| decided_from | 19 |
+| implements | 6 |
 | references | 12 |
-| reviews | 15 |
-| verifies | 7 |
+| reviews | 17 |
+| verifies | 10 |

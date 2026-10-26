@@ -177,3 +177,40 @@ test_that("/table/download preserves 'value' verbatim when it arrives as a forma
   # The already-scaled percentage string must not be re-interpreted/rescaled.
   expect_equal(df$value[df$measure == "headcount"], "45.67")
 })
+
+test_that("characterization: /table/download cannot consume Approach C nested layout+cells payload", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.dl_router), "Router could not be created")
+
+  # Nested Approach C payload as produced by the reshaped /table endpoint
+  nested_payload <- list(
+    format = "csv",
+    data = list(
+      list(
+        pip_id = "COL_2010_ECH_INC_ALL",
+        country_code = "COL",
+        surveyid_year = 2010L,
+        welfare_type = "INC",
+        layout = list(columns = list(varname = "gender")),
+        cells = list(
+          list(column = list(code = 0, label = "Female"), measures = list(mean = "5.50"))
+        )
+      )
+    )
+  )
+
+  # /table/download expects a flat array of row objects; passing nested per-survey
+  # {layout, cells} objects causes rbindlist() to fail inside the handler,
+  # which escapes to the global error handler. This characterizes the known,
+  # temporary incompatibility until feature
+  # 'table-download-has-no-flat-rows-under-cells-response-format' is implemented.
+  # Pinned to current observed behavior as of 2026-10-26 (this plan's fix-triage
+  # pass): a 500 via the global error handler's generic envelope. If this ever
+  # legitimately changes (e.g. the handler starts validating input shape and
+  # returning 400/422 instead of crashing), update this assertion deliberately
+  # rather than loosening it back to an "any of these" check.
+  res <- .dl_router$call(.dl_req(jsonlite::toJSON(nested_payload, auto_unbox = TRUE)))
+  expect_equal(res$status, 500L)
+  expect_equal(res$body$status, "error")
+  expect_equal(res$body$errors, "Internal server error.")
+})

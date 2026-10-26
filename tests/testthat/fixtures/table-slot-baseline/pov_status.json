@@ -8,9 +8,7 @@
       "poverty_line": "2.15",
       "by": "pov_status"
     },
-    "by_order": [
-      "pov_status"
-    ]
+    "by_order": "pov_status"
   },
   "data": [
     {
@@ -18,20 +16,54 @@
       "country_code": "COL",
       "surveyid_year": 2010,
       "welfare_type": "INC",
-      "pov_status": 0,
       "poverty_line": 2.15,
-      "measure": "headcount",
-      "value": "0.00"
-    },
-    {
-      "pip_id": "COL_2010_ECH_INC_ALL",
-      "country_code": "COL",
-      "surveyid_year": 2010,
-      "welfare_type": "INC",
-      "pov_status": 1,
-      "poverty_line": 2.15,
-      "measure": "headcount",
-      "value": "100.00"
+      "analysis_var": "welfare",
+      "measures": "headcount",
+      "layout": {
+        "columns": {
+          "varname": "pov_status",
+          "label": "Poverty status",
+          "categories": [
+            {
+              "code": 0,
+              "label": "Non-poor"
+            },
+            {
+              "code": 1,
+              "label": "Poor"
+            }
+          ]
+        },
+        "rows": {},
+        "superColumns": {},
+        "superRows": {}
+      },
+      "cells": [
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": 0,
+            "label": "Non-poor"
+          },
+          "measures": {
+            "headcount": "0.00"
+          }
+        },
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": 1,
+            "label": "Poor"
+          },
+          "measures": {
+            "headcount": "100.00"
+          }
+        }
+      ]
     }
   ],
   "meta": {

@@ -207,9 +207,23 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 
     result_data <- piptm::format_table_output(result_data)
 
+    n_surveys <- data.table::uniqueN(result_data, by = "pip_id")
+
+    if (!include_meta) {
+      result_data <- piptm::serialize_table_response(
+        dt           = result_data,
+        slots        = check$slots,
+        analysis_var = analysis_var,
+        poverty_line = poverty_line,
+        measures     = measures,
+        release      = rel
+      )
+    }
+
     list(
       data = result_data,
       rel = rel,
+      n_surveys = n_surveys,
       description_metadata = description_metadata
     )
   })
@@ -217,10 +231,7 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 
   meta <- list(
     release   = out$result$rel,
-    n_surveys = tryCatch(
-      data.table::uniqueN(out$result$data, by = "pip_id"),
-      error = function(e) NA_integer_
-    )
+    n_surveys = out$result$n_surveys
   )
   if (include_meta) {
     meta$description_metadata <- out$result$description_metadata

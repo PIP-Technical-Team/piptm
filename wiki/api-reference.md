@@ -14,6 +14,11 @@
 - `compute_mean_welfare()` — computes mean welfare statistics.
 - `load_survey_microdata()` — manifest lookup, lazy file validation, and
   Arrow-backed loading of survey microdata.
+- `serialize_table_response()` (`R/table_response.R`) — reshapes `/table`
+  API endpoint output into the per-survey, dense `cells[]` layout (Approach
+  C): one object per survey with a dense `cells` array instead of flat
+  rows. Uses a grouped `data.table` split (`by = dim_varnames`) to build
+  unique cell groupings efficiently.
 <!-- cg:auto:end -->
 
 <!-- cg:auto:parameters -->

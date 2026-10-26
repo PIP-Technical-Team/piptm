@@ -48,6 +48,7 @@ ids <- pip_lookup(
 Other api: 
 \code{\link{format_table_output}()},
 \code{\link{run_api}()},
+\code{\link{serialize_table_response}()},
 \code{\link{table_maker}()}
 }
 \concept{api}

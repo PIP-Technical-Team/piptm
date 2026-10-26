@@ -189,7 +189,8 @@ test_that("phase4: GET /table validates and computes with analysis_var", {
   expect_equal(res$status, 200L)
   body <- .parse_phase4_res(res)
   expect_equal(body$status, "success")
-  expect_true(all(c("gini", "mean") %in% body$data$measure))
+  measures_returned <- if (is.data.frame(body$data)) body$data$measures[[1L]] else body$data[[1L]]$measures
+  expect_true(all(c("gini", "mean") %in% measures_returned))
 })
 
 test_that("phase4: GET /table rejects pov_status usage without poverty_line", {

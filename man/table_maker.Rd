@@ -155,6 +155,7 @@ representation used by the \verb{/table} API.
 Other api: 
 \code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
-\code{\link{run_api}()}
+\code{\link{run_api}()},
+\code{\link{serialize_table_response}()}
 }
 \concept{api}

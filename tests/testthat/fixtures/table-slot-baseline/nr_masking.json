@@ -7,9 +7,7 @@
       "measures": "mean",
       "by": "gender"
     },
-    "by_order": [
-      "gender"
-    ]
+    "by_order": "gender"
   },
   "data": [
     {
@@ -17,18 +15,54 @@
       "country_code": "TST",
       "surveyid_year": 2020,
       "welfare_type": "INC",
-      "gender": 0,
-      "measure": "mean",
-      "value": "NR"
-    },
-    {
-      "pip_id": "TST_2020_ECH_INC_ALL",
-      "country_code": "TST",
-      "surveyid_year": 2020,
-      "welfare_type": "INC",
-      "gender": 1,
-      "measure": "mean",
-      "value": "6.00"
+      "poverty_line": {},
+      "analysis_var": "welfare",
+      "measures": "mean",
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            {
+              "code": 1,
+              "label": "Male"
+            },
+            {
+              "code": 0,
+              "label": "Female"
+            }
+          ]
+        },
+        "rows": {},
+        "superColumns": {},
+        "superRows": {}
+      },
+      "cells": [
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": 1,
+            "label": "Male"
+          },
+          "measures": {
+            "mean": "6.00"
+          }
+        },
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": 0,
+            "label": "Female"
+          },
+          "measures": {
+            "mean": "NR"
+          }
+        }
+      ]
     }
   ],
   "meta": {

@@ -61,7 +61,10 @@ test_that("build helper gives special-case pov_status n_categories=2", {
 
   expect_equal(entry$tm_type, "poverty")
   expect_identical(entry$n_categories, 2L)
-  expect_null(entry$categories)
+  expect_equal(entry$categories, list(
+    list(code = "0", label = "Non-poor"),
+    list(code = "1", label = "Poor")
+  ))
 })
 
 test_that("package load initializes registries slot", {

@@ -171,11 +171,18 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `include_metadata` *(optional, string)* — Case-insensitive; any spelling of `"true"` (`"true"`, `"True"`, `"TRUE"`) returns description metadata alongside table output. Any other value (or omission) disables metadata.
   _HTTP transport note_: Query parameters arrive as strings; the types above describe the server-side coercion performed before validation.
 - **Responses:**
-  - `200 OK` (default) — `data` is a long-format array of TableRow objects (see [Shared Schemas](#shared-schemas--common-structures)); `meta = { "release": <release>, "n_surveys": <count>, "description_metadata": null }`.
+  - `200 OK` (default) — `data` is an array of per-survey objects formatted according to Approach C (see structure below); `meta = { "release": <release>, "n_surveys": <count> }`.
   - `200 OK` (`include_metadata="true"`) — `data = { "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`; `meta.description_metadata` populated.
   - `400` — Validation failure (e.g., too many surveys, missing poverty line, invalid PPP).
   - `422` — Domain failure (manifest mismatch, computation error).
 - **Notes:**
+  - **Approach C Response Format (`include_metadata=false`)**:
+    - This Approach C shape applies **only** when `include_metadata` is falsy (the default). When `include_metadata="true"`, `data` instead takes the legacy flat-row shape described in the `200 OK (include_metadata="true")` response above (`{ "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`) — the metadata path is not reshaped to Approach C.
+    - `data` contains one object per survey in `pip_id`.
+    - Each survey object has header fields (`pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `poverty_line`, `analysis_var`, `measures[]`).
+    - `layout`: fixed keys `columns`, `rows`, `superColumns`, `superRows` (`null` for unused slots). Each active slot contains `varname`, `label`, and ordered `categories` (`{ "code": <val>, "label": <str> }`). Missing categories use `code: null`.
+    - `cells`: dense array containing all observed (computed or masked) category combinations. Each cell carries all four slot keys (`superRow`, `row`, `superColumn`, `column`, each `{ "code": <val>, "label": <str> }` or `null`) and a `measures` object keyed by measure name with formatted display strings (e.g. `"12.50"`, `"NR"`, or `null`). Cells omit `population`.
+    - Ordering: Category ordering in `layout` and cell ordering in `cells[]` are deterministic and registry-sourced (`superRows` → `rows` → `superColumns` → `columns`).
   - **Layout slot rules**:
     - Query parameters are case-sensitive camelCase (`column`, `row`, `superColumn`, `superRow`).
     - Slots must be filled in order (`column` → `row` → `superColumn` → `superRow`). A gapped assignment (e.g. `column=gender&superRow=area` without `row`) returns HTTP 400. Even though `column=gender&superRow=area` groups the same underlying observations as `column=gender&row=area`, the rejection is a deliberate layout rule that prevents degenerate table headers (super-axis bands with no child axis).
@@ -229,6 +236,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - **Notes:**
   - This endpoint is stateless and does not call `table_maker()`.
   - Error responses use the standard JSON envelope with `Content-Type: application/json`.
+  - **Payload compatibility note**: `/table/download` currently expects flat row objects. Because `/table` now returns per-survey objects containing nested `layout` and `cells[]` (Approach C), directly forwarding `/table` response payloads to `/table/download` is temporarily unsupported until the dependent feature `table-download-has-no-flat-rows-under-cells-response-format` is implemented.
 
 ---
 

@@ -230,7 +230,10 @@ activate_test_registry <- function(release = NULL, .local_envir = parent.frame()
       roles = c("analysis_var", "covariate"),
       stat_groups = c("poverty"),
       n_categories = 2L,
-      categories = NULL
+      categories = list(
+        list(code = "0", label = "Non-poor"),
+        list(code = "1", label = "Poor")
+      )
     ),
     gender = list(
       varname = "gender",

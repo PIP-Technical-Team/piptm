@@ -227,6 +227,12 @@ if (!nzchar(.ep_plumber_path)) {
 # Block 1: Discovery endpoints — no Arrow data required
 # =============================================================================
 
+# Initial fixture setup for endpoint block
+if (!is.null(.ep_router)) {
+  .init_fx <- .make_ep_fixtures()
+  activate_test_registry(.init_fx$release)
+}
+
 test_that("GET /health returns 200", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
@@ -760,6 +766,36 @@ test_that("GET /table with 1 survey returns 200 success envelope (fixture)", {
   expect_false(is.null(body$meta))
 })
 
+test_that("GET /table with include_metadata=false (default) returns Approach C shape, distinct from include_metadata=true", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res_default <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean"
+  )))
+  expect_equal(res_default$status, 200L)
+  body_default <- parse_api_res(res_default)
+  # Approach C: data is a per-survey object array with layout+cells; no
+  # top-level description_metadata in meta.
+  expect_true(is.null(body_default$data$pip_id) || is.list(body_default$data))
+  expect_false(is.null(body_default$data$layout) && is.null(body_default$data[[1L]]$layout))
+  expect_null(body_default$meta$description_metadata)
+
+  res_meta <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    include_metadata = "true"
+  )))
+  expect_equal(res_meta$status, 200L)
+  body_meta <- parse_api_res(res_meta)
+  # Legacy flat shape: data has no `layout`/`cells` keys at all; metadata is
+  # surfaced via meta.description_metadata instead.
+  expect_null(body_meta$data$layout)
+  expect_false(is.null(body_meta$meta$description_metadata))
+})
+
 test_that("GET /table with no release param — meta.release equals current release", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
@@ -1190,11 +1226,12 @@ test_that("GET /table returns string values, no population or flag, and formatte
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
-  df <- body$data
-  expect_true(is.data.frame(df))
-  expect_type(df$value, "character")
-  expect_false("population" %in% names(df))
-  expect_false("flag" %in% names(df))
+  cells <- body$data$cells[[1L]]
+  meas  <- cells$measures
+  expect_type(as.character(unlist(meas$mean)), "character")
+  expect_type(as.character(unlist(meas$gini)), "character")
+  expect_false("population" %in% names(cells))
+  expect_false("flag" %in% names(meas))
 })
 
 test_that("GET /table returns 422 envelope when formatter fails", {
@@ -1284,17 +1321,18 @@ test_that("GET /table surfaces 'NR' end-to-end for a masked cell through the rea
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
 
-  df <- body$data
-  expect_true(is.data.frame(df))
-  expect_false("population" %in% names(df))
-  expect_false("flag" %in% names(df))
+  cells <- body$data$cells[[1L]]
+  expect_false("population" %in% names(cells))
 
-  masked_row   <- df[df$gender == 0L, ]
-  unmasked_row <- df[df$gender == 1L, ]
-  expect_equal(nrow(masked_row), 1L)
-  expect_equal(nrow(unmasked_row), 1L)
-  expect_equal(masked_row$value, "NR")
-  expect_false(identical(unmasked_row$value, "NR"))
+  col_codes <- cells$column$code
+  mean_vals <- cells$measures$mean
+
+  masked_val   <- mean_vals[col_codes == 0L]
+  unmasked_val <- mean_vals[col_codes == 1L]
+  expect_equal(length(masked_val), 1L)
+  expect_equal(length(unmasked_val), 1L)
+  expect_equal(as.character(unlist(masked_val)), "NR")
+  expect_false(identical(as.character(unlist(unmasked_val)), "NR"))
 })
 
 # =============================================================================
@@ -1374,7 +1412,7 @@ test_that("POST /table handles scalar, length-1 array, and rejects length > 1 ar
   expect_equal(res_scalar$status, 200L)
   body_scalar <- parse_api_res(res_scalar)
   expect_equal(body_scalar$status, "success")
-  expect_true("gender" %in% names(body_scalar$data))
+  expect_equal(as.character(unlist(body_scalar$data$layout$columns$varname)), "gender")
 
   # Length-1 array in POST JSON: unboxes / accepts
   res_arr1 <- .ep_router$call(make_api_req("POST", "/table", body = list(
@@ -1385,7 +1423,7 @@ test_that("POST /table handles scalar, length-1 array, and rejects length > 1 ar
   expect_equal(res_arr1$status, 200L)
   body_arr1 <- parse_api_res(res_arr1)
   expect_equal(body_arr1$status, "success")
-  expect_true("gender" %in% names(body_arr1$data))
+  expect_equal(as.character(unlist(body_arr1$data$layout$columns$varname)), "gender")
 
   # Length-2 array in POST JSON: rejects with 400, never 500
   res_arr2 <- .ep_router$call(make_api_req("POST", "/table", body = list(
@@ -1478,7 +1516,12 @@ test_that("GET /table with all slots omitted returns 200 national table, not 500
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
-  expect_equal(nrow(body$data), 1L)
+  n_surveys_returned <- if (is.data.frame(body$data)) nrow(body$data) else length(body$data)
+  expect_equal(n_surveys_returned, 1L)
+  survey <- if (is.data.frame(body$data)) body$data[1L, ] else body$data[[1L]]
+  cells  <- if (is.data.frame(survey$cells)) survey$cells else survey$cells[[1L]]
+  n_cells_returned <- if (is.data.frame(cells)) nrow(cells) else length(cells)
+  expect_equal(n_cells_returned, 1L)
 })
 
 test_that("GET /table responses match pre-change baseline fixtures (semantic equality)", {

@@ -1,10 +1,10 @@
 # 🧠 Project Brain — Part 1
 
-_Generated 2026-10-22_
+_Generated 2026-10-26_
 
-## Table_Maker\(\) / Pip_Id / Version
+## Table_Maker\(\) / /Table / Pip_Id
 
-_Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
+_Keywords: `table_maker()` · `/table` · `pip_id`_ · 90 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -58,6 +58,8 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
   > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
 - **[Population share threshold: NR cell masking and API value formatting](.cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md)** · `brainstorm` · _decided_ · `2026-10-20`
   > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[/table request contract: explicit slot parameters replacing ordered by](.cg-docs/brainstorms/2026-10-22-table-endpoint-explicit-slot-parameters.md)** · `brainstorm` · _decided_ · `2026-10-22`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
 - **[Version as partition key with manifest-based resolution](.cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md)** · `plan` · _active_ · `2026-04-02`
@@ -108,6 +110,12 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
   > Replace the ambiguous, near-identical prose sentences generated for the three share measures (`pop_share`, `target_wi…
 - **[Population share threshold: NR masking and API value formatting](.cg-docs/plans/2026-10-20-pop-share-nr-masking.md)** · `plan` · _completed_ · `2026-10-20`
   > Replace row-dropping suppression in `table_maker()` with cell-level NR masking at a 0.1% default threshold, remove th…
+- **[/table explicit slot parameters replacing ordered by \(revised\)](.cg-docs/plans/2026-10-22-table-explicit-slot-parameters-revised.md)** · `plan` · _completed_ · `2026-10-22`
+  > Replace the repeatable `by` parameter on `/table` with four named slot parameters — `column`, `row`, `superColumn`, `…
+- **[/table explicit slot parameters replacing ordered by](.cg-docs/plans/2026-10-22-table-explicit-slot-parameters.md)** · `plan` · _active_ · `2026-10-22`
+  > Replace the single repeatable `by` parameter on `/table` with four explicit, named slot parameters - `column`, `row`,…
+- **[/table response format: layout + observed cells\[\] \(Approach C\)](.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md)** · `plan` · _completed_ · `2026-10-26`
+  > Reshape the `/table` response (with `include_metadata` off) from flat long-format rows into **Approach C**: `data[]` …
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
   > **Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always include…
 - **[2026-04-07-computation-engine-review](.cg-docs/reviews/2026-04-07-computation-engine-review.md)** · `review` · _—_ · `—`
@@ -144,6 +152,16 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
   > **Review mode**: verify (light, following fix-triage — third pass, covering the full cumulative P1/P2/P3 fix-triage d…
 - **[2026-10-20-pop-share-nr-masking-verify-review](.cg-docs/reviews/2026-10-20-pop-share-nr-masking-verify-review.md)** · `review` · _—_ · `2026-10-22`
   > **Review mode**: verify (light, following fix-triage) **Parent review**: `.cg-docs/reviews/2026-10-20-pop-share-nr-ma…
+- **[2026-10-22-table-explicit-slot-parameters-revised-review](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-review.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `docs/api-contra…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review-2](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review-2.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: current working-tree object-slot fix in `inst/plumber/help…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review-3](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review-3.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: current uncommitted working-tree diff (parent commit `83ac…
+- **[2026-10-22-table-explicit-slot-parameters-revised-verify-review](.cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review.md)** · `review` · _—_ · `2026-10-23`
+  > **Review mode**: light (`mode:verify`) **Files reviewed**: committed implementation diff `HEAD^..HEAD`, focused on AP…
+- **[2026-10-26-table-layout-cells-response-format-review](.cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md)** · `review` · _—_ · `2026-10-26`
+  > **Review mode**: architecture (explicit) **Files reviewed**: `R/table_response.R` (new), `R/registry.R`, `inst/plumbe…
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
 - **[/table/download silently corrupts data when a sibling endpoint's output format changes](.cg-docs/solutions/bugs/2026-10-22-table-download-format-contract-leakage.md)** · `solution` · _—_ · `2026-10-22`
@@ -169,9 +187,9 @@ _Keywords: `table_maker()` · `pip_id` · `version`_ · 81 entities
 - **[Adding new measures to the computation engine via the registry pattern](.cg-docs/solutions/testing-patterns/2026-06-01-adding-measures-registry-pattern.md)** · `solution` · _—_ · `2026-06-01`
   > Need to extend the computation engine with new measures (`obs_share`, `pop_share`) without breaking existing consumer…
 
-## Service Layer / Computation Engine / Api
+## Service Layer / Table / Computation Engine
 
-_Keywords: `service layer` · `computation engine` · `api`_ · 26 entities
+_Keywords: `service layer` · `table` · `computation engine`_ · 28 entities
 
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`
   > Version as partition key with manifest-based resolution
@@ -211,8 +229,12 @@ _Keywords: `service layer` · `computation engine` · `api`_ · 26 entities
   > HTML Description Renderer + Wording Quality Improvements
 - **[Structured Cell Definition table for share measures](roadmap.json#structured-cell-definition-table-for-share-measures)** · `feature` · _done_ · `—`
   > Structured Cell Definition table for share measures
-- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _idea_ · `—`
+- **[/table response format: layout slot assignment for the UI](roadmap.json#table-response-format-layout-slot-assignment)** · `feature` · _done_ · `—`
   > /table response format: layout slot assignment for the UI
+- **[/table request contract: explicit slot parameters replacing ordered by](roadmap.json#table-request-contract-explicit-slot-parameters-replacing-ordered-by)** · `feature` · _done_ · `—`
+  > /table request contract: explicit slot parameters replacing ordered by
+- **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _idea_ · `—`
+  > /table/download has no flat rows to receive under the new cells[] response format
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[API PPP parameter validation refactor](roadmap.json#ppp-api-input-validation)** · `feature` · _done_ · `—`

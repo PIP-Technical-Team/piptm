@@ -101,6 +101,14 @@ NULL
     )
 
     n_categories <- if (identical(varname, "pov_status")) 2L else NULL
+    categories <- if (identical(varname, "pov_status")) {
+      list(
+        list(code = "0", label = "Non-poor"),
+        list(code = "1", label = "Poor")
+      )
+    } else {
+      NULL
+    }
 
     return(list(
       varname      = varname,
@@ -109,7 +117,7 @@ NULL
       roles        = as.character(unlist(spec_var$roles, use.names = FALSE)),
       stat_groups  = stat_groups,
       n_categories = n_categories,
-      categories   = NULL
+      categories   = categories
     ))
   }
 

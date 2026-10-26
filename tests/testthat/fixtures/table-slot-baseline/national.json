@@ -13,8 +13,26 @@
       "country_code": "COL",
       "surveyid_year": 2010,
       "welfare_type": "INC",
-      "measure": "mean",
-      "value": "5.50"
+      "poverty_line": {},
+      "analysis_var": "welfare",
+      "measures": "mean",
+      "layout": {
+        "columns": {},
+        "rows": {},
+        "superColumns": {},
+        "superRows": {}
+      },
+      "cells": [
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {},
+          "measures": {
+            "mean": "5.50"
+          }
+        }
+      ]
     }
   ],
   "meta": {

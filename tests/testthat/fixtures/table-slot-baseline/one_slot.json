@@ -6,9 +6,7 @@
       "measures": "mean",
       "by": "gender"
     },
-    "by_order": [
-      "gender"
-    ]
+    "by_order": "gender"
   },
   "data": [
     {
@@ -16,18 +14,54 @@
       "country_code": "COL",
       "surveyid_year": 2010,
       "welfare_type": "INC",
-      "gender": "male",
-      "measure": "mean",
-      "value": "5.00"
-    },
-    {
-      "pip_id": "COL_2010_ECH_INC_ALL",
-      "country_code": "COL",
-      "surveyid_year": 2010,
-      "welfare_type": "INC",
-      "gender": "female",
-      "measure": "mean",
-      "value": "6.00"
+      "poverty_line": {},
+      "analysis_var": "welfare",
+      "measures": "mean",
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            {
+              "code": "male",
+              "label": "Male"
+            },
+            {
+              "code": "female",
+              "label": "Female"
+            }
+          ]
+        },
+        "rows": {},
+        "superColumns": {},
+        "superRows": {}
+      },
+      "cells": [
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": "male",
+            "label": "Male"
+          },
+          "measures": {
+            "mean": "5.00"
+          }
+        },
+        {
+          "superRow": {},
+          "row": {},
+          "superColumn": {},
+          "column": {
+            "code": "female",
+            "label": "Female"
+          },
+          "measures": {
+            "mean": "6.00"
+          }
+        }
+      ]
     }
   ],
   "meta": {
