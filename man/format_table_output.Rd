@@ -61,6 +61,7 @@ formatted <- format_table_output(res)
 }
 \seealso{
 Other api: 
+\code{\link{flatten_table_response}()},
 \code{\link{pip_lookup}()},
 \code{\link{run_api}()},
 \code{\link{serialize_table_response}()},

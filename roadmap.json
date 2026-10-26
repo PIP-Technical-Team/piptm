@@ -259,8 +259,9 @@
           "id": "table-download-has-no-flat-rows-under-cells-response-format",
           "title": "/table/download has no flat rows to receive under the new cells[] response format",
           "description": "/table/download is a stateless POST that accepts back the flat `data` rows the client received from /table. Once /table returns the Approach C cells[] + layout structure instead of flat long-format rows, the client no longer holds flat rows to send back. Needs a design decision: either /table/download accepts the cells[]+layout payload and flattens server-side, or /table additionally returns a flat representation, or /table/download becomes stateful/recomputing. Pre-existing gap introduced by the response-format decision in .cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
-          "status": "idea",
-          "plan": null
+          "status": "active",
+          "brainstorm": ".cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md",
+          "plan": ".cg-docs/plans/2026-10-26-table-download-approach-c-flattening.md"
         }
       ]
     },

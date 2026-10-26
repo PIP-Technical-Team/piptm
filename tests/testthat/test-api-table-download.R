@@ -33,12 +33,49 @@ if (!nzchar(.dl_path) || !file.exists(.dl_path)) {
   req
 }
 
-.dl_rows <- list(
-  list(pip_id = "AAA_2020", measure = "mean", value = 1.5, population = 100, poverty_line = NULL),
-  list(pip_id = "AAA_2020", measure = "gini", value = NULL, population = 100, poverty_line = NULL)
+# Canonical Approach C survey payload for download unit tests
+.dl_data <- list(
+  list(
+    pip_id        = "COL_2010_ECH_INC_ALL",
+    country_code  = "COL",
+    surveyid_year = 2010L,
+    welfare_type  = "INC",
+    poverty_line  = 2.15,
+    analysis_var  = "welfare",
+    measures      = list("mean", "gini"),
+    layout        = list(
+      columns = list(
+        varname    = "gender",
+        label      = "Gender",
+        categories = list(
+          list(code = 0L, label = "Female"),
+          list(code = 1L, label = "Male")
+        )
+      ),
+      rows         = NULL,
+      superColumns = NULL,
+      superRows    = NULL
+    ),
+    cells = list(
+      list(
+        superRow    = NULL,
+        row         = NULL,
+        superColumn = NULL,
+        column      = list(code = 0L, label = "Female"),
+        measures    = list(mean = "4.50", gini = "45.67")
+      ),
+      list(
+        superRow    = NULL,
+        row         = NULL,
+        superColumn = NULL,
+        column      = list(code = 1L, label = "Male"),
+        measures    = list(mean = "5.15", gini = NULL)
+      )
+    )
+  )
 )
 
-.dl_json <- function(format, data = .dl_rows) {
+.dl_json <- function(format, data = .dl_data) {
   jsonlite::toJSON(list(format = format, data = data), auto_unbox = TRUE, null = "null")
 }
 
@@ -46,7 +83,7 @@ if (!nzchar(.dl_path) || !file.exists(.dl_path)) {
   jsonlite::fromJSON(rawToChar(res$body), simplifyVector = TRUE)
 }
 
-test_that("/table/download returns a CSV attachment", {
+test_that("/table/download returns a Shape A CSV attachment", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.dl_router), "Router could not be created")
 
@@ -54,12 +91,19 @@ test_that("/table/download returns a CSV attachment", {
   expect_equal(res$status, 200L)
   expect_match(res$headers[["Content-Type"]], "text/csv")
   expect_match(res$headers[["Content-Disposition"]], "table\\.csv")
-  df <- data.table::fread(text = rawToChar(res$body))
+  df <- data.table::fread(text = rawToChar(res$body), colClasses = "character")
   expect_equal(nrow(df), 2L)
-  expect_true(all(c("pip_id", "measure", "value", "population") %in% names(df)))
+  expect_named(
+    df,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "gender", "mean", "gini"),
+    ignore.order = FALSE
+  )
+  expect_equal(df$gender, c("Female", "Male"))
+  expect_equal(df$mean, c("4.50", "5.15"))
+  expect_equal(df$gini, c("45.67", ""))
 })
 
-test_that("/table/download returns a readable RDS with numeric value", {
+test_that("/table/download returns a readable Shape A RDS with character measures and numeric poverty_line", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.dl_router), "Router could not be created")
 
@@ -73,8 +117,18 @@ test_that("/table/download returns a readable RDS with numeric value", {
   df <- readRDS(tmp)
   expect_s3_class(df, "data.frame")
   expect_equal(nrow(df), 2L)
-  expect_true(is.numeric(df$value))
-  expect_true(is.na(df$value[2L]))
+  expect_named(
+    df,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "gender", "mean", "gini"),
+    ignore.order = FALSE
+  )
+  expect_type(df$poverty_line, "double")
+  expect_equal(df$poverty_line, c(2.15, 2.15))
+  expect_type(df$mean, "character")
+  expect_type(df$gini, "character")
+  expect_equal(df$mean, c("4.50", "5.15"))
+  expect_equal(df$gini[1L], "45.67")
+  expect_true(is.na(df$gini[2L]))
 })
 
 test_that("/table/download rejects an unsupported format with 400", {
@@ -136,7 +190,7 @@ test_that("/table/download defaults to CSV when format is omitted", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.dl_router), "Router could not be created")
 
-  res <- .dl_router$call(.dl_req(jsonlite::toJSON(list(data = .dl_rows), auto_unbox = TRUE, null = "null")))
+  res <- .dl_router$call(.dl_req(jsonlite::toJSON(list(data = .dl_data), auto_unbox = TRUE, null = "null")))
   expect_equal(res$status, 200L)
   expect_match(res$headers[["Content-Type"]], "text/csv")
   expect_match(res$headers[["Content-Disposition"]], "table\\.csv")
@@ -157,60 +211,73 @@ test_that("/table/download rejects oversized payloads with 413", {
   expect_true(length(payload$errors) >= 1L)
 })
 
-test_that("/table/download preserves 'value' verbatim when it arrives as a formatted /table string (NR sentinel, scaled percentage)", {
+test_that("/table/download preserves formatted measure strings verbatim (NR sentinel, scaled percentage)", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.dl_router), "Router could not be created")
 
-  # Rows shaped like the current /table response: `value` is already a
-  # formatted display string (per format_table_output()), not a raw number.
-  formatted_rows <- list(
-    list(pip_id = "AAA_2020", measure = "gini", value = "NR", poverty_line = NULL),
-    list(pip_id = "AAA_2020", measure = "headcount", value = "45.67", poverty_line = NULL)
-  )
+  nr_data <- .dl_data
+  nr_data[[1L]]$measures <- list("gini", "headcount")
+  nr_data[[1L]]$cells[[1L]]$measures <- list(gini = "NR", headcount = "45.67")
+  nr_data[[1L]]$cells[[2L]]$measures <- list(gini = "38.12", headcount = "NR")
 
-  res <- .dl_router$call(.dl_req(.dl_json("csv", data = formatted_rows)))
+  res <- .dl_router$call(.dl_req(.dl_json("csv", data = nr_data)))
   expect_equal(res$status, 200L)
   df <- data.table::fread(text = rawToChar(res$body), colClasses = "character")
   expect_equal(nrow(df), 2L)
-  # The "NR" sentinel must survive untouched, not be silently coerced to NA.
-  expect_equal(df$value[df$measure == "gini"], "NR")
-  # The already-scaled percentage string must not be re-interpreted/rescaled.
-  expect_equal(df$value[df$measure == "headcount"], "45.67")
+  expect_equal(df$gini, c("NR", "38.12"))
+  expect_equal(df$headcount, c("45.67", "NR"))
 })
 
-test_that("characterization: /table/download cannot consume Approach C nested layout+cells payload", {
+test_that("/table/download round-trips the 3-covariate Approach C fixture into CSV and RDS", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.dl_router), "Router could not be created")
 
-  # Nested Approach C payload as produced by the reshaped /table endpoint
-  nested_payload <- list(
+  fx_path <- testthat::test_path("fixtures", "table-response-approach-c", "three_covariates_post_format.json")
+  skip_if(!file.exists(fx_path), "Authoritative fixture not found")
+  fx <- jsonlite::fromJSON(fx_path, simplifyVector = FALSE)
+
+  # CSV round-trip
+  res_csv <- .dl_router$call(.dl_req(.dl_json("csv", data = fx$data)))
+  expect_equal(res_csv$status, 200L)
+  df_csv <- data.table::fread(text = rawToChar(res_csv$body), colClasses = "character")
+  expect_equal(nrow(df_csv), 20L)
+  expect_named(
+    df_csv,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "educat4", "area", "gender", "mean"),
+    ignore.order = FALSE
+  )
+  expect_equal(df_csv$educat4[1L], "None")
+  expect_equal(df_csv$area[1L], "Rural")
+  expect_equal(df_csv$gender[1L], "Female")
+  expect_equal(df_csv$mean[1L], "4.50")
+
+  # RDS round-trip
+  res_rds <- .dl_router$call(.dl_req(.dl_json("rds", data = fx$data)))
+  expect_equal(res_rds$status, 200L)
+  tmp <- tempfile(fileext = ".rds")
+  on.exit(unlink(tmp), add = TRUE)
+  writeBin(res_rds$body, tmp)
+  df_rds <- readRDS(tmp)
+  expect_equal(nrow(df_rds), 20L)
+  expect_equal(df_rds$mean[20L], "10.87")
+  expect_equal(df_rds$educat4[20L], "Unknown")
+})
+
+test_that("/table/download rejects legacy flat-row payloads with 400 (never 500)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.dl_router), "Router could not be created")
+
+  legacy_payload <- list(
     format = "csv",
     data = list(
-      list(
-        pip_id = "COL_2010_ECH_INC_ALL",
-        country_code = "COL",
-        surveyid_year = 2010L,
-        welfare_type = "INC",
-        layout = list(columns = list(varname = "gender")),
-        cells = list(
-          list(column = list(code = 0, label = "Female"), measures = list(mean = "5.50"))
-        )
-      )
+      list(pip_id = "COL_2010_ECH_INC_ALL", measure = "mean", value = "4.50", poverty_line = NULL)
     )
   )
 
-  # /table/download expects a flat array of row objects; passing nested per-survey
-  # {layout, cells} objects causes rbindlist() to fail inside the handler,
-  # which escapes to the global error handler. This characterizes the known,
-  # temporary incompatibility until feature
-  # 'table-download-has-no-flat-rows-under-cells-response-format' is implemented.
-  # Pinned to current observed behavior as of 2026-10-26 (this plan's fix-triage
-  # pass): a 500 via the global error handler's generic envelope. If this ever
-  # legitimately changes (e.g. the handler starts validating input shape and
-  # returning 400/422 instead of crashing), update this assertion deliberately
-  # rather than loosening it back to an "any of these" check.
-  res <- .dl_router$call(.dl_req(jsonlite::toJSON(nested_payload, auto_unbox = TRUE)))
-  expect_equal(res$status, 500L)
-  expect_equal(res$body$status, "error")
-  expect_equal(res$body$errors, "Internal server error.")
+  res <- .dl_router$call(.dl_req(jsonlite::toJSON(legacy_payload, auto_unbox = TRUE, null = "null")))
+  expect_equal(res$status, 400L)
+  expect_match(res$headers[["Content-Type"]], "application/json")
+  payload <- .dl_body(res)
+  expect_equal(payload$status, "error")
+  expect_true(length(payload$errors) >= 1L)
 })

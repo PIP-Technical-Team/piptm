@@ -249,9 +249,10 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 #* Convert an already-computed `/table` result into a CSV or RDS download.
 #*
 #* Stateless: no recomputation, no Arrow access. The client sends back the
-#* `data` rows it received from `/table`.
+#* Approach C `data` array it received from `/table`, which is flattened into
+#* a rectangular Shape A table (one row per cell, measures as columns).
 #*
-#* Request body (JSON): `{"format": "csv" | "rds", "data": [ {row}, ... ]}`.
+#* Request body (JSON): `{"format": "csv" | "rds", "data": [ {survey}, ... ]}`.
 #* Errors are returned as the standard JSON error envelope (400 / 413).
 #*
 #* @param body:object Request body (JSON object)
@@ -288,44 +289,26 @@ function(req, body = NULL, res) {
   body <- if (is.null(raw_body) || !nzchar(raw_body)) {
     NULL
   } else {
-    tryCatch(jsonlite::fromJSON(raw_body), error = function(e) NULL)
+    tryCatch(jsonlite::fromJSON(raw_body, simplifyVector = FALSE), error = function(e) NULL)
   }
-  if (is.null(body) || !is.list(body) || length(body) == 0L) {
+  if (is.null(body) || !is.list(body) || length(body) == 0L || is.null(names(body))) {
     return(err("Request body must be a non-empty JSON object.", 400L))
   }
 
-  fmt <- tolower(trimws(as.character(body$format %||% "csv")[1L]))
+  fmt <- tolower(trimws(as.character(unlist(body$format %||% "csv"))[1L]))
   if (is.na(fmt) || !fmt %in% c("csv", "rds")) {
     return(err("`format` must be one of: csv, rds.", 400L))
   }
 
-  tbl <- tryCatch(
-    data.table::as.data.table(
-      if (is.data.frame(body$data)) body$data else data.table::rbindlist(body$data, fill = TRUE)
-    ),
-    error = function(e) NULL
+  flat_res <- tryCatch(
+    list(tbl = piptm::flatten_table_response(body$data), error = NULL),
+    error = function(e) list(tbl = NULL, error = cli::ansi_strip(conditionMessage(e)))
   )
-  if (is.null(tbl) || nrow(tbl) == 0L) {
-    return(err("`data` must be a non-empty array of row objects.", 400L))
+  if (!is.null(flat_res$error) || is.null(flat_res$tbl) || nrow(flat_res$tbl) == 0L) {
+    msg <- flat_res$error %||% "`data` must be a non-empty array of Approach C survey objects."
+    return(err(msg, 400L))
   }
-
-  # NOTE: `value` is intentionally excluded from numeric coercion below.
-  # Since the /table formatting change, `value` may already be a formatted
-  # display string (e.g. "45.67" for a scaled percentage, or the "NR"
-  # suppression sentinel for masked cells). Coercing it with as.numeric()
-  # here would silently turn "NR" into NA (destroying the disclosure-control
-  # signal) and would not "undo" the x100 percentage scaling already applied
-  # by format_table_output(). Payloads that already carry a raw numeric
-  # `value` (e.g. hand-built row objects, not copied from /table) are left
-  # untouched as-is, since JSON numeric values round-trip as numeric without
-  # needing explicit coercion.
-  # `population` is retained here only for legacy client payloads built
-  # before the column was removed from table_maker()/`/table` output (see
-  # NEWS.md); it is a harmless no-op when absent. `poverty_line` remains a
-  # genuine numeric field in current /table output.
-  for (col in intersect(c("population", "poverty_line"), names(tbl))) {
-    data.table::set(tbl, j = col, value = suppressWarnings(as.numeric(tbl[[col]])))
-  }
+  tbl <- flat_res$tbl
 
   tmp <- tempfile(fileext = paste0(".", fmt))
   on.exit(unlink(tmp), add = TRUE)

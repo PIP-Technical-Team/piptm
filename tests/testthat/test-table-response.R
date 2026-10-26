@@ -443,3 +443,142 @@ test_that("three-covariate response matches authoritative post-format fixture", 
     expect_type(cell$measures$mean, "character")
   }
 })
+
+# ── flatten_table_response() (Shape A for /table/download) ───────────────────
+
+test_that("flatten_table_response flattens 3-covariate fixture into Shape A data.table", {
+  fx_path <- testthat::test_path("fixtures", "table-response-approach-c", "three_covariates_post_format.json")
+  skip_if(!file.exists(fx_path), "Authoritative fixture not found")
+
+  fx <- jsonlite::fromJSON(fx_path, simplifyVector = FALSE)
+  dt <- piptm::flatten_table_response(fx$data)
+
+  expect_s3_class(dt, "data.table")
+  expect_equal(nrow(dt), 20L)
+  expect_named(
+    dt,
+    c(
+      "pip_id", "country_code", "surveyid_year", "welfare_type",
+      "analysis_var", "poverty_line",
+      "educat4", "area", "gender",
+      "mean"
+    ),
+    ignore.order = FALSE
+  )
+
+  expect_type(dt$pip_id, "character")
+  expect_type(dt$country_code, "character")
+  expect_type(dt$surveyid_year, "integer")
+  expect_type(dt$welfare_type, "character")
+  expect_type(dt$analysis_var, "character")
+  expect_type(dt$poverty_line, "double")
+  expect_true(all(is.na(dt$poverty_line)))
+
+  # First cell: None / Rural / Female -> "4.50"
+  expect_equal(dt$educat4[1L], "None")
+  expect_equal(dt$area[1L], "Rural")
+  expect_equal(dt$gender[1L], "Female")
+  expect_equal(dt$mean[1L], "4.50")
+
+  # Last cell: Unknown / Urban / Male -> "10.87"
+  expect_equal(dt$educat4[20L], "Unknown")
+  expect_equal(dt$area[20L], "Urban")
+  expect_equal(dt$gender[20L], "Male")
+  expect_equal(dt$mean[20L], "10.87")
+})
+
+test_that("flatten_table_response handles national table (0 active slots), multiple measures, NR, and null values", {
+  rel <- activate_test_registry("TEST_RELEASE")
+  slots <- list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL)
+
+  flat_dt <- data.table::data.table(
+    pip_id = rep("COL_2010_ECH_INC_ALL", 3L),
+    country_code = rep("COL", 3L),
+    surveyid_year = rep(2010L, 3L),
+    welfare_type = rep("INC", 3L),
+    poverty_line = c(2.15, NA_real_, NA_real_),
+    measure = c("headcount", "gini", "mean"),
+    value = c("15.20", "NR", NA_character_)
+  )
+
+  serialized <- piptm::serialize_table_response(
+    dt = flat_dt,
+    slots = slots,
+    analysis_var = "welfare",
+    poverty_line = 2.15,
+    measures = c("headcount", "gini", "mean"),
+    release = rel
+  )
+
+  out <- piptm::flatten_table_response(serialized)
+  expect_s3_class(out, "data.table")
+  expect_equal(nrow(out), 1L)
+  expect_named(
+    out,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "headcount", "gini", "mean"),
+    ignore.order = FALSE
+  )
+  expect_equal(out$poverty_line, 2.15)
+  expect_equal(out$headcount, "15.20")
+  expect_equal(out$gini, "NR")
+  expect_true(is.na(out$mean))
+})
+
+test_that("flatten_table_response stacks multi-survey Approach C payloads in survey and cell order", {
+  rel <- activate_test_registry("TEST_RELEASE")
+  slots <- list(column = "gender", row = NULL, superColumn = NULL, superRow = NULL)
+
+  flat_dt <- data.table::data.table(
+    pip_id = c("COL_2010_ECH_INC_ALL", "PER_2012_ENAHO_INC_ALL", "PER_2012_ENAHO_INC_ALL"),
+    country_code = c("COL", "PER", "PER"),
+    surveyid_year = c(2010L, 2012L, 2012L),
+    welfare_type = c("INC", "INC", "INC"),
+    gender = c("male", "male", "female"),
+    poverty_line = rep(NA_real_, 3L),
+    measure = rep("mean", 3L),
+    value = c("10.00", "20.00", "25.00")
+  )
+
+  serialized <- piptm::serialize_table_response(flat_dt, slots, "welfare", NULL, "mean", rel)
+  out <- piptm::flatten_table_response(serialized)
+
+  expect_equal(nrow(out), 3L)
+  expect_named(
+    out,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "gender", "mean"),
+    ignore.order = FALSE
+  )
+  expect_equal(out$pip_id, c("COL_2010_ECH_INC_ALL", "PER_2012_ENAHO_INC_ALL", "PER_2012_ENAHO_INC_ALL"))
+  expect_equal(out$gender, c("Male", "Male", "Female"))
+  expect_equal(out$mean, c("10.00", "20.00", "25.00"))
+})
+
+test_that("flatten_table_response rejects empty, legacy flat-row, and mismatched-schema payloads", {
+  expect_error(piptm::flatten_table_response(list()), class = "rlang_error")
+  expect_error(piptm::flatten_table_response(NULL), class = "rlang_error")
+
+  # Legacy flat-row payload
+  legacy_rows <- list(
+    list(pip_id = "COL_2010_ECH_INC_ALL", measure = "mean", value = "10.00")
+  )
+  expect_error(piptm::flatten_table_response(legacy_rows), class = "rlang_error")
+
+  # Two surveys with mismatched active slot variables
+  rel <- activate_test_registry("TEST_RELEASE")
+  dt1 <- data.table::data.table(
+    pip_id = "COL_2010_ECH_INC_ALL", country_code = "COL", surveyid_year = 2010L,
+    welfare_type = "INC", gender = "male", poverty_line = NA_real_, measure = "mean", value = "10.00"
+  )
+  dt2 <- data.table::data.table(
+    pip_id = "PER_2012_ENAHO_INC_ALL", country_code = "PER", surveyid_year = 2012L,
+    welfare_type = "INC", area = "urban", poverty_line = NA_real_, measure = "mean", value = "20.00"
+  )
+  s1 <- piptm::serialize_table_response(
+    dt1, list(column = "gender", row = NULL, superColumn = NULL, superRow = NULL), "welfare", NULL, "mean", rel
+  )
+  s2 <- piptm::serialize_table_response(
+    dt2, list(column = "area", row = NULL, superColumn = NULL, superRow = NULL), "welfare", NULL, "mean", rel
+  )
+  expect_error(piptm::flatten_table_response(c(s1, s2)), class = "rlang_error")
+})
+

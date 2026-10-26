@@ -96,6 +96,7 @@ serialize_table_response(
 }
 \seealso{
 Other api: 
+\code{\link{flatten_table_response}()},
 \code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
 \code{\link{run_api}()},

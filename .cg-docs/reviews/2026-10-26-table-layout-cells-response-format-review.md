@@ -18,7 +18,7 @@ findings:
   P2.4: fixed
   P2.5: fixed
   P2.6: fixed
-  P2.7: skipped
+  P2.7: skipped # accepted: already committed as a single commit (8b7ad3d); not worth a history rewrite
 ---
 
 ## Review Report
