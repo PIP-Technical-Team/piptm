@@ -582,3 +582,56 @@ test_that("flatten_table_response rejects empty, legacy flat-row, and mismatched
   expect_error(piptm::flatten_table_response(c(s1, s2)), class = "rlang_error")
 })
 
+test_that("flatten_table_response rejects colliding or duplicate column names", {
+  rel <- activate_test_registry("TEST_RELEASE")
+
+  # A measure name colliding with a reserved header column
+  dt_collide_header <- data.table::data.table(
+    pip_id = "COL_2010_ECH_INC_ALL", country_code = "COL", surveyid_year = 2010L,
+    welfare_type = "INC", poverty_line = NA_real_, measure = "pip_id", value = "x"
+  )
+  s_collide_header <- piptm::serialize_table_response(
+    dt_collide_header,
+    list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL),
+    "welfare", NULL, "pip_id", rel
+  )
+  expect_error(piptm::flatten_table_response(s_collide_header), class = "rlang_error")
+
+  # An active slot varname colliding with a measure name
+  dt_collide_measure <- data.table::data.table(
+    pip_id = "COL_2010_ECH_INC_ALL", country_code = "COL", surveyid_year = 2010L,
+    welfare_type = "INC", gender = "male", poverty_line = NA_real_, measure = "gender", value = "10.00"
+  )
+  s_collide_measure <- piptm::serialize_table_response(
+    dt_collide_measure,
+    list(column = "gender", row = NULL, superColumn = NULL, superRow = NULL),
+    "welfare", NULL, "gender", rel
+  )
+  expect_error(piptm::flatten_table_response(s_collide_measure), class = "rlang_error")
+})
+
+test_that("flatten_table_response rejects malformed scalar survey header fields", {
+  rel <- activate_test_registry("TEST_RELEASE")
+  dt <- data.table::data.table(
+    pip_id = "COL_2010_ECH_INC_ALL", country_code = "COL", surveyid_year = 2010L,
+    welfare_type = "INC", poverty_line = NA_real_, measure = "mean", value = "10.00"
+  )
+  serialized <- piptm::serialize_table_response(
+    dt, list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL),
+    "welfare", NULL, "mean", rel
+  )
+
+  bad_null_pip_id <- serialized
+  bad_null_pip_id[[1L]]$pip_id <- NULL
+  expect_error(piptm::flatten_table_response(bad_null_pip_id), class = "rlang_error")
+
+  bad_year <- serialized
+  bad_year[[1L]]$surveyid_year <- "not-a-year"
+  expect_error(piptm::flatten_table_response(bad_year), class = "rlang_error")
+
+  bad_poverty_line <- serialized
+  bad_poverty_line[[1L]]$poverty_line <- "not-a-number"
+  expect_error(piptm::flatten_table_response(bad_poverty_line), class = "rlang_error")
+})
+
+

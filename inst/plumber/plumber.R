@@ -12,6 +12,7 @@
 #
 # Endpoints (this file, bottom section — see Step 3)
 #   GET|POST /table
+#   POST /table/download
 #   POST /description
 #   GET /lookup
 #   GET /surveys
@@ -281,12 +282,20 @@ function(req, body = NULL, res) {
     },
     error = function(e) NULL
   )
-  if (!is.null(raw_body) && nzchar(raw_body) &&
+  # Some request sources (e.g. rook.input$read_lines()) may return a
+  # multi-element character vector; collapse to a single string before any
+  # `&&`/length-1 check, otherwise R >= 4.2 throws an unhandled
+  # "'length = N' in coercion to 'logical(1)'" error (HTTP 500) instead of
+  # the intended 400/413 JSON envelope.
+  if (is.character(raw_body) && length(raw_body) > 1L) {
+    raw_body <- paste(raw_body, collapse = "\n")
+  }
+  if (!is.null(raw_body) && length(raw_body) == 1L && nzchar(raw_body) &&
       nchar(raw_body, type = "bytes") > max_bytes) {
     return(err("Request body too large (max 25 MB).", 413L))
   }
 
-  body <- if (is.null(raw_body) || !nzchar(raw_body)) {
+  body <- if (is.null(raw_body) || length(raw_body) == 0L || !nzchar(raw_body)) {
     NULL
   } else {
     tryCatch(jsonlite::fromJSON(raw_body, simplifyVector = FALSE), error = function(e) NULL)

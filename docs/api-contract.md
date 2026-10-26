@@ -219,24 +219,53 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
     "data": [
       {
         "pip_id": "COL_2019_GEIH_INC_ALL",
-        "measure": "mean",
-        "value": 123.45,
-        "population": 1000
+        "country_code": "COL",
+        "surveyid_year": 2019,
+        "welfare_type": "INC",
+        "poverty_line": null,
+        "analysis_var": "welfare",
+        "measures": ["mean", "gini"],
+        "layout": {
+          "columns": {
+            "varname": "gender",
+            "label": "Gender",
+            "categories": [
+              { "code": 0, "label": "Female" },
+              { "code": 1, "label": "Male" }
+            ]
+          },
+          "rows": null,
+          "superColumns": null,
+          "superRows": null
+        },
+        "cells": [
+          {
+            "superRow": null,
+            "row": null,
+            "superColumn": null,
+            "column": { "code": 0, "label": "Female" },
+            "measures": { "mean": "12.50", "gini": "45.67" }
+          }
+        ]
       }
     ]
   }
   ```
   - `format` *(optional, string)* — `csv` (default) or `rds`.
-  - `data` *(required, non-empty array of row objects)* — typically copied from `/table` response `data`.
+  - `data` *(required, non-empty array of Approach C survey objects)* — copied directly from `/table` response `data` (`include_metadata = false`).
 - **Responses:**
   - `200 OK` (`format=csv`) — raw CSV bytes; `Content-Type: text/csv; charset=utf-8`; `Content-Disposition: attachment; filename="table.csv"`.
   - `200 OK` (`format=rds`) — raw RDS bytes; `Content-Type: application/octet-stream`; `Content-Disposition: attachment; filename="table.rds"`.
-  - `400` — malformed/empty JSON body, unsupported `format`, or invalid/empty `data` payload.
+  - `400` — malformed/empty JSON body, unsupported `format`, legacy flat-row payload, or invalid/empty Approach C `data` payload.
   - `413` — request payload exceeds 25 MB.
 - **Notes:**
   - This endpoint is stateless and does not call `table_maker()`.
   - Error responses use the standard JSON envelope with `Content-Type: application/json`.
-  - **Payload compatibility note**: `/table/download` currently expects flat row objects. Because `/table` now returns per-survey objects containing nested `layout` and `cells[]` (Approach C), directly forwarding `/table` response payloads to `/table/download` is temporarily unsupported until the dependent feature `table-download-has-no-flat-rows-under-cells-response-format` is implemented.
+  - **Exported table structure (Shape A — one row per cell, measures as columns)**:
+    - `flatten_table_response()` converts the Approach C `data[]` payload into a rectangular table with one row per element of `cells[]` (stacked across surveys in `data[]` order):
+      1. **6 leading survey header columns** (always present): `pip_id` (character), `country_code` (character), `surveyid_year` (integer), `welfare_type` (character), `analysis_var` (character), `poverty_line` (numeric; `NA` / empty in CSV when `null`).
+      2. **Active dimension columns**: one character column per active (non-`null`) slot in `layout`, ordered `superRows` → `rows` → `superColumns` → `columns`, named after `layout[[slot]]$varname` (e.g. `educat4`, `area`, `gender`) and populated with each cell's category `label` (e.g. `"None"`, `"Rural"`, `"Female"`, `"Unknown"`). Unused slots are omitted; a national table (no active slots) has zero dimension columns.
+      3. **Measure columns**: one character column per measure in `measures[]` order, preserving formatted display strings verbatim (`"12.50"`, `"NR"`, or `NA`/empty when `null`). Measure columns are never coerced to numeric.
 
 ---
 

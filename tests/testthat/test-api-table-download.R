@@ -111,8 +111,7 @@ test_that("/table/download returns a readable Shape A RDS with character measure
   expect_equal(res$status, 200L)
   expect_equal(res$headers[["Content-Type"]], "application/octet-stream")
   expect_match(res$headers[["Content-Disposition"]], "table\\.rds")
-  tmp <- tempfile(fileext = ".rds")
-  on.exit(unlink(tmp), add = TRUE)
+  tmp <- withr::local_tempfile(fileext = ".rds")
   writeBin(res$body, tmp)
   df <- readRDS(tmp)
   expect_s3_class(df, "data.frame")
@@ -254,8 +253,7 @@ test_that("/table/download round-trips the 3-covariate Approach C fixture into C
   # RDS round-trip
   res_rds <- .dl_router$call(.dl_req(.dl_json("rds", data = fx$data)))
   expect_equal(res_rds$status, 200L)
-  tmp <- tempfile(fileext = ".rds")
-  on.exit(unlink(tmp), add = TRUE)
+  tmp <- withr::local_tempfile(fileext = ".rds")
   writeBin(res_rds$body, tmp)
   df_rds <- readRDS(tmp)
   expect_equal(nrow(df_rds), 20L)
@@ -281,3 +279,79 @@ test_that("/table/download rejects legacy flat-row payloads with 400 (never 500)
   expect_equal(payload$status, "error")
   expect_true(length(payload$errors) >= 1L)
 })
+
+test_that("/table/download exports national (no-slot) and multi-survey Approach C payloads and is deterministic", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.dl_router), "Router could not be created")
+
+  nat_fx <- jsonlite::fromJSON(
+    testthat::test_path("fixtures", "table-slot-baseline", "national.json"),
+    simplifyVector = FALSE
+  )
+
+  # Repeat calls produce byte-identical CSV output
+  res1 <- .dl_router$call(.dl_req(.dl_json("csv", data = nat_fx$data)))
+  res2 <- .dl_router$call(.dl_req(.dl_json("csv", data = nat_fx$data)))
+  expect_equal(res1$status, 200L)
+  expect_identical(rawToChar(res1$body), rawToChar(res2$body))
+
+  df_nat <- data.table::fread(text = rawToChar(res1$body), colClasses = "character")
+  expect_equal(nrow(df_nat), 1L)
+  expect_named(
+    df_nat,
+    c("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "poverty_line", "mean"),
+    ignore.order = FALSE
+  )
+  expect_equal(df_nat$mean, "5.50")
+
+  # Multi-survey payload (stacking 2 surveys)
+  s1 <- .dl_data[[1L]]
+  s2 <- .dl_data[[1L]]
+  s2$pip_id <- "PER_2012_ENAHO_INC_ALL"
+  s2$country_code <- "PER"
+  s2$surveyid_year <- 2012L
+
+  res_multi <- .dl_router$call(.dl_req(.dl_json("csv", data = list(s1, s2))))
+  expect_equal(res_multi$status, 200L)
+  df_multi <- data.table::fread(text = rawToChar(res_multi$body), colClasses = "character")
+  expect_equal(nrow(df_multi), 4L)
+  expect_equal(df_multi$pip_id, c("COL_2010_ECH_INC_ALL", "COL_2010_ECH_INC_ALL", "PER_2012_ENAHO_INC_ALL", "PER_2012_ENAHO_INC_ALL"))
+})
+
+test_that("/table/download rejects malformed survey/layout/cell objects and mismatched multi-survey schemas with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.dl_router), "Router could not be created")
+
+  # Missing `cells`
+  bad_no_cells <- .dl_data
+  bad_no_cells[[1L]]$cells <- list()
+  res1 <- .dl_router$call(.dl_req(.dl_json("csv", data = bad_no_cells)))
+  expect_equal(res1$status, 400L)
+  expect_match(res1$headers[["Content-Type"]], "application/json")
+  payload1 <- .dl_body(res1)
+  expect_equal(payload1$status, "error")
+  expect_true(length(payload1$errors) >= 1L)
+
+  # Missing `layout`
+  bad_no_layout <- .dl_data
+  bad_no_layout[[1L]]$layout <- NULL
+  res2 <- .dl_router$call(.dl_req(.dl_json("csv", data = bad_no_layout)))
+  expect_equal(res2$status, 400L)
+  expect_match(res2$headers[["Content-Type"]], "application/json")
+  payload2 <- .dl_body(res2)
+  expect_equal(payload2$status, "error")
+  expect_true(length(payload2$errors) >= 1L)
+
+  # Multi-survey with mismatched measures
+  s1 <- .dl_data[[1L]]
+  s2 <- .dl_data[[1L]]
+  s2$pip_id <- "PER_2012_ENAHO_INC_ALL"
+  s2$measures <- list("mean")
+  res3 <- .dl_router$call(.dl_req(.dl_json("csv", data = list(s1, s2))))
+  expect_equal(res3$status, 400L)
+  expect_match(res3$headers[["Content-Type"]], "application/json")
+  payload3 <- .dl_body(res3)
+  expect_equal(payload3$status, "error")
+  expect_true(length(payload3$errors) >= 1L)
+})
+

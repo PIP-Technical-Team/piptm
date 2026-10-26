@@ -1,7 +1,8 @@
 ---
 date: 2026-10-26
 title: "/table/download Approach C stateless flattening (Shape A)"
-status: active
+status: completed
+completed-date: 2026-10-26
 scope: "Standard"
 brainstorm: ".cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md"
 language: "R"
@@ -9,8 +10,7 @@ estimated-effort: "small"
 deviation-policy: "ask"
 execution-report: .cg-docs/work-reports/2026-10-26-table-download-approach-c-flattening.md
 artifact-schema-version: 1
-completed-phases: [1]
-current-phase: 2
+completed-phases: [1, 2]
 phases: 2
 tags: [api, plumber, table-download, approach-c, csv, rds, serialization, breaking-change]
 ---
