@@ -211,7 +211,23 @@ flatten_table_response <- function(data) {
     cli::cli_abort("Survey `cells` must be a non-empty array of cell objects.")
   }
 
-  for (c_idx in seq_along(cells)) {
+  n_cells <- length(cells)
+
+  # Validate cells while extracting all dimension labels and measure values.
+  # This keeps the payload traversal to one pass instead of validating once
+  # and then rescanning it for every output column.
+  dim_values <- matrix(
+    NA_character_,
+    nrow = n_cells,
+    ncol = length(active_cell_slots)
+  )
+  measure_values <- matrix(
+    NA_character_,
+    nrow = n_cells,
+    ncol = length(measures_vec),
+    dimnames = list(NULL, measures_vec)
+  )
+  for (c_idx in seq_len(n_cells)) {
     cell <- cells[[c_idx]]
     if (!is.list(cell) || is.data.frame(cell) || !all(req_cell_keys %in% names(cell)) ||
         !is.list(cell$measures)) {
@@ -219,9 +235,28 @@ flatten_table_response <- function(data) {
         "Each element of `cells` must be an object containing: {.val {req_cell_keys}}."
       )
     }
-  }
 
-  n_cells <- length(cells)
+    for (i in seq_along(active_cell_slots)) {
+      c_slot <- active_cell_slots[[i]]
+      slot_val <- cell[[c_slot]]
+      if (!is.null(slot_val) && !is.list(slot_val)) {
+        cli::cli_abort(
+          "Cell active slot {.val {c_slot}} must be a `{{code, label}}` object or `null`."
+        )
+      }
+      if (!is.null(slot_val) && !is.null(slot_val$label) &&
+          length(slot_val$label) > 0L && !is.na(slot_val$label[[1L]])) {
+        dim_values[[c_idx, i]] <- as.character(slot_val$label[[1L]])
+      }
+    }
+
+    for (m_idx in seq_along(measures_vec)) {
+      m_val <- cell$measures[[measures_vec[[m_idx]]]]
+      if (!is.null(m_val) && length(m_val) > 0L && !is.na(m_val[[1L]])) {
+        measure_values[[c_idx, m_idx]] <- as.character(m_val[[1L]])
+      }
+    }
+  }
 
   # Validate scalar survey header fields before indexing [[1L]]. JSON
   # parsed with simplifyVector = FALSE yields a present-but-NULL/empty
@@ -294,33 +329,12 @@ flatten_table_response <- function(data) {
   )
 
   for (i in seq_along(active_cell_slots)) {
-    c_slot <- active_cell_slots[[i]]
     v_name <- active_varnames[[i]]
-    cols_list[[v_name]] <- vapply(cells, function(cell) {
-      slot_val <- cell[[c_slot]]
-      if (!is.null(slot_val) && !is.list(slot_val)) {
-        cli::cli_abort(
-          "Cell active slot {.val {c_slot}} must be a `{{code, label}}` object or `null`."
-        )
-      }
-      if (is.null(slot_val) || is.null(slot_val$label) ||
-          length(slot_val$label) == 0L || is.na(slot_val$label[[1L]])) {
-        NA_character_
-      } else {
-        as.character(slot_val$label[[1L]])
-      }
-    }, character(1L))
+    cols_list[[v_name]] <- dim_values[, i]
   }
 
-  for (m in measures_vec) {
-    cols_list[[m]] <- vapply(cells, function(cell) {
-      m_val <- cell$measures[[m]]
-      if (is.null(m_val) || length(m_val) == 0L || is.na(m_val[[1L]])) {
-        NA_character_
-      } else {
-        as.character(m_val[[1L]])
-      }
-    }, character(1L))
+  for (m_idx in seq_along(measures_vec)) {
+    cols_list[[measures_vec[[m_idx]]]] <- measure_values[, m_idx]
   }
 
   list(

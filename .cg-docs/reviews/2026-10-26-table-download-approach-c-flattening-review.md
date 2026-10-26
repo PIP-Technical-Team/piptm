@@ -17,7 +17,7 @@ findings:
   P2.3: fixed
   P2.4: fixed
   P2.5: skipped # advisory branching note; user judgment call, not a code defect
-  P3.1: open
+  P3.1: fixed
 ---
 
 # Review Report
