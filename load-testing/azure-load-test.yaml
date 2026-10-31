@@ -1,0 +1,58 @@
+version: v0.1
+testId: table-maker-api-stress
+displayName: Table Maker API stress suite
+description: Curated ramp or spike workloads for the private Table Maker API
+testType: Locust
+testPlan: locustfile.py
+engineInstances: 1
+configurationFiles:
+  - scenarios.json
+  - requirements.txt
+  - loadtest/api.py
+  - loadtest/bootstrap.py
+  - loadtest/config.py
+  - loadtest/scenarios.py
+  - loadtest/shapes.py
+  - loadtest/users.py
+properties:
+  userPropertyFile: locust.conf
+env:
+  - name: TARGET_HOST
+    value: "https://tablemakerapiqa.worldbank.org"
+  - name: LOAD_PROFILE
+    value: "ramp"
+  - name: USERS
+    value: "100"
+  - name: SPAWN_RATE
+    value: "5"
+  - name: RUN_TIME
+    value: "15m"
+  - name: RAMP_STEPS
+    value: "10,50,100"
+  - name: SPIKE_USERS
+    value: "100"
+  - name: SPIKE_HOLD_SECONDS
+    value: "120"
+  - name: RANDOM_SEED
+    value: "20261030"
+  - name: SCENARIO_CATALOG
+    value: "scenarios.json"
+  - name: BOOTSTRAP_MODE
+    value: "live-with-curated-fallback"
+  - name: REQUEST_TIMEOUT
+    value: "120"
+failureCriteria:
+  clientMetrics:
+    - p95(response_time_ms) > 3000
+    - percentage(error) > 1
+autoStop:
+  errorPercentage: 80
+  timeWindow: 120
+
+# ITS adds these top-level keys only after substituting real Azure resource IDs:
+# subnetId: /subscriptions/<subscription>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>
+# publicIPDisabled: true
+# appComponents:
+#   - resourceId: /subscriptions/<subscription>/resourceGroups/<rg>/providers/Microsoft.App/containerApps/<app>
+#     resourceName: <app>
+#     resourceType: Microsoft.App/containerApps

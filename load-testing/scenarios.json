@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "catalog_release": "ITS-validated-current-release",
+  "scenarios": [
+    {
+      "id": "tier1-national-get",
+      "tier": 1,
+      "weight": 30,
+      "transport": "GET",
+      "analysis_var": "welfare",
+      "measures": ["mean", "gini"],
+      "slots": {},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL"],
+      "survey_count": 1,
+      "required_covariates": [],
+      "downstream": "none"
+    },
+    {
+      "id": "tier1-poverty-column",
+      "tier": 1,
+      "weight": 20,
+      "transport": "GET",
+      "analysis_var": "pov_status",
+      "measures": ["headcount", "poverty_gap"],
+      "slots": {"column": "gender"},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL"],
+      "survey_count": 1,
+      "required_covariates": ["gender"],
+      "poverty_line": 2.15,
+      "downstream": "description_metadata"
+    },
+    {
+      "id": "tier1-download-csv",
+      "tier": 1,
+      "weight": 10,
+      "transport": "POST",
+      "analysis_var": "welfare",
+      "measures": ["mean", "median"],
+      "slots": {"column": "gender"},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL"],
+      "survey_count": 1,
+      "required_covariates": ["gender"],
+      "downstream": "download_csv"
+    },
+    {
+      "id": "tier2-filtered-binary-shares",
+      "tier": 2,
+      "weight": 20,
+      "transport": "POST",
+      "analysis_var": "gender",
+      "measures": ["pop_share", "target_survey_share"],
+      "slots": {"column": "area", "row": "age_group"},
+      "filter_base": {"gender": [0]},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL", "PER_2019_ENAHO_INC_ALL", "ECU_2019_ENEMDU_INC_ALL", "BOL_2019_EH_INC_ALL"],
+      "survey_count": 3,
+      "required_covariates": ["area", "age_group", "gender"],
+      "downstream": "description_recompute"
+    },
+    {
+      "id": "tier2-download-rds",
+      "tier": 2,
+      "weight": 10,
+      "transport": "POST",
+      "analysis_var": "welfare",
+      "measures": ["mean", "gini"],
+      "slots": {"column": "gender", "row": "area"},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL", "PER_2019_ENAHO_INC_ALL", "ECU_2019_ENEMDU_INC_ALL", "BOL_2019_EH_INC_ALL"],
+      "survey_count": 5,
+      "required_covariates": ["gender", "area"],
+      "downstream": "download_rds"
+    },
+    {
+      "id": "tier3-heavy-three-slot",
+      "tier": 3,
+      "weight": 10,
+      "transport": "POST",
+      "analysis_var": "welfare",
+      "measures": ["mean", "median", "gini", "p90"],
+      "slots": {"column": "gender", "row": "area", "superColumn": "age_group"},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL", "PER_2019_ENAHO_INC_ALL", "ECU_2019_ENEMDU_INC_ALL", "BOL_2019_EH_INC_ALL", "ARG_2019_EPH_INC_ALL", "CHL_2017_CASEN_INC_ALL", "CRI_2019_ENAHO_INC_ALL", "DOM_2019_ENFT_INC_ALL", "HND_2019_EPHPM_INC_ALL", "MEX_2018_ENIGH_INC_ALL", "PAN_2019_EH_INC_ALL", "PRY_2019_EPH_INC_ALL", "SLV_2019_EHPM_INC_ALL", "URY_2019_ECH_INC_ALL"],
+      "survey_count": 15,
+      "required_covariates": ["gender", "area", "age_group"],
+      "downstream": "none"
+    },
+    {
+      "id": "tier3-heavy-four-slot",
+      "tier": 3,
+      "weight": 5,
+      "transport": "POST",
+      "analysis_var": "welfare",
+      "measures": ["mean", "median", "gini"],
+      "slots": {"column": "gender", "row": "area", "superColumn": "age_group", "superRow": "educat4"},
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL", "PER_2019_ENAHO_INC_ALL", "ECU_2019_ENEMDU_INC_ALL", "BOL_2019_EH_INC_ALL", "ARG_2019_EPH_INC_ALL", "CHL_2017_CASEN_INC_ALL", "CRI_2019_ENAHO_INC_ALL", "DOM_2019_ENFT_INC_ALL", "HND_2019_EPHPM_INC_ALL", "MEX_2018_ENIGH_INC_ALL", "PAN_2019_EH_INC_ALL", "PRY_2019_EPH_INC_ALL", "SLV_2019_EHPM_INC_ALL", "URY_2019_ECH_INC_ALL"],
+      "survey_count": 15,
+      "required_covariates": ["gender", "area", "age_group", "educat4"],
+      "downstream": "description_metadata"
+    }
+  ]
+}
