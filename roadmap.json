@@ -341,6 +341,23 @@
           "plan": null
         }
       ]
+    },
+    {
+      "id": "phase-8-launch-readiness",
+      "title": "Phase 8 — Launch Readiness & Load Testing",
+      "description": "Verify production launch readiness of the Table Maker Plumber API through concurrent load testing, SLO validation, and turnkey infrastructure handoff.",
+      "objective": "Validate API launch readiness and SLO compliance under concurrent load prior to production deployment.",
+      "status": "planned",
+      "features": [
+        {
+          "id": "azure-load-testing-stress-test-suite-for-table-maker-api",
+          "title": "Azure Load Testing Stress Test Suite for Table Maker API",
+          "description": "Self-bootstrapping Python Locust stress test suite and Azure Load Testing YAML bundle covering realistic UI wizard user journeys, head-of-line blocking under concurrent load, and SLO pass/fail criteria for ITS handoff.",
+          "status": "idea",
+          "brainstorm": ".cg-docs/brainstorms/2026-10-30-azure-load-testing-stress-suite.md",
+          "plan": null
+        }
+      ]
     }
   ]
 }
