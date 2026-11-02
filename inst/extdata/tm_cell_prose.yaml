@@ -1,0 +1,454 @@
+schema_version: "1.0"
+
+# ==============================================================================
+# 1. Analysis variables (non-share continuous & poverty variables)
+# ==============================================================================
+analysis_vars:
+  welfare:
+    noun_inc: "daily income"
+    noun_con: "daily consumption"
+    noun_default: "daily welfare"
+    short_noun_inc: "income"
+    short_noun_con: "consumption"
+    short_noun_default: "welfare"
+    monetary: true
+
+  pov_status:
+    noun_inc: "daily income"
+    noun_con: "daily consumption"
+    noun_default: "daily welfare"
+    short_noun_inc: "income"
+    short_noun_con: "consumption"
+    short_noun_default: "welfare"
+    monetary: true
+
+  age:
+    noun_default: "age (in years)"
+    short_noun_default: "age"
+    monetary: false
+
+  educy:
+    noun_default: "years of education"
+    short_noun_default: "years of education"
+    monetary: false
+
+  hsize:
+    noun_default: "household size"
+    short_noun_default: "household size"
+    monetary: false
+
+# ==============================================================================
+# 2. Filter & layout covariate variables
+#    Category wording is built from the registry label via `phrase_frame`
+#    ({label} or {label_lower}), with head `nouns` only for `gender` and
+#    `pov_status`, and small code-keyed `overrides` only where the raw label
+#    does not splice cleanly into `phrase_frame`.
+# ==============================================================================
+variables:
+  pov_status:
+    slot_noun: "poverty status"
+    phrase_frame: "who are {label_lower}"
+    nouns:
+      "0": "non-poor people"
+      "1": "poor people"
+    adjectives:
+      "0": "non-poor"
+      "1": "poor"
+    overrides:
+      "0": "who are non-poor"
+      "1": "living in poverty"
+
+  gender:
+    slot_noun: "gender"
+    phrase_frame: "who are {label_lower}"
+    nouns:
+      "1": "men"
+      "0": "women"
+    overrides:
+      "1": "who are men"
+      "0": "who are women"
+
+  area:
+    slot_noun: "area"
+    phrase_frame: "living in {label_lower} areas"
+
+  educat4:
+    slot_noun: "education level"
+    phrase_frame: "with {label_lower} education"
+    overrides:
+      "1": "with incomplete secondary education"
+      "5": "with no or incomplete primary education"
+
+  educat5:
+    slot_noun: "education level"
+    phrase_frame: "with {label_lower} education"
+    overrides:
+      "1": "with no education"
+      "2": "with incomplete primary education"
+      "3": "with completed primary but incomplete secondary education"
+      "4": "with completed secondary education"
+      "5": "with some tertiary or post-secondary education"
+
+  educat7:
+    slot_noun: "education level"
+    phrase_frame: "with {label_lower} education"
+    overrides:
+      "1": "with no education"
+      "2": "with incomplete primary education"
+      "3": "with completed primary education"
+      "4": "with incomplete secondary education"
+      "5": "with completed secondary education"
+
+  age_group:
+    slot_noun: "age group"
+    phrase_frame: "aged {label}"
+
+  age_group2:
+    slot_noun: "age group"
+    phrase_frame: "aged {label}"
+
+  hsize_group:
+    slot_noun: "household size"
+    phrase_frame: "in households of {label}"
+
+  wquintile:
+    slot_noun: "welfare quintile"
+    phrase_frame: "in welfare quintile {label}"
+
+  imp_wat_rec:
+    slot_noun: "improved water access"
+    phrase_frame: "with improved water source: {label}"
+    overrides:
+      "1": "with an improved water source"
+      "0": "without an improved water source"
+
+  imp_san_rec:
+    slot_noun: "improved sanitation access"
+    phrase_frame: "with improved sanitation: {label}"
+    overrides:
+      "1": "with improved sanitation"
+      "0": "without improved sanitation"
+
+  electricity:
+    slot_noun: "electricity access"
+    phrase_frame: "with electricity access: {label}"
+    overrides:
+      "1": "with access to electricity"
+      "0": "without access to electricity"
+
+  lstatus:
+    slot_noun: "labor status"
+    phrase_frame: "who are {label_lower}"
+    overrides:
+      "3": "outside the labor force"
+
+  lstatus_year:
+    slot_noun: "labor status (12-month)"
+    phrase_frame: "who are {label_lower}"
+    overrides:
+      "3": "outside the labor force"
+
+  empstat:
+    slot_noun: "employment status"
+    phrase_frame: "working as {label_lower}"
+    overrides:
+      "1": "working as paid employees"
+      "2": "working as non-paid employees"
+      "3": "working as employers"
+      "4": "who are self-employed"
+      "5": "in other employment statuses"
+
+  empstat_2:
+    slot_noun: "secondary job employment status"
+    phrase_frame: "working as {label_lower} in their secondary job"
+    overrides:
+      "1": "working as paid employees in their secondary job"
+      "2": "working as non-paid employees in their secondary job"
+      "3": "working as employers in their secondary job"
+      "4": "who are self-employed in their secondary job"
+      "5": "in other secondary-job employment statuses"
+
+  empstat_year:
+    slot_noun: "employment status (12-month)"
+    phrase_frame: "working as {label_lower}"
+    overrides:
+      "1": "working as paid employees"
+      "2": "working as non-paid employees"
+      "3": "working as employers"
+      "4": "who are self-employed"
+      "5": "in other employment statuses"
+
+  empstat_2_year:
+    slot_noun: "secondary job employment status (12-month)"
+    phrase_frame: "working as {label_lower} in their secondary job"
+    overrides:
+      "1": "working as paid employees in their secondary job"
+      "2": "working as non-paid employees in their secondary job"
+      "3": "working as employers in their secondary job"
+      "4": "who are self-employed in their secondary job"
+      "5": "in other secondary-job employment statuses"
+
+  industrycat4:
+    slot_noun: "industry"
+    phrase_frame: "working in {label_lower}"
+    overrides:
+      "4": "working in other sectors"
+
+  industrycat4_2:
+    slot_noun: "secondary job industry"
+    phrase_frame: "working in {label_lower} (secondary job)"
+    overrides:
+      "4": "working in other sectors (secondary job)"
+
+  industrycat4_year:
+    slot_noun: "industry (12-month)"
+    phrase_frame: "working in {label_lower}"
+    overrides:
+      "4": "working in other sectors"
+
+  industrycat4_2_year:
+    slot_noun: "secondary job industry (12-month)"
+    phrase_frame: "working in {label_lower} (secondary job)"
+    overrides:
+      "4": "working in other sectors (secondary job)"
+
+  industrycat10:
+    slot_noun: "industry (10 groups)"
+    phrase_frame: "working in {label_lower}"
+    overrides:
+      "1": "working in agriculture, hunting, or fishing"
+      "10": "working in other unspecified services"
+
+  industrycat10_2:
+    slot_noun: "secondary job industry (10 groups)"
+    phrase_frame: "working in {label_lower} (secondary job)"
+    overrides:
+      "1": "working in agriculture, hunting, or fishing (secondary job)"
+      "10": "working in other unspecified services (secondary job)"
+
+  industrycat10_year:
+    slot_noun: "industry (10 groups, 12-month)"
+    phrase_frame: "working in {label_lower}"
+    overrides:
+      "1": "working in agriculture, hunting, or fishing"
+      "10": "working in other unspecified services"
+
+  industrycat10_2_year:
+    slot_noun: "secondary job industry (10 groups, 12-month)"
+    phrase_frame: "working in {label_lower} (secondary job)"
+    overrides:
+      "1": "working in agriculture, hunting, or fishing (secondary job)"
+      "10": "working in other unspecified services (secondary job)"
+
+# ==============================================================================
+# 3. Binary target variables (used when stat_group == "shares")
+# ==============================================================================
+targets:
+  female:
+    predicate: "are women"
+    modifier: "female"
+    rate_noun: "female share"
+  male:
+    predicate: "are men"
+    modifier: "male"
+    rate_noun: "male share"
+  urban:
+    predicate: "live in urban areas"
+    modifier: "urban"
+    rate_noun: "urban population share"
+  rural:
+    predicate: "live in rural areas"
+    modifier: "rural"
+    rate_noun: "rural population share"
+  youth:
+    predicate: "are youth (aged 15\u201324)"
+    modifier: "youth (aged 15\u201324)"
+    rate_noun: "youth share"
+  prime_work_age:
+    predicate: "are of prime working age (25\u201364)"
+    modifier: "prime-working-age"
+    rate_noun: "prime-working-age share"
+  elderly:
+    predicate: "are aged 65 and older"
+    modifier: "elderly"
+    rate_noun: "elderly population share"
+  employed:
+    predicate: "are employed"
+    modifier: "employed"
+    rate_noun: "employment rate"
+  unemployed:
+    predicate: "are unemployed"
+    modifier: "unemployed"
+    rate_noun: "unemployment rate"
+  in_labor_force:
+    predicate: "are in the labor force"
+    modifier: null
+    rate_noun: "labor force participation rate"
+  self_emp:
+    predicate: "are self-employed"
+    modifier: "self-employed"
+    rate_noun: "self-employment rate"
+  paid_emp:
+    predicate: "are paid employees"
+    modifier: "paid-employee"
+    rate_noun: "paid-employment rate"
+  inf_emp:
+    predicate: "are unpaid family workers"
+    modifier: "unpaid-family-worker"
+    rate_noun: "unpaid family work rate"
+  employer:
+    predicate: "are employers"
+    modifier: "employer"
+    rate_noun: "employer rate"
+  emp_agri:
+    predicate: "work in agriculture"
+    modifier: null
+    rate_noun: "agricultural employment share"
+  emp_indu:
+    predicate: "work in industry"
+    modifier: null
+    rate_noun: "industrial employment share"
+  emp_serv:
+    predicate: "work in services"
+    modifier: null
+    rate_noun: "services employment share"
+  emp_others:
+    predicate: "work in other sectors"
+    modifier: null
+    rate_noun: "other-sector employment share"
+  imp_wat_rec:
+    predicate: "have an improved water source"
+    modifier: null
+    rate_noun: "improved-water access rate"
+  imp_san_rec:
+    predicate: "have improved sanitation"
+    modifier: null
+    rate_noun: "improved-sanitation rate"
+  electricity:
+    predicate: "have access to electricity"
+    modifier: null
+    rate_noun: "electricity access rate"
+
+# ==============================================================================
+# 4. Measures (all 23 measures in tm_measure_spec.yaml)
+# ==============================================================================
+measures:
+  # Summary statistics
+  mean:
+    label: "Mean"
+    stat_group: "summary_statistics"
+    template: "Average {var_noun} of {cell_group}{ppp_suffix}."
+  median:
+    label: "Median"
+    stat_group: "summary_statistics"
+    template: "{Var_noun} of the middle person among {cell_group}, with half below and half above{ppp_suffix}."
+  min:
+    label: "Min"
+    stat_group: "summary_statistics"
+    template: "Lowest {var_noun} observed among {cell_group}{ppp_suffix}."
+  max:
+    label: "Max"
+    stat_group: "summary_statistics"
+    template: "Highest {var_noun} observed among {cell_group}{ppp_suffix}."
+  sd:
+    label: "Standard deviation"
+    stat_group: "summary_statistics"
+    template: "Standard deviation of {var_noun} among {cell_group}{ppp_suffix}."
+  var:
+    label: "Variance"
+    stat_group: "summary_statistics"
+    template: "Variance of {var_noun} among {cell_group}{ppp_suffix}."
+  sum:
+    label: "Sum"
+    stat_group: "summary_statistics"
+    template: "Weighted sum of {var_noun} across {cell_group}{ppp_suffix}."
+  p10:
+    label: "10th percentile"
+    stat_group: "summary_statistics"
+    template: "{Var_noun} level below which the lowest 10% of {cell_group} fall{ppp_suffix}."
+  p25:
+    label: "25th percentile"
+    stat_group: "summary_statistics"
+    template: "{Var_noun} level below which the lowest 25% of {cell_group} fall{ppp_suffix}."
+  p75:
+    label: "75th percentile"
+    stat_group: "summary_statistics"
+    template: "{Var_noun} level below which 75% of {cell_group} fall{ppp_suffix}."
+  p90:
+    label: "90th percentile"
+    stat_group: "summary_statistics"
+    template: "{Var_noun} level below which 90% of {cell_group} fall{ppp_suffix}."
+  p90_p10:
+    label: "P90/P10 ratio"
+    stat_group: "summary_statistics"
+    template: "Ratio of the 90th percentile to the 10th percentile of {var_noun} within {cell_group}."
+  p90_p50:
+    label: "P90/P50 ratio"
+    stat_group: "summary_statistics"
+    template: "Ratio of the 90th percentile to the median of {var_noun} within {cell_group}."
+  p50_p10:
+    label: "P50/P10 ratio"
+    stat_group: "summary_statistics"
+    template: "Ratio of the median to the 10th percentile of {var_noun} within {cell_group}."
+  nobs:
+    label: "Number of observations"
+    stat_group: "summary_statistics"
+    template: "Unweighted number of survey observations in {cell_group}."
+  obs_share:
+    label: "Observation share"
+    stat_group: "summary_statistics"
+    template: "Unweighted share of survey observations that fall in {cell_group}."
+
+  # Poverty
+  headcount:
+    label: "Poverty headcount"
+    stat_group: "poverty"
+    template: "Out of all {cell_group}, the percentage living on less than {pov_line_text}."
+  poverty_gap:
+    label: "Poverty gap"
+    stat_group: "poverty"
+    template: "How far below {pov_line_short} {cell_group} fall on average, expressed as a percentage of the {pov_line_short} line."
+  poverty_severity:
+    label: "Poverty severity"
+    stat_group: "poverty"
+    template: "Squared poverty gap below {pov_line_text} among {cell_group}, giving greater weight to the poorest."
+  severity:
+    label: "Poverty severity"
+    stat_group: "poverty"
+    template: "Squared poverty gap below {pov_line_text} among {cell_group}, giving greater weight to the poorest."
+  watts:
+    label: "Watts index"
+    stat_group: "poverty"
+    template: "Watts distribution-sensitive poverty index at {pov_line_text} among {cell_group}."
+  npoor:
+    label: "Population in poverty"
+    stat_group: "poverty"
+    template: "The number of {cell_group} living on less than {pov_line_text}."
+  pop_poverty:
+    label: "Population in poverty"
+    stat_group: "poverty"
+    template: "The number of {cell_group} living on less than {pov_line_text}."
+
+  # Inequality
+  gini:
+    label: "Gini"
+    stat_group: "inequality"
+    template: "{Short_var_noun} inequality within {cell_group} (0 = everyone equal, 1 = one person has it all)."
+  mld:
+    label: "Mean log deviation"
+    stat_group: "inequality"
+    template: "Mean log deviation of {short_var_noun} within {cell_group}."
+
+  # Shares
+  pop_share:
+    label: "Population share"
+    stat_group: "shares"
+    template: "Out of {out_of}, the percentage who are {cell_group}."
+  target_within_group_share:
+    label: "Target share within cell"
+    stat_group: "shares"
+    template: "Out of {out_of}, the percentage who {target_predicate}."
+  target_survey_share:
+    label: "Target share in sample base"
+    stat_group: "shares"
+    template: "Out of {out_of}, the percentage who are {target_cell_group}."
