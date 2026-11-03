@@ -267,7 +267,7 @@
           "id": "page2-cell-definition-endpoint",
           "title": "Page 2 cell definition endpoint (POST /cell-definition)",
           "description": "Provide a clear, three-section natural-language explanation (Who is in the table, What a cell is, What is shown in that cell) for Page 2 configurations without running table_maker() or accessing microdata, backed by inst/extdata/tm_cell_prose.yaml and served at POST /cell-definition.",
-          "status": "active",
+          "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
           "plan": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md"
         }

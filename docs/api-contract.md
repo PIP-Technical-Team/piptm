@@ -58,7 +58,7 @@ components:
 | UI Step | Description | Endpoints |
 |---------|-------------|-----------|
 | Step 1 — Survey selection | Discover releases, manifest rows, categories, and persist selections | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup`, `/session/surveys`, `/session/<id>/surveys` |
-| Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions` |
+| Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions, and explain what each cell in the configured table represents | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions`, `/cell-definition` (POST) |
 | Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
 
@@ -152,6 +152,63 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - **Responses:**
   - `200 OK` — `data = { "pip_id": [ ... ] }`
   - `404 Not Found` — Session missing or expired.
+
+### `/cell-definition` — POST (Step 2)
+- **Purpose:** Return a result-free, three-section natural-language explanation (*Who is in the table*, *What a cell is*, *What is shown in that cell*) of what each cell in the configured `/table` output represents, based solely on the Page 2 decisions and the release variable registry. Never calls `table_maker()` and never touches Arrow microdata.
+- **JSON Request Body:**
+  - `analysis_var` *(required, string)* — `welfare`, `pov_status`, or any entry from `/analysis-variables`.
+  - `measures` *(required, string[])* — One or more measure names from `/statistics`.
+  - `poverty_line` *(conditional, numeric)* — Required when `analysis_var == "pov_status"`, any layout slot is `"pov_status"`, or any poverty measure is requested.
+  - `column`, `row`, `superColumn`, `superRow` *(optional, string)* — Layout slot assignments. Same no-gap and no-duplicate rules as `/table` (`column` → `row` → `superColumn` → `superRow`).
+  - `filter_base` *(optional, JSON object or JSON-encoded string)* — Sample-base filter mapping variable names to allowed category codes (e.g. `{ "age_group": ["3"], "educat7": ["4"] }`).
+  - `ppp` *(optional, integer)* — PPP reference year (default `2021`).
+  - `pop_share_threshold` *(optional, numeric in (0, 1) or null)* — Default `0.001` (0.1%); `null` disables the `"NR"` suppression note.
+  - `welfare_type` *(optional, `"INC"` | `"CON"`)* — Resolves monetary welfare wording to `"daily income"` (`"INC"`) or `"daily consumption"` (`"CON"`); defaults to `"daily welfare"` when omitted.
+  - `release` *(optional, string)* — Release ID; defaults to the current release.
+- **Responses:**
+  - `200 OK` — Standard `ResponseEnvelope` with `data` containing `{ schema_version, who_is_in_table, what_a_cell_is, what_is_shown, notes }`. If the variable registry for `release` is unavailable, degrades gracefully to raw-code labels (`"code 1"`, etc.) and populates `warnings[]`.
+  - `400 Bad Request` — Missing/invalid parameters, slot gaps or duplicates, `analysis_var` repeated in a slot, missing `poverty_line` for poverty measures/`pov_status`, or target share measures (`target_within_group_share`, `target_survey_share`) requested with `analysis_var = "welfare"` or `"pov_status"`.
+  - `422 Unprocessable Entity` — Explicit `release` does not exist in loaded manifests.
+- **Response Schema (`data`):**
+  ```json
+  {
+    "schema_version": "1.0",
+    "who_is_in_table": {
+      "title": "Who is in the table",
+      "filtered": true,
+      "text": "All people aged 25\u201364 in the survey. That group is the 100% for the table."
+    },
+    "what_a_cell_is": {
+      "title": "What a cell is",
+      "dimensions": [
+        { "slot": "rows",    "varname": "area",   "label": "area",   "example_category": "Urban" },
+        { "slot": "columns", "varname": "gender", "label": "gender", "example_category": "Male" }
+      ],
+      "structure_text": "Each cell is one combination of area (row) and gender (column).",
+      "example_cell_label": "men living in urban areas",
+      "example_text": "For example, the first cell is men living in urban areas \u2014 within the filtered group above."
+    },
+    "what_is_shown": {
+      "title": "What is shown in that cell",
+      "intro": "The cell shows multiple percentages. Notice how they count the same or different groups against two different 100% totals (either the cell or the whole table):",
+      "measures": [
+        {
+          "key": "pop_share",
+          "label": "Population share",
+          "counts": "men living in urban areas (everyone in the cell)",
+          "out_of": "all people aged 25\u201364 in the survey (everyone in the table)",
+          "text": "Out of all people aged 25\u201364 in the survey, the percentage who are men living in urban areas.",
+          "total_note": "All cells in the table add up to 100%."
+        }
+      ]
+    },
+    "notes": []
+  }
+  ```
+- **Rendering guidance for `what_is_shown.measures[]`:**
+  - `key` (`"mean"`, `"pop_share"`, etc.) is a machine identifier (for matching the Page 3 measure chip) and must not be rendered as part of the label.
+  - **`text` and `total_note` are the primary displayed prose** (`total_note` is `null` for non-share measures).
+  - **`counts` and `out_of` are optional supporting fields** (populated on share measures, `null` on non-share measures) naming the numerator and 100% denominator groups explicitly for UIs that wish to render a structured breakdown alongside or instead of `text`.
 
 ### `/table` — GET & POST (Step 3)
 - **Purpose:** Execute the Table Maker computation engine for up to 15 surveys.
@@ -371,6 +428,7 @@ Access-Control-Allow-Headers: Content-Type
 | `/table` | GET, POST | Execute tables for selected surveys |
 | `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
 | `/description` | POST | Render natural-language table description |
+| `/cell-definition` | POST | Return Page 2 three-section cell explanation JSON |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |
 | `/categories` | GET | Power Step 1 Available Variables filter chips |

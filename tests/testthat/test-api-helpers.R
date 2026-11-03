@@ -731,3 +731,231 @@ test_that("capture_with_warnings() catches resolve_release() abort for bogus rel
   expect_false(is.null(out$error))
   expect_true(nzchar(out$error))
 })
+
+# ── .validate_table_shape() & validate_cell_definition_input() (R9) ────────────
+
+test_that("validate_table_input() output is byte-for-byte identical to pre-refactor baseline", {
+  expect_true(exists(".validate_table_shape", mode = "function"))
+
+  # Exact baseline captured from original validate_table_input() before refactoring
+  pre_refactor_baseline <- list(
+    valid_minimal = list(
+      valid = TRUE,
+      errors = character(0),
+      poverty_line = NULL,
+      ppp = NULL,
+      pop_share_threshold = NULL,
+      by = NULL,
+      slots = list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL)
+    ),
+    valid_full = list(
+      valid = TRUE,
+      errors = character(0),
+      poverty_line = 2.15,
+      ppp = 2017L,
+      pop_share_threshold = 0.005,
+      by = c("gender", "area", "educat4", "age_group"),
+      slots = list(column = "gender", row = "area", superColumn = "educat4", superRow = "age_group")
+    ),
+    invalid_pip_null_and_bad_measure = list(
+      valid = FALSE,
+      errors = c(
+        "`pip_id` must be a non-empty character vector.",
+        "Unknown measure(s): bogus_meas. Valid measures: headcount, poverty_gap, severity, watts, pop_poverty, gini, mld, mean, median, sd, var, min, max, nobs, p10, p25, p75, p90, sum, pop_share, target_within_group_share, target_survey_share."
+      ),
+      poverty_line = NULL,
+      ppp = NULL,
+      pop_share_threshold = NULL,
+      by = NULL,
+      slots = list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL)
+    ),
+    invalid_multi_errors = list(
+      valid = FALSE,
+      errors = c(
+        "`pip_id` may contain at most 15 surveys per request; 17 were supplied.",
+        "`poverty_line` must be positive and finite.",
+        "Layout slots must be filled in order (column, row, superColumn, superRow). `row` is empty but a later slot is filled.",
+        "`analysis_var` (`pov_status`) cannot also be used as a disaggregation layout slot.",
+        "`poverty_line` is required when analysis_var is 'pov_status' or when 'pov_status' is used as a disaggregation dimension.",
+        "`ppp` must be a plain integer year (digits only, e.g. 2017); got: 2017.5.",
+        "`pop_share_threshold` must be strictly between 0 and 1; got: 1.5."
+      ),
+      poverty_line = NULL,
+      ppp = NULL,
+      pop_share_threshold = NULL,
+      by = c("pov_status", "gender"),
+      slots = list(column = "pov_status", row = NULL, superColumn = "gender", superRow = NULL)
+    ),
+    invalid_all_three = list(
+      valid = FALSE,
+      errors = c(
+        "`analysis_var` must be a single non-empty character value.",
+        "`pip_id` must be a non-empty character vector.",
+        "`measures` must be a non-empty character vector."
+      ),
+      poverty_line = NULL,
+      ppp = NULL,
+      pop_share_threshold = NULL,
+      by = NULL,
+      slots = list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL)
+    )
+  )
+
+  cases <- list(
+    valid_minimal = list(
+      analysis_var = "welfare",
+      pip_id       = "ARM_2012_ILCS_CON_ALL",
+      measures     = "mean"
+    ),
+    valid_full = list(
+      analysis_var        = "pov_status",
+      pip_id              = c("ARM_2012_ILCS_CON_ALL", "COL_2019_GEIH_INC_ALL"),
+      measures            = c("headcount", "poverty_gap"),
+      poverty_line        = "2.15",
+      column              = "gender",
+      row                 = "area",
+      superColumn         = "educat4",
+      superRow            = "age_group",
+      ppp                 = "2017",
+      pop_share_threshold = "0.005"
+    ),
+    invalid_pip_null_and_bad_measure = list(
+      analysis_var = "welfare",
+      pip_id       = NULL,
+      measures     = c("mean", "bogus_meas")
+    ),
+    invalid_multi_errors = list(
+      analysis_var        = "pov_status",
+      pip_id              = c("../bad", paste0("ARM_2012_ILCS_CON_ALL_", 1:16)),
+      measures            = "headcount",
+      poverty_line        = "-5",
+      column              = "pov_status",
+      row                 = NULL,
+      superColumn         = "gender",
+      ppp                 = "2017.5",
+      pop_share_threshold = "1.5"
+    ),
+    invalid_all_three = list(
+      analysis_var = NULL,
+      pip_id       = NULL,
+      measures     = NULL
+    )
+  )
+
+  actual <- lapply(cases, function(args) do.call(validate_table_input, args))
+  expect_identical(actual, pre_refactor_baseline)
+  expect_identical(
+    as.character(jsonlite::toJSON(actual, auto_unbox = TRUE, null = "null")),
+    as.character(jsonlite::toJSON(pre_refactor_baseline, auto_unbox = TRUE, null = "null"))
+  )
+})
+
+test_that("validate_cell_definition_input() validates Page 2 parameters without pip_id", {
+  ok <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = c("mean", "gini"),
+    column       = "gender",
+    row          = "educat4",
+    filter_base  = list(age_group = c("2", "3")),
+    ppp          = 2021L,
+    welfare_type = "inc"
+  ))
+  expect_true(ok$valid)
+  expect_equal(ok$errors, character(0))
+  expect_equal(ok$welfare_type, "INC")
+  expect_equal(ok$filter_base, list(age_group = c("2", "3")))
+
+  # Accepts JSON-encoded string filter_base
+  ok_str <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = '{"age_group":["3"]}'
+  ))
+  expect_true(ok_str$valid)
+  expect_equal(ok_str$filter_base$age_group, "3")
+
+  # Rejects malformed JSON string filter_base
+  bad_fb <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = "{not valid json"
+  ))
+  expect_false(bad_fb$valid)
+  expect_true(any(grepl("filter_base", bad_fb$errors)))
+
+  # Rejects unknown filter_base dimension
+  bad_fb_dim <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(bogus_dim = "1")
+  ))
+  expect_false(bad_fb_dim$valid)
+  expect_true(any(grepl("bogus_dim", bad_fb_dim$errors)))
+
+  # Rejects invalid welfare_type
+  bad_wt <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    welfare_type = "INVALID"
+  ))
+  expect_false(bad_wt$valid)
+  expect_true(any(grepl("welfare_type", bad_wt$errors)))
+
+  # Rejects target share measures when analysis_var is welfare, pov_status, or continuous ("age")
+  bad_target_share <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "target_survey_share"
+  ))
+  expect_false(bad_target_share$valid)
+  expect_true(any(grepl("binary target", bad_target_share$errors, ignore.case = TRUE)))
+
+  bad_age_share <- validate_cell_definition_input(list(
+    analysis_var = "age",
+    measures     = "target_within_group_share"
+  ))
+  expect_false(bad_age_share$valid)
+  expect_true(any(grepl("binary target", bad_age_share$errors, ignore.case = TRUE)))
+
+  # Rejects NA or empty category codes and non-filter continuous variables in filter_base
+  bad_fb_na <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(age_group = c("1", NA_character_))
+  ))
+  expect_false(bad_fb_na$valid)
+  expect_true(any(grepl("filter_base\\$age_group", bad_fb_na$errors)))
+
+  bad_fb_cont <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(age = "25")
+  ))
+  expect_false(bad_fb_cont$valid)
+  expect_true(any(grepl("Unknown `filter_base` dimension", bad_fb_cont$errors)))
+
+  # Rejects vector pop_share_threshold and non-scalar release
+  bad_vec_thresh <- validate_cell_definition_input(list(
+    analysis_var        = "welfare",
+    measures            = "mean",
+    pop_share_threshold = c(0.001, 0.005)
+  ))
+  expect_false(bad_vec_thresh$valid)
+  expect_true(any(grepl("pop_share_threshold", bad_vec_thresh$errors)))
+
+  bad_rel <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    release      = c("REL1", "REL2")
+  ))
+  expect_false(bad_rel$valid)
+  expect_true(any(grepl("release", bad_rel$errors)))
+
+  # Rejects poverty measures without poverty_line
+  bad_pov <- validate_cell_definition_input(list(
+    analysis_var = "pov_status",
+    measures     = "headcount"
+  ))
+  expect_false(bad_pov$valid)
+  expect_true(any(grepl("poverty_line", bad_pov$errors)))
+})
+

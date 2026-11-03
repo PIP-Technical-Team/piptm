@@ -1,10 +1,8 @@
 # Plan: .cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md (Phase 1, Step 3)
 # Unit tests for build_cell_explanation()
 
-library(testthat)
-library(jsonlite)
-
 .with_fixture_registry <- function(release_id = "FIXTURE_2026", code) {
+  skip_if_not_installed("yaml")
   ns <- asNamespace("piptm")
   env <- ns$.piptm_env
   old_regs  <- env$registries
@@ -324,6 +322,7 @@ test_that("Example 5 & single-cell shares: No rows or columns selected (by = NUL
 })
 
 test_that("R5: No-registry fallback with PIPTM_ARROW_ROOT unset degrades every label to raw codes", {
+  skip_if_not_installed("yaml")
   ns <- asNamespace("piptm")
   env <- ns$.piptm_env
   old_regs  <- env$registries
@@ -448,5 +447,147 @@ test_that("R8(b): Filter variable also used as a layout slot emits overlap note 
       res_43$who_is_in_table$text,
       "People aged 15\u201324 or 25\u201364 who also have incomplete or general secondary education. Anyone outside this group is excluded before the table is built."
     )
+  })
+})
+
+test_that("R8(c) / V5: NR suppression note trigger matches R/table_response.R active_slots condition and R/table_maker.R", {
+  # 1. Inspect the real source files to verify the structural condition has not drifted
+  tr_path <- tryCatch(
+    file.path(rprojroot::find_package_root_file(), "R", "table_response.R"),
+    error = function(e) ""
+  )
+  tm_path <- tryCatch(
+    file.path(rprojroot::find_package_root_file(), "R", "table_maker.R"),
+    error = function(e) ""
+  )
+  if (nzchar(tr_path) && file.exists(tr_path)) {
+    tr_src <- paste(readLines(tr_path, warn = FALSE), collapse = "\n")
+    # R/table_response.R defines active_slots as non-null, non-empty trimmed slot strings
+    # and branches on if (length(active_slots) == 0L) for single-cell vs multi-cell
+    expect_match(tr_src, "active_slots <- Filter\\(", perl = TRUE)
+    expect_match(tr_src, "if \\(length\\(active_slots\\) == 0L\\)", perl = TRUE)
+  }
+  if (nzchar(tm_path) && file.exists(tm_path)) {
+    tm_src <- paste(readLines(tm_path, warn = FALSE), collapse = "\n")
+    # R/table_maker.R masks cells as "NR" iff !is.null(pop_share_threshold) && length(dim_cols) > 0L
+    expect_match(tm_src, "if \\(!is\\.null\\(pop_share_threshold\\)\\)", perl = TRUE)
+    expect_match(tm_src, "if \\(length\\(dim_cols\\) > 0L\\)", perl = TRUE)
+  }
+
+  # 2. Functional parity across (slots x pop_share_threshold) combinations
+  .with_fixture_registry("FIXTURE_2026", {
+    grid <- list(
+      list(slots = list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL), threshold = 0.001, expect_nr_note = FALSE),
+      list(slots = list(column = NULL, row = NULL, superColumn = NULL, superRow = NULL), threshold = NULL,  expect_nr_note = FALSE),
+      list(slots = list(column = "gender", row = NULL, superColumn = NULL, superRow = NULL), threshold = 0.001, expect_nr_note = TRUE),
+      list(slots = list(column = "gender", row = NULL, superColumn = NULL, superRow = NULL), threshold = NULL,  expect_nr_note = FALSE),
+      list(slots = list(column = "gender", row = "area", superColumn = NULL, superRow = NULL), threshold = 0.005, expect_nr_note = TRUE)
+    )
+
+    for (g in grid) {
+      active_slots_tr <- Filter(
+        function(k) !is.null(g$slots[[k]]) && nzchar(trimws(g$slots[[k]])),
+        c("column", "row", "superColumn", "superRow")
+      )
+      expected_by_tr_and_tm <- (length(active_slots_tr) > 0L) && !is.null(g$threshold)
+      expect_identical(expected_by_tr_and_tm, g$expect_nr_note)
+
+      exp_out <- build_cell_explanation(
+        analysis_var        = "welfare",
+        measures            = "mean",
+        column              = g$slots$column,
+        row                 = g$slots$row,
+        superColumn         = g$slots$superColumn,
+        superRow            = g$slots$superRow,
+        pop_share_threshold = g$threshold,
+        release             = "FIXTURE_2026"
+      )
+      has_nr_note <- any(grepl("shown as \"NR\"", unlist(exp_out$notes), fixed = TRUE))
+      expect_identical(has_nr_note, expected_by_tr_and_tm)
+    }
+  })
+})
+
+test_that("Edge cases: long-filter shares, modifier=null targets, 4 slots, 1-slot age_group, duplicate/empty filters, all 23 measures, and entry validation", {
+  .with_fixture_registry("FIXTURE_2026", {
+    # 1. Long filter (1 var with 3 categories) + shares: out_of never duplicates "everyone in the table"
+    res_long_sh <- build_cell_explanation(
+      analysis_var = "in_labor_force",
+      measures     = c("pop_share", "target_within_group_share", "target_survey_share"),
+      column       = "gender",
+      filter_base  = list(educat4 = c("1", "2", "3")),
+      release      = "FIXTURE_2026"
+    )
+    expect_equal(
+      res_long_sh$what_is_shown$measures[[1L]]$out_of,
+      "everyone in the table (the filtered group above)"
+    )
+    expect_equal(
+      res_long_sh$what_is_shown$measures[[2L]]$counts,
+      "men who are in the labor force"
+    )
+    expect_equal(
+      res_long_sh$what_is_shown$measures[[3L]]$out_of,
+      "everyone in the table (the filtered group above)"
+    )
+
+    # 2. All 4 layout slots active (column, row, superColumn, superRow)
+    res_4slots <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures     = "mean",
+      column       = "gender",
+      row          = "educat4",
+      superColumn  = "area",
+      superRow     = "age_group",
+      release      = "FIXTURE_2026"
+    )
+    expect_length(res_4slots$what_a_cell_is$dimensions, 4L)
+    expect_match(res_4slots$what_a_cell_is$structure_text, "age group (row group)", fixed = TRUE)
+
+    # 3. 1-slot age_group does not double the word "group"; duplicate filter codes deduplicated; empty filter ignored
+    res_age_slot <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures     = "mean",
+      column       = "age_group",
+      filter_base  = list(area = c("0", "0"), empty_var = character(0)),
+      release      = "FIXTURE_2026"
+    )
+    expect_equal(res_age_slot$what_a_cell_is$structure_text, "Each cell is one age group (column).")
+    expect_equal(
+      res_age_slot$who_is_in_table$text,
+      "People living in rural areas. Anyone outside this group is excluded before the table is built."
+    )
+
+    # 4. All 23 canonical measures in tm_measure_spec.yaml render non-empty text with no unexpanded {...}
+    meas_spec <- yaml::read_yaml(
+      system.file("extdata", "tm_measure_spec.yaml", package = "piptm")
+    )$stat_groups
+    for (g in meas_spec) {
+      mkeys <- names(g$measures)
+      avar <- if (identical(g$id, "shares")) {
+        "imp_wat_rec"
+      } else if (identical(g$id, "poverty")) {
+        "pov_status"
+      } else {
+        "welfare"
+      }
+      res_m <- build_cell_explanation(
+        analysis_var = avar,
+        measures     = mkeys,
+        column       = "gender",
+        poverty_line = 2.15,
+        release      = "FIXTURE_2026"
+      )
+      for (m_item in res_m$what_is_shown$measures) {
+        expect_true(nzchar(m_item$text), info = paste("Empty text for", m_item$key))
+        expect_false(grepl("\\{[A-Za-z_]+\\}", m_item$text), info = paste("Unexpanded placeholder in", m_item$key))
+      }
+    }
+
+    # 5. Entry-point argument validation for direct R callers
+    expect_error(build_cell_explanation(analysis_var = NULL, measures = "mean"), "analysis_var")
+    expect_error(build_cell_explanation(analysis_var = "welfare", measures = character(0)), "measures")
+    expect_error(build_cell_explanation(analysis_var = "pov_status", measures = "headcount", poverty_line = -1), "poverty_line")
+    expect_error(build_cell_explanation(analysis_var = "welfare", measures = "mean", ppp = 2017.5), "ppp")
   })
 })

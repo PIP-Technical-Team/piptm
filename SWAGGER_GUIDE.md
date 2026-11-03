@@ -67,8 +67,8 @@ Query parameters (works identically as a POST form body):
 | `analysis_var` | string | yes | e.g. `welfare`, `pov_status`, or any optional dimension from `GET /analysis-variables` |
 | `pip_id` | string[] | yes | repeatable; 1–15 survey identifiers |
 | `measures` | string[] | yes | repeatable; must be in `GET /statistics` |
-| `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or `"pov_status"` appears in `by` |
-| `by` | string[] | no | repeatable; disaggregation dimensions from `GET /dimensions` (supports up to the 4 Decision‑3 layout slots) |
+| `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or `"pov_status"` appears in any layout slot |
+| `column`, `row`, `superColumn`, `superRow` | string | no | Decision-3 layout slots (filled in order without gaps, from `GET /dimensions` / `GET /covariates`) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
 | `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
@@ -301,6 +301,34 @@ Statistics, Inequality, Poverty), loaded from the release's measure registry
 (`inst/extdata/tm_measure_spec.yaml`). This is the source for the Decision 2
 "grouped statistic dropdown".
 
+### `POST /cell-definition` — Page 2 cell explanation (Step 2)
+
+Returns the three-section natural-language cell explanation (`who_is_in_table`,
+`what_a_cell_is`, `what_is_shown`, `notes`) for the current Page 2 configuration
+without calling `table_maker()` or accessing Arrow microdata.
+
+Example JSON request body:
+
+```json
+{
+  "analysis_var": "welfare",
+  "measures": ["mean", "median", "gini"],
+  "column": "gender",
+  "row": "educat4",
+  "superColumn": "area",
+  "filter_base": {
+    "age_group": ["3"],
+    "educat7": ["4"]
+  },
+  "ppp": 2021,
+  "welfare_type": "INC"
+}
+```
+
+In `what_is_shown.measures[]`, `text` and `total_note` provide the displayed
+prose, while `counts` and `out_of` (populated for share measures) are optional
+supporting fields.
+
 ### `GET /health` — health check
 
 Returns `{ "status": "ok", "release": "..." }`. As with `/releases`, `release`
@@ -316,6 +344,7 @@ other endpoints.
 | Step 2, Decision 1 — sample base | `GET /categories` |
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |
+| Step 2 — live cell explanation | `POST /cell-definition` |
 | Step 2 footer / Step 3 results | `GET|POST /table`, `POST /description`, `POST /table/download` |
 | Cross-cutting | `GET /releases`, `GET /health`, `GET /dimensions` |
 
@@ -329,7 +358,9 @@ other endpoints.
    endpoint) it is a **JSON-encoded string** that the server parses with
    `jsonlite::fromJSON()` — a malformed string returns `422`, not `400`. On
    `/description`'s fallback path (a JSON body) it must be a **native nested
-   JSON object**, not a string — it is used as-is with no parsing step.
+   JSON object**, not a string — it is used as-is with no parsing step. On
+   `POST /cell-definition` both a **native nested JSON object** and a
+   **JSON-encoded string** are accepted, and malformed JSON returns `400`.
 4. `pip_id` is capped at 15 values per `/table` request (Step 1's "at most 15
    surveys" rule is enforced server-side, not just in the UI).
 5. `/categories` and `/covariates` support the same optional `pip_id`

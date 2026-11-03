@@ -24,6 +24,8 @@
 .PIP_ID_PATTERN <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
 .SLOT_NAMES <- c("column", "row", "superColumn", "superRow")
 
+`%||%` <- function(x, y) if (!is.null(x)) x else y
+
 #' Build a structured success response envelope
 #'
 #' @param data     The payload to include in the `data` field.
@@ -224,74 +226,34 @@ resolve_release <- function(release) {
 
 # ── Input validators ──────────────────────────────────────────────────────────
 
-#' Validate inputs for the /table endpoint
+#' Shared shape/parameter validator for `/table` and `/cell-definition`
 #'
-#' Checks all user-supplied parameters for the `/table` endpoint. Returns a
-#' list so the handler can act on the validation result and use the coerced
-#' `poverty_line`, `ppp`, `pop_share_threshold`, and assembled `by` values
-#' without re-coercing.
-#'
-#' Checks performed:
-#' \itemize{
-#'   \item `pip_id` is a non-NULL character vector of length 1–15
-#'   \item `measures` is a non-NULL character vector with all elements in
-#'     [piptm:::.MEASURE_REGISTRY]
-#'   \item `analysis_var` is a single non-empty character value
-#'   \item `poverty_line`, if not `NULL`, coerces cleanly to a single numeric
-#'     value and is positive and finite
-#'   \item `poverty_line` is required when `analysis_var == "pov_status"` or
-#'     when `"pov_status"` is assigned to any layout slot
-#'   \item Layout slots (`column`, `row`, `superColumn`, `superRow`) each
-#'     contain at most one dimension in [piptm::pip_valid_dimensions()], are
-#'     filled in order without gaps, and contain no duplicate variables
-#'   \item `ppp`, if not `NULL`, is a single value coercible to a positive
-#'     integer (PPP reference year, e.g. `2017`)
-#'   \item `pop_share_threshold`, if not `NULL` or `""`, coerces to a numeric
-#'     value strictly in `(0, 1)`
-#' }
-#'
-#' Note: `release` validation is handled separately by [resolve_release()].
+#' Validates all Page 2 table-shape parameters (`analysis_var`, `measures`,
+#' `poverty_line`, layout slots `column`/`row`/`superColumn`/`superRow`, `ppp`,
+#' and `pop_share_threshold`). `pip_id` errors from [validate_table_input()] are
+#' spliced in via `pip_id_errors` immediately after `analysis_var` so error
+#' ordering is byte-for-byte identical to the original `validate_table_input()`.
 #'
 #' @param analysis_var        Character scalar analysis variable name.
-#' @param pip_id              Character vector of survey identifiers.
 #' @param measures            Character vector of measure names.
-#' @param poverty_line        Numeric (or coercible) scalar poverty line, or
-#'   `NULL`.
-#' @param column              Character scalar variable for the Columns slot,
-#'   or `NULL`.
-#' @param row                 Character scalar variable for the Rows slot, or
-#'   `NULL`.
-#' @param superColumn         Character scalar variable for the Super Columns
-#'   slot, or `NULL`.
-#' @param superRow            Character scalar variable for the Super Rows
-#'   slot, or `NULL`.
-#' @param ppp                 Integer scalar PPP reference year (e.g. `2017`),
-#'   or `NULL` to use the manifest default. Must be a single positive integer
-#'   value when provided.
-#' @param pop_share_threshold Numeric (or coercible) scalar cell-suppression
-#'   threshold in `(0, 1)`, or `NULL`/`""` to disable suppression.
-#'
-#' @return A named list:
-#'   \describe{
-#'     \item{`valid`}{`TRUE` when all checks pass; `FALSE` otherwise.}
-#'     \item{`errors`}{Character vector of error messages (empty when valid).}
-#'     \item{`poverty_line`}{The coerced numeric scalar, or `NULL`. Use this
-#'       in the handler rather than the original input.}
-#'     \item{`ppp`}{The coerced integer scalar, or `NULL`. Use this in the
-#'       handler rather than the original input.}
-#'     \item{`pop_share_threshold`}{The coerced numeric scalar in `(0, 1)`, or
-#'       `NULL` when suppression is disabled.}
-#'     \item{`by`}{Character vector of filled layout slot variables in slot
-#'       order (`column`, `row`, `superColumn`, `superRow`), or `NULL` when no
-#'       slots are filled.}
-#'     \item{`slots`}{Named list with keys `column`, `row`, `superColumn`, and
-#'       `superRow`, each holding the trimmed variable name or `NULL`.}
-#'   }
-validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_line = NULL,
-                                 column = NULL, row = NULL,
-                                 superColumn = NULL, superRow = NULL,
-                                 ppp = NULL,
-                                 pop_share_threshold = NULL) {
+#' @param poverty_line        Numeric (or coercible) scalar poverty line, or `NULL`.
+#' @param column              Character scalar variable for the Columns slot, or `NULL`.
+#' @param row                 Character scalar variable for the Rows slot, or `NULL`.
+#' @param superColumn         Character scalar variable for the Super Columns slot, or `NULL`.
+#' @param superRow            Character scalar variable for the Super Rows slot, or `NULL`.
+#' @param ppp                 Integer scalar PPP reference year, or `NULL`.
+#' @param pop_share_threshold Numeric (or coercible) scalar cell-suppression threshold in `(0, 1)`, or `NULL`.
+#' @param pip_id_errors       Character vector of `pip_id` validation errors to splice after `analysis_var`.
+#' @return A named list with `valid`, `errors`, `poverty_line`, `ppp`,
+#'   `pop_share_threshold`, `by`, and `slots`.
+#' @keywords internal
+.validate_table_shape <- function(analysis_var = NULL, measures = NULL,
+                                  poverty_line = NULL,
+                                  column = NULL, row = NULL,
+                                  superColumn = NULL, superRow = NULL,
+                                  ppp = NULL,
+                                  pop_share_threshold = NULL,
+                                  pip_id_errors = character()) {
   errors <- character()
 
   # ── analysis_var ───────────────────────────────────────────────────────────
@@ -313,35 +275,9 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     }
   }
 
-  # ── pip_id ─────────────────────────────────────────────────────────────────
-  if (is.null(pip_id) || !is.character(pip_id) || length(pip_id) == 0L) {
-    errors <- c(errors, "`pip_id` must be a non-empty character vector.")
-  } else if (length(pip_id) > .MAX_SURVEYS_PER_REQUEST) {
-    errors <- c(
-      errors,
-      paste0(
-        "`pip_id` may contain at most ", .MAX_SURVEYS_PER_REQUEST,
-        " surveys per request; ",
-        length(pip_id), " were supplied."
-      )
-    )
-  } else {
-    # P1.10 — allowlist: pip_id values must match the canonical survey-ID
-    # pattern (ISO3 _ year _ survey-acronym _ welfare-type _ area-code).
-    # This prevents path-traversal, shell-injection, and garbage input from
-    # reaching the filesystem or computation layer.
-    bad_ids <- pip_id[!grepl(.PIP_ID_PATTERN, pip_id)]
-    if (length(bad_ids) > 0L) {
-      errors <- c(
-        errors,
-        paste0(
-          "`pip_id` value(s) contain invalid characters or format: ",
-          paste(bad_ids, collapse = ", "),
-          ". Expected pattern: ISO3_YYYY_<survey-info> (uppercase letters, ",
-          "digits, hyphens, underscores; max 50 characters)."
-        )
-      )
-    }
+  # ── pip_id (when supplied by validate_table_input) ─────────────────────────
+  if (length(pip_id_errors) > 0L) {
+    errors <- c(errors, pip_id_errors)
   }
 
   # ── measures ───────────────────────────────────────────────────────────────
@@ -634,25 +570,33 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
 
   coerced_threshold <- NULL
   if (!is.null(pop_share_threshold) && !identical(pop_share_threshold, "")) {
-    coerced_threshold <- suppressWarnings(as.numeric(pop_share_threshold))
-    if (is.na(coerced_threshold)) {
+    if ((!is.character(pop_share_threshold) && !is.numeric(pop_share_threshold)) ||
+        length(pop_share_threshold) != 1L) {
       errors <- c(
         errors,
-        paste0(
-          "`pop_share_threshold` must be a numeric value in (0, 1); ",
-          "got: ", substr(as.character(pop_share_threshold), 1L, 40L), "."
-        )
+        "`pop_share_threshold` must be a single numeric value in (0, 1)."
       )
-      coerced_threshold <- NULL
-    } else if (coerced_threshold <= 0 || coerced_threshold >= 1) {
-      errors <- c(
-        errors,
-        paste0(
-          "`pop_share_threshold` must be strictly between 0 and 1; ",
-          "got: ", coerced_threshold, "."
+    } else {
+      coerced_threshold <- suppressWarnings(as.numeric(pop_share_threshold))
+      if (is.na(coerced_threshold) || !is.finite(coerced_threshold)) {
+        errors <- c(
+          errors,
+          paste0(
+            "`pop_share_threshold` must be a numeric value in (0, 1); ",
+            "got: ", substr(as.character(pop_share_threshold), 1L, 40L), "."
+          )
         )
-      )
-      coerced_threshold <- NULL
+        coerced_threshold <- NULL
+      } else if (coerced_threshold <= 0 || coerced_threshold >= 1) {
+        errors <- c(
+          errors,
+          paste0(
+            "`pop_share_threshold` must be strictly between 0 and 1; ",
+            "got: ", coerced_threshold, "."
+          )
+        )
+        coerced_threshold <- NULL
+      }
     }
   }
 
@@ -664,6 +608,252 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
     pop_share_threshold = coerced_threshold,
     by                  = by,
     slots               = slots
+  )
+}
+
+#' Validate inputs for the /table endpoint
+#'
+#' Checks all user-supplied parameters for the `/table` endpoint. Returns a
+#' list so the handler can act on the validation result and use the coerced
+#' `poverty_line`, `ppp`, `pop_share_threshold`, and assembled `by` values
+#' without re-coercing.
+#'
+#' @param analysis_var        Character scalar analysis variable name.
+#' @param pip_id              Character vector of survey identifiers.
+#' @param measures            Character vector of measure names.
+#' @param poverty_line        Numeric (or coercible) scalar poverty line, or `NULL`.
+#' @param column              Character scalar variable for the Columns slot, or `NULL`.
+#' @param row                 Character scalar variable for the Rows slot, or `NULL`.
+#' @param superColumn         Character scalar variable for the Super Columns slot, or `NULL`.
+#' @param superRow            Character scalar variable for the Super Rows slot, or `NULL`.
+#' @param ppp                 Integer scalar PPP reference year, or `NULL`.
+#' @param pop_share_threshold Numeric (or coercible) scalar cell-suppression threshold in `(0, 1)`, or `NULL`.
+#' @return A named list with `valid`, `errors`, `poverty_line`, `ppp`,
+#'   `pop_share_threshold`, `by`, and `slots`.
+validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_line = NULL,
+                                 column = NULL, row = NULL,
+                                 superColumn = NULL, superRow = NULL,
+                                 ppp = NULL,
+                                 pop_share_threshold = NULL) {
+  pip_errors <- character()
+
+  if (is.null(pip_id) || !is.character(pip_id) || length(pip_id) == 0L) {
+    pip_errors <- c(pip_errors, "`pip_id` must be a non-empty character vector.")
+  } else if (length(pip_id) > .MAX_SURVEYS_PER_REQUEST) {
+    pip_errors <- c(
+      pip_errors,
+      paste0(
+        "`pip_id` may contain at most ", .MAX_SURVEYS_PER_REQUEST,
+        " surveys per request; ",
+        length(pip_id), " were supplied."
+      )
+    )
+  } else {
+    bad_ids <- pip_id[!grepl(.PIP_ID_PATTERN, pip_id)]
+    if (length(bad_ids) > 0L) {
+      pip_errors <- c(
+        pip_errors,
+        paste0(
+          "`pip_id` value(s) contain invalid characters or format: ",
+          paste(bad_ids, collapse = ", "),
+          ". Expected pattern: ISO3_YYYY_<survey-info> (uppercase letters, ",
+          "digits, hyphens, underscores; max 50 characters)."
+        )
+      )
+    }
+  }
+
+  .validate_table_shape(
+    analysis_var        = analysis_var,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    column              = column,
+    row                 = row,
+    superColumn         = superColumn,
+    superRow            = superRow,
+    ppp                 = ppp,
+    pop_share_threshold = pop_share_threshold,
+    pip_id_errors       = pip_errors
+  )
+}
+
+#' Validate inputs for the POST /cell-definition endpoint
+#'
+#' Reuses [.validate_table_shape()] for all Page 2 table-shape parameters (no
+#' `pip_id` required), and validates `filter_base` (nested JSON object or
+#' JSON-encoded string), optional `welfare_type` (`"INC"` / `"CON"`), and
+#' coherence of target share measures (`target_within_group_share`,
+#' `target_survey_share`) with `analysis_var`.
+#'
+#' @param body Parsed JSON request body (a named list).
+#' @return A named list with `valid`, `errors`, `analysis_var`, `measures`,
+#'   `poverty_line`, `ppp`, `pop_share_threshold`, `by`, `slots`, `filter_base`,
+#'   and `welfare_type`.
+validate_cell_definition_input <- function(body) {
+  if (!is.list(body) || is.data.frame(body) || length(body) == 0L || is.null(names(body))) {
+    return(list(
+      valid  = FALSE,
+      errors = "Request body must be a non-empty JSON object."
+    ))
+  }
+
+  measures_in <- if (!is.null(body$measures)) {
+    as.character(unlist(body$measures, use.names = FALSE))
+  } else {
+    NULL
+  }
+
+  has_threshold <- "pop_share_threshold" %in% names(body)
+  threshold_in  <- if (has_threshold) body$pop_share_threshold else 0.001
+
+  shape <- .validate_table_shape(
+    analysis_var        = body$analysis_var,
+    measures            = measures_in,
+    poverty_line        = body$poverty_line,
+    column              = body$column,
+    row                 = body$row,
+    superColumn         = body$superColumn,
+    superRow            = body$superRow,
+    ppp                 = body$ppp %||% 2021L,
+    pop_share_threshold = threshold_in
+  )
+
+  errors <- shape$errors
+
+  # Poverty measures require poverty_line even if analysis_var is not pov_status
+  mreg <- piptm:::.MEASURE_REGISTRY
+  poverty_measures <- unique(c(names(mreg)[mreg == "poverty"], "poverty_severity", "npoor"))
+  pov_already_flagged <- identical(body$analysis_var, "pov_status") || ("pov_status" %in% shape$by)
+  if (!is.null(measures_in) && any(measures_in %in% poverty_measures) &&
+      is.null(shape$poverty_line) && !pov_already_flagged) {
+    errors <- c(
+      errors,
+      "`poverty_line` is required when poverty measures are requested."
+    )
+  }
+
+  # Target share measures require a binary target analysis_var
+  target_shares <- c("target_within_group_share", "target_survey_share")
+  valid_targets <- names(piptm:::.get_cell_prose()$targets)
+  if (!is.null(measures_in) && any(measures_in %in% target_shares) &&
+      !is.null(body$analysis_var) && is.character(body$analysis_var) &&
+      length(body$analysis_var) == 1L && nzchar(trimws(body$analysis_var)) &&
+      !trimws(body$analysis_var) %in% valid_targets) {
+    errors <- c(
+      errors,
+      paste0(
+        "Target share measures (`target_within_group_share`, `target_survey_share`) ",
+        "require a binary target `analysis_var` (not `", trimws(body$analysis_var), "`)."
+      )
+    )
+  }
+
+  # filter_base validation (nested object or JSON-encoded string)
+  parsed_fb <- NULL
+  if (!is.null(body$filter_base) && length(body$filter_base) > 0L) {
+    fb_raw <- body$filter_base
+    if (is.character(fb_raw)) {
+      if (length(fb_raw) != 1L || is.na(fb_raw)) {
+        errors <- c(errors, "`filter_base` must be a JSON object or a single JSON-encoded string.")
+      } else if (nzchar(trimws(fb_raw))) {
+        fb_try <- tryCatch(
+          jsonlite::fromJSON(fb_raw, simplifyVector = TRUE),
+          error = function(e) structure(list(msg = conditionMessage(e)), class = "fb_parse_err")
+        )
+        if (inherits(fb_try, "fb_parse_err") || !is.list(fb_try) || is.data.frame(fb_try)) {
+          errors <- c(errors, "`filter_base` string is not valid JSON for a named filter object.")
+        } else {
+          parsed_fb <- fb_try
+        }
+      }
+    } else if (is.list(fb_raw) && !is.data.frame(fb_raw)) {
+      parsed_fb <- fb_raw
+    } else {
+      errors <- c(errors, "`filter_base` must be a named JSON object mapping variable names to category codes.")
+    }
+
+    if (!is.null(parsed_fb) && length(parsed_fb) > 0L) {
+      fb_names <- names(parsed_fb)
+      if (is.null(fb_names) || any(is.na(fb_names)) || any(!nzchar(trimws(fb_names)))) {
+        errors <- c(errors, "`filter_base` must be a named JSON object with non-empty variable names.")
+        parsed_fb <- NULL
+      } else {
+        valid_dims <- intersect(
+          piptm::pip_valid_dimensions(),
+          names(piptm:::.get_cell_prose()$variables)
+        )
+        unknown_fb <- setdiff(fb_names, valid_dims)
+        if (length(unknown_fb) > 0L) {
+          errors <- c(
+            errors,
+            paste0(
+              "Unknown `filter_base` dimension(s): ",
+              paste(unknown_fb, collapse = ", "),
+              ". Valid dimensions: ",
+              paste(valid_dims, collapse = ", "),
+              "."
+            )
+          )
+        }
+        for (fnm in fb_names) {
+          vals <- unlist(parsed_fb[[fnm]], use.names = FALSE)
+          if (length(vals) == 0L || is.logical(vals) ||
+              (!is.character(vals) && !is.numeric(vals)) ||
+              anyNA(vals) || any(!nzchar(trimws(as.character(vals))))) {
+            errors <- c(
+              errors,
+              paste0("`filter_base$", fnm, "` must be a non-empty vector of non-missing category codes.")
+            )
+          } else {
+            parsed_fb[[fnm]] <- unique(trimws(as.character(vals)))
+          }
+        }
+      }
+    }
+  }
+
+  # Optional welfare_type ("INC" or "CON", case-insensitive)
+  norm_wt <- NULL
+  if (!is.null(body$welfare_type) && !identical(body$welfare_type, "")) {
+    if (!is.character(body$welfare_type) || length(body$welfare_type) != 1L || is.na(body$welfare_type)) {
+      errors <- c(errors, "`welfare_type` must be \"INC\" or \"CON\" when provided.")
+    } else {
+      wt_up <- toupper(trimws(body$welfare_type))
+      if (!wt_up %in% c("INC", "CON")) {
+        errors <- c(
+          errors,
+          paste0("`welfare_type` must be \"INC\" or \"CON\"; got: ", body$welfare_type, ".")
+        )
+      } else {
+        norm_wt <- wt_up
+      }
+    }
+  }
+
+  # Optional release (must be a single non-missing character or numeric scalar when provided)
+  norm_rel <- NULL
+  if (!is.null(body$release) && !identical(body$release, "")) {
+    if ((!is.character(body$release) && !is.numeric(body$release)) ||
+        length(body$release) != 1L || is.na(body$release) || !nzchar(trimws(as.character(body$release)))) {
+      errors <- c(errors, "`release` must be a single non-empty character value when provided.")
+    } else {
+      norm_rel <- trimws(as.character(body$release))
+    }
+  }
+
+  list(
+    valid               = length(errors) == 0L,
+    errors              = errors,
+    analysis_var        = if (!is.null(body$analysis_var) && is.character(body$analysis_var) && length(body$analysis_var) == 1L) trimws(body$analysis_var) else NULL,
+    measures            = measures_in,
+    poverty_line        = shape$poverty_line,
+    ppp                 = shape$ppp %||% 2021L,
+    pop_share_threshold = shape$pop_share_threshold,
+    by                  = shape$by,
+    slots               = shape$slots,
+    filter_base         = parsed_fb,
+    welfare_type        = norm_wt,
+    release             = norm_rel
   )
 }
 

@@ -1,15 +1,15 @@
 ---
 date: 2026-11-02
 title: "Page 2 cell definition endpoint (POST /cell-definition)"
-status: active
+status: completed
+completed-date: 2026-11-02
 scope: "Deep"
 brainstorm: ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md"
 language: "R"
 estimated-effort: "medium"
 deviation-policy: "ask"
 phases: 2
-completed-phases: [1]
-current-phase: 2
+completed-phases: [1, 2]
 execution-report: ".cg-docs/work-reports/2026-11-02-page2-cell-definition-endpoint.md"
 artifact-schema-version: 1
 tags: [cell-definition, page-2, api, endpoint, shares, prose, table-maker]
@@ -199,11 +199,11 @@ Both P3 observations are also folded in: `yaml` stays in `Suggests` (guarded by 
 
 ## Documentation Checklist
 
-- [ ] `R/cell_explanation.R` roxygen2 documentation + `NAMESPACE` export + `man/build_cell_explanation.Rd`
-- [ ] `inst/plumber/plumber.R` roxygen/plumber annotations for `POST /cell-definition`
-- [ ] `docs/api-contract.md` Step 2 mapping and endpoint specification
-- [ ] `SWAGGER_GUIDE.md` example request payload for `POST /cell-definition`
-- [ ] Fixture registry header comment explaining its maintenance obligation (Step 1)
+- [x] `R/cell_explanation.R` roxygen2 documentation + `NAMESPACE` export + `man/build_cell_explanation.Rd`
+- [x] `inst/plumber/plumber.R` roxygen/plumber annotations for `POST /cell-definition`
+- [x] `docs/api-contract.md` Step 2 mapping and endpoint specification
+- [x] `SWAGGER_GUIDE.md` example request payload for `POST /cell-definition`
+- [x] Fixture registry header comment explaining its maintenance obligation (Step 1)
 
 ## Risks & Mitigations
 

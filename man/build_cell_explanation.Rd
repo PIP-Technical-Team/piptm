@@ -56,3 +56,20 @@ registry (if loaded), and \code{inst/extdata/tm_cell_prose.yaml}. Never calls
 \code{\link[=table_maker]{table_maker()}}, never loads Arrow microdata, and never emits sample sizes
 or computed data values.
 }
+\examples{
+build_cell_explanation(
+  analysis_var = "welfare",
+  measures     = c("mean", "gini"),
+  column       = "gender",
+  row          = "area",
+  ppp          = 2021L,
+  welfare_type = "INC"
+)
+}
+\seealso{
+Other api:
+\code{\link{format_table_output}()},
+\code{\link{serialize_table_response}()},
+\code{\link{table_maker}()}
+}
+\concept{api}

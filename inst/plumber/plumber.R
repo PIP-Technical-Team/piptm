@@ -14,6 +14,7 @@
 #   GET|POST /table
 #   POST /table/download
 #   POST /description
+#   POST /cell-definition
 #   GET /lookup
 #   GET /surveys
 #   GET /countries
@@ -878,4 +879,90 @@ function(release = NULL, res) {
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
   api_response(out$result$data, warnings = out$warnings,
                meta = list(release = out$result$rel))
+}
+
+# ── POST /cell-definition ─────────────────────────────────────────────────────
+
+#* Return a three-section natural-language explanation of what each cell in the
+#* configured table represents (Page 2, Step 2).
+#*
+#* Pure function of the Page 2 configuration parameters and the release
+#* variable registry. Does not call `table_maker()` and does not access Arrow
+#* microdata.
+#*
+#* @param body:object Request body (JSON object with `analysis_var`, `measures`,
+#*   optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`,
+#*   `filter_base`, `ppp`, `pop_share_threshold`, `welfare_type`, `release`).
+#* @parser json
+#* @serializer json list(na = "null")
+#* @post /cell-definition
+function(req, body = NULL, res) {
+  if (is.null(body)) {
+    raw_body <- tryCatch(
+      if (!is.null(req$postBody)) {
+        req$postBody
+      } else {
+        req$rook.input$read_lines()
+      },
+      error = function(e) NULL
+    )
+    if (is.character(raw_body) && length(raw_body) > 1L) {
+      raw_body <- paste(raw_body, collapse = "\n")
+    }
+    if (is.null(raw_body) || length(raw_body) == 0L || !nzchar(trimws(raw_body))) {
+      return(api_error("Request body must be a non-empty JSON object.", 400L, res))
+    }
+
+    body <- tryCatch(
+      jsonlite::fromJSON(raw_body, simplifyVector = TRUE),
+      error = function(e) NULL
+    )
+  }
+  if (is.null(body) || !is.list(body) || is.data.frame(body) ||
+      length(body) == 0L || is.null(names(body))) {
+    return(api_error("Request body must be a non-empty JSON object.", 400L, res))
+  }
+
+  check <- validate_cell_definition_input(body)
+  if (!check$valid) {
+    return(api_error(check$errors, 400L, res))
+  }
+
+  out <- capture_with_warnings({
+    rel_in <- check$release
+    rel <- if (!is.null(rel_in) && nzchar(rel_in)) {
+      resolve_release(rel_in)
+    } else {
+      tryCatch(piptm::piptm_current_release(), error = function(e) NULL)
+    }
+
+    exp_res <- piptm::build_cell_explanation(
+      analysis_var        = check$analysis_var,
+      measures            = check$measures,
+      poverty_line        = check$poverty_line,
+      column              = check$slots$column,
+      row                 = check$slots$row,
+      superColumn         = check$slots$superColumn,
+      superRow            = check$slots$superRow,
+      filter_base         = check$filter_base,
+      ppp                 = check$ppp,
+      pop_share_threshold = check$pop_share_threshold,
+      welfare_type        = check$welfare_type,
+      release             = rel
+    )
+
+    list(
+      data     = exp_res[c("schema_version", "who_is_in_table", "what_a_cell_is", "what_is_shown", "notes")],
+      warnings = as.character(unlist(exp_res$warnings, use.names = FALSE)),
+      rel      = rel
+    )
+  })
+
+  if (!is.null(out$error)) {
+    return(api_error(out$error, 422L, res))
+  }
+
+  all_warnings <- unique(c(out$warnings, out$result$warnings))
+  meta_out <- if (!is.null(out$result$rel)) list(release = out$result$rel) else list()
+  api_response(out$result$data, warnings = all_warnings, meta = meta_out)
 }

@@ -2,9 +2,6 @@
 # Spec sync test between tm_variable_spec.yaml, tm_measure_spec.yaml,
 # tests/testthat/fixtures/registry-cell-prose-sample.json, and tm_cell_prose.yaml.
 
-library(testthat)
-library(jsonlite)
-
 .resolve_extdata <- function(filename) {
   p <- tryCatch(
     file.path(rprojroot::find_package_root_file(), "inst", "extdata", filename),
@@ -138,6 +135,13 @@ test_that("Step 2: tm_cell_prose.yaml stays in sync with variable/measure specs 
           setdiff(names(v_prose$nouns), fixture_codes),
           character(0),
           info = paste("Unmatched noun codes in tm_cell_prose.yaml for", vname)
+        )
+      }
+      if (!is.null(v_prose$adjectives)) {
+        expect_equal(
+          setdiff(names(v_prose$adjectives), fixture_codes),
+          character(0),
+          info = paste("Unmatched adjective codes in tm_cell_prose.yaml for", vname)
         )
       }
       if (!is.null(v_prose$overrides)) {

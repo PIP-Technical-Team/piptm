@@ -1,5 +1,11 @@
 schema_version: "1.0"
 
+# Note: Entries for variables/measures defined in tm_variable_spec.yaml or
+# tm_measure_spec.yaml that are not yet enabled in piptm.optional_vars or
+# .MEASURE_REGISTRY (e.g. educy, _year/_2 labor variants, ratio/alias measures)
+# are intentionally retained here for forward-compatible spec sync coverage
+# (verified by tests/testthat/test-cell-prose-sync.R).
+
 # ==============================================================================
 # 1. Analysis variables (non-share continuous & poverty variables)
 # ==============================================================================
@@ -265,7 +271,7 @@ targets:
     modifier: "youth (aged 15\u201324)"
     rate_noun: "youth share"
   prime_work_age:
-    predicate: "are of prime working age (25\u201364)"
+    predicate: "are of prime working age (25\u201354)"
     modifier: "prime-working-age"
     rate_noun: "prime-working-age share"
   elderly:
