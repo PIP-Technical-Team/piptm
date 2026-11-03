@@ -851,6 +851,7 @@ test_that("validate_table_input() output is byte-for-byte identical to pre-refac
 })
 
 test_that("validate_cell_definition_input() validates Page 2 parameters without pip_id", {
+  skip_if_not_installed("yaml")
   ok <- validate_cell_definition_input(list(
     analysis_var = "welfare",
     measures     = c("mean", "gini"),

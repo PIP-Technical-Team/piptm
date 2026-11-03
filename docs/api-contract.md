@@ -167,7 +167,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `release` *(optional, string)* — Release ID; defaults to the current release.
 - **Responses:**
   - `200 OK` — Standard `ResponseEnvelope` with `data` containing `{ schema_version, who_is_in_table, what_a_cell_is, what_is_shown, notes }`. If the variable registry for `release` is unavailable, degrades gracefully to raw-code labels (`"code 1"`, etc.) and populates `warnings[]`.
-  - `400 Bad Request` — Missing/invalid parameters, slot gaps or duplicates, `analysis_var` repeated in a slot, missing `poverty_line` for poverty measures/`pov_status`, or target share measures (`target_within_group_share`, `target_survey_share`) requested with `analysis_var = "welfare"` or `"pov_status"`.
+  - `400 Bad Request` — Missing/invalid parameters, slot gaps or duplicates, `analysis_var` repeated in a slot, missing `poverty_line` for poverty measures/`pov_status`, or target share measures (`target_within_group_share`, `target_survey_share`) requested with a non-binary target `analysis_var`.
   - `422 Unprocessable Entity` — Explicit `release` does not exist in loaded manifests.
 - **Response Schema (`data`):**
   ```json
