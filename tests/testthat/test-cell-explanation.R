@@ -450,6 +450,24 @@ test_that("R8(b): Filter variable also used as a layout slot emits overlap note 
   })
 })
 
+test_that("R9(P3.1): 3+ filter variables join multiple 'who also' clauses with 'and'", {
+  .with_fixture_registry("FIXTURE_2026", {
+    res <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures     = "mean",
+      filter_base  = list(age_group = "3", educat7 = "4", area = "0"),
+      release      = "FIXTURE_2026"
+    )
+    expect_equal(
+      res$who_is_in_table$text,
+      paste0(
+        "People aged 25\u201364 who also have incomplete secondary education ",
+        "and who also live in rural areas. Anyone outside this group is excluded before the table is built."
+      )
+    )
+  })
+})
+
 test_that("R8(c) / V5: NR suppression note trigger matches R/table_response.R active_slots condition and R/table_maker.R", {
   # 1. Inspect the real source files to verify the structural condition has not drifted
   tr_path <- tryCatch(

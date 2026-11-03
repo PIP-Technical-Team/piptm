@@ -933,6 +933,15 @@ test_that("validate_cell_definition_input() validates Page 2 parameters without 
   expect_false(bad_fb_cont$valid)
   expect_true(any(grepl("Unknown `filter_base` dimension", bad_fb_cont$errors)))
 
+  # Rejects logical-valued filter_base codes (P3.2 — must not silently coerce TRUE/FALSE)
+  bad_fb_logical <- validate_cell_definition_input(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(age_group = TRUE)
+  ))
+  expect_false(bad_fb_logical$valid)
+  expect_true(any(grepl("filter_base\\$age_group", bad_fb_logical$errors)))
+
   # Rejects vector pop_share_threshold and non-scalar release
   bad_vec_thresh <- validate_cell_definition_input(list(
     analysis_var        = "welfare",
