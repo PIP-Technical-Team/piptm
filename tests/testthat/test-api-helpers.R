@@ -969,3 +969,146 @@ test_that("validate_cell_definition_input() validates Page 2 parameters without 
   expect_true(any(grepl("poverty_line", bad_pov$errors)))
 })
 
+test_that("validate_cell_definition_query() validates Page 2 parameters from query args", {
+  skip_if_not_installed("yaml")
+
+  ok <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = c("mean", "gini"),
+    column       = "gender",
+    row          = "educat4",
+    filter_base  = '{"age_group":["2","3"]}',
+    ppp          = 2021L,
+    welfare_type = "inc"
+  )
+  expect_true(ok$valid)
+  expect_equal(ok$errors, character(0))
+  expect_equal(ok$welfare_type, "INC")
+  expect_equal(ok$filter_base, list(age_group = c("2", "3")))
+
+  # Rejects malformed JSON string filter_base
+  bad_fb <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = "{not valid json"
+  )
+  expect_false(bad_fb$valid)
+  expect_true(any(grepl("filter_base", bad_fb$errors)))
+
+  # Rejects unknown filter_base dimension
+  bad_fb_dim <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = '{"bogus_dim":["1"]}'
+  )
+  expect_false(bad_fb_dim$valid)
+  expect_true(any(grepl("bogus_dim", bad_fb_dim$errors)))
+
+  # Rejects invalid welfare_type
+  bad_wt <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    welfare_type = "INVALID"
+  )
+  expect_false(bad_wt$valid)
+  expect_true(any(grepl("welfare_type", bad_wt$errors)))
+
+  # Rejects target share measures when analysis_var is welfare, pov_status, or continuous ("age")
+  bad_target_share <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "target_survey_share"
+  )
+  expect_false(bad_target_share$valid)
+  expect_true(any(grepl("binary target", bad_target_share$errors, ignore.case = TRUE)))
+
+  bad_age_share <- validate_cell_definition_query(
+    analysis_var = "age",
+    measures     = "target_within_group_share"
+  )
+  expect_false(bad_age_share$valid)
+  expect_true(any(grepl("binary target", bad_age_share$errors, ignore.case = TRUE)))
+
+  # Rejects NA or empty category codes and non-filter continuous variables in filter_base
+  bad_fb_na <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = '{"age_group":["1",null]}'
+  )
+  expect_false(bad_fb_na$valid)
+  expect_true(any(grepl("filter_base\\$age_group", bad_fb_na$errors)))
+
+  bad_fb_cont <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = '{"age":["25"]}'
+  )
+  expect_false(bad_fb_cont$valid)
+  expect_true(any(grepl("Unknown `filter_base` dimension", bad_fb_cont$errors)))
+
+  # Rejects nested dictionary/object or data frame in filter_base dimension (P0.1)
+  bad_fb_nested <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = '{"age_group":{"min":1,"max":5}}'
+  )
+  expect_false(bad_fb_nested$valid)
+  expect_true(any(grepl("flat vector of category codes", bad_fb_nested$errors)))
+
+  # Rejects vector pop_share_threshold and non-scalar release
+  bad_vec_thresh <- validate_cell_definition_query(
+    analysis_var        = "welfare",
+    measures            = "mean",
+    pop_share_threshold = c(0.001, 0.005)
+  )
+  expect_false(bad_vec_thresh$valid)
+  expect_true(any(grepl("pop_share_threshold", bad_vec_thresh$errors)))
+
+  bad_rel <- validate_cell_definition_query(
+    analysis_var = "welfare",
+    measures     = "mean",
+    release      = c("REL1", "REL2")
+  )
+  expect_false(bad_rel$valid)
+  expect_true(any(grepl("release", bad_rel$errors)))
+
+  # Rejects poverty measures without poverty_line
+  bad_pov <- validate_cell_definition_query(
+    analysis_var = "pov_status",
+    measures     = "headcount"
+  )
+  expect_false(bad_pov$valid)
+  expect_true(any(grepl("poverty_line", bad_pov$errors)))
+
+  # Error message parity: verify error strings are identical between validators for equivalent inputs
+  input_cases <- list(
+    bad_target_share = list(
+      query = list(analysis_var = "welfare", measures = "target_survey_share"),
+      body  = list(analysis_var = "welfare", measures = "target_survey_share")
+    ),
+    bad_wt = list(
+      query = list(analysis_var = "welfare", measures = "mean", welfare_type = "INVALID"),
+      body  = list(analysis_var = "welfare", measures = "mean", welfare_type = "INVALID")
+    ),
+    bad_fb_dim = list(
+      query = list(
+        analysis_var = "welfare",
+        measures = "mean",
+        filter_base = '{"bogus_dim":["1"]}'
+      ),
+      body  = list(
+        analysis_var = "welfare",
+        measures = "mean",
+        filter_base = list(bogus_dim = "1")
+      )
+    ),
+    bad_pov = list(
+      query = list(analysis_var = "pov_status", measures = "headcount"),
+      body  = list(analysis_var = "pov_status", measures = "headcount")
+    )
+  )
+  for (cname in names(input_cases)) {
+    q_res <- do.call(validate_cell_definition_query, input_cases[[cname]]$query)
+    b_res <- validate_cell_definition_input(input_cases[[cname]]$body)
+    expect_identical(q_res$errors, b_res$errors)
+  }
+})

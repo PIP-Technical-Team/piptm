@@ -58,7 +58,7 @@ components:
 | UI Step | Description | Endpoints |
 |---------|-------------|-----------|
 | Step 1 — Survey selection | Discover releases, manifest rows, categories, and persist selections | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup`, `/session/surveys`, `/session/<id>/surveys` |
-| Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions, and explain what each cell in the configured table represents | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions`, `/cell-definition` (POST) |
+| Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions, and explain what each cell in the configured table represents | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions`, `/cell-definition` (GET) |
 | Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
 
@@ -153,16 +153,16 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `200 OK` — `data = { "pip_id": [ ... ] }`
   - `404 Not Found` — Session missing or expired.
 
-### `/cell-definition` — POST (Step 2)
+### `/cell-definition` — GET (Step 2)
 - **Purpose:** Return a result-free, three-section natural-language explanation (*Who is in the table*, *What a cell is*, *What is shown in that cell*) of what each cell in the configured `/table` output represents, based solely on the Page 2 decisions and the release variable registry. Never calls `table_maker()` and never touches Arrow microdata.
-- **JSON Request Body:**
+- **Query Parameters:**
   - `analysis_var` *(required, string)* — `welfare`, `pov_status`, or any entry from `/analysis-variables`.
-  - `measures` *(required, string[])* — One or more measure names from `/statistics`.
+  - `measures` *(required, string, repeatable)* — One or more measure names from `/statistics` (`measures=mean&measures=gini`).
   - `poverty_line` *(conditional, numeric)* — Required when `analysis_var == "pov_status"`, any layout slot is `"pov_status"`, or any poverty measure is requested.
   - `column`, `row`, `superColumn`, `superRow` *(optional, string)* — Layout slot assignments. Same no-gap and no-duplicate rules as `/table` (`column` → `row` → `superColumn` → `superRow`).
-  - `filter_base` *(optional, JSON object or JSON-encoded string)* — Sample-base filter mapping variable names to allowed category codes (e.g. `{ "age_group": ["3"], "educat7": ["4"] }`).
+  - `filter_base` *(optional, JSON-encoded string)* — Sample-base filter mapping variable names to allowed category codes, for example `{"age_group":["3"],"educat7":["4"]}`.
   - `ppp` *(optional, integer)* — PPP reference year (default `2021`).
-  - `pop_share_threshold` *(optional, numeric in (0, 1) or null)* — Default `0.001` (0.1%); `null` disables the `"NR"` suppression note.
+  - `pop_share_threshold` *(optional, numeric in (0, 1))* — Default `0.001` (0.1%); empty string disables the `"NR"` suppression note.
   - `welfare_type` *(optional, `"INC"` | `"CON"`)* — Resolves monetary welfare wording to `"daily income"` (`"INC"`) or `"daily consumption"` (`"CON"`); defaults to `"daily welfare"` when omitted.
   - `release` *(optional, string)* — Release ID; defaults to the current release.
 - **Responses:**
@@ -428,7 +428,7 @@ Access-Control-Allow-Headers: Content-Type
 | `/table` | GET, POST | Execute tables for selected surveys |
 | `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
 | `/description` | POST | Render natural-language table description |
-| `/cell-definition` | POST | Return Page 2 three-section cell explanation JSON |
+| `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |
 | `/categories` | GET | Power Step 1 Available Variables filter chips |

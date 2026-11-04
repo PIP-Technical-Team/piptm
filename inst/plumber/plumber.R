@@ -14,7 +14,7 @@
 #   GET|POST /table
 #   POST /table/download
 #   POST /description
-#   POST /cell-definition
+#   GET /cell-definition
 #   GET /lookup
 #   GET /surveys
 #   GET /countries
@@ -881,7 +881,7 @@ function(release = NULL, res) {
                meta = list(release = out$result$rel))
 }
 
-# ── POST /cell-definition ─────────────────────────────────────────────────────
+# ── GET /cell-definition ──────────────────────────────────────────────────────
 
 #* Return a three-section natural-language explanation of what each cell in the
 #* configured table represents (Page 2, Step 2).
@@ -890,40 +890,46 @@ function(release = NULL, res) {
 #* variable registry. Does not call `table_maker()` and does not access Arrow
 #* microdata.
 #*
-#* @param body:object Request body (JSON object with `analysis_var`, `measures`,
-#*   optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`,
-#*   `filter_base`, `ppp`, `pop_share_threshold`, `welfare_type`, `release`).
-#* @parser json
+#* @param analysis_var:character Analysis variable name (required).
+#* @param measures:[character] Measure names (required, repeatable).
+#* @param poverty_line:numeric Poverty line value (required when
+#*   `analysis_var = "pov_status"`, `"pov_status"` appears in any layout slot,
+#*   or poverty measures are requested).
+#* @param column:character Variable placed in the Columns slot (optional).
+#* @param row:character Variable placed in the Rows slot (optional).
+#* @param superColumn:character Variable placed in the Super Columns slot (optional).
+#* @param superRow:character Variable placed in the Super Rows slot (optional).
+#*   Layout slots must be filled in order (column, row, superColumn, superRow);
+#*   gaps and repeated variables are rejected with HTTP 400.
+#* @param filter_base:character JSON-encoded sample-base filter object
+#*   (optional), for example `{"gender":[0],"age_group":[1,2]}`.
+#* @param ppp:integer PPP reference year (optional; default `2021`). Must be a
+#*   positive integer; invalid values return HTTP 400.
+#* @param pop_share_threshold:numeric Optional cell-suppression threshold
+#*   (default `0.001`). Use null/empty to disable suppression.
+#* @param welfare_type:character Optional `"INC"` or `"CON"` for welfare wording.
+#* @param release:character Release ID (optional; defaults to current release).
 #* @serializer json list(na = "null")
-#* @post /cell-definition
-function(req, body = NULL, res) {
-  if (is.null(body)) {
-    raw_body <- tryCatch(
-      if (!is.null(req$postBody)) {
-        req$postBody
-      } else {
-        req$rook.input$read_lines()
-      },
-      error = function(e) NULL
-    )
-    if (is.character(raw_body) && length(raw_body) > 1L) {
-      raw_body <- paste(raw_body, collapse = "\n")
-    }
-    if (is.null(raw_body) || length(raw_body) == 0L || !nzchar(trimws(raw_body))) {
-      return(api_error("Request body must be a non-empty JSON object.", 400L, res))
-    }
+#* @get /cell-definition
+function(analysis_var = NULL, measures = NULL, poverty_line = NULL,
+         column = NULL, row = NULL, superColumn = NULL, superRow = NULL,
+         filter_base = NULL, ppp = 2021L, pop_share_threshold = 0.001,
+         welfare_type = NULL, release = NULL, res) {
 
-    body <- tryCatch(
-      jsonlite::fromJSON(raw_body, simplifyVector = TRUE),
-      error = function(e) NULL
-    )
-  }
-  if (is.null(body) || !is.list(body) || is.data.frame(body) ||
-      length(body) == 0L || is.null(names(body))) {
-    return(api_error("Request body must be a non-empty JSON object.", 400L, res))
-  }
-
-  check <- validate_cell_definition_input(body)
+  check <- validate_cell_definition_query(
+    analysis_var        = analysis_var,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    column              = column,
+    row                 = row,
+    superColumn         = superColumn,
+    superRow            = superRow,
+    filter_base         = filter_base,
+    ppp                 = ppp,
+    pop_share_threshold = pop_share_threshold,
+    welfare_type        = welfare_type,
+    release             = release
+  )
   if (!check$valid) {
     return(api_error(check$errors, 400L, res))
   }

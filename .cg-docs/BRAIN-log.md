@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-10-26 · 123 artifacts (newest first) + 36 roadmap features_
+_Generated 2026-11-04 · 133 artifacts (newest first) + 38 roadmap features_
 
 ## undated
 
@@ -20,6 +20,35 @@ _Generated 2026-10-26 · 123 artifacts (newest first) + 36 roadmap features_
   > **Review depth**: thorough **Files reviewed**: `R/load_data.R`, `tests/testthat/test-load-data.R` **Findings**: 9 (P0…
 - **[README](.cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md)** · `brainstorm` · _—_ · `—`
   > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
+
+## 2026-11-04
+
+- **[2026-11-04-cell-definition-get-only-review](.cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md)** · `review` · _—_ · `2026-11-04`
+  > **Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `R/cell_explanat…
+- **[2026-11-04-cell-definition-get-only-verify-review](.cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md)** · `review` · _—_ · `2026-11-04`
+  > **Review mode**: light (mode:verify) **Files reviewed**: 9 (`R/cell_explanation.R`, `inst/plumber/helpers.R`, `inst/p…
+- **[Advisory-item deferral: delegating request-body builder architecture to platform layer](.cg-docs/solutions/bugs/2026-11-04-advisory-deferral-request-builder-architecture.md)** · `solution` · _—_ · `2026-11-04`
+  > During GET-only migration of `/cell-definition`, the standard review flagged [P3.7], an advisory finding: > `validate…
+- **[Query-parameter endpoint migration: testing and validator hardening for GET routes](.cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md)** · `solution` · _—_ · `2026-11-04`
+  > Migrating a plumber endpoint from `POST /cell-definition` (JSON-body request) to `GET /cell-definition` (query-parame…
+- **[Replace POST /cell-definition with GET /cell-definition](.cg-docs/plans/2026-11-04-cell-definition-get-only.md)** · `plan` · _completed_ · `2026-11-04`
+  > Replace the existing `POST /cell-definition` route with a `GET /cell-definition` route that accepts the same Page 2 c…
+
+## 2026-11-03
+
+- **[2026-11-02-page2-cell-definition-endpoint-review](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: architecture **Files reviewed**: 14 **Findings**: 15 (P0: 0, P1: 5, P2: 6, P3: 4)
+- **[2026-11-02-page2-cell-definition-endpoint-verify-review](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: verify (light, `@cg-code-quality` + `@cg-testing` only) **Files reviewed**: 7 (`R/cell_explanation.R…
+- **[2026-11-02-page2-cell-definition-endpoint-verify-review-2](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review-2.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: verify (light, `@cg-code-quality` + `@cg-testing`) **Files reviewed**: 8 **Findings**: 2 (P0: 0, P1:…
+
+## 2026-11-02
+
+- **[Page 2 cell definition endpoint \(POST /cell-definition\)](.cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md)** · `plan` · _completed_ · `2026-11-02`
+  > Implement a result-free Page 2 cell explanation feature consisting of a dedicated curated prose specification (`inst/…
+- **[Page 2 cell definition endpoint, and phasing of the metadata rework](.cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md)** · `brainstorm` · _decided_ · `2026-11-02`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 
 ## 2026-10-26
 
@@ -390,6 +419,8 @@ _Generated 2026-10-26 · 123 artifacts (newest first) + 36 roadmap features_
   > API value formatting and string NR response contract
 - **[Arrow push-down vs. in-memory compute benchmark](roadmap.json#arrow-vs-collapse-benchmark)** · `feature` · _done_ · `—`
   > Arrow push-down vs. in-memory compute benchmark
+- **[Replace POST /cell-definition with GET /cell-definition](roadmap.json#cell-definition-get-only)** · `feature` · _done_ · `—`
+  > Replace POST /cell-definition with GET /cell-definition
 - **[Family-based computation orchestrator \(compute_measures\)](roadmap.json#computation-engine-family-orchestrator)** · `feature` · _done_ · `—`
   > Family-based computation orchestrator (compute_measures)
 - **[CRAN readiness \(devtools::check clean\)](roadmap.json#cran-readiness)** · `feature` · _planned_ · `—`
@@ -422,6 +453,8 @@ _Generated 2026-10-26 · 123 artifacts (newest first) + 36 roadmap features_
   > obs_share and pop_share measures
 - **[Orchestration: batch vs. per-survey optimization](roadmap.json#orchestration-batch-vs-per-survey)** · `feature` · _done_ · `—`
   > Orchestration: batch vs. per-survey optimization
+- **[Page 2 cell definition endpoint \(POST /cell-definition\)](roadmap.json#page2-cell-definition-endpoint)** · `feature` · _done_ · `—`
+  > Page 2 cell definition endpoint (POST /cell-definition)
 - **[Parquet file validation \(schema + data checks\)](roadmap.json#parquet-validation-schema-data)** · `feature` · _active_ · `—`
   > Parquet file validation (schema + data checks)
 - **[Performance benchmarking and profiling](roadmap.json#performance-profiling)** · `feature` · _active_ · `—`

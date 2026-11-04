@@ -3,7 +3,7 @@
 # Reads curated prose fragments from `inst/extdata/tm_cell_prose.yaml` (cached
 # in `.piptm_env$cell_prose`) and composes the three-section cell explanation
 # (`who_is_in_table`, `what_a_cell_is`, `what_is_shown`, `notes`) for
-# `POST /cell-definition` without calling `table_maker()` or touching Arrow
+# `GET /cell-definition` without calling `table_maker()` or touching Arrow
 # microdata.
 
 #' Load and cache `inst/extdata/tm_cell_prose.yaml`

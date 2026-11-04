@@ -1,31 +1,50 @@
-# Plan: .cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md (Phase 2, Step 5)
-# Integration tests for POST /cell-definition using socket-free pr$call()
+# Plan: .cg-docs/plans/2026-11-04-cell-definition-get-only.md (Phase 2, Step 3)
+# Integration tests for GET /cell-definition using socket-free pr$call()
 
-make_cell_def_req <- function(body = NULL, raw_str = NULL, raw_lines = NULL) {
-  body_raw <- if (!is.null(raw_lines)) {
-    charToRaw(paste(raw_lines, collapse = "\n"))
-  } else if (!is.null(raw_str)) {
-    charToRaw(raw_str)
-  } else if (!is.null(body)) {
-    charToRaw(jsonlite::toJSON(body, auto_unbox = TRUE, null = "null"))
+make_cell_def_get_req <- function(params = list()) {
+  # Build a query string from a named list, supporting vector values as repeated keys
+  # (e.g. measures = c("mean", "gini") -> measures=mean&measures=gini)
+  n_keys <- length(params)
+  if (n_keys == 0L) {
+    qs <- ""
   } else {
-    raw(0L)
+    qs_parts <- vector("list", n_keys)
+    idx <- 0L
+    for (nm in names(params)) {
+      vals <- params[[nm]]
+      if (is.null(vals)) next
+      vals_chr <- as.character(vals)
+      vals_chr <- vals_chr[!is.na(vals_chr)]
+      if (length(vals_chr) == 0L) next
+      enc_vals <- vapply(
+        vals_chr,
+        function(v) utils::URLencode(v, reserved = TRUE),
+        character(1L)
+      )
+      idx <- idx + 1L
+      qs_parts[[idx]] <- paste0(nm, "=", enc_vals)
+    }
+    if (idx == 0L) {
+      qs <- ""
+    } else {
+      qs <- paste(unlist(qs_parts[seq_len(idx)], use.names = FALSE), collapse = "&")
+    }
   }
 
   req                <- new.env(parent = emptyenv())
-  req$REQUEST_METHOD <- "POST"
+  req$REQUEST_METHOD <- "GET"
   req$PATH_INFO      <- "/cell-definition"
-  req$QUERY_STRING   <- ""
+  req$QUERY_STRING   <- qs
   req$HTTP_ACCEPT    <- "application/json"
-  req$CONTENT_TYPE   <- if (length(body_raw) > 0L) "application/json" else ""
-  req$CONTENT_LENGTH <- as.character(length(body_raw))
+  req$CONTENT_TYPE   <- ""
+  req$CONTENT_LENGTH <- "0"
   req$HTTP_HOST      <- "localhost"
   req$rook.input     <- list(
-    read_lines = function() if (!is.null(raw_lines)) raw_lines else rawToChar(body_raw),
-    read       = function(l = -1L) body_raw,
+    read_lines = function() "",
+    read       = function(l = -1L) raw(0L),
     rewind     = function() invisible(NULL)
   )
-  req$postBody       <- if (!is.null(raw_lines)) NULL else if (length(body_raw) > 0L) rawToChar(body_raw) else ""
+  req$postBody       <- ""
   req
 }
 
@@ -46,6 +65,15 @@ parse_cell_def_res <- function(res, simplify = FALSE) {
     plumber_path <- system.file("plumber", "plumber.R", package = "piptm")
   }
   suppressMessages(plumber::plumb(plumber_path))
+}
+
+.CELL_DEF_ROUTER <- NULL
+
+get_cell_def_router <- function() {
+  if (is.null(.CELL_DEF_ROUTER)) {
+    .CELL_DEF_ROUTER <<- .get_cell_def_router()
+  }
+  .CELL_DEF_ROUTER
 }
 
 .with_api_fixture_registry <- function(code) {
@@ -71,26 +99,24 @@ parse_cell_def_res <- function(res, simplify = FALSE) {
 
   env$registries <- list("20260401_TEST" = fixture_reg)
   env$current_release <- "20260401_TEST"
-  if (length(env$manifests) == 0L) {
-    env$manifests <- list("20260401_TEST" = data.frame(pip_id = "ARG_2014_EPHC_INC_URB"))
-  }
+  env$manifests[["20260401_TEST"]] <- data.frame(pip_id = "ARG_2014_EPHC_INC_URB")
   env$arrow_root <- NULL
 
   force(code)
 }
 
-test_that("POST /cell-definition returns 200 for welfare, poverty, and share configurations", {
-  pr <- .get_cell_def_router()
+test_that("GET /cell-definition returns 200 for welfare, poverty, and share configurations", {
+  pr <- get_cell_def_router()
 
   .with_api_fixture_registry({
-    # 1. Welfare summary + inequality with nested-object filter_base
-    req1 <- make_cell_def_req(list(
+    # 1. Welfare summary + inequality with JSON-string filter_base
+    req1 <- make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = c("mean", "median", "gini"),
       row          = "educat4",
       column       = "gender",
       superColumn  = "area",
-      filter_base  = list(age_group = "3", educat7 = "4"),
+      filter_base  = '{"age_group":["3"],"educat7":["4"]}',
       ppp          = 2021L,
       welfare_type = "INC"
     ))
@@ -103,7 +129,7 @@ test_that("POST /cell-definition returns 200 for welfare, poverty, and share con
     expect_length(p1$data$what_is_shown$measures, 3L)
 
     # 2. Poverty measures with JSON-encoded string filter_base
-    req2 <- make_cell_def_req(list(
+    req2 <- make_cell_def_get_req(list(
       analysis_var = "pov_status",
       measures     = c("headcount", "poverty_gap"),
       column       = "gender",
@@ -117,7 +143,7 @@ test_that("POST /cell-definition returns 200 for welfare, poverty, and share con
     expect_true(p2$data$who_is_in_table$filtered[[1L]])
 
     # 3. Share measures + by = NULL
-    req3 <- make_cell_def_req(list(
+    req3 <- make_cell_def_get_req(list(
       analysis_var = "employed",
       measures     = c("pop_share", "target_within_group_share", "target_survey_share")
     ))
@@ -132,8 +158,8 @@ test_that("POST /cell-definition returns 200 for welfare, poverty, and share con
   })
 })
 
-test_that("POST /cell-definition returns 200 with fallback warning when no release registry is loaded", {
-  pr <- .get_cell_def_router()
+test_that("GET /cell-definition returns 200 with fallback warning when no release registry is loaded", {
+  pr <- get_cell_def_router()
 
   ns <- asNamespace("piptm")
   env <- ns$.piptm_env
@@ -157,12 +183,10 @@ test_that("POST /cell-definition returns 200 with fallback warning when no relea
   env$current_release <- NULL
   env$arrow_root <- NULL
 
-  req <- make_cell_def_req(raw_lines = c(
-    "{",
-    '  "analysis_var": "welfare",',
-    '  "measures": ["mean"],',
-    '  "column": "gender"',
-    "}"
+  req <- make_cell_def_get_req(list(
+    analysis_var = "welfare",
+    measures     = "mean",
+    column       = "gender"
   ))
   res <- pr$call(req)
   expect_equal(res$status, 200L)
@@ -171,79 +195,127 @@ test_that("POST /cell-definition returns 200 with fallback warning when no relea
   expect_true(length(p$warnings) > 0L)
 })
 
-test_that("POST /cell-definition returns 400 for validation errors and 422 for unknown release", {
-  pr <- .get_cell_def_router()
+test_that("GET /cell-definition returns 400 for validation errors and 422 for unknown release", {
+  pr <- get_cell_def_router()
 
   .with_api_fixture_registry({
-    # Empty body -> 400
-    res_empty <- pr$call(make_cell_def_req(raw_str = ""))
+    # Empty query -> 400
+    res_empty <- pr$call(make_cell_def_get_req(list()))
     expect_equal(res_empty$status, 400L)
-
-    # JSON array body -> 400
-    res_arr <- pr$call(make_cell_def_req(raw_str = '[{"analysis_var":"welfare","measures":["mean"]}]'))
-    expect_equal(res_arr$status, 400L)
+    expect_equal(parse_cell_def_res(res_empty)$status[[1L]], "error")
 
     # Vector pop_share_threshold -> 400
-    res_vec_thresh <- pr$call(make_cell_def_req(list(
+    res_vec_thresh <- pr$call(make_cell_def_get_req(list(
       analysis_var        = "welfare",
       measures            = "mean",
-      pop_share_threshold = c(0.001, 0.005)
+      pop_share_threshold = c("0.001", "0.005")
     )))
     expect_equal(res_vec_thresh$status, 400L)
+    expect_true(any(grepl("pop_share_threshold", parse_cell_def_res(res_vec_thresh)$errors)))
 
     # Target share with continuous analysis_var ("age") -> 400
-    res_age_share <- pr$call(make_cell_def_req(list(
+    res_age_share <- pr$call(make_cell_def_get_req(list(
       analysis_var = "age",
       measures     = "target_survey_share"
     )))
     expect_equal(res_age_share$status, 400L)
+    expect_true(any(grepl("binary target", parse_cell_def_res(res_age_share)$errors, ignore.case = TRUE)))
 
     # Missing analysis_var / measures -> 400
-    res_missing <- pr$call(make_cell_def_req(list(column = "gender")))
+    res_missing <- pr$call(make_cell_def_get_req(list(column = "gender")))
     expect_equal(res_missing$status, 400L)
+    expect_true(any(grepl("analysis_var", parse_cell_def_res(res_missing)$errors)))
 
     # Slot gap (row without column) -> 400
-    res_gap <- pr$call(make_cell_def_req(list(
+    res_gap <- pr$call(make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = "mean",
       row          = "gender"
     )))
     expect_equal(res_gap$status, 400L)
+    expect_true(any(grepl("Layout slots must be filled in order", parse_cell_def_res(res_gap)$errors)))
 
     # Duplicate variable across slots -> 400
-    res_dup <- pr$call(make_cell_def_req(list(
+    res_dup <- pr$call(make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = "mean",
       column       = "gender",
       row          = "gender"
     )))
     expect_equal(res_dup$status, 400L)
+    expect_true(any(grepl("assigned to more than one slot", parse_cell_def_res(res_dup)$errors)))
 
     # analysis_var also used in a slot -> 400
-    res_avar_slot <- pr$call(make_cell_def_req(list(
+    res_avar_slot <- pr$call(make_cell_def_get_req(list(
       analysis_var = "pov_status",
       measures     = "headcount",
       poverty_line = 2.15,
       column       = "pov_status"
     )))
     expect_equal(res_avar_slot$status, 400L)
+    expect_true(any(grepl("cannot also be used as a disaggregation", parse_cell_def_res(res_avar_slot)$errors)))
 
     # Missing poverty_line when headcount requested -> 400
-    res_no_pl <- pr$call(make_cell_def_req(list(
+    res_no_pl <- pr$call(make_cell_def_get_req(list(
       analysis_var = "pov_status",
       measures     = "headcount"
     )))
     expect_equal(res_no_pl$status, 400L)
+    expect_true(any(grepl("poverty_line", parse_cell_def_res(res_no_pl)$errors)))
 
     # Target share with analysis_var = "welfare" -> 400
-    res_bad_share <- pr$call(make_cell_def_req(list(
+    res_bad_share <- pr$call(make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = "target_survey_share"
     )))
     expect_equal(res_bad_share$status, 400L)
+    expect_true(any(grepl("binary target", parse_cell_def_res(res_bad_share)$errors, ignore.case = TRUE)))
+
+    # Malformed filter_base JSON string -> 400
+    res_bad_fb <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      filter_base  = "{not-valid-json"
+    )))
+    expect_equal(res_bad_fb$status, 400L)
+    expect_true(any(grepl("filter_base", parse_cell_def_res(res_bad_fb)$errors)))
+
+    # Invalid welfare_type -> 400
+    res_bad_wt <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      welfare_type = "INVALID"
+    )))
+    expect_equal(res_bad_wt$status, 400L)
+    expect_true(any(grepl("welfare_type", parse_cell_def_res(res_bad_wt)$errors)))
+
+    # Empty filter_base is treated as no filter -> 200
+    res_empty_fb <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      column       = "gender",
+      filter_base  = ""
+    )))
+    expect_equal(res_empty_fb$status, 200L)
+    p_empty_fb <- parse_cell_def_res(res_empty_fb)
+    expect_equal(p_empty_fb$status[[1L]], "success")
+    expect_false(p_empty_fb$data$who_is_in_table$filtered[[1L]])
+
+    # Empty pop_share_threshold disables suppression note -> 200
+    res_empty_thresh <- pr$call(make_cell_def_get_req(list(
+      analysis_var        = "employed",
+      measures            = "pop_share",
+      column              = "gender",
+      pop_share_threshold = ""
+    )))
+    expect_equal(res_empty_thresh$status, 200L)
+    p_empty_thresh <- parse_cell_def_res(res_empty_thresh)
+    expect_equal(p_empty_thresh$status[[1L]], "success")
+    note_vals <- unlist(p_empty_thresh$data$notes, use.names = FALSE)
+    expect_false(any(grepl("shown as \\\"NR\\\"", note_vals, fixed = TRUE)))
 
     # Unknown release -> 422
-    res_422 <- pr$call(make_cell_def_req(list(
+    res_422 <- pr$call(make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = "mean",
       release      = "BOGUS_RELEASE_9999"
@@ -252,4 +324,12 @@ test_that("POST /cell-definition returns 400 for validation errors and 422 for u
     p_422 <- parse_cell_def_res(res_422)
     expect_equal(p_422$status[[1L]], "error")
   })
+})
+
+test_that("POST /cell-definition is not routed (returns 405)", {
+  pr <- get_cell_def_router()
+  req <- make_cell_def_get_req(list(analysis_var = "welfare", measures = "mean"))
+  req$REQUEST_METHOD <- "POST"
+  res <- pr$call(req)
+  expect_equal(res$status, 405L)
 })

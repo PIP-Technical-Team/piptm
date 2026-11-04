@@ -677,7 +677,60 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
   )
 }
 
-#' Validate inputs for the POST /cell-definition endpoint
+#' Validate query parameters for the GET /cell-definition endpoint
+#'
+#' Reuses [.validate_table_shape()] for all Page 2 table-shape parameters (no
+#' `pip_id` required), and validates `filter_base` (JSON-encoded string),
+#' optional `welfare_type` (`"INC"` / `"CON"`), and coherence of target share
+#' measures (`target_within_group_share`, `target_survey_share`) with
+#' `analysis_var`.
+#'
+#' @param analysis_var        Character scalar analysis variable name.
+#' @param measures            Character vector of measure names.
+#' @param poverty_line        Numeric (or coercible) scalar poverty line, or `NULL`.
+#' @param column              Character scalar variable for the Columns slot, or `NULL`.
+#' @param row                 Character scalar variable for the Rows slot, or `NULL`.
+#' @param superColumn         Character scalar variable for the Super Columns slot, or `NULL`.
+#' @param superRow            Character scalar variable for the Super Rows slot, or `NULL`.
+#' @param filter_base         Character scalar JSON-encoded filter object, or `NULL`.
+#' @param ppp                 Integer scalar PPP reference year (default `2021L`).
+#' @param pop_share_threshold Numeric (or coercible) scalar cell-suppression threshold (default `0.001`), or `NULL`.
+#' @param welfare_type        Character scalar `"INC"` or `"CON"`, or `NULL`.
+#' @param release             Character scalar release ID, or `NULL`.
+#' @return A named list with `valid`, `errors`, `analysis_var`, `measures`,
+#'   `poverty_line`, `ppp`, `pop_share_threshold`, `by`, `slots`, `filter_base`,
+#'   `welfare_type`, and `release`.
+#' @keywords internal
+validate_cell_definition_query <- function(analysis_var = NULL,
+                                           measures = NULL,
+                                           poverty_line = NULL,
+                                           column = NULL,
+                                           row = NULL,
+                                           superColumn = NULL,
+                                           superRow = NULL,
+                                           filter_base = NULL,
+                                           ppp = 2021L,
+                                           pop_share_threshold = 0.001,
+                                           welfare_type = NULL,
+                                           release = NULL) {
+  body_repr <- list(
+    analysis_var        = analysis_var,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    column              = column,
+    row                 = row,
+    superColumn         = superColumn,
+    superRow            = superRow,
+    filter_base         = filter_base,
+    ppp                 = ppp,
+    pop_share_threshold = pop_share_threshold,
+    welfare_type        = welfare_type,
+    release             = release
+  )
+  validate_cell_definition_input(body_repr)
+}
+
+#' Validate inputs for the /cell-definition endpoint
 #'
 #' Reuses [.validate_table_shape()] for all Page 2 table-shape parameters (no
 #' `pip_id` required), and validates `filter_base` (nested JSON object or
@@ -685,15 +738,16 @@ validate_table_input <- function(analysis_var = NULL, pip_id, measures, poverty_
 #' coherence of target share measures (`target_within_group_share`,
 #' `target_survey_share`) with `analysis_var`.
 #'
-#' @param body Parsed JSON request body (a named list).
+#' @param body Parsed parameter list (a named list).
 #' @return A named list with `valid`, `errors`, `analysis_var`, `measures`,
 #'   `poverty_line`, `ppp`, `pop_share_threshold`, `by`, `slots`, `filter_base`,
-#'   and `welfare_type`.
+#'   `welfare_type`, and `release`.
+#' @keywords internal
 validate_cell_definition_input <- function(body) {
   if (!is.list(body) || is.data.frame(body) || length(body) == 0L || is.null(names(body))) {
     return(list(
       valid  = FALSE,
-      errors = "Request body must be a non-empty JSON object."
+      errors = "Request parameters must be a non-empty named object."
     ))
   }
 
@@ -757,7 +811,12 @@ validate_cell_definition_input <- function(body) {
         errors <- c(errors, "`filter_base` must be a JSON object or a single JSON-encoded string.")
       } else if (nzchar(trimws(fb_raw))) {
         fb_try <- tryCatch(
-          jsonlite::fromJSON(fb_raw, simplifyVector = TRUE),
+          jsonlite::fromJSON(
+            fb_raw,
+            simplifyVector    = TRUE,
+            simplifyDataFrame = FALSE,
+            simplifyMatrix    = FALSE
+          ),
           error = function(e) structure(list(msg = conditionMessage(e)), class = "fb_parse_err")
         )
         if (inherits(fb_try, "fb_parse_err") || !is.list(fb_try) || is.data.frame(fb_try)) {
@@ -796,16 +855,27 @@ validate_cell_definition_input <- function(body) {
           )
         }
         for (fnm in fb_names) {
-          vals <- unlist(parsed_fb[[fnm]], use.names = FALSE)
+          val_raw <- parsed_fb[[fnm]]
+          if (is.data.frame(val_raw) || !is.null(dim(val_raw)) ||
+              (is.list(val_raw) && !is.null(names(val_raw))) ||
+              (is.list(val_raw) && any(vapply(val_raw, function(x) is.list(x) || !is.null(dim(x)), logical(1))))) {
+            errors <- c(
+              errors,
+              paste0("`filter_base$", fnm, "` must be a flat vector of category codes, not a nested object or table.")
+            )
+            next
+          }
+          vals <- unlist(val_raw, use.names = FALSE)
+          trimmed_vals <- trimws(as.character(vals))
           if (length(vals) == 0L || is.logical(vals) ||
               (!is.character(vals) && !is.numeric(vals)) ||
-              anyNA(vals) || any(!nzchar(trimws(as.character(vals))))) {
+              anyNA(vals) || any(!nzchar(trimmed_vals))) {
             errors <- c(
               errors,
               paste0("`filter_base$", fnm, "` must be a non-empty vector of non-missing category codes.")
             )
           } else {
-            parsed_fb[[fnm]] <- unique(trimws(as.character(vals)))
+            parsed_fb[[fnm]] <- unique(trimmed_vals)
           }
         }
       }

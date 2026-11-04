@@ -301,28 +301,45 @@ Statistics, Inequality, Poverty), loaded from the release's measure registry
 (`inst/extdata/tm_measure_spec.yaml`). This is the source for the Decision 2
 "grouped statistic dropdown".
 
-### `POST /cell-definition` — Page 2 cell explanation (Step 2)
+### `GET /cell-definition` — Page 2 cell explanation (Step 2)
 
 Returns the three-section natural-language cell explanation (`who_is_in_table`,
 `what_a_cell_is`, `what_is_shown`, `notes`) for the current Page 2 configuration
 without calling `table_maker()` or accessing Arrow microdata.
 
-Example JSON request body:
+Query parameters (Swagger "Try it out"):
 
-```json
-{
-  "analysis_var": "welfare",
-  "measures": ["mean", "median", "gini"],
-  "column": "gender",
-  "row": "educat4",
-  "superColumn": "area",
-  "filter_base": {
-    "age_group": ["3"],
-    "educat7": ["4"]
-  },
-  "ppp": 2021,
-  "welfare_type": "INC"
-}
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `analysis_var` | string | yes | e.g. `welfare`, `pov_status`, or any dimension from `GET /analysis-variables` |
+| `measures` | string[] | yes | repeatable; e.g. `measures=mean&measures=gini` |
+| `poverty_line` | number | conditional | required when `analysis_var = "pov_status"`, `"pov_status"` appears in any slot, or poverty measures requested |
+| `column`, `row`, `superColumn`, `superRow` | string | no | layout slots (filled in order without gaps, from `GET /covariates`) |
+| `ppp` | integer | no | PPP reference year; default `2021` |
+| `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"age_group":["3"],"educat7":["4"]}` |
+| `pop_share_threshold` | number | no | cell-masking threshold in `(0, 1)`; default `0.001` (0.1%); send empty to disable |
+| `welfare_type` | string | no | `"INC"` or `"CON"`; defaults to `"daily welfare"` when omitted |
+| `release` | string | no | defaults to the current release |
+
+Example (Swagger "Try it out", query parameters):
+
+```
+analysis_var=welfare
+measures=mean
+measures=median
+measures=gini
+column=gender
+row=educat4
+superColumn=area
+filter_base={"age_group":["3"],"educat7":["4"]}
+ppp=2021
+welfare_type=INC
+```
+
+Equivalent percent-encoded request URL:
+
+```text
+/cell-definition?analysis_var=welfare&measures=mean&measures=median&measures=gini&column=gender&row=educat4&superColumn=area&filter_base=%7B%22age_group%22%3A%5B%223%22%5D%2C%22educat7%22%3A%5B%224%22%5D%7D&ppp=2021&welfare_type=INC
 ```
 
 In `what_is_shown.measures[]`, `text` and `total_note` provide the displayed
@@ -344,7 +361,7 @@ other endpoints.
 | Step 2, Decision 1 — sample base | `GET /categories` |
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |
-| Step 2 — live cell explanation | `POST /cell-definition` |
+| Step 2 — live cell explanation | `GET /cell-definition` |
 | Step 2 footer / Step 3 results | `GET|POST /table`, `POST /description`, `POST /table/download` |
 | Cross-cutting | `GET /releases`, `GET /health`, `GET /dimensions` |
 
@@ -354,13 +371,12 @@ other endpoints.
    before reading `data`.
 2. `POST /description` and `POST /table/download` do not use the JSON envelope
    on success — they return rendered text and file bytes respectively.
-3. `filter_base` encoding differs by endpoint: on `/table` (a query-string
-   endpoint) it is a **JSON-encoded string** that the server parses with
-   `jsonlite::fromJSON()` — a malformed string returns `422`, not `400`. On
-   `/description`'s fallback path (a JSON body) it must be a **native nested
-   JSON object**, not a string — it is used as-is with no parsing step. On
-   `POST /cell-definition` both a **native nested JSON object** and a
-   **JSON-encoded string** are accepted, and malformed JSON returns `400`.
+3. `filter_base` encoding differs by endpoint: on query-string endpoints
+   (`/table` and `GET /cell-definition`) it is a **JSON-encoded string** that
+   the server parses with `jsonlite::fromJSON()`. On `/description`'s fallback
+   path (a JSON body) it must be a **native nested JSON object**, not a string
+   — it is used as-is with no parsing step. On `GET /cell-definition`, malformed
+   JSON returns `400` (consistent with validation).
 4. `pip_id` is capped at 15 values per `/table` request (Step 1's "at most 15
    surveys" rule is enforced server-side, not just in the UI).
 5. `/categories` and `/covariates` support the same optional `pip_id`
