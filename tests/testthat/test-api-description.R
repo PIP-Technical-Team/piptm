@@ -153,8 +153,8 @@ test_that("POST /description fast path returns Markdown (200) when format=markdo
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
   expect_type(body, "character")
   expect_true(grepl("## Table Overview", body, fixed = TRUE))
-  expect_true(grepl("## Cell Definition", body, fixed = TRUE))
-  expect_true(grepl("The Mean of Welfare", body, fixed = TRUE))
+  expect_false(grepl("## Cell Definition", body, fixed = TRUE))
+  expect_true(grepl("## Execution Details", body, fixed = TRUE))
 })
 
 test_that("POST /description fast path defaults to HTML when format is omitted", {
@@ -173,6 +173,7 @@ test_that("POST /description fast path defaults to HTML when format is omitted",
   expect_type(body, "character")
   expect_true(grepl("<h2", body, fixed = TRUE))
   expect_true(grepl("Table Overview", body, fixed = TRUE))
+  expect_false(grepl("Cell Definition", body, fixed = TRUE))
   expect_false(grepl("## Table Overview", body, fixed = TRUE))
 })
 
@@ -196,6 +197,7 @@ test_that("POST /description fast path returns HTML when format=html in body", {
   expect_true(grepl("<h2", body, fixed = TRUE))
   expect_true(grepl("Table Overview", body, fixed = TRUE))
   expect_true(grepl("Description:", body, fixed = TRUE))
+  expect_false(grepl("Cell Definition", body, fixed = TRUE))
   expect_false(grepl("## Table Overview", body, fixed = TRUE))
 })
 
@@ -440,6 +442,7 @@ test_that("POST /description fallback path accepts slot parameters and disaggreg
   expect_equal(res$status, 200L)
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
   expect_match(body, "gender", ignore.case = TRUE)
+  expect_false(grepl("Cell Definition", body, fixed = TRUE))
 
   # Legacy 'by'-only body is not recognized as a fallback table parameter (400)
   res_legacy <- .desc_router$call(make_api_req(

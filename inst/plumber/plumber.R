@@ -403,6 +403,10 @@ function(req, body = NULL, res) {
   # format == "markdown" leaves Content-Type as text/plain; format defaults to
   # "html" (Content-Type: text/html; charset=utf-8) when omitted.
   render_description <- function(model) {
+    if ("cell_definition" %in% names(model)) {
+      model$cell_definition$visible <- FALSE
+    }
+
     if (identical(format, "html")) {
       piptm::render_description_html(model)
     } else {
