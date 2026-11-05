@@ -151,6 +151,7 @@ Most endpoints return a common envelope:
 Error status conventions:
 
 - `400`: request validation failures
+- `404`: unknown route or missing resource
 - `413`: payload too large (`POST /table/download`, body > 25 MB)
 - `422`: domain/processing failures (including unknown release)
 - `500`: uncaught internal errors

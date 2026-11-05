@@ -5,7 +5,7 @@
 **Audience:** PIP Platform UI/IT team  
 **Plan Reference:** `.cg-docs/plans/2026-08-31-api-contract-openapi.md`
 
-This document specifies every public endpoint exposed by the `piptm` Plumber service. It maps the API surface to the three-step Table Maker UI, lists request and response schemas, records validation rules, and captures operational constraints (sessions, CORS, error handling).
+This document specifies every public endpoint exposed by the `piptm` Plumber service. It maps the API surface to the three-step Table Maker UI, lists request and response schemas, records validation rules, and captures operational constraints (CORS, error handling).
 
 ---
 
@@ -155,12 +155,12 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   _HTTP transport note_: Query parameters arrive as strings; the types above describe the server-side coercion performed before validation.
 - **Responses:**
   - `200 OK` (default) — `data` is an array of per-survey objects formatted according to Approach C (see structure below); `meta = { "release": <release>, "n_surveys": <count> }`.
-  - `200 OK` (`include_metadata="true"`) — `data = { "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`; `meta.description_metadata` populated.
+  - `200 OK` (`include_metadata="true"`) — `data = [<TableRow>,…]`; `meta.description_metadata` populated.
   - `400` — Validation failure (e.g., too many surveys, missing poverty line, invalid PPP).
   - `422` — Domain failure (manifest mismatch, computation error).
 - **Notes:**
   - **Approach C Response Format (`include_metadata=false`)**:
-    - This Approach C shape applies **only** when `include_metadata` is falsy (the default). When `include_metadata="true"`, `data` instead takes the legacy flat-row shape described in the `200 OK (include_metadata="true")` response above (`{ "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`) — the metadata path is not reshaped to Approach C.
+    - This Approach C shape applies **only** when `include_metadata` is falsy (the default). When `include_metadata="true"`, `data` remains flat `<TableRow>` rows and `description_metadata` is attached under `meta.description_metadata`.
     - `data` contains one object per survey in `pip_id`.
     - Each survey object has header fields (`pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `poverty_line`, `analysis_var`, `measures[]`).
     - `layout`: fixed keys `columns`, `rows`, `superColumns`, `superRows` (`null` for unused slots). Each active slot contains `varname`, `label`, and ordered `categories` (`{ "code": <val>, "label": <str> }`). Missing categories use `code: null`.
@@ -172,7 +172,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
     - Each slot accepts a single variable name; repeating a slot parameter returns HTTP 400.
     - Assigning the same variable to multiple slots returns HTTP 400.
     - The four slots structurally cap `/table` disaggregation to four dimensions. Direct callers of R package function `table_maker(by = ...)` are capped at `length(by) <= 4` via defensive assertion.
-  - `filter_base` JSON must be parsable; invalid JSON returns HTTP 400.
+  - `filter_base` JSON must be parsable; invalid JSON returns HTTP 422.
   - `pip_id` and `measures` arrays must be non-empty; size >15 returns HTTP 400.
   - All requests are sample-weighted; the poverty line is always PPP USD per day.
 
