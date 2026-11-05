@@ -479,9 +479,9 @@ test_that("GET /covariates returns pov_status with n_categories=2", {
   expect_false("pov_status_mutex" %in% names(pov))
 })
 
-# ── /session endpoints ───────────────────────────────────────────────────────
+# ── removed /session endpoints ────────────────────────────────────────────────
 
-test_that("POST /session/surveys creates a session and returns session_id", {
+test_that("POST /session/surveys returns 404 (route removed)", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
@@ -489,54 +489,15 @@ test_that("POST /session/surveys creates a session and returns session_id", {
     pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
   )))
 
-  expect_equal(res$status, 200L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "success")
-  expect_true("session_id" %in% names(body$data))
-  expect_true(nzchar(as.character(body$data$session_id)))
-})
-
-test_that("GET /session/<id>/surveys returns stored pip_id", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  create_res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list(
-    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
-  )))
-  create_body <- parse_api_res(create_res)
-  sid <- as.character(create_body$data$session_id)
-
-  res <- .ep_router$call(make_api_req("GET", paste0("/session/", sid, "/surveys")))
-
-  expect_equal(res$status, 200L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "success")
-  expect_equal(
-    as.character(body$data$pip_id),
-    c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
-  )
-})
-
-test_that("POST /session/surveys rejects missing pip_id with 400", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list()))
-  expect_equal(res$status, 400L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
-})
-
-test_that("GET /session/<id>/surveys returns 404 for unknown session", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  res <- .ep_router$call(make_api_req("GET", "/session/nonexistent123/surveys"))
   expect_equal(res$status, 404L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
+})
+
+test_that("GET /session/<id>/surveys returns 404 (route removed)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/session/123/surveys"))
+  expect_equal(res$status, 404L)
 })
 
 # =============================================================================

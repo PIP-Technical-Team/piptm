@@ -49,7 +49,7 @@ components:
 |------|---------|---------------|
 | 200  | Success | Request completed; warnings possible |
 | 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies |
-| 404  | Not found | `/session/<id>/surveys` when the session expired or never existed |
+| 404  | Not found | Unknown route or missing resource |
 | 422  | Domain/processing failure | Manifest lookup errors, computation failures, release mismatch |
 | 500  | Internal error | Unexpected exception (stack traces never exposed) |
 
@@ -57,7 +57,7 @@ components:
 
 | UI Step | Description | Endpoints |
 |---------|-------------|-----------|
-| Step 1 — Survey selection | Discover releases, manifest rows, categories, and persist selections | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup`, `/session/surveys`, `/session/<id>/surveys` |
+| Step 1 — Survey selection | Discover releases, manifest rows, and categories | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup` |
 | Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions` |
 | Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
@@ -135,23 +135,6 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `release` *(optional)* — Defaults to current release
 - **Validation:** `country_code`, `year`, and `welfare_type` **must** have identical lengths (zip semantics). Length mismatch returns HTTP 400.
 - **Response:** Array of `{ country_code, year, welfare_type, pip_id }` with `meta.release`.
-
-### `/session/surveys` — POST (Step 1)
-- **Purpose:** Persist selected survey identifiers in an in-memory session (used to resume selections later).
-- **Body:**
-  ```json
-  { "pip_id": ["COL_2019_GEIH_INC_ALL", "BOL_2018_ECH_CON_ALL"] }
-  ```
-  - Accepts one or more values matching `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`. (The `/table` endpoint enforces the 15-survey execution cap.)
-- **Response:** `data = { "session_id": "a1b2c3d4e5f6" }`.
-- **Session rules:** See [Session Management Details](#session-management-details) below.
-
-### `/session/<id>/surveys` — GET (Step 1)
-- **Purpose:** Fetch stored survey IDs by session ID.
-- **Path parameter:** `id` *(required, string)*.
-- **Responses:**
-  - `200 OK` — `data = { "pip_id": [ ... ] }`
-  - `404 Not Found` — Session missing or expired.
 
 ### `/table` — GET & POST (Step 3)
 - **Purpose:** Execute the Table Maker computation engine for up to 15 surveys.
@@ -334,23 +317,15 @@ DescriptionMetadata:
 
 ## Validation Rules (Cross-Cutting)
 
-1. **Survey Cap:** `/table` enforces a hard limit of 15 `pip_id` entries per request. Other endpoints (for example `/session/surveys`) store whatever length is provided but downstream `/table` calls must respect the 15-survey cap.
+1. **Survey Cap:** `/table` enforces a hard limit of 15 `pip_id` entries per request.
 2. **Identifiers:** `pip_id` must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`.
 3. **PPP Year:** `ppp` must be a single positive integer. Strings must contain digits only (`"2017"` valid, `"2e3"` rejected).
 4. **Poverty Line:** Required whenever poverty status is analyzed or disaggregated; must be positive finite numeric.
 5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 400.
-6. **Sessions:** Stored process-locally; expire after 3600 seconds; retrieval after expiry returns 404.
-7. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
-8. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `include_metadata="false"`, `release=<current>`.
-9. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
-10. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
-
-## Session Management Details
-
-- Session IDs are random 12-character alphanumeric strings.
-- Collision handling retries up to 20 times before aborting with an error.
-- Session storage is in-memory (`new.env()`); load-balanced deployments do **not** share sessions across instances.
-- Expired sessions are purged on retrieval attempts.
+6. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
+7. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `include_metadata="false"`, `release=<current>`.
+8. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
+9. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
 
 ## CORS
 
@@ -376,7 +351,6 @@ Access-Control-Allow-Headers: Content-Type
 | `/categories` | GET | Power Step 1 Available Variables filter chips |
 | `/covariates` | GET | Populate layout slot drawers |
 | `/lookup` | GET | Resolve free-form triplets to `pip_id`s |
-| `/session/surveys` & `/session/<id>/surveys` | POST / GET | Save/restore survey selections |
 
 ## Change Control
 

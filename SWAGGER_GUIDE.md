@@ -78,7 +78,7 @@ Query parameters (works identically as a POST form body):
 `pip_id` format: each value must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`
 (3-letter ISO3 country code, 4-digit year, then survey-info segment), e.g.
 `ARM_2012_ILCS_CON_ALL`. This pattern is enforced server-side; it is reused
-below for `/description`, `/lookup`, and `/session/surveys` examples.
+below for `/description` and `/lookup` examples.
 
 Example (Swagger "Try it out", query parameters):
 
@@ -277,23 +277,6 @@ Super Rows) instead of sample-base filter variables.
 | `pip_id` | string[] | no — omit for the full catalog |
 | `release` | string | no |
 
-### `POST /session/surveys` — store a Step 1 survey selection
-
-Stores a validated set of `pip_id` values server-side (in-memory,
-process-local, expires after 1 hour) and returns `{ "session_id": "..." }`.
-Useful for handing off a Step 1 selection across page loads/tabs without
-re-transmitting the full list.
-
-| Parameter | Type | Required |
-|---|---|---|
-| `pip_id` | string[] | yes — repeatable; must match the canonical `pip_id` pattern |
-
-### `GET /session/:id/surveys` — retrieve a stored survey selection
-
-Path parameter `id` is the session ID returned by `POST /session/surveys`.
-Returns `{ "pip_id": [...] }`. Returns `404` if the session does not exist or
-has expired.
-
 ### `GET /statistics` — Decision 2 statistic groups
 
 Returns the statistic groups and their measures (Shares and Counts, Summary
@@ -312,7 +295,7 @@ other endpoints.
 
 | UI step | Endpoints used |
 |---|---|
-| Step 1 — survey grid | `GET /surveys-ui`, `GET /countries`, `GET /regions`, `GET /surveys`, `POST /session/surveys`, `GET /session/:id/surveys` |
+| Step 1 — survey grid | `GET /surveys-ui`, `GET /countries`, `GET /regions`, `GET /surveys` |
 | Step 2, Decision 1 — sample base | `GET /categories` |
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |

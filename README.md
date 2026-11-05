@@ -133,8 +133,6 @@ Rscript inst/plumber/run.R
 | `/table` | GET, POST | Compute table output |
 | `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
 | `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
-| `/session/surveys` | POST | Create a session and store a survey selection |
-| `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 

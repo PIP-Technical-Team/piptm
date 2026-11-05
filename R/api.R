@@ -11,8 +11,7 @@
 #' listening for HTTP requests.  This is a blocking call — the function
 #' does not return until the server is stopped (Ctrl+C / SIGINT).
 #'
-#' The router exposes API endpoints for compute, discovery, session, and
-#' download flows.
+#' The router exposes API endpoints for compute, discovery, and download flows.
 #'
 #' | Endpoint | Method | Description |
 #' |---|---|---|
@@ -30,8 +29,6 @@
 #' | `/countries` | GET | Country code/name metadata from manifest |
 #' | `/regions` | GET | Region metadata with country memberships |
 #' | `/surveys-ui` | GET | UI-ready survey catalog |
-#' | `/session/surveys` | POST | Create a short-lived survey selection session |
-#' | `/session/<id>/surveys` | GET | Retrieve survey IDs from a session |
 #' | `/health` | GET | Server health check |
 #'
 #' All responses follow a structured envelope:
