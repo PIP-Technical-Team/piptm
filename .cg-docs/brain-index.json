@@ -1,5 +1,5 @@
 {
-  "edge_count": 67,
+  "edge_count": 81,
   "edges": [
     {
       "edge_type": "decided_from",
@@ -119,6 +119,24 @@
       "edge_type": "decided_from",
       "source": ".cg-docs/plans/2026-10-26-table-layout-cells-response-format.md",
       "target": ".cg-docs/brainstorms/2026-10-19-table-endpoint-layout-slot-response-format.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+      "target": ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
+      "target": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
       "target_missing": false
     },
     {
@@ -290,6 +308,48 @@
       "target_missing": false
     },
     {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md",
+      "target": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review-2.md",
+      "target": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md",
+      "target": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+      "target": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+      "target_missing": false
+    },
+    {
       "edge_type": "references",
       "source": ".cg-docs/brainstorms/2026-04-02-version-partition-and-manifest-resolution.md",
       "target": ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
@@ -368,6 +428,18 @@
       "target_missing": false
     },
     {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
+      "target": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target_missing": false
+    },
+    {
       "edge_type": "implements",
       "source": ".cg-docs/plans/2026-04-29-arrow-vs-collapse-benchmark.md",
       "target": "roadmap.json#arrow-vs-collapse-benchmark",
@@ -401,6 +473,18 @@
       "edge_type": "implements",
       "source": ".cg-docs/plans/2026-10-26-table-layout-cells-response-format.md",
       "target": "roadmap.json#table-response-format-layout-slot-assignment",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+      "target": "roadmap.json#page2-cell-definition-endpoint",
+      "target_missing": false
+    },
+    {
+      "edge_type": "implements",
+      "source": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
+      "target": "roadmap.json#cell-definition-get-only",
       "target_missing": false
     }
   ],
@@ -1196,6 +1280,70 @@
         "table_maker()",
         "cells[]",
         "data.table"
+      ]
+    },
+    {
+      "date": "2026-11-02",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
+      "slug": "2026-11-02-page2-cell-definition-endpoint",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "cell-definition",
+        "page-2",
+        "api",
+        "endpoint",
+        "shares",
+        "description-endpoint",
+        "metadata",
+        "table-maker",
+        "ux",
+        "wording",
+        "phasing"
+      ],
+      "title": "Page 2 cell definition endpoint, and phasing of the metadata rework",
+      "top_keywords": [
+        "tm_variable_spec.yaml",
+        "tm_cell_prose.yaml",
+        "/description",
+        "tm_measure_spec.yaml",
+        "cell_definition",
+        "inst/extdata/tm_cell_prose.yaml",
+        "yaml",
+        "measures",
+        "target_survey_share",
+        "testthat"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "slug": "2026-11-09-cell-definition-all-cells-breakdown",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "cell-definition",
+        "page-2",
+        "api",
+        "endpoint",
+        "ux",
+        "wording",
+        "cell-explanation"
+      ],
+      "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
+      "top_keywords": [
+        "example_text",
+        "structure_text",
+        "title",
+        "what_a_cell_is",
+        "filter_base",
+        "approach",
+        "cell-definition",
+        "dimensions",
+        "r/cell_explanation.r",
+        "{ title, structure_text, items, example_text }"
       ]
     },
     {
@@ -2202,6 +2350,125 @@
       ]
     },
     {
+      "date": "2026-11-02",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+      "slug": "2026-11-02-page2-cell-definition-endpoint",
+      "status": "completed",
+      "summary": "Implement a result-free Page 2 cell explanation feature consisting of a dedicated curated prose specification (`inst/extdata/tm_cell_prose.yaml`), an exported pure R builder (`build_cell_explanation()`), and a new Plumber endpoint (`POST /cell-definition`) that returns a clear, three-section JSON explanation (*Who is in the table*, *What a cell is*, *What is shown in that cell*) of what each cell in the configured `/table` output represents.",
+      "tags": [
+        "cell-definition",
+        "page-2",
+        "api",
+        "endpoint",
+        "shares",
+        "prose",
+        "table-maker"
+      ],
+      "title": "Page 2 cell definition endpoint (POST /cell-definition)",
+      "top_keywords": [
+        "tm_variable_spec.yaml",
+        "tm_cell_prose.yaml",
+        "tm_measure_spec.yaml",
+        "validate_table_input()",
+        "build_cell_explanation()",
+        "swagger_guide.md",
+        "null",
+        "filter_base",
+        "post /cell-definition",
+        ".validate_table_shape()"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
+      "slug": "2026-11-04-cell-definition-get-only",
+      "status": "completed",
+      "summary": "Replace the existing `POST /cell-definition` route with a `GET /cell-definition` route that accepts the same Page 2 configuration fields as query parameters, matching `GET /table`'s existing convention (repeatable `measures`, a single JSON-encoded `filter_base` string, plain scalar slots/`ppp`/etc.). The POST route is removed entirely; `GET /cell-definition` becomes the sole route for this functionality.",
+      "tags": [
+        "cell-definition",
+        "api",
+        "endpoint",
+        "table-maker",
+        "get",
+        "breaking-change"
+      ],
+      "title": "Replace POST /cell-definition with GET /cell-definition",
+      "top_keywords": [
+        "filter_base",
+        "swagger_guide.md",
+        "analysis_var",
+        "post /cell-definition",
+        "get /cell-definition",
+        "/table",
+        "validate_cell_definition_input()",
+        ".validate_table_shape()",
+        "release",
+        "welfare_type"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
+      "slug": "2026-11-09-cell-definition-all-cells-breakdown-revised",
+      "status": "completed",
+      "summary": "Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI bloat. When the configured table has ≤ 4 cells (and known registry/filter categories), enumerate every combined cell in plain English; when it has > 4 cells, emit a compact one-line-per-active-slot category breakdown (max 4 lines) plus a single concrete example cell. Expose a uniform `{ title, structure_text, items, example_text, dimensions, example_cell_label }` shape so ITS can render `title`, `structure_text`, `items`, and `example_text` with zero conditional logic.",
+      "tags": [
+        "cell-definition",
+        "page-2",
+        "api",
+        "endpoint",
+        "ux",
+        "wording",
+        "cell-explanation"
+      ],
+      "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition (revised)",
+      "top_keywords": [
+        "example_text",
+        "swagger_guide.md",
+        "<= 4",
+        "structure_text",
+        "> 4",
+        "test-cell-explanation.r",
+        "what_a_cell_is",
+        "items = list()",
+        "docs/api-contract.md",
+        "filter_base"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "slug": "2026-11-09-cell-definition-all-cells-breakdown",
+      "status": "active",
+      "summary": "Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI bloat. When the configured table has ≤ 4 cells, enumerate every combined cell in plain English; when it has > 4 cells, emit a compact one-line-per-active-slot category breakdown (max 4 lines) plus a single concrete example cell. Expose a uniform `{ title, structure_text, items, example_text }` shape so ITS can render it with zero conditional logic.",
+      "tags": [
+        "cell-definition",
+        "page-2",
+        "api",
+        "endpoint",
+        "ux",
+        "wording",
+        "cell-explanation"
+      ],
+      "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
+      "top_keywords": [
+        "what_a_cell_is",
+        "test-cell-explanation.r",
+        "example_text",
+        "filter_base",
+        "swagger_guide.md",
+        "structure_text",
+        "what_is_shown",
+        "test-cell-definition.r",
+        "docs/api-contract.md",
+        "test-api-cell-definition.r"
+      ]
+    },
+    {
       "date": "",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
@@ -2846,6 +3113,160 @@
       ]
     },
     {
+      "date": "2026-11-03",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md",
+      "slug": "2026-11-02-page2-cell-definition-endpoint-review",
+      "status": "",
+      "summary": "**Review mode**: architecture **Files reviewed**: 14 **Findings**: 15 (P0: 0, P1: 5, P2: 6, P3: 4)",
+      "tags": [],
+      "title": "2026-11-02-page2-cell-definition-endpoint-review",
+      "top_keywords": [
+        "r/cell_explanation.r",
+        "helpers.r",
+        "filter_base",
+        "inst/plumber/helpers.r",
+        "tm_cell_prose.yaml",
+        "cell_explanation.r",
+        "na",
+        "build_cell_explanation()",
+        "test-cell-prose-sync.r",
+        "swagger_guide.md"
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review-2.md",
+      "slug": "2026-11-02-page2-cell-definition-endpoint-verify-review-2",
+      "status": "",
+      "summary": "**Review mode**: verify (light, `@cg-code-quality` + `@cg-testing`) **Files reviewed**: 8 **Findings**: 2 (P0: 0, P1: 0, P2: 0, P3: 2)",
+      "tags": [],
+      "title": "2026-11-02-page2-cell-definition-endpoint-verify-review-2",
+      "top_keywords": [
+        "validate_cell_definition_input()",
+        "yaml",
+        "tests/testthat/test-api-helpers.r",
+        "skip_if_not_installed(\"yaml\")",
+        "docs/api-contract.md",
+        "test-api-helpers.r",
+        "api-contract.md",
+        "analysis_var",
+        "cg-testing",
+        "review"
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md",
+      "slug": "2026-11-02-page2-cell-definition-endpoint-verify-review",
+      "status": "",
+      "summary": "**Review mode**: verify (light, `@cg-code-quality` + `@cg-testing` only) **Files reviewed**: 7 (`R/cell_explanation.R`, `inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `inst/extdata/tm_cell_prose.yaml`, `man/build_cell_explanation.Rd`, `SWAGGER_GUIDE.md`, `docs/api-contract.md`, plus the four test files) **Findings**: 2 new (P0: 0, P1: 0, P2: 0, P3: 2), 4 suppressed per fix-triage scope",
+      "tags": [],
+      "title": "2026-11-02-page2-cell-definition-endpoint-verify-review",
+      "top_keywords": [
+        "r/cell_explanation.r",
+        "fixed",
+        "inst/plumber/helpers.r",
+        "cell_explanation.r",
+        "filter_base",
+        "cell_group",
+        "inst/plumber/plumber.r",
+        ".build_who_is_in_table",
+        "build_cell_explanation()",
+        "helpers.r"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md",
+      "slug": "2026-11-04-cell-definition-get-only-review",
+      "status": "",
+      "summary": "**Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `R/cell_explanation.R`, `tests/testthat/test-api-helpers.R`, `tests/testthat/test-api-cell-definition.R`, `docs/api-contract.md`, `SWAGGER_GUIDE.md`, `roadmap.json`) **Findings**: 20 (P0: 1, P1: 1, P2: 10, P3: 8)",
+      "tags": [],
+      "title": "2026-11-04-cell-definition-get-only-review",
+      "top_keywords": [
+        "test-api-cell-definition.r",
+        "helpers.r",
+        "filter_base",
+        "release",
+        "swagger_guide.md",
+        "@return",
+        "fix",
+        "post",
+        "cell-definition",
+        "docs/api-contract.md"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md",
+      "slug": "2026-11-04-cell-definition-get-only-verify-review",
+      "status": "",
+      "summary": "**Review mode**: light (mode:verify) **Files reviewed**: 9 (`R/cell_explanation.R`, `inst/plumber/helpers.R`, `inst/plumber/plumber.R`, `tests/testthat/test-api-cell-definition.R`, `tests/testthat/test-api-helpers.R`, `docs/api-contract.md`, `SWAGGER_GUIDE.md`, `roadmap.json`, `.cg-docs/active-state/current.json`) **Findings**: 1 (P0: 0, P1: 0, P2: 1, P3: 0)",
+      "tags": [],
+      "title": "2026-11-04-cell-definition-get-only-verify-review",
+      "top_keywords": [
+        "swagger_guide.md",
+        "roadmap.json",
+        "2026-11-04-cell-definition-get-only-review.md",
+        "test-api-cell-definition.r",
+        "review",
+        "fix",
+        "report",
+        "important",
+        "passed",
+        "r/cell_explanation.r"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+      "slug": "2026-11-09-cell-definition-all-cells-breakdown-revised-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 5 (`R/cell_explanation.R`, `tests/testthat/test-cell-explanation.R`, `tests/testthat/test-api-cell-definition.R`, `docs/api-contract.md`, `SWAGGER_GUIDE.md`) **Findings**: 15 (P0: 0, P1: 0, P2: 7, P3: 8)",
+      "tags": [],
+      "title": "2026-11-09-cell-definition-all-cells-breakdown-revised-review",
+      "top_keywords": [
+        "return()",
+        "cell_explanation.r",
+        "test-cell-explanation.r",
+        "fix",
+        "r/cell_explanation.r",
+        "tests/testthat/test-api-cell-definition.r",
+        ".slot_effective_categories()",
+        "test-api-cell-definition.r",
+        "swagger_guide.md",
+        "review"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md",
+      "slug": "2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review",
+      "status": "",
+      "summary": "**Review mode**: light (mode:verify) **Parent review**: `.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md` **Files reviewed**: 2 (`R/cell_explanation.R`, `tests/testthat/test-cell-explanation.R`) **Findings**: 1 (P0: 0, P1: 1, P2: 0, P3: 0) — all resolved",
+      "tags": [],
+      "title": "2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review",
+      "top_keywords": [
+        "info",
+        "label",
+        "2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+        "test-cell-explanation.r",
+        "testthat",
+        "review",
+        "verification",
+        "report",
+        "blocking",
+        "critical"
+      ]
+    },
+    {
       "date": "2026-04-03",
       "entity_type": "solution",
       "path": ".cg-docs/solutions/bugs/2026-04-03-null-allowed-cols-gen-validate-for-write.md",
@@ -3302,6 +3723,37 @@
       ]
     },
     {
+      "date": "2026-11-04",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-11-04-advisory-deferral-request-builder-architecture.md",
+      "slug": "2026-11-04-advisory-deferral-request-builder-architecture",
+      "status": "",
+      "summary": "During GET-only migration of `/cell-definition`, the standard review flagged [P3.7], an advisory finding: > `validate_cell_definition_query()` delegates validation via an indirect `body_repr` list, rather than validating directly on the parsed query parameters. This design carries forward from the POST route's structure (where the `body` dict was parsed externally). **The finding**: This is not incorrect, but it indicates an architectural opportunity — the validator could be simplified by removing the intermediate `body_repr` abstraction and validating raw query params directly, or by moving request-composition logic (building complex filter structures) to the platform layer.",
+      "tags": [
+        "api",
+        "architecture",
+        "platform",
+        "delegation",
+        "async-body-building",
+        "query-delegation",
+        "cell-definition",
+        "advisory"
+      ],
+      "title": "Advisory-item deferral: delegating request-body builder architecture to platform layer",
+      "top_keywords": [
+        "body_repr",
+        "current",
+        "platform",
+        "architecture",
+        "filter_base",
+        "why",
+        "future",
+        "/cell-definition",
+        "validate_cell_definition_query()",
+        "layer"
+      ]
+    },
+    {
       "date": "2026-05-21",
       "entity_type": "solution",
       "path": ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
@@ -3728,6 +4180,72 @@
         "computation",
         "via",
         "test-measures.r"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md",
+      "slug": "2026-11-04-query-parameter-endpoint-migration-testing",
+      "status": "",
+      "summary": "Migrating a plumber endpoint from `POST /cell-definition` (JSON-body request) to `GET /cell-definition` (query-parameter request) surfaces three distinct challenges: 1. **Empty-query disable semantics are contract-significant but not asserted** at router level. - Over GET, empty query strings (`filter_base=\"\"`) are read as the string `\"\"`, not `NULL`. - This enables disable patterns (empty value = no filter, no suppression). - Tests that omit this case allow regressions where a parser fix or validator bypass silently changes behavior. 2. **Validator deserializes nested JSON without guards**, creating silent data corruption. - `jsonlite::fromJSON()` + `unlist()` flattens nested objects and arrays without validation. - Malformed queries...",
+      "tags": [
+        "plumber",
+        "api",
+        "endpoint",
+        "query-parameter",
+        "migration",
+        "testing",
+        "regression",
+        "json-parsing",
+        "validator",
+        "empty-query"
+      ],
+      "title": "Query-parameter endpoint migration: testing and validator hardening for GET routes",
+      "top_keywords": [
+        "null",
+        "unlist()",
+        "\"\"",
+        "fix",
+        "issue",
+        "plumber",
+        "empty-query",
+        "validator",
+        "query-parameter",
+        "endpoint"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/testing-patterns/2026-11-09-bounded-adaptive-prose-enumeration.md",
+      "slug": "2026-11-09-bounded-adaptive-prose-enumeration",
+      "status": "",
+      "summary": "When generating natural-language explanations of user-configured multi-dimensional tables (e.g. `GET /cell-definition` for Page 2 layout slots `row`, `column`, `superRow`, `superColumn`): 1. **The single-cell example failure**: Providing plain-English wording for only the first combined cell (e.g., `\"For example, the first cell is men living in urban areas\"`) leaves all remaining categories (categories 2..N across all active dimensions) completely unexplained to the user. 2. **The Cartesian explosion problem**: Fully enumerating every combined cell ($N_1 \\times N_2 \\times N_3 \\times N_4$) quickly explodes. A table with 4 dimensions can produce up to 560 cells, turning a preview into hundreds of lines of repetitive...",
+      "tags": [
+        "api",
+        "endpoint",
+        "cell-definition",
+        "prose",
+        "json-serialization",
+        "plumber",
+        "testthat",
+        "unboxing",
+        "cartesian-product",
+        "bounded-contracts"
+      ],
+      "title": "Bounded adaptive prose enumeration: factorizing multi-dimensional grid explanations into bounded UI contracts",
+      "top_keywords": [
+        "bounded",
+        "case",
+        "adaptive",
+        "enumeration",
+        "prose",
+        "categories",
+        "active",
+        "known",
+        "total_cells",
+        "as.list()"
       ]
     },
     {
@@ -4363,6 +4881,72 @@
     {
       "date": "",
       "entity_type": "feature",
+      "path": "roadmap.json#page2-cell-definition-endpoint",
+      "slug": "page2-cell-definition-endpoint",
+      "status": "done",
+      "summary": "Page 2 cell definition endpoint (POST /cell-definition)",
+      "tags": [],
+      "title": "Page 2 cell definition endpoint (POST /cell-definition)",
+      "top_keywords": [
+        "service layer",
+        "page",
+        "cell",
+        "definition",
+        "endpoint",
+        "post",
+        "cell-definition",
+        "feature",
+        "milestone",
+        "phase"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#cell-definition-get-only",
+      "slug": "cell-definition-get-only",
+      "status": "done",
+      "summary": "Replace POST /cell-definition with GET /cell-definition",
+      "tags": [],
+      "title": "Replace POST /cell-definition with GET /cell-definition",
+      "top_keywords": [
+        "cell-definition",
+        "service layer",
+        "replace",
+        "post",
+        "feature",
+        "milestone",
+        "phase",
+        "api",
+        "service",
+        "layer"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
+      "slug": "adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
+      "status": "done",
+      "summary": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
+      "tags": [],
+      "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
+      "top_keywords": [
+        "service layer",
+        "adaptive",
+        "cell",
+        "enumeration",
+        "per-slot",
+        "category",
+        "breakdown",
+        "cell-definition",
+        "feature",
+        "milestone"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
       "path": "roadmap.json#ppp-load-data-resolution",
       "slug": "ppp-load-data-resolution",
       "status": "done",
@@ -4514,13 +5098,13 @@
       ]
     }
   ],
-  "entity_count": 159,
-  "generated": "2026-10-26",
+  "entity_count": 178,
+  "generated": "2026-11-09",
   "schema_version": "0.2.0",
   "topic_count": 3,
   "topics": [
     {
-      "entity_count": 100,
+      "entity_count": 113,
       "entity_paths": [
         ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
         ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
@@ -4550,6 +5134,8 @@
         ".cg-docs/brainstorms/2026-10-20-pop-share-nr-masking.md",
         ".cg-docs/brainstorms/2026-10-22-table-endpoint-explicit-slot-parameters.md",
         ".cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md",
+        ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
+        ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
         ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
         ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
         ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
@@ -4579,6 +5165,10 @@
         ".cg-docs/plans/2026-10-22-table-explicit-slot-parameters.md",
         ".cg-docs/plans/2026-10-26-table-download-approach-c-flattening.md",
         ".cg-docs/plans/2026-10-26-table-layout-cells-response-format.md",
+        ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
+        ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
+        ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
+        ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
         ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
         ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
         ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
@@ -4603,6 +5193,13 @@
         ".cg-docs/reviews/2026-10-22-table-explicit-slot-parameters-revised-verify-review.md",
         ".cg-docs/reviews/2026-10-26-table-download-approach-c-flattening-review.md",
         ".cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md",
+        ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md",
+        ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review-2.md",
+        ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md",
+        ".cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md",
+        ".cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md",
+        ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+        ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md",
         ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
         ".cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md",
         ".cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md",
@@ -4632,7 +5229,7 @@
       "slug": "table-maker-table-pip-id"
     },
     {
-      "entity_count": 28,
+      "entity_count": 31,
       "entity_paths": [
         "roadmap.json#version-partition-key",
         "roadmap.json#manifest-generation-partition-filter",
@@ -4656,6 +5253,9 @@
         "roadmap.json#table-response-format-layout-slot-assignment",
         "roadmap.json#table-request-contract-explicit-slot-parameters-replacing-ordered-by",
         "roadmap.json#table-download-has-no-flat-rows-under-cells-response-format",
+        "roadmap.json#page2-cell-definition-endpoint",
+        "roadmap.json#cell-definition-get-only",
+        "roadmap.json#adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
         "roadmap.json#ppp-load-data-resolution",
         "roadmap.json#ppp-api-input-validation",
         "roadmap.json#ppp-edge-case-test-coverage",
@@ -4665,11 +5265,11 @@
       ],
       "keywords": [
         "service layer",
-        "table",
-        "computation engine"
+        "endpoint",
+        "table"
       ],
-      "label": "Service Layer / Table / Computation Engine",
-      "slug": "service-layer-table-computation-engine"
+      "label": "Service Layer / Endpoint / Table",
+      "slug": "service-layer-endpoint-table"
     },
     {
       "entity_count": 5,

@@ -80,6 +80,7 @@ piptm::run_api(port = 9000L, host = "127.0.0.1")
 }
 \seealso{
 Other api: 
+\code{\link{build_cell_explanation}()},
 \code{\link{flatten_table_response}()},
 \code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},

@@ -197,3 +197,27 @@ serialization, validate JSON values rather than only key presence, reject
 duplicate/reserved column-name collisions before named-list assignment, and
 preserve formatted measure strings such as `"NR"` verbatim. See
 `.cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md`.
+
+### Query-parameter validator hardening and empty-value semantics (established 2026-11-04)
+
+When migrating endpoints from `POST` (JSON body) to `GET` (query parameters):
+
+1. **Guard nested-JSON flattening**: Before `unlist()` on parsed JSON strings, verify the value is a flat vector. Reject data frames, named lists, and recursively-nested structures that would silently corrupt data via flattening. Example: `{"age_group": {"min": 1, "max": 5}}` must error, not flatten to `c(1, 5)`. Apply `!is.null(dim(x))`, `!is.null(names(x))`, and recursive list checks before unlisting.
+
+2. **Empty-value disable semantics are contract-significant**: Over GET, omitting a param means `NULL` in the request builder, but explicitly empty (`?param=`) parses as the string `""` in the query string. The disable pattern depends on this distinction. Tests must assert both cases: missing (NULL) and empty string ("") separately at router level, checking payload structure (not just HTTP status).
+
+3. **Give all handler-validated params `NULL` defaults**: Missing required params crash at plumber's binding layer (500) before reaching the handler. Provide `function(param = NULL, ...)` so missing values reach validation logic and return 400.
+
+4. **Simplify JSON parsing options**: Set `simplifyDataFrame = FALSE, simplifyMatrix = FALSE` in `fromJSON()` to avoid unnecessary frame/matrix allocations for malformed/object input.
+
+See `.cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md` for full implementation details and test patterns.
+
+### Bounded adaptive prose and array-serialization contracts (established 2026-11-09)
+
+When endpoints return natural-language explanations of user-configured multi-dimensional grids (e.g. `GET /cell-definition`):
+
+1. **Never emit unbounded Cartesian products**: Multi-dimensional tables explode exponentially ($N_1 \times N_2 \times N_3 \times N_4$). Cap combined enumeration at small cardinalities ($\le 4$ total cells). Above 4 cells, switch to an additive, factorized per-slot breakdown (1 line per active layout slot, max 4 lines) plus 1 concrete combined example cell.
+2. **Always wrap array-contract fields as `as.list()` in R**: In Plumber with `auto_unbox = TRUE`, single-element character vectors (`c("...")`) unbox to bare JSON strings (`"items": "..."`), breaking frontend clients that expect an array (`"items": ["..."]`). Using `as.list()` prevents scalar unboxing even for length-1 arrays.
+3. **Guard fallback paths against false counts**: When metadata or registries are unavailable, drop numeric count suffixes entirely rather than deriving false cell counts from dummy fallback items.
+
+See `.cg-docs/solutions/testing-patterns/2026-11-09-bounded-adaptive-prose-enumeration.md` for full details.

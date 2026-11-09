@@ -68,6 +68,7 @@
   .piptm_env$current_release <- NULL
   .piptm_env$registry_dir    <- NULL
   .piptm_env$registries      <- list()
+  .piptm_env$cell_prose      <- NULL
 
   # --- Read paths from environment variables ---------------------------------
   # Each team member sets these in their ~/.Renviron. When unset (CI, new

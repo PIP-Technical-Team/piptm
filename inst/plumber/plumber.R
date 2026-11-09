@@ -14,6 +14,7 @@
 #   GET|POST /table
 #   POST /table/download
 #   POST /description
+#   GET /cell-definition
 #   GET /lookup
 #   GET /surveys
 #   GET /countries
@@ -404,6 +405,10 @@ function(req, body = NULL, res) {
   # format == "markdown" leaves Content-Type as text/plain; format defaults to
   # "html" (Content-Type: text/html; charset=utf-8) when omitted.
   render_description <- function(model) {
+    if ("cell_definition" %in% names(model)) {
+      model$cell_definition$visible <- FALSE
+    }
+
     if (identical(format, "html")) {
       piptm::render_description_html(model)
     } else {
@@ -841,4 +846,96 @@ function(release = NULL, res) {
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
   api_response(out$result$data, warnings = out$warnings,
                meta = list(release = out$result$rel))
+}
+
+# ── GET /cell-definition ──────────────────────────────────────────────────────
+
+#* Return a three-section natural-language explanation of what each cell in the
+#* configured table represents (Page 2, Step 2).
+#*
+#* Pure function of the Page 2 configuration parameters and the release
+#* variable registry. Does not call `table_maker()` and does not access Arrow
+#* microdata.
+#*
+#* @param analysis_var:character Analysis variable name (required).
+#* @param measures:[character] Measure names (required, repeatable).
+#* @param poverty_line:numeric Poverty line value (required when
+#*   `analysis_var = "pov_status"`, `"pov_status"` appears in any layout slot,
+#*   or poverty measures are requested).
+#* @param column:character Variable placed in the Columns slot (optional).
+#* @param row:character Variable placed in the Rows slot (optional).
+#* @param superColumn:character Variable placed in the Super Columns slot (optional).
+#* @param superRow:character Variable placed in the Super Rows slot (optional).
+#*   Layout slots must be filled in order (column, row, superColumn, superRow);
+#*   gaps and repeated variables are rejected with HTTP 400.
+#* @param filter_base:character JSON-encoded sample-base filter object
+#*   (optional), for example `{"gender":[0],"age_group":[1,2]}`.
+#* @param ppp:integer PPP reference year (optional; default `2021`). Must be a
+#*   positive integer; invalid values return HTTP 400.
+#* @param pop_share_threshold:numeric Optional cell-suppression threshold
+#*   (default `0.001`). Use null/empty to disable suppression.
+#* @param welfare_type:character Optional `"INC"` or `"CON"` for welfare wording.
+#* @param release:character Release ID (optional; defaults to current release).
+#* @serializer json list(na = "null")
+#* @get /cell-definition
+function(analysis_var = NULL, measures = NULL, poverty_line = NULL,
+         column = NULL, row = NULL, superColumn = NULL, superRow = NULL,
+         filter_base = NULL, ppp = 2021L, pop_share_threshold = 0.001,
+         welfare_type = NULL, release = NULL, res) {
+
+  check <- validate_cell_definition_query(
+    analysis_var        = analysis_var,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    column              = column,
+    row                 = row,
+    superColumn         = superColumn,
+    superRow            = superRow,
+    filter_base         = filter_base,
+    ppp                 = ppp,
+    pop_share_threshold = pop_share_threshold,
+    welfare_type        = welfare_type,
+    release             = release
+  )
+  if (!check$valid) {
+    return(api_error(check$errors, 400L, res))
+  }
+
+  out <- capture_with_warnings({
+    rel_in <- check$release
+    rel <- if (!is.null(rel_in) && nzchar(rel_in)) {
+      resolve_release(rel_in)
+    } else {
+      tryCatch(piptm::piptm_current_release(), error = function(e) NULL)
+    }
+
+    exp_res <- piptm::build_cell_explanation(
+      analysis_var        = check$analysis_var,
+      measures            = check$measures,
+      poverty_line        = check$poverty_line,
+      column              = check$slots$column,
+      row                 = check$slots$row,
+      superColumn         = check$slots$superColumn,
+      superRow            = check$slots$superRow,
+      filter_base         = check$filter_base,
+      ppp                 = check$ppp,
+      pop_share_threshold = check$pop_share_threshold,
+      welfare_type        = check$welfare_type,
+      release             = rel
+    )
+
+    list(
+      data     = exp_res[c("schema_version", "who_is_in_table", "what_a_cell_is", "what_is_shown", "notes")],
+      warnings = as.character(unlist(exp_res$warnings, use.names = FALSE)),
+      rel      = rel
+    )
+  })
+
+  if (!is.null(out$error)) {
+    return(api_error(out$error, 422L, res))
+  }
+
+  all_warnings <- unique(c(out$warnings, out$result$warnings))
+  meta_out <- if (!is.null(out$result$rel)) list(release = out$result$rel) else list()
+  api_response(out$result$data, warnings = all_warnings, meta = meta_out)
 }

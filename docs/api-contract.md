@@ -367,6 +367,7 @@ Access-Control-Allow-Headers: Content-Type
 | `/table` | GET, POST | Execute tables for selected surveys |
 | `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
 | `/description` | POST | Render natural-language table description |
+| `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |
 | `/categories` | GET | Power Step 1 Available Variables filter chips |

@@ -24,6 +24,12 @@
   `POST /table/download`. It preserves formatted measure strings (including
   `"NR"` and JSON `null`), validates headers, layouts, cell slots, name
   collisions, and cross-survey schema equality, and is registry-free.
+- `build_cell_explanation()` (`R/cell_explanation.R`) — generates
+  natural-language table and cell explanations for `GET /cell-definition`,
+  producing a bounded adaptive `what_a_cell_is$items` array (<= 4 entries:
+  full Cartesian enumeration for <= 4 cells, per-slot category breakdown for
+  > 4 cells) with JSON array unbox protection and filter-aware category
+  intersections.
 <!-- cg:auto:end -->
 
 <!-- cg:auto:parameters -->
@@ -51,6 +57,14 @@ uses Approach C (per-survey `layout` plus dense `cells[]`), while
 `POST /table/download` accepts that payload and exports deterministic Shape A
 rows. Malformed payloads are rejected at the boundary with the standard HTTP
 400 JSON error envelope rather than being silently coerced.
+
+The `GET /cell-definition` API returns a natural-language explanation payload
+(`who_is_in_table`, `what_a_cell_is`, `what_is_shown`, `notes`, and `warnings`).
+Its `what_a_cell_is$items` field is guaranteed to serialize as a bounded JSON
+array with at most 4 entries (full Cartesian enumeration for <= 4 total cells,
+1 summary line per active slot for > 4 cells, or empty when no slots are active
+or the registry is unresolved), preventing Plumber scalar-string unboxing and
+combinatorial text bloat.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)
