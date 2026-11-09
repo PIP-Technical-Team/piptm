@@ -307,6 +307,22 @@ Returns the three-section natural-language cell explanation (`who_is_in_table`,
 `what_a_cell_is`, `what_is_shown`, `notes`) for the current Page 2 configuration
 without calling `table_maker()` or accessing Arrow microdata.
 
+The `what_a_cell_is` section carries a uniform `{ title, structure_text, items,
+example_text }` shape (`dimensions` and `example_cell_label` remain available for
+structural reference). `items` is always a JSON array of plain-English strings
+and never exceeds 4 entries:
+
+- **4 or fewer total cells** → `items` enumerates every combined cell
+  (e.g., `"Men living in urban areas"`), in registry category order.
+- **More than 4 total cells** → `items` lists one line per active layout slot
+  (e.g., `"Column (gender): men or women."`), at most four lines.
+- **No layout slot selected** → `items` is `[]` and `example_text` is `null`.
+
+When a layout-slot variable is also constrained by `filter_base`, only the
+retained categories appear in `items` and in the total cell count. When the
+variable registry is unavailable, `items` is `[]` and the cell-count suffix is
+omitted.
+
 Query parameters (Swagger "Try it out"):
 
 | Parameter | Type | Required | Notes |

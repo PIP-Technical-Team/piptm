@@ -184,7 +184,13 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
         { "slot": "rows",    "varname": "area",   "label": "area",   "example_category": "Urban" },
         { "slot": "columns", "varname": "gender", "label": "gender", "example_category": "Male" }
       ],
-      "structure_text": "Each cell is one combination of area (row) and gender (column).",
+      "structure_text": "Each cell is one combination of area (row) and gender (column) \u2014 4 cells in total:",
+      "items": [
+        "Men living in urban areas",
+        "Women living in urban areas",
+        "Men living in rural areas",
+        "Women living in rural areas"
+      ],
       "example_cell_label": "men living in urban areas",
       "example_text": "For example, the first cell is men living in urban areas \u2014 within the filtered group above."
     },
@@ -205,6 +211,14 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
     "notes": []
   }
   ```
+- **Rendering guidance for `what_a_cell_is`:**
+  - Render the four fields the same way in every case: `title` (heading), `structure_text` (sentence stating the layout and total cell count), `items` (a plain-English string array rendered as a list), and `example_text` (closing sentence, or `null` when no layout slot is selected).
+  - **`items` is always a JSON array of plain-English strings** and never exceeds **4 entries**, so the UI needs no conditional logic:
+    - **4 or fewer total cells** (for example a 2×2 `area × gender` table): `items` enumerates every combined cell (e.g., `"Men living in urban areas"`, `"Women living in urban areas"`, …), in registry category order (earlier layout slots vary first).
+    - **More than 4 total cells** (for example `education level (5) × gender (2)` = 10 cells): `items` contains one line per active layout slot listing that slot's categories (e.g., `"Row (education level): people with …"`, `"Column (gender): men or women."`), at most four lines (rows, columns, row groups, column groups).
+    - **No layout slot selected**: `items` is `[]` and `example_text` is `null`.
+  - **Filter-aware categories:** when a layout-slot variable is also constrained by `filter_base`, only the retained categories appear in `items` and in the total cell count, matching the actual table the server would build.
+  - When the variable registry for `release` is unavailable, `items` is `[]` and `structure_text` omits the cell-count suffix (the response still degrades to raw-code labels and populates `warnings[]`).
 - **Rendering guidance for `what_is_shown.measures[]`:**
   - `key` (`"mean"`, `"pop_share"`, etc.) is a machine identifier (for matching the Page 3 measure chip) and must not be rendered as part of the label.
   - **`text` and `total_note` are the primary displayed prose** (`total_note` is `null` for non-share measures).
