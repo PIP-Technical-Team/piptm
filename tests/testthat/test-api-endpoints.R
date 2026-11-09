@@ -1020,17 +1020,17 @@ test_that("GET /table returns exact user-facing 422 messages for missing survey,
 
   # 5. filter_base category code matches 0 rows in load_surveys().
   # COL_2010_ECH_INC_ALL's "area" fixture column has only 2 registered
-  # categories (0-indexed codes 0/1; see helper-fixtures.R `area` registry
-  # entry). Guard that 999 is outside that domain so this test fails loudly
-  # (not silently, via a different/misleading message) if the registry
-  # fixture's `area` category count ever changes.
+  # categories (string codes "urban"/"rural"; see helper-fixtures.R `area`
+  # registry entry). Guard that "999" is outside that actual code domain so
+  # this test fails loudly (not silently, via a different/misleading
+  # message) if the registry fixture's `area` category codes ever change.
   area_entry <- piptm::piptm_filter_categories()
   area_entry <- Filter(function(x) identical(x$varname, "area"), area_entry)
   stopifnot(
     "fixture registry must define the 'area' filter variable for this test" =
       length(area_entry) == 1L,
-    "999 must fall outside the registered 'area' category code range (0-indexed) for this test to exercise the 0-row branch" =
-      999L >= length(area_entry[[1L]]$subcategories %||% area_entry[[1L]]$categories)
+    "'999' must fall outside the registered 'area' category codes for this test to exercise the 0-row branch" =
+      !("999" %in% vapply(area_entry[[1L]]$subcategories, `[[`, character(1), "code"))
   )
   res_fb_zero <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id      = "COL_2010_ECH_INC_ALL",
