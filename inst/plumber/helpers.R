@@ -112,16 +112,49 @@ resolve_release <- function(release) {
   }
 
   known <- names(piptm::piptm_manifests())
-  if (!release %in% known) {
-    cli::cli_abort(
+  if (!is.character(release) || length(release) != 1L || is.na(release) || !release %in% known) {
+    piptm:::piptm_abort(
       c(
         "Release {.val {release}} is not a known release.",
         "i" = "Available releases: {.val {sort(known)}}."
-      )
+      ),
+      user_message = piptm:::.piptm_unknown_release_user_error(release)
     )
   }
 
   release
+}
+
+#' Parse a `filter_base` request parameter into an R list
+#'
+#' Accepts `NULL`, an already-parsed R `list` (from JSON request bodies), or a
+#' JSON-encoded character string (from query parameters). Raises a user-safe
+#' `piptm_abort()` when JSON parsing fails.
+#'
+#' @param filter_base Raw `filter_base` parameter from query or body.
+#' @return `NULL`, a parsed list, or the input value for downstream validation.
+parse_filter_base_input <- function(filter_base) {
+  if (is.null(filter_base)) {
+    return(NULL)
+  }
+  if (is.character(filter_base)) {
+    if (length(filter_base) != 1L || is.na(filter_base)) {
+      piptm:::piptm_abort(
+        "Malformed filter_base: expected a single JSON string.",
+        user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
+    }
+    return(tryCatch(
+      jsonlite::fromJSON(filter_base),
+      error = function(e) {
+        piptm:::piptm_abort(
+          "Malformed filter_base JSON: {conditionMessage(e)}",
+          user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+        )
+      }
+    ))
+  }
+  filter_base
 }
 
 # ── Input validators ──────────────────────────────────────────────────────────
@@ -727,8 +760,10 @@ validate_lookup_input <- function(country_code, year, welfare_type) {
 #'       occurred.}
 #'     \item{`warnings`}{Character vector of warning/message strings collected
 #'       during evaluation (in order of occurrence).}
-#'     \item{`error`}{`NULL` on success, or a single character string
-#'       describing the caught error.}
+#'     \item{`error`}{`NULL` on success, or a single user-safe character string
+#'       suitable for the API `errors[]` response envelope.}
+#'     \item{`dev_error`}{`NULL` on success, or a single character string
+#'       containing the raw developer `conditionMessage(e)` for diagnostics.}
 #'   }
 capture_with_warnings <- function(expr) {
   collected <- character()
@@ -753,16 +788,34 @@ capture_with_warnings <- function(expr) {
       }
     ),
     error = function(e) {
+      dev_msg  <- cli::ansi_strip(conditionMessage(e))
+      user_msg <- piptm:::piptm_user_error_message(e, fallback = NULL)
+      if (is.null(user_msg)) {
+        message(sprintf(
+          "[piptm][unmapped_error] %s: %s",
+          paste(class(e), collapse = "/"),
+          dev_msg
+        ))
+        user_msg <- piptm:::.PIPTM_GENERIC_USER_ERROR
+      }
       # Use a typed S3 class instead of a list-key sentinel to avoid
       # colliding with domain functions that legitimately return list(.__error__ = ...).
-      structure(list(message = conditionMessage(e)), class = "cw_error")
+      structure(
+        list(user_message = user_msg, dev_message = dev_msg),
+        class = "cw_error"
+      )
     }
   )
 
   # Distinguish a caught error from a normal return value via S3 class.
   if (inherits(result, "cw_error")) {
-    return(list(result = NULL, warnings = collected, error = result$message))
+    return(list(
+      result    = NULL,
+      warnings  = collected,
+      error     = result$user_message,
+      dev_error = result$dev_message
+    ))
   }
 
-  list(result = result, warnings = collected, error = NULL)
+  list(result = result, warnings = collected, error = NULL, dev_error = NULL)
 }

@@ -312,23 +312,25 @@ piptm_manifest <- function(release = NULL) {
   if (is.null(release)) {
     release <- piptm_current_release()
     if (is.null(release)) {
-      cli::cli_abort(
+      piptm_abort(
         c(
           "No current release is set.",
           "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
-        )
+        ),
+        user_message = .PIPTM_NO_ACTIVE_RELEASE_USER_ERROR
       )
     }
   }
 
   manifests <- .piptm_env$manifests
-  if (!release %in% names(manifests)) {
-    cli::cli_abort(
+  if (!is.character(release) || length(release) != 1L || is.na(release) || !release %in% names(manifests)) {
+    piptm_abort(
       c(
         "Release {.val {release}} not found in loaded manifests.",
         "i" = "Available releases: {.val {sort(names(manifests))}}",
         "i" = "Call {.fn set_manifest_dir} to load manifests from a directory."
-      )
+      ),
+      user_message = .piptm_unknown_release_user_error(release)
     )
   }
 

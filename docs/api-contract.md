@@ -41,17 +41,38 @@ components:
 ```
 
 - Success responses: `status="success"`, `errors=[]`; `data` carries payload; `warnings` may contain informational messages.
-- Error responses: `status="error"`, `data=null`; `errors` lists messages suitable for UI display.
+- Error responses: `status="error"`, `data=null`; `errors` lists plain-English, user-safe sentences that UI clients can display directly in a banner or toast without client-side parsing or sanitization.
 
 ## Error Codes
 
 | HTTP | Meaning | Common Causes |
 |------|---------|---------------|
 | 200  | Success | Request completed; warnings possible |
-| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies |
+| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies, invalid download payload |
 | 404  | Not found | Unknown route or missing resource |
-| 422  | Domain/processing failure | Manifest lookup errors, computation failures, release mismatch |
+| 413  | Payload too large | `POST /table/download` body exceeds 25 MB |
+| 422  | Domain/processing failure | Survey/country unavailable, PPP year unavailable, unsupported breakdown covariates, empty sample-filter results, unknown release |
 | 500  | Internal error | Unexpected exception (stack traces never exposed) |
+
+### User-Safe `errors[]` Guarantee
+
+Every string returned in `errors[]` across HTTP 422, 413, and 500 responses (as well as HTTP 400 payload rejections on `POST /table/download`) is guaranteed to be a plain-English sentence safe for direct display to end users (no internal R variable names such as `pip_id`, `manifest`, `triplet`, `Parquet`, `Arrow`, or `Approach C`, and no `cli`/glue markup). HTTP 400 parameter validation messages from `validate_table_input()`, `validate_lookup_input()`, and `validate_description_input()` report invalid request parameters directly.
+
+Representative domain and payload error messages:
+
+| Scenario | HTTP | `errors[]` Message |
+|----------|------|--------------------|
+| Requested country/survey not in release | 422 | `"The requested country or survey is not available in the selected data release."` |
+| Empty survey selection after resolution | 422 | `"No surveys matched your selection. Please select at least one available country and survey year."` |
+| Requested PPP year unavailable across selected surveys | 422 | `"None of the selected surveys have data available for the <ppp> PPP standard. Please switch to another PPP year."` |
+| Selected surveys lack requested breakdown covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Area. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Area, Gender. Remove one or more of these covariates or choose a different survey."`) |
+| Selected surveys lack sample-filter covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Age. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Age, Gender. Remove one or more of these covariates or choose a different survey."`) |
+| Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
+| Malformed/unreadable sample filter JSON (`filter_base`) | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
+| Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
+| Incomplete/invalid `description_metadata` on `POST /description` | 422 | `"The table description could not be generated because the provided table metadata is incomplete or invalid."` |
+| Incomplete/invalid `data` payload on `POST /table/download` | 400 | `"The table data could not be exported because the download payload is incomplete or invalid."` |
+| Any unmapped internal/schema error | 422 / 500 | `"Something went wrong processing this request."` *(raw developer diagnostic is logged server-side to `stderr` with the `[piptm][unmapped_error]` prefix)* |
 
 ## UI Step Mapping
 
@@ -321,7 +342,7 @@ DescriptionMetadata:
 2. **Identifiers:** `pip_id` must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`.
 3. **PPP Year:** `ppp` must be a single positive integer. Strings must contain digits only (`"2017"` valid, `"2e3"` rejected).
 4. **Poverty Line:** Required whenever poverty status is analyzed or disaggregated; must be positive finite numeric.
-5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 400.
+5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 422.
 6. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
 7. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `include_metadata="false"`, `release=<current>`.
 8. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.

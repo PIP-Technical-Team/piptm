@@ -173,11 +173,7 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   include_meta <- identical(tolower(include_metadata), "true")
 
   out <- capture_with_warnings({
-    parsed_filter_base <- if (is.null(filter_base)) {
-      NULL
-    } else {
-      jsonlite::fromJSON(filter_base)
-    }
+    parsed_filter_base <- parse_filter_base_input(filter_base)
 
     rel  <- resolve_release(release)
 
@@ -309,10 +305,18 @@ function(req, body = NULL, res) {
 
   flat_res <- tryCatch(
     list(tbl = piptm::flatten_table_response(body$data), error = NULL),
-    error = function(e) list(tbl = NULL, error = cli::ansi_strip(conditionMessage(e)))
+    error = function(e) {
+      list(
+        tbl   = NULL,
+        error = piptm:::piptm_user_error_message(
+          e,
+          fallback = piptm:::.PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR
+        )
+      )
+    }
   )
   if (!is.null(flat_res$error) || is.null(flat_res$tbl) || nrow(flat_res$tbl) == 0L) {
-    msg <- flat_res$error %||% "`data` must be a non-empty array of Approach C survey objects."
+    msg <- flat_res$error %||% piptm:::.PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR
     return(err(msg, 400L))
   }
   tbl <- flat_res$tbl
@@ -429,14 +433,20 @@ function(req, body = NULL, res) {
     if (has_metadata) {
       description_metadata <- body$description_metadata
       if (is.null(description_metadata) || !is.list(description_metadata)) {
-        cli::cli_abort("`description_metadata` must be a JSON object.")
+        piptm:::piptm_abort(
+          "`description_metadata` must be a JSON object.",
+          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
+        )
       }
 
       # Fast path: validate + build model + render. Table params derive from
       # the embedded metadata.
       params <- description_metadata$params
       if (is.null(params)) {
-        cli::cli_abort("`description_metadata` is missing the `params` field.")
+        piptm:::piptm_abort(
+          "`description_metadata` is missing the `params` field.",
+          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
+        )
       }
 
       model <- piptm::build_description_model(description_metadata, params)
@@ -444,7 +454,7 @@ function(req, body = NULL, res) {
       list(content = rendered)
     } else {
       # Fallback path: recompute via table_maker(include_metadata = TRUE).
-      parsed_filter_base <- body$filter_base
+      parsed_filter_base <- parse_filter_base_input(body$filter_base)
 
       rel <- resolve_release(body$release %||% NULL)
       tm_out <- piptm::table_maker(
