@@ -277,6 +277,14 @@
           "description": "Convert the Page 2 cell-definition explanation endpoint from POST (JSON body) to GET (query parameters), matching /table's existing convention. Removes the POST route entirely.",
           "status": "done",
           "plan": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md"
+        },
+        {
+          "id": "adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
+          "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
+          "description": "Enumerate all combined cells in plain English when total cells <= 4 and emit a compact per-slot category breakdown (1 line per active slot) plus one combined example cell when total cells > 4, under a uniform { title, structure_text, items, example_text } contract in GET /cell-definition.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+          "plan": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md"
         }
       ]
     },

@@ -1,18 +1,22 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-11-04T18:35:00Z",
-  "workflow": "/cg-review",
+  "updatedAt": "2026-11-09T20:14:27Z",
+  "workflow": "/cg-work",
   "status": "completed",
   "branch": "feat/cell-definitions",
-  "plan": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
-  "executionReport": ".cg-docs/work-reports/2026-11-04-cell-definition-get-only.md",
+  "plan": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
+  "executionReport": ".cg-docs/work-reports/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
   "currentPhase": null,
-  "completedPhases": [1, 2],
-  "evidenceStatus": [],
+  "evidenceStatus": [
+    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-cell-explanation.R"},
+    {"id": "V5", "status": "passed", "artifact": "tests/testthat/test-api-cell-definition.R"},
+    {"id": "V6", "status": "passed", "artifact": "devtools::test() (1 pre-existing unrelated failure in test-api-description.R)"},
+    {"id": "V7", "status": "passed", "artifact": "docs/api-contract.md"}
+  ],
   "unresolvedDecisions": [],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md", "status": "completed"},
-    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-04-cell-definition-get-only.md", "status": "complete"}
+    {"kind": "plan", "path": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md", "status": "completed"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-09-cell-definition-all-cells-breakdown-revised.md", "status": "open"}
   ],
-  "nextCommand": "git commit -m 'feat(api)!: replace POST /cell-definition with GET /cell-definition'"
+  "nextCommand": "/cg-review light"
 }
