@@ -1,10 +1,10 @@
 # 🧠 Project Brain — Part 1
 
-_Generated 2026-11-04_
+_Generated 2026-11-09_
 
 ## Table_Maker\(\) / /Table / Pip_Id
 
-_Keywords: `table_maker()` · `/table` · `pip_id`_ · 108 entities
+_Keywords: `table_maker()` · `/table` · `pip_id`_ · 113 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -63,6 +63,8 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 108 entities
 - **[/table/download input & output shape under Approach C](.cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md)** · `brainstorm` · _decided_ · `2026-10-26`
   > `/table/download` (`inst/plumber/plumber.R:247-343`) is a stateless `POST` endpoint that converts an already-computed…
 - **[Page 2 cell definition endpoint, and phasing of the metadata rework](.cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md)** · `brainstorm` · _decided_ · `2026-11-02`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition](.cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md)** · `brainstorm` · _decided_ · `2026-11-09`
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
@@ -126,6 +128,10 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 108 entities
   > Implement a result-free Page 2 cell explanation feature consisting of a dedicated curated prose specification (`inst/…
 - **[Replace POST /cell-definition with GET /cell-definition](.cg-docs/plans/2026-11-04-cell-definition-get-only.md)** · `plan` · _completed_ · `2026-11-04`
   > Replace the existing `POST /cell-definition` route with a `GET /cell-definition` route that accepts the same Page 2 c…
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition \(revised\)](.cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md)** · `plan` · _completed_ · `2026-11-09`
+  > Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI b…
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition](.cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md)** · `plan` · _active_ · `2026-11-09`
+  > Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI b…
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
   > **Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always include…
 - **[2026-04-07-computation-engine-review](.cg-docs/reviews/2026-04-07-computation-engine-review.md)** · `review` · _—_ · `—`
@@ -184,6 +190,10 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 108 entities
   > **Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `R/cell_explanat…
 - **[2026-11-04-cell-definition-get-only-verify-review](.cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md)** · `review` · _—_ · `2026-11-04`
   > **Review mode**: light (mode:verify) **Files reviewed**: 9 (`R/cell_explanation.R`, `inst/plumber/helpers.R`, `inst/p…
+- **[2026-11-09-cell-definition-all-cells-breakdown-revised-review](.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light **Files reviewed**: 5 (`R/cell_explanation.R`, `tests/testthat/test-cell-explanation.R`, `test…
+- **[2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review](.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light (mode:verify) **Parent review**: `.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakd…
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
 - **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
@@ -225,7 +235,7 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 108 entities
 
 ## Service Layer / Endpoint / Table
 
-_Keywords: `service layer` · `endpoint` · `table`_ · 30 entities
+_Keywords: `service layer` · `endpoint` · `table`_ · 31 entities
 
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`
   > Version as partition key with manifest-based resolution
@@ -275,6 +285,8 @@ _Keywords: `service layer` · `endpoint` · `table`_ · 30 entities
   > Page 2 cell definition endpoint (POST /cell-definition)
 - **[Replace POST /cell-definition with GET /cell-definition](roadmap.json#cell-definition-get-only)** · `feature` · _done_ · `—`
   > Replace POST /cell-definition with GET /cell-definition
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition](roadmap.json#adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition)** · `feature` · _done_ · `—`
+  > Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[API PPP parameter validation refactor](roadmap.json#ppp-api-input-validation)** · `feature` · _done_ · `—`

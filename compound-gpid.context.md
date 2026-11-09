@@ -211,3 +211,13 @@ When migrating endpoints from `POST` (JSON body) to `GET` (query parameters):
 4. **Simplify JSON parsing options**: Set `simplifyDataFrame = FALSE, simplifyMatrix = FALSE` in `fromJSON()` to avoid unnecessary frame/matrix allocations for malformed/object input.
 
 See `.cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md` for full implementation details and test patterns.
+
+### Bounded adaptive prose and array-serialization contracts (established 2026-11-09)
+
+When endpoints return natural-language explanations of user-configured multi-dimensional grids (e.g. `GET /cell-definition`):
+
+1. **Never emit unbounded Cartesian products**: Multi-dimensional tables explode exponentially ($N_1 \times N_2 \times N_3 \times N_4$). Cap combined enumeration at small cardinalities ($\le 4$ total cells). Above 4 cells, switch to an additive, factorized per-slot breakdown (1 line per active layout slot, max 4 lines) plus 1 concrete combined example cell.
+2. **Always wrap array-contract fields as `as.list()` in R**: In Plumber with `auto_unbox = TRUE`, single-element character vectors (`c("...")`) unbox to bare JSON strings (`"items": "..."`), breaking frontend clients that expect an array (`"items": ["..."]`). Using `as.list()` prevents scalar unboxing even for length-1 arrays.
+3. **Guard fallback paths against false counts**: When metadata or registries are unavailable, drop numeric count suffixes entirely rather than deriving false cell counts from dummy fallback items.
+
+See `.cg-docs/solutions/testing-patterns/2026-11-09-bounded-adaptive-prose-enumeration.md` for full details.

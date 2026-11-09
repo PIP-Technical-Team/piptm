@@ -29,6 +29,14 @@ load).
   invalid cell slots, and cross-survey schema mismatches; formatted measure
   strings (including `"NR"` and JSON `null`) are preserved and malformed
   requests receive the standard HTTP 400 JSON error envelope.
+- 2026-11-09 — `GET /cell-definition` and `build_cell_explanation()` in
+  `R/cell_explanation.R` adopt bounded adaptive prose enumeration for
+  `what_a_cell_is$items`. Tables with 4 or fewer cells emit full Cartesian
+  cell descriptions, while tables with more than 4 cells factorize into one
+  line per active layout slot (guaranteeing <= 4 items and preventing text
+  bloat). Plumber array unboxing is guarded via `as.list()` so single-element
+  lists serialize as JSON arrays, slot categories intersect with `filter_base`,
+  and unresolved registry fallbacks omit false cell counts.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)
