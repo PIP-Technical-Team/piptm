@@ -41,17 +41,36 @@ components:
 ```
 
 - Success responses: `status="success"`, `errors=[]`; `data` carries payload; `warnings` may contain informational messages.
-- Error responses: `status="error"`, `data=null`; `errors` lists messages suitable for UI display.
+- Error responses: `status="error"`, `data=null`; `errors` lists plain-English, user-safe sentences that UI clients can display directly in a banner or toast without client-side parsing or sanitization.
 
 ## Error Codes
 
 | HTTP | Meaning | Common Causes |
 |------|---------|---------------|
 | 200  | Success | Request completed; warnings possible |
-| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies |
+| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies, invalid download payload |
 | 404  | Not found | Unknown route or missing resource |
-| 422  | Domain/processing failure | Manifest lookup errors, computation failures, release mismatch |
+| 413  | Payload too large | `POST /table/download` body exceeds 25 MB |
+| 422  | Domain/processing failure | Survey/country unavailable, PPP year unavailable, unsupported breakdown dimensions, empty sample-filter results, unknown release |
 | 500  | Internal error | Unexpected exception (stack traces never exposed) |
+
+### User-Safe `errors[]` Guarantee
+
+Every string returned in `errors[]` across HTTP 400, 413, 422, and 500 responses is guaranteed to be safe for direct display to end users (no internal R variable names such as `pip_id`, `manifest`, `triplet`, `Parquet`, `Arrow`, or `Approach C`, and no `cli`/glue markup).
+
+| Scenario | HTTP | `errors[]` Message |
+|----------|------|--------------------|
+| Requested country/survey not in release | 422 | `"The requested country or survey is not available in the selected data release."` |
+| Empty survey selection after resolution | 422 | `"No surveys matched your selection. Please select at least one available country and survey year."` |
+| Requested PPP year unavailable across selected surveys | 422 | `"None of the selected surveys have data available for the <ppp> PPP standard. Please switch to another PPP year."` |
+| Selected surveys lack requested breakdown dimensions | 422 | `"None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."` |
+| Selected surveys lack sample-filter variables | 422 | `"None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."` |
+| Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
+| Malformed/unreadable sample filter JSON | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
+| Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
+| Incomplete/invalid `description_metadata` on `POST /description` | 422 | `"The table description could not be generated because the provided table metadata is incomplete or invalid."` |
+| Incomplete/invalid `data` payload on `POST /table/download` | 400 | `"The table data could not be exported because the download payload is incomplete or invalid."` |
+| Any unmapped internal/schema error | 422 | `"Something went wrong processing this request."` *(raw developer diagnostic is logged server-side to `stderr` with the `[piptm][unmapped_error]` prefix)* |
 
 ## UI Step Mapping
 

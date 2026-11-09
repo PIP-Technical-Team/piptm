@@ -713,20 +713,37 @@ test_that("capture_with_warnings() collects cli warnings", {
   expect_null(out$error)
 })
 
-test_that("capture_with_warnings() catches stop() errors", {
-  out <- capture_with_warnings(stop("something broke"))
+test_that("capture_with_warnings() catches stop() errors with generic user-safe fallback and preserves dev_error", {
+  out <- suppressMessages(capture_with_warnings(stop("something broke")))
   expect_null(out$result)
-  expect_true(grepl("something broke", out$error))
+  expect_identical(out$error, piptm:::.PIPTM_GENERIC_USER_ERROR)
+  expect_true(grepl("something broke", out$dev_error))
+  expect_identical(out$warnings, character())
 })
 
-test_that("capture_with_warnings() catches cli_abort() errors", {
-  out <- capture_with_warnings(cli::cli_abort("abort message"))
+test_that("capture_with_warnings() catches unmapped cli_abort() errors with generic user-safe fallback", {
+  out <- suppressMessages(capture_with_warnings(cli::cli_abort("abort message")))
   expect_null(out$result)
-  expect_true(grepl("abort message", out$error))
+  expect_identical(out$error, piptm:::.PIPTM_GENERIC_USER_ERROR)
+  expect_true(grepl("abort message", out$dev_error))
+  expect_identical(out$warnings, character())
+})
+
+test_that("capture_with_warnings() extracts user_message from piptm_abort() without logging unmapped warning", {
+  out <- capture_with_warnings(
+    piptm:::piptm_abort(
+      "internal diagnostic {.val secret_col}",
+      user_message = "Friendly user-facing sentence."
+    )
+  )
+  expect_null(out$result)
+  expect_identical(out$error, "Friendly user-facing sentence.")
+  expect_true(grepl("secret_col", out$dev_error))
+  expect_identical(out$warnings, character())
 })
 
 test_that("capture_with_warnings() catches resolve_release() abort for bogus release", {
-  out <- capture_with_warnings(resolve_release("this_is_not_a_real_release"))
+  out <- suppressMessages(capture_with_warnings(resolve_release("this_is_not_a_real_release")))
   expect_null(out$result)
   expect_false(is.null(out$error))
   expect_true(nzchar(out$error))

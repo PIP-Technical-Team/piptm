@@ -653,7 +653,10 @@ test_that("GET /table with bogus release returns 422", {
   expect_equal(res$status, 422L)
   body <- parse_api_res(res)
   expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
+  expect_identical(
+    unlist(body$errors),
+    "The requested data release ('BOGUS_RELEASE_DOES_NOT_EXIST') is not available."
+  )
 })
 
 # =============================================================================
@@ -888,7 +891,7 @@ test_that("GET /table with ppp='-1' returns 400 (negative ppp)", {
   expect_equal(body$status, "error")
 })
 
-test_that("GET /table with malformed filter_base JSON returns 422", {
+test_that("GET /table with malformed filter_base JSON returns 422 with user-safe filter error message", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -900,6 +903,28 @@ test_that("GET /table with malformed filter_base JSON returns 422", {
   expect_equal(res$status, 422L)
   body <- parse_api_res(res)
   expect_equal(body$status, "error")
+  expect_identical(
+    unlist(body$errors),
+    "The selected sample filter could not be read. Please reset your filters and try again."
+  )
+})
+
+test_that("POST /table with parsed list filter_base in JSON body does not fail fromJSON coercion", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id       = "COL_2015_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(age = c(15L, 20L))
+  )))
+
+  expect_true(res$status %in% c(200L, 422L))
+  body <- parse_api_res(res)
+  # Even if 422 due to fixture columns, it must not be the malformed JSON error
+  expect_false(any(grepl("could not be read", unlist(body$errors))))
 })
 
 test_that("GET /table with valid filter_base JSON is accepted by endpoint", {
@@ -933,6 +958,63 @@ test_that("GET /table with ppp=NULL omitted uses manifest default — returns 20
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
+})
+
+test_that("GET /table returns exact user-facing 422 messages for missing survey, unavailable PPP, excluded dimensions, and 0-row filter_base", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  # 1. Valid pip_id pattern that is not in the manifest
+  res_missing <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "ZZZ_2020_FAKE_INC_ALL",
+    measures = "mean"
+  )))
+  expect_equal(res_missing$status, 422L)
+  body_missing <- parse_api_res(res_missing)
+  expect_identical(
+    unlist(body_missing$errors),
+    "The requested country or survey is not available in the selected data release."
+  )
+
+  # 2. Unavailable PPP year across all requested surveys
+  res_ppp <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = "1999"
+  )))
+  expect_equal(res_ppp$status, 422L)
+  body_ppp <- parse_api_res(res_ppp)
+  expect_identical(
+    unlist(body_ppp$errors),
+    "None of the selected surveys have data available for the 1999 PPP standard. Please switch to another PPP year."
+  )
+
+  # 3. Breakdown dimension absent from requested survey (BOL_2000_ECH_INC_ALL has 0 dimensions in fixture)
+  res_dim <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "BOL_2000_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender"
+  )))
+  expect_equal(res_dim$status, 422L)
+  body_dim <- parse_api_res(res_dim)
+  expect_identical(
+    unlist(body_dim$errors),
+    "None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."
+  )
+
+  # 4. filter_base dimension absent from requested survey
+  res_fb_dim <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "BOL_2000_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(gender = 1L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_dim$status, 422L)
+  body_fb_dim <- parse_api_res(res_fb_dim)
+  expect_identical(
+    unlist(body_fb_dim$errors),
+    "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+  )
 })
 
 # P1.8 — repeated ppp query param: should be rejected (not scalar)
@@ -1195,7 +1277,7 @@ test_that("GET /table returns string values, no population or flag, and formatte
   expect_false("flag" %in% names(meas))
 })
 
-test_that("GET /table returns 422 envelope when formatter fails", {
+test_that("GET /table returns 422 envelope with generic user-safe fallback when formatter fails", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -1204,20 +1286,21 @@ test_that("GET /table returns 422 envelope when formatter fails", {
     format_table_output = function(...) stop("simulated schema formatting failure"),
     .package = "piptm",
     {
-      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+      res <- suppressMessages(.ep_router$call(make_api_req("GET", "/table", query = list(
         pip_id       = "COL_2010_ECH_INC_ALL",
         analysis_var = "welfare",
         measures     = "mean"
-      )))
+      ))))
       expect_equal(res$status, 422L)
       body <- parse_api_res(res)
       expect_equal(body$status, "error")
-      expect_true(any(grepl("simulated schema formatting failure", unlist(body$errors))))
+      expect_identical(unlist(body$errors), piptm:::.PIPTM_GENERIC_USER_ERROR)
+      expect_false(any(grepl("simulated schema formatting failure", unlist(body$errors))))
     }
   )
 })
 
-test_that("GET /table returns 422 when format_table_output() genuinely throws on malformed table_maker() output (not a mocked formatter)", {
+test_that("GET /table returns 422 with generic user-safe fallback when format_table_output() genuinely throws on malformed table_maker() output", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -1225,7 +1308,8 @@ test_that("GET /table returns 422 when format_table_output() genuinely throws on
   # Only `table_maker()` is mocked here, to simulate a future regression that
   # drops a required column from its output. `format_table_output()` itself
   # runs unmocked and must genuinely raise its real validation error for the
-  # endpoint's error handler to convert into a 422 envelope.
+  # endpoint's error handler to convert into a safe 422 envelope without
+  # leaking internal column names (`flag`).
   malformed_table <- data.table::data.table(
     pip_id  = "COL_2010_ECH_INC_ALL",
     measure = "mean",
@@ -1238,15 +1322,16 @@ test_that("GET /table returns 422 when format_table_output() genuinely throws on
     table_maker = function(...) malformed_table,
     .package = "piptm",
     {
-      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+      res <- suppressMessages(.ep_router$call(make_api_req("GET", "/table", query = list(
         pip_id       = "COL_2010_ECH_INC_ALL",
         analysis_var = "welfare",
         measures     = "mean"
-      )))
+      ))))
       expect_equal(res$status, 422L)
       body <- parse_api_res(res)
       expect_equal(body$status, "error")
-      expect_true(any(grepl("flag", unlist(body$errors), ignore.case = TRUE)))
+      expect_identical(unlist(body$errors), piptm:::.PIPTM_GENERIC_USER_ERROR)
+      expect_false(any(grepl("flag", unlist(body$errors), ignore.case = TRUE)))
     }
   )
 })

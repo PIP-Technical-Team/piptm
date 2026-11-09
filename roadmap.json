@@ -262,6 +262,14 @@
           "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md",
           "plan": ".cg-docs/plans/2026-10-26-table-download-approach-c-flattening.md"
+        },
+        {
+          "id": "user-facing-api-error-messages",
+          "title": "User-facing API error messages",
+          "description": "Translate internal cli_abort() developer-facing error messages into user-safe, plain-English text at the API boundary (inst/plumber), via per-call-site user_message authoring (see .cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md), rolled out incrementally against highest-traffic error sites first.",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
+          "plan": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md"
         }
       ]
     },

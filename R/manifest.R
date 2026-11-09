@@ -312,23 +312,26 @@ piptm_manifest <- function(release = NULL) {
   if (is.null(release)) {
     release <- piptm_current_release()
     if (is.null(release)) {
-      cli::cli_abort(
+      piptm_abort(
         c(
           "No current release is set.",
           "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
-        )
+        ),
+        user_message = "Survey data is temporarily unavailable because no active data release is loaded."
       )
     }
   }
 
   manifests <- .piptm_env$manifests
   if (!release %in% names(manifests)) {
-    cli::cli_abort(
+    rel_label <- if (length(release) == 1L && !is.na(release)) as.character(release) else ""
+    piptm_abort(
       c(
         "Release {.val {release}} not found in loaded manifests.",
         "i" = "Available releases: {.val {sort(names(manifests))}}",
         "i" = "Call {.fn set_manifest_dir} to load manifests from a directory."
-      )
+      ),
+      user_message = sprintf("The requested data release ('%s') is not available.", rel_label)
     )
   }
 

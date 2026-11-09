@@ -113,11 +113,13 @@ resolve_release <- function(release) {
 
   known <- names(piptm::piptm_manifests())
   if (!release %in% known) {
-    cli::cli_abort(
+    rel_label <- if (length(release) == 1L && !is.na(release)) as.character(release) else ""
+    piptm:::piptm_abort(
       c(
         "Release {.val {release}} is not a known release.",
         "i" = "Available releases: {.val {sort(known)}}."
-      )
+      ),
+      user_message = sprintf("The requested data release ('%s') is not available.", rel_label)
     )
   }
 
@@ -727,8 +729,10 @@ validate_lookup_input <- function(country_code, year, welfare_type) {
 #'       occurred.}
 #'     \item{`warnings`}{Character vector of warning/message strings collected
 #'       during evaluation (in order of occurrence).}
-#'     \item{`error`}{`NULL` on success, or a single character string
-#'       describing the caught error.}
+#'     \item{`error`}{`NULL` on success, or a single user-safe character string
+#'       suitable for the API `errors[]` response envelope.}
+#'     \item{`dev_error`}{`NULL` on success, or a single character string
+#'       containing the raw developer `conditionMessage(e)` for diagnostics.}
 #'   }
 capture_with_warnings <- function(expr) {
   collected <- character()
@@ -753,16 +757,35 @@ capture_with_warnings <- function(expr) {
       }
     ),
     error = function(e) {
+      dev_msg <- cli::ansi_strip(conditionMessage(e))
+      um      <- e[["user_message"]]
+      has_um  <- is.character(um) && length(um) == 1L && !is.na(um) && nzchar(trimws(um))
+      if (!has_um) {
+        message(sprintf(
+          "[piptm][unmapped_error] %s: %s",
+          paste(class(e), collapse = "/"),
+          dev_msg
+        ))
+      }
+      user_msg <- piptm:::piptm_user_error_message(e)
       # Use a typed S3 class instead of a list-key sentinel to avoid
       # colliding with domain functions that legitimately return list(.__error__ = ...).
-      structure(list(message = conditionMessage(e)), class = "cw_error")
+      structure(
+        list(user_message = user_msg, dev_message = dev_msg),
+        class = "cw_error"
+      )
     }
   )
 
   # Distinguish a caught error from a normal return value via S3 class.
   if (inherits(result, "cw_error")) {
-    return(list(result = NULL, warnings = collected, error = result$message))
+    return(list(
+      result    = NULL,
+      warnings  = collected,
+      error     = result$user_message,
+      dev_error = result$dev_message
+    ))
   }
 
-  list(result = result, warnings = collected, error = NULL)
+  list(result = result, warnings = collected, error = NULL, dev_error = NULL)
 }

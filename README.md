@@ -156,6 +156,8 @@ Error status conventions:
 - `422`: domain/processing failures (including unknown release)
 - `500`: uncaught internal errors
 
+Every entry in `errors[]` is guaranteed to be a plain-English, user-safe sentence suitable for direct display in the UI. Unmapped internal exceptions return `"Something went wrong processing this request."` to the client while logging the developer diagnostic to `stderr` with a `[piptm][unmapped_error]` prefix.
+
 Success-response exceptions:
 
 - `POST /description`: returns rendered Markdown/HTML text, not the JSON envelope.

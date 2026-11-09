@@ -107,11 +107,12 @@ pip_valid_dimensions <- function() {
 
   unknown <- setdiff(measures, names(.MEASURE_REGISTRY))
   if (length(unknown) > 0L) {
-    cli_abort(
+    piptm_abort(
       c(
         "Unknown measure{?s}: {.val {unknown}}.",
         i = "Valid measures: {.val {names(.MEASURE_REGISTRY)}}."
       ),
+      user_message = "One or more requested statistics are not recognized.",
       call = NULL
     )
   }
@@ -167,22 +168,24 @@ pip_valid_dimensions <- function() {
 
   unknown_dims <- setdiff(by, valid_dims)
   if (length(unknown_dims) > 0L) {
-    cli_abort(
+    piptm_abort(
       c(
         "Unknown dimension{?s}: {.val {unknown_dims}}.",
         i = "Valid dimensions: {.val {valid_dims}}."
       ),
+      user_message = "One or more requested breakdown variables are not available for the selected release.",
       call = NULL
     )
   }
 
 
   if (length(by) > 4L) {
-    cli_abort(
+    piptm_abort(
       c(
         "At most 4 dimensions may be requested; \\
          got {length(by)}: {.val {by}}."
       ),
+      user_message = "At most 4 breakdown variables can be used in a single table.",
       call = NULL
     )
   }
@@ -221,21 +224,23 @@ pip_valid_dimensions <- function() {
   if (!"poverty" %in% families) return(invisible(poverty_lines))
 
   if (is.null(poverty_lines) || length(poverty_lines) == 0L) {
-    cli_abort(
+    piptm_abort(
       c(
         "Poverty measures require {.arg poverty_lines}.",
         i = "Provide a numeric vector of one or more positive poverty lines."
       ),
+      user_message = "A valid positive poverty line is required to compute poverty statistics.",
       call = NULL
     )
   }
 
   if (!is.numeric(poverty_lines)) {
-    cli_abort(
+    piptm_abort(
       paste0(
         "{.arg poverty_lines} must be a numeric vector, ",
         "not {.cls {class(poverty_lines)}}."
       ),
+      user_message = "A valid positive poverty line is required to compute poverty statistics.",
       call = NULL
     )
   }
@@ -243,11 +248,12 @@ pip_valid_dimensions <- function() {
   bad <- !is.finite(poverty_lines) | poverty_lines <= 0
   if (any(bad)) {
     bad_vals <- poverty_lines[bad]
-    cli_abort(
+    piptm_abort(
       c(
         "{.arg poverty_lines} must contain only positive finite values.",
         x = "Problematic values: {.val {bad_vals}}."
       ),
+      user_message = "A valid positive poverty line is required to compute poverty statistics.",
       call = NULL
     )
   }

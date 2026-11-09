@@ -250,6 +250,11 @@ test_that("POST /description returns 422 for metadata missing params", {
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_identical(
+    unlist(body$errors),
+    "The table description could not be generated because the provided table metadata is incomplete or invalid."
+  )
 })
 
 # =============================================================================
@@ -387,6 +392,11 @@ test_that("POST /description returns 422 for metadata with invalid provenance st
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_identical(
+    unlist(body$errors),
+    "The table description could not be generated because the provided table metadata is incomplete or invalid."
+  )
 })
 
 test_that("POST /description returns 422 for metadata with invalid surveys structure", {
@@ -400,6 +410,11 @@ test_that("POST /description returns 422 for metadata with invalid surveys struc
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_identical(
+    unlist(body$errors),
+    "The table description could not be generated because the provided table metadata is incomplete or invalid."
+  )
 })
 
 test_that("POST /description returns 422 for metadata with invalid resolved_labels", {
@@ -413,6 +428,11 @@ test_that("POST /description returns 422 for metadata with invalid resolved_labe
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_identical(
+    unlist(body$errors),
+    "The table description could not be generated because the provided table metadata is incomplete or invalid."
+  )
 })
 
 # =============================================================================

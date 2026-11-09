@@ -35,22 +35,24 @@
 build_description_model <- function(description_metadata, params) {
   # Input validation
   if (!is.list(description_metadata) || !is.list(params)) {
-    cli::cli_abort(
+    piptm_abort(
       c(
         "{.fn build_description_model} requires list inputs.",
         "i" = "Got: {.obj_type_friendly description_metadata} and {.obj_type_friendly params}."
-      )
+      ),
+      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
     )
   }
 
   required_fields <- c("params", "provenance", "surveys", "resolved_labels", "execution")
   missing_fields <- setdiff(required_fields, names(description_metadata))
   if (length(missing_fields)) {
-    cli::cli_abort(
+    piptm_abort(
       c(
         "{.arg description_metadata} is missing required fields.",
         "i" = "Missing: {.val {missing_fields}}"
-      )
+      ),
+      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
     )
   }
 
@@ -66,11 +68,12 @@ build_description_model <- function(description_metadata, params) {
     is.null(field_value) || !structural_checks[[field]](field_value)
   }, logical(1))]
   if (length(invalid)) {
-    cli::cli_abort(
+    piptm_abort(
       c(
         "{.arg description_metadata} contains malformed fields.",
         "i" = "Invalid structure for: {.val {invalid}}"
-      )
+      ),
+      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
     )
   }
 

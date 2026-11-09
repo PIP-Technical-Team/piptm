@@ -182,11 +182,12 @@ load_survey_microdata <- function(country_code,
   if (is.null(release)) {
     release <- piptm_current_release()
     if (is.null(release)) {
-      cli::cli_abort(
+      piptm_abort(
         c(
           "No current release is set.",
           "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
-        )
+        ),
+        user_message = "Survey data is temporarily unavailable because no active data release is loaded."
       )
     }
   }
@@ -210,10 +211,14 @@ load_survey_microdata <- function(country_code,
   ]
 
   if (nrow(entry) == 0L) {
-    cli::cli_abort(
+    piptm_abort(
       c(
         "No manifest entry found for {.val {country_code}} / {year} / {.val {welfare_type}} in release {.val {release}}.",
         "i" = "Check {.fn piptm_manifest} for available surveys in this release."
+      ),
+      user_message = sprintf(
+        "Survey data for %s (%s) is not available in the selected data release.",
+        country_code, year
       )
     )
   }
@@ -307,10 +312,15 @@ load_survey_microdata <- function(country_code,
       "^welfare_ppp_([0-9]+).*", "\\1",
       welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
     ))
-    cli::cli_abort(
+    ppp_label <- if (length(ppp) == 1L && !is.na(ppp)) as.character(ppp) else "the requested"
+    piptm_abort(
       c(
         "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
         "i" = "Available PPPs: {.val {available_ppp}}"
+      ),
+      user_message = sprintf(
+        "PPP year %s is not available for the selected survey (%s %s). Available PPP years: %s.",
+        ppp_label, country_code, year, paste(available_ppp, collapse = ", ")
       )
     )
   }
@@ -498,10 +508,15 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL,
     entries_dt <- entries_dt[has_col]
   }
   if (nrow(entries_dt) == 0L) {
-    cli::cli_abort(
+    ppp_label <- if (length(effective_year) == 1L && !is.na(effective_year)) as.character(effective_year) else "the requested"
+    piptm_abort(
       c(
         "No surveys remain after skipping those without PPP {.val {effective_year}} welfare column.",
         "i" = "Provide {.arg ppp} matching the surveys' available welfare columns."
+      ),
+      user_message = sprintf(
+        "None of the selected surveys have data available for the %s PPP standard. Please switch to another PPP year.",
+        ppp_label
       )
     )
   }
@@ -593,11 +608,12 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL,
   }
 
   if (nrow(dt) == 0L) {
-    cli::cli_abort(
+    piptm_abort(
       c(
         "Arrow query returned 0 rows for the requested surveys.",
         "i" = "Arrow root: {.path {arrow_root}}"
-      )
+      ),
+      user_message = "No survey observations matched the selected sample filters. Try broadening your filter selection."
     )
   }
 
