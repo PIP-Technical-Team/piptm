@@ -297,6 +297,140 @@
 }
 
 
+#' Resolve the effective category codes for a layout slot variable
+#'
+#' Returns the variable's registry category codes in registry order. When the
+#' variable is also constrained by `filter_base` (`clean_fb`), the codes are
+#' intersected with the retained filter values (case-insensitively on code or
+#' label), preserving registry order. When the registry has no categories for
+#' the variable, `known` is `FALSE` and a single fallback code is returned so
+#' the no-registry path never claims a real cell count.
+#'
+#' @param varname  Character scalar variable name.
+#' @param reg      Loaded release variable registry list, or `NULL`.
+#' @param clean_fb Cleaned `filter_base` list (see [.clean_filter_base()]).
+#' @return Named list with `codes` (character vector) and `known` (logical).
+#' @keywords internal
+.slot_effective_categories <- function(varname, reg, clean_fb) {
+  reg_entry <- if (!is.null(reg)) reg[[varname]] else NULL
+
+  reg_codes <- character(0)
+  reg_labels <- character(0)
+  if (!is.null(reg_entry$categories) && length(reg_entry$categories) > 0L) {
+    reg_codes <- vapply(
+      reg_entry$categories,
+      function(x) as.character(x$code)[[1L]],
+      character(1)
+    )
+    reg_labels <- vapply(
+      reg_entry$categories,
+      function(x) as.character(x$label)[[1L]],
+      character(1)
+    )
+  }
+
+  if (length(reg_codes) == 0L) {
+    return(list(codes = .first_slot_code(varname, reg), known = FALSE))
+  }
+
+  fb_vals <- if (!is.null(clean_fb) && varname %in% names(clean_fb)) {
+    clean_fb[[varname]]
+  } else {
+    NULL
+  }
+
+  if (is.null(fb_vals) || length(fb_vals) == 0L) {
+    return(list(codes = reg_codes, known = TRUE))
+  }
+
+  fb_lower <- tolower(trimws(as.character(fb_vals)))
+  keep <- tolower(reg_codes) %in% fb_lower | tolower(reg_labels) %in% fb_lower
+  retained <- reg_codes[keep]
+
+  if (length(retained) == 0L) {
+    # Direct R caller passed filter codes that do not match registry codes:
+    # fall back to the raw filter values rather than collapsing to zero cells.
+    return(list(codes = as.character(fb_vals), known = TRUE))
+  }
+
+  list(codes = retained, known = TRUE)
+}
+
+
+#' Compose a plain-English cell-group phrase from per-slot category picks
+#'
+#' Applies head-noun precedence (`columns > rows > superColumns > superRows`),
+#' `adj` pre-modifiers, and trailing category phrases, mirroring the composition
+#' used for the first example cell so every enumerated cell reads consistently.
+#'
+#' @param slot_picks List of per-slot picks, each a list with `slot` and
+#'   `cat_info` (as returned by [.lookup_cat_prose()]).
+#' @return Character scalar cell-group phrase (not capitalized).
+#' @keywords internal
+.compose_cell_group <- function(slot_picks, trailing_extra = character(0)) {
+  precedence_order <- c("columns", "rows", "superColumns", "superRows")
+  resolved_slots <- vapply(slot_picks, function(sp) sp$slot, character(1))
+  head_slot <- NULL
+  head_noun <- "people"
+  for (p_slot in precedence_order) {
+    idx <- match(p_slot, resolved_slots)
+    if (!is.na(idx)) {
+      cand_noun <- slot_picks[[idx]]$cat_info$noun
+      if (!is.null(cand_noun) && nzchar(cand_noun)) {
+        head_slot <- p_slot
+        head_noun <- cand_noun
+        break
+      }
+    }
+  }
+
+  pre_modifiers <- character(0)
+  trailing <- character(0)
+  for (sp in slot_picks) {
+    if (!identical(sp$slot, head_slot)) {
+      if (!is.null(sp$cat_info$adj) && nzchar(sp$cat_info$adj)) {
+        pre_modifiers <- c(pre_modifiers, sp$cat_info$adj)
+      } else {
+        trailing <- c(trailing, sp$cat_info$phrase)
+      }
+    }
+  }
+  trailing <- c(trailing, trailing_extra)
+
+  head_with_mods <- paste(c(pre_modifiers, head_noun), collapse = " ")
+
+  if (length(trailing) > 1L && all(startsWith(trailing, "whose "))) {
+    paste(head_with_mods, .join_natural(trailing, conj = "and"))
+  } else {
+    paste(c(head_with_mods, trailing), collapse = " ")
+  }
+}
+
+
+#' Join a slot's effective category phrases for a `> 4`-cell breakdown line
+#'
+#' Mirrors the single-variable rule in [.build_who_is_in_table()]: when every
+#' category supplies a head `noun`, join the nouns with "or"; otherwise prepend
+#' "people " to the joined trailing phrases.
+#'
+#' @param cat_infos List of `.lookup_cat_prose()` results for one slot.
+#' @return Character scalar plain-English category list.
+#' @keywords internal
+.slot_category_list <- function(cat_infos) {
+  all_have_noun <- all(vapply(
+    cat_infos,
+    function(ci) !is.null(ci$noun) && nzchar(ci$noun),
+    logical(1)
+  ))
+  if (all_have_noun) {
+    nouns <- vapply(cat_infos, function(ci) ci$noun, character(1))
+    return(.join_natural(nouns, conj = "or"))
+  }
+  phrases <- vapply(cat_infos, function(ci) ci$phrase, character(1))
+  paste("people", .join_var_phrases(phrases))
+}
+
+
 #' Format poverty line phrase
 #'
 #' @param poverty_line Numeric vector or NULL.
@@ -461,6 +595,7 @@
           "No row or column variables are selected, so the table has a single cell covering %s.",
           table_pop_short
         ),
+        items              = list(),
         example_cell_label = table_pop_short,
         example_text       = NULL
       ),
@@ -473,15 +608,18 @@
 
   slot_resolved <- lapply(active_display, function(s) {
     vname <- trimws(as.character(s$arg)[[1L]])
-    fcode <- .first_slot_code(vname, reg)
-    cinfo <- .lookup_cat_prose(vname, fcode, reg, prose)
+    eff <- .slot_effective_categories(vname, reg, clean_fb)
+    cat_infos <- lapply(eff$codes, function(cd) .lookup_cat_prose(vname, cd, reg, prose))
+    first_ci <- cat_infos[[1L]]
     list(
       slot             = s$slot,
       role_label       = s$role_label,
       varname          = vname,
-      slot_noun        = cinfo$slot_noun,
-      example_category = cinfo$label,
-      cat_info         = cinfo
+      slot_noun        = first_ci$slot_noun,
+      example_category = first_ci$label,
+      cat_info         = first_ci,
+      cat_infos        = cat_infos,
+      known            = eff$known
     )
   })
 
@@ -498,7 +636,7 @@
     sr1 <- slot_resolved[[1L]]
     group_word <- if (grepl("\\bgroups?\\b", sr1$slot_noun, ignore.case = TRUE)) "" else " group"
     structure_text <- sprintf(
-      "Each cell is one %s%s (%s).",
+      "Each cell is one %s%s (%s)",
       sr1$slot_noun,
       group_word,
       sr1$role_label
@@ -508,58 +646,78 @@
       sprintf("%s (%s)", sr$slot_noun, sr$role_label)
     }, character(1))
     structure_text <- sprintf(
-      "Each cell is one combination of %s.",
+      "Each cell is one combination of %s",
       .join_natural(dim_phrases, conj = "and")
     )
   }
 
   active_varnames <- vapply(slot_resolved, function(sr) sr$varname, character(1))
+  pov_clause <- ""
   if ("pov_status" %in% active_varnames && !is.null(poverty_line)) {
-    structure_text <- paste0(
-      substr(structure_text, 1L, nchar(structure_text) - 1L),
-      sprintf(", where \"poor\" means living on less than %s.", pov_line_fmt$full)
-    )
+    pov_clause <- sprintf(", where \"poor\" means living on less than %s", pov_line_fmt$full)
+    structure_text <- paste0(structure_text, pov_clause)
   }
 
-  # Head-noun precedence order (R6): column > row > superColumn > superRow
-  precedence_order <- c("columns", "rows", "superColumns", "superRows")
-  resolved_slots   <- vapply(slot_resolved, function(sr) sr$slot, character(1))
-  head_slot <- NULL
-  head_noun <- "people"
-  for (p_slot in precedence_order) {
-    idx <- match(p_slot, resolved_slots)
-    if (!is.na(idx)) {
-      cand_noun <- slot_resolved[[idx]]$cat_info$noun
-      if (!is.null(cand_noun) && nzchar(cand_noun)) {
-        head_slot <- p_slot
-        head_noun <- cand_noun
-        break
-      }
-    }
-  }
-
-  pre_modifiers <- character(0)
-  trailing      <- character(0)
-  for (sr in slot_resolved) {
-    if (!identical(sr$slot, head_slot)) {
-      if (!is.null(sr$cat_info$adj) && nzchar(sr$cat_info$adj)) {
-        pre_modifiers <- c(pre_modifiers, sr$cat_info$adj)
-      } else {
-        trailing <- c(trailing, sr$cat_info$phrase)
-      }
-    }
-  }
-
+  # Short-filter trailing phrase woven into non-share cell groups when the
+  # filtered variable is not itself a layout slot.
+  trailing_extra <- character(0)
   if (!any_shares && is_short_filter && !(names(clean_fb)[[1L]] %in% active_varnames)) {
-    trailing <- c(trailing, filter_phrases_trailing)
+    trailing_extra <- filter_phrases_trailing
   }
 
-  head_with_mods <- paste(c(pre_modifiers, head_noun), collapse = " ")
+  # First example cell: first effective category of every active slot.
+  first_picks <- lapply(slot_resolved, function(sr) {
+    list(slot = sr$slot, cat_info = sr$cat_info)
+  })
+  cell_group <- .compose_cell_group(first_picks, trailing_extra = trailing_extra)
 
-  if (length(trailing) > 1L && all(startsWith(trailing, "whose "))) {
-    cell_group <- paste(head_with_mods, .join_natural(trailing, conj = "and"))
+  # Adaptive items + cell-count suffix (only when all active slots have known
+  # registry/filter categories; the no-registry fallback stays count-free).
+  all_known <- all(vapply(slot_resolved, function(sr) isTRUE(sr$known), logical(1)))
+  items <- list()
+  if (all_known) {
+    total_cells <- prod(vapply(slot_resolved, function(sr) length(sr$cat_infos), integer(1)))
+    count_word <- if (total_cells == 1L) "cell" else "cells"
+    structure_text <- sprintf(
+      "%s \u2014 %d %s in total:",
+      structure_text,
+      total_cells,
+      count_word
+    )
+
+    if (total_cells <= 4L) {
+      # Full combined enumeration. Earlier slots vary outer/slowest, later slots
+      # inner/fastest (display order: rows, columns, superRows, superColumns).
+      n_each <- vapply(slot_resolved, function(sr) length(sr$cat_infos), integer(1))
+      grid <- do.call(
+        expand.grid,
+        c(lapply(n_each, seq_len), list(KEEP.OUT.ATTRS = FALSE))
+      )
+      # Order rows so the first slot varies slowest: sort by columns left-to-right.
+      grid <- grid[do.call(order, as.list(grid)), , drop = FALSE]
+      cell_phrases <- vapply(seq_len(nrow(grid)), function(r) {
+        picks <- lapply(seq_along(slot_resolved), function(j) {
+          sr <- slot_resolved[[j]]
+          list(slot = sr$slot, cat_info = sr$cat_infos[[grid[r, j]]])
+        })
+        .cap_first(.compose_cell_group(picks, trailing_extra = trailing_extra))
+      }, character(1))
+      items <- as.list(cell_phrases)
+    } else {
+      # Per-slot breakdown: one grammatical line per active slot (<= 4 lines).
+      slot_bullets <- vapply(slot_resolved, function(sr) {
+        sprintf(
+          "%s (%s): %s.",
+          .cap_first(sr$role_label),
+          sr$slot_noun,
+          .slot_category_list(sr$cat_infos)
+        )
+      }, character(1))
+      items <- as.list(slot_bullets)
+    }
   } else {
-    cell_group <- paste(c(head_with_mods, trailing), collapse = " ")
+    # No-registry fallback: restore the trailing period, emit no items.
+    structure_text <- paste0(structure_text, ".")
   }
 
   example_text <- if (has_filter && (!is_short_filter || any_shares)) {
@@ -573,6 +731,7 @@
       title              = "What a cell is",
       dimensions         = dimensions_out,
       structure_text     = structure_text,
+      items              = items,
       example_cell_label = cell_group,
       example_text       = example_text
     ),
@@ -837,7 +996,12 @@
 #' @param release             Optional character scalar release ID.
 #'
 #' @return A named list with elements `schema_version`, `who_is_in_table`,
-#'   `what_a_cell_is`, `what_is_shown`, `notes`, and `warnings`.
+#'   `what_a_cell_is`, `what_is_shown`, `notes`, and `warnings`. The
+#'   `what_a_cell_is` element carries an `items` character list: a full
+#'   combined-cell enumeration when the table has 4 or fewer cells, a per-slot
+#'   category breakdown (one line per active layout slot) when it has more than
+#'   4 cells, and an empty list when no layout slot is active or the registry is
+#'   unavailable.
 #' @family api
 #' @export
 #' @examples

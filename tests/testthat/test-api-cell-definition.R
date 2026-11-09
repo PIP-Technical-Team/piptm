@@ -333,3 +333,63 @@ test_that("POST /cell-definition is not routed (returns 405)", {
   res <- pr$call(req)
   expect_equal(res$status, 405L)
 })
+
+test_that("GET /cell-definition returns what_a_cell_is$items as a JSON array for 0/1/4/2-item cases", {
+  pr <- get_cell_def_router()
+
+  .with_api_fixture_registry({
+    # (a) 0 slots -> items is an empty JSON array []
+    res0 <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean"
+    )))
+    expect_equal(res0$status, 200L)
+    p0 <- parse_cell_def_res(res0)
+    expect_type(p0$data$what_a_cell_is$items, "list")
+    expect_length(p0$data$what_a_cell_is$items, 0L)
+    # Raw JSON shows an array, not null/scalar
+    body0 <- res0$body
+    if (is.raw(body0)) body0 <- rawToChar(body0)
+    expect_match(body0, "\"items\"\\s*:\\s*\\[", perl = TRUE)
+
+    # (b) 1-slot educat4 (5 cats) -> >4 mode, single breakdown line as a 1-element array
+    res1 <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      column       = "educat4"
+    )))
+    expect_equal(res1$status, 200L)
+    p1 <- parse_cell_def_res(res1)
+    expect_type(p1$data$what_a_cell_is$items, "list")
+    expect_length(p1$data$what_a_cell_is$items, 1L)
+    body1 <- res1$body
+    if (is.raw(body1)) body1 <- rawToChar(body1)
+    # Single-element items must remain a JSON array, not an unboxed string
+    expect_match(body1, "\"items\"\\s*:\\s*\\[", perl = TRUE)
+    expect_false(grepl("\"items\"\\s*:\\s*\"", body1, perl = TRUE))
+
+    # (c) 2x2 area x gender -> 4-element enumeration array
+    res4 <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      row          = "area",
+      column       = "gender"
+    )))
+    expect_equal(res4$status, 200L)
+    p4 <- parse_cell_def_res(res4)
+    expect_type(p4$data$what_a_cell_is$items, "list")
+    expect_length(p4$data$what_a_cell_is$items, 4L)
+
+    # (d) educat4 (5) x gender (2) = 10 cells -> 2 per-slot breakdown lines
+    res2 <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      row          = "educat4",
+      column       = "gender"
+    )))
+    expect_equal(res2$status, 200L)
+    p2 <- parse_cell_def_res(res2)
+    expect_type(p2$data$what_a_cell_is$items, "list")
+    expect_length(p2$data$what_a_cell_is$items, 2L)
+  })
+})

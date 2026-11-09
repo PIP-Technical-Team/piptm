@@ -59,8 +59,11 @@ test_that("Example 1: Welfare, three measures, three slots, long filter (2 filte
     expect_length(res$what_a_cell_is$dimensions, 3L)
     expect_equal(
       res$what_a_cell_is$structure_text,
-      "Each cell is one combination of education level (row), gender (column), and area (column group)."
+      "Each cell is one combination of education level (row), gender (column), and area (column group) \u2014 20 cells in total:"
     )
+    # 20 cells (> 4) -> per-slot breakdown, one line per active slot (<= 4 lines)
+    expect_length(res$what_a_cell_is$items, 3L)
+    expect_equal(res$what_a_cell_is$items[[2L]], "Column (gender): men or women.")
     # In 20260401_TEST.json, first categories are: gender 1=Male ("men"), educat4 1=Incomplete secondary, area 1=Urban
     expect_equal(
       res$what_a_cell_is$example_cell_label,
@@ -99,6 +102,149 @@ test_that("Example 1: Welfare, three measures, three slots, long filter (2 filte
       "Income inequality within men with incomplete secondary education living in urban areas (0 = everyone equal, 1 = one person has it all)."
     )
   })
+})
+
+test_that("what_a_cell_is$items: <=4-cell enumeration, >4-cell per-slot breakdown, fallback, and overlap", {
+  .with_fixture_registry("FIXTURE_2026", {
+    # (A) 2x2 (area x gender) = 4 cells -> full combined enumeration, outer=rows, inner=columns.
+    # Registry order: area 1=Urban then 0=Rural; gender 1=Male("men") then 0=Female("women").
+    res_2x2 <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "area",
+      column = "gender",
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_2x2$what_a_cell_is$structure_text, "4 cells in total:", fixed = TRUE)
+    expect_type(res_2x2$what_a_cell_is$items, "list")
+    expect_length(res_2x2$what_a_cell_is$items, 4L)
+    expect_equal(
+      unlist(res_2x2$what_a_cell_is$items),
+      c(
+        "Men living in urban areas",
+        "Women living in urban areas",
+        "Men living in rural areas",
+        "Women living in rural areas"
+      )
+    )
+
+    # (B) 1 slot, 3 categories (lstatus) -> <=4 mode, 3 enumerated items.
+    res_lstatus <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "lstatus",
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_lstatus$what_a_cell_is$structure_text, "3 cells in total:", fixed = TRUE)
+    expect_length(res_lstatus$what_a_cell_is$items, 3L)
+
+    # (C) 1 slot, 5 categories (educat4) -> >4 mode, single per-slot breakdown line.
+    res_educ <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "educat4",
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_educ$what_a_cell_is$structure_text, "5 cells in total:", fixed = TRUE)
+    expect_length(res_educ$what_a_cell_is$items, 1L)
+    expect_match(res_educ$what_a_cell_is$items[[1L]], "Row (education level): people with ", fixed = TRUE)
+    expect_match(res_educ$what_a_cell_is$items[[1L]], "education.", fixed = TRUE)
+
+    # (D) >4 cells (educat4 (5) x gender (2) = 10) -> 2 breakdown lines; gender uses nouns.
+    res_10 <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "educat4",
+      column = "gender",
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_10$what_a_cell_is$structure_text, "10 cells in total:", fixed = TRUE)
+    expect_length(res_10$what_a_cell_is$items, 2L)
+    expect_equal(res_10$what_a_cell_is$items[[2L]], "Column (gender): men or women.")
+    expect_lte(length(res_10$what_a_cell_is$items), 4L)
+
+    # (E) 0 slots -> empty items, null example_text, no cell-count suffix.
+    res_0 <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      release = "FIXTURE_2026"
+    )
+    expect_length(res_0$what_a_cell_is$items, 0L)
+    expect_null(res_0$what_a_cell_is$example_text)
+    expect_false(grepl("cells in total", res_0$what_a_cell_is$structure_text, fixed = TRUE))
+
+    # (F) Filter overlap: column = area, filter to Urban only ("1") -> 1 cell in total (singular),
+    # 1 item, example cell is Urban (not Rural).
+    res_f1 <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "area",
+      filter_base = list(area = "1"),
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_f1$what_a_cell_is$structure_text, "1 cell in total:", fixed = TRUE)
+    expect_false(grepl("1 cells in total", res_f1$what_a_cell_is$structure_text, fixed = TRUE))
+    expect_length(res_f1$what_a_cell_is$items, 1L)
+    expect_match(res_f1$what_a_cell_is$items[[1L]], "urban", ignore.case = TRUE)
+    expect_false(grepl("rural", res_f1$what_a_cell_is$items[[1L]], ignore.case = TRUE))
+
+    # (G) Filter overlap in 2x2: row=area filtered to Rural only ("0"), column=gender ->
+    # 2 cells in total, first cell is a rural men cell (not urban).
+    res_f2 <- build_cell_explanation(
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "area",
+      column = "gender",
+      filter_base = list(area = "0"),
+      release = "FIXTURE_2026"
+    )
+    expect_match(res_f2$what_a_cell_is$structure_text, "2 cells in total:", fixed = TRUE)
+    expect_length(res_f2$what_a_cell_is$items, 2L)
+    expect_true(all(grepl("rural", unlist(res_f2$what_a_cell_is$items), ignore.case = TRUE)))
+    expect_false(any(grepl("urban", unlist(res_f2$what_a_cell_is$items), ignore.case = TRUE)))
+
+    # items never exceeds 4 across every multi-slot scenario above
+    for (r in list(res_2x2, res_lstatus, res_educ, res_10, res_0, res_f1, res_f2)) {
+      expect_lte(length(r$what_a_cell_is$items), 4L)
+    }
+  })
+})
+
+test_that("what_a_cell_is$items is empty with no cell-count suffix when the registry is unavailable", {
+  skip_if_not_installed("yaml")
+  ns <- asNamespace("piptm")
+  env <- ns$.piptm_env
+  old_regs  <- env$registries
+  old_cur   <- env$current_release
+  old_arrow <- env$arrow_root
+  old_env_arrow <- Sys.getenv("PIPTM_ARROW_ROOT", unset = NA_character_)
+  on.exit({
+    env$registries      <- old_regs
+    env$current_release <- old_cur
+    env$arrow_root      <- old_arrow
+    if (is.na(old_env_arrow)) {
+      Sys.unsetenv("PIPTM_ARROW_ROOT")
+    } else {
+      Sys.setenv(PIPTM_ARROW_ROOT = old_env_arrow)
+    }
+  }, add = TRUE)
+
+  Sys.unsetenv("PIPTM_ARROW_ROOT")
+  env$registries <- list()
+  env$current_release <- NULL
+  env$arrow_root <- NULL
+
+  res <- build_cell_explanation(
+    analysis_var = "welfare",
+    measures = "mean",
+    row = "educat4",
+    column = "gender",
+    superColumn = "area",
+    release = "MISSING_REL"
+  )
+  expect_length(res$what_a_cell_is$items, 0L)
+  expect_false(grepl("cells in total", res$what_a_cell_is$structure_text, fixed = TRUE))
+  expect_false(grepl("cell in total", res$what_a_cell_is$structure_text, fixed = TRUE))
 })
 
 test_that("Example 2: Shares, two slots, short filter (filter appears only once, in total population)", {
@@ -222,7 +368,9 @@ test_that("Example 4: Poverty status used as a row, with a welfare measure + hea
 
     expect_true(res$who_is_in_table$filtered)
     expect_match(res$what_a_cell_is$structure_text, "$3.65 a day (2021 PPP)", fixed = TRUE)
+    expect_match(res$what_a_cell_is$structure_text, "4 cells in total:", fixed = TRUE)
     expect_equal(res$what_a_cell_is$example_cell_label, "non-poor men living in rural areas")
+    expect_length(res$what_a_cell_is$items, 4L)
     expect_equal(
       res$what_is_shown$measures[[1L]]$text,
       "Average daily income of non-poor men living in rural areas (2021 PPP dollars)."
@@ -386,7 +534,7 @@ test_that("R8(d): Non-monetary analysis variables (age, educy, hsize) omit PPP d
         ppp = 2021L,
         release = "FIXTURE_2026"
       )
-      expect_equal(res_v$what_a_cell_is$structure_text, "Each cell is one gender group (column).")
+      expect_equal(res_v$what_a_cell_is$structure_text, "Each cell is one gender group (column) \u2014 2 cells in total:")
       expect_false(grepl("PPP", res_v$what_is_shown$measures[[1L]]$text, fixed = TRUE),
                    info = paste("PPP should be omitted for", v))
       expect_false(grepl("PPP", res_v$what_is_shown$measures[[2L]]$text, fixed = TRUE),
@@ -561,6 +709,8 @@ test_that("Edge cases: long-filter shares, modifier=null targets, 4 slots, 1-slo
     )
     expect_length(res_4slots$what_a_cell_is$dimensions, 4L)
     expect_match(res_4slots$what_a_cell_is$structure_text, "age group (row group)", fixed = TRUE)
+    # educat4(5) x gender(2) x area(2) x age_group(4) = 80 cells (>4) -> 4 per-slot breakdown lines
+    expect_length(res_4slots$what_a_cell_is$items, 4L)
 
     # 3. 1-slot age_group does not double the word "group"; duplicate filter codes deduplicated; empty filter ignored
     res_age_slot <- build_cell_explanation(
@@ -570,7 +720,7 @@ test_that("Edge cases: long-filter shares, modifier=null targets, 4 slots, 1-slo
       filter_base  = list(area = c("0", "0"), empty_var = character(0)),
       release      = "FIXTURE_2026"
     )
-    expect_equal(res_age_slot$what_a_cell_is$structure_text, "Each cell is one age group (column).")
+    expect_equal(res_age_slot$what_a_cell_is$structure_text, "Each cell is one age group (column) \u2014 4 cells in total:")
     expect_equal(
       res_age_slot$who_is_in_table$text,
       "People living in rural areas. Anyone outside this group is excluded before the table is built."
