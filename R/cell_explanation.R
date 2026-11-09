@@ -975,7 +975,7 @@
     notes_out <- c(
       notes_out,
       sprintf(
-        "Cells covering less than %s%% of the table are shown as \"NR\" instead of a number.",
+        "Cells covering less than %s%% of the table's population are shown as \"NR\" (Not Reported) \u2014 the subgroup estimate is suppressed because its sample is too small to report reliably.",
         pct_str
       )
     )

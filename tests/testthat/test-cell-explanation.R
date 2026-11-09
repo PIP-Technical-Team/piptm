@@ -680,7 +680,7 @@ test_that("R8(c) / V5: NR suppression note trigger matches R/table_response.R ac
         pop_share_threshold = g$threshold,
         release             = "FIXTURE_2026"
       )
-      has_nr_note <- any(grepl("shown as \"NR\"", unlist(exp_out$notes), fixed = TRUE))
+      has_nr_note <- any(grepl("\"NR\" (Not Reported)", unlist(exp_out$notes), fixed = TRUE))
       expect_identical(has_nr_note, expected_by_tr_and_tm)
     }
   })
