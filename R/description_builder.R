@@ -40,7 +40,7 @@ build_description_model <- function(description_metadata, params) {
         "{.fn build_description_model} requires list inputs.",
         "i" = "Got: {.obj_type_friendly description_metadata} and {.obj_type_friendly params}."
       ),
-      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
+      user_message = .PIPTM_DESCRIPTION_METADATA_USER_ERROR
     )
   }
 
@@ -52,7 +52,7 @@ build_description_model <- function(description_metadata, params) {
         "{.arg description_metadata} is missing required fields.",
         "i" = "Missing: {.val {missing_fields}}"
       ),
-      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
+      user_message = .PIPTM_DESCRIPTION_METADATA_USER_ERROR
     )
   }
 
@@ -73,7 +73,7 @@ build_description_model <- function(description_metadata, params) {
         "{.arg description_metadata} contains malformed fields.",
         "i" = "Invalid structure for: {.val {invalid}}"
       ),
-      user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
+      user_message = .PIPTM_DESCRIPTION_METADATA_USER_ERROR
     )
   }
 

@@ -187,7 +187,7 @@ load_survey_microdata <- function(country_code,
           "No current release is set.",
           "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
         ),
-        user_message = "Survey data is temporarily unavailable because no active data release is loaded."
+        user_message = .PIPTM_NO_ACTIVE_RELEASE_USER_ERROR
       )
     }
   }
@@ -211,6 +211,8 @@ load_survey_microdata <- function(country_code,
   ]
 
   if (nrow(entry) == 0L) {
+    cc_label <- if (length(country_code) == 1L && !is.na(country_code)) as.character(country_code) else "the requested country"
+    yr_label <- if (length(year) == 1L && !is.na(year)) as.character(year) else "the requested year"
     piptm_abort(
       c(
         "No manifest entry found for {.val {country_code}} / {year} / {.val {welfare_type}} in release {.val {release}}.",
@@ -218,7 +220,7 @@ load_survey_microdata <- function(country_code,
       ),
       user_message = sprintf(
         "Survey data for %s (%s) is not available in the selected data release.",
-        country_code, year
+        cc_label, yr_label
       )
     )
   }
@@ -308,11 +310,13 @@ load_survey_microdata <- function(country_code,
   # --- 5. PPP welfare column selection ------------------------------------------
   candidates <- .find_welfare_col(welfare_vars, ppp)
   if (length(candidates) == 0L) {
-    available_ppp <- unique(sub(
+    available_ppp <- sort(unique(sub(
       "^welfare_ppp_([0-9]+).*", "\\1",
       welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
-    ))
+    )))
     ppp_label <- if (length(ppp) == 1L && !is.na(ppp)) as.character(ppp) else "the requested"
+    cc_label  <- if (length(country_code) == 1L && !is.na(country_code)) as.character(country_code) else "the requested country"
+    yr_label  <- if (length(year) == 1L && !is.na(year)) as.character(year) else "the requested year"
     piptm_abort(
       c(
         "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
@@ -320,7 +324,7 @@ load_survey_microdata <- function(country_code,
       ),
       user_message = sprintf(
         "PPP year %s is not available for the selected survey (%s %s). Available PPP years: %s.",
-        ppp_label, country_code, year, paste(available_ppp, collapse = ", ")
+        ppp_label, cc_label, yr_label, paste(available_ppp, collapse = ", ")
       )
     )
   }

@@ -173,23 +173,7 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   include_meta <- identical(tolower(include_metadata), "true")
 
   out <- capture_with_warnings({
-    parsed_filter_base <- if (is.null(filter_base)) {
-      NULL
-    } else if (is.list(filter_base)) {
-      filter_base
-    } else if (is.character(filter_base)) {
-      tryCatch(
-        jsonlite::fromJSON(filter_base),
-        error = function(e) {
-          piptm:::piptm_abort(
-            "Malformed filter_base JSON: {conditionMessage(e)}",
-            user_message = "The selected sample filter could not be read. Please reset your filters and try again."
-          )
-        }
-      )
-    } else {
-      filter_base
-    }
+    parsed_filter_base <- parse_filter_base_input(filter_base)
 
     rel  <- resolve_release(release)
 
@@ -451,7 +435,7 @@ function(req, body = NULL, res) {
       if (is.null(description_metadata) || !is.list(description_metadata)) {
         piptm:::piptm_abort(
           "`description_metadata` must be a JSON object.",
-          user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
+          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
         )
       }
 
@@ -461,7 +445,7 @@ function(req, body = NULL, res) {
       if (is.null(params)) {
         piptm:::piptm_abort(
           "`description_metadata` is missing the `params` field.",
-          user_message = "The table description could not be generated because the provided table metadata is incomplete or invalid."
+          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
         )
       }
 
@@ -470,7 +454,7 @@ function(req, body = NULL, res) {
       list(content = rendered)
     } else {
       # Fallback path: recompute via table_maker(include_metadata = TRUE).
-      parsed_filter_base <- body$filter_base
+      parsed_filter_base <- parse_filter_base_input(body$filter_base)
 
       rel <- resolve_release(body$release %||% NULL)
       tm_out <- piptm::table_maker(

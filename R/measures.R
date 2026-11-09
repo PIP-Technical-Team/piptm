@@ -229,7 +229,7 @@ pip_valid_dimensions <- function() {
         "Poverty measures require {.arg poverty_lines}.",
         i = "Provide a numeric vector of one or more positive poverty lines."
       ),
-      user_message = "A valid positive poverty line is required to compute poverty statistics.",
+      user_message = .PIPTM_POVERTY_LINE_USER_ERROR,
       call = NULL
     )
   }
@@ -240,7 +240,7 @@ pip_valid_dimensions <- function() {
         "{.arg poverty_lines} must be a numeric vector, ",
         "not {.cls {class(poverty_lines)}}."
       ),
-      user_message = "A valid positive poverty line is required to compute poverty statistics.",
+      user_message = .PIPTM_POVERTY_LINE_USER_ERROR,
       call = NULL
     )
   }
@@ -253,7 +253,7 @@ pip_valid_dimensions <- function() {
         "{.arg poverty_lines} must contain only positive finite values.",
         x = "Problematic values: {.val {bad_vals}}."
       ),
-      user_message = "A valid positive poverty line is required to compute poverty statistics.",
+      user_message = .PIPTM_POVERTY_LINE_USER_ERROR,
       call = NULL
     )
   }

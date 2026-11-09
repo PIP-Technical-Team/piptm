@@ -112,18 +112,49 @@ resolve_release <- function(release) {
   }
 
   known <- names(piptm::piptm_manifests())
-  if (!release %in% known) {
-    rel_label <- if (length(release) == 1L && !is.na(release)) as.character(release) else ""
+  if (!is.character(release) || length(release) != 1L || is.na(release) || !release %in% known) {
     piptm:::piptm_abort(
       c(
         "Release {.val {release}} is not a known release.",
         "i" = "Available releases: {.val {sort(known)}}."
       ),
-      user_message = sprintf("The requested data release ('%s') is not available.", rel_label)
+      user_message = piptm:::.piptm_unknown_release_user_error(release)
     )
   }
 
   release
+}
+
+#' Parse a `filter_base` request parameter into an R list
+#'
+#' Accepts `NULL`, an already-parsed R `list` (from JSON request bodies), or a
+#' JSON-encoded character string (from query parameters). Raises a user-safe
+#' `piptm_abort()` when JSON parsing fails.
+#'
+#' @param filter_base Raw `filter_base` parameter from query or body.
+#' @return `NULL`, a parsed list, or the input value for downstream validation.
+parse_filter_base_input <- function(filter_base) {
+  if (is.null(filter_base)) {
+    return(NULL)
+  }
+  if (is.character(filter_base)) {
+    if (length(filter_base) != 1L || is.na(filter_base)) {
+      piptm:::piptm_abort(
+        "Malformed filter_base: expected a single JSON string.",
+        user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
+    }
+    return(tryCatch(
+      jsonlite::fromJSON(filter_base),
+      error = function(e) {
+        piptm:::piptm_abort(
+          "Malformed filter_base JSON: {conditionMessage(e)}",
+          user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+        )
+      }
+    ))
+  }
+  filter_base
 }
 
 # ── Input validators ──────────────────────────────────────────────────────────
@@ -757,17 +788,16 @@ capture_with_warnings <- function(expr) {
       }
     ),
     error = function(e) {
-      dev_msg <- cli::ansi_strip(conditionMessage(e))
-      um      <- e[["user_message"]]
-      has_um  <- is.character(um) && length(um) == 1L && !is.na(um) && nzchar(trimws(um))
-      if (!has_um) {
+      dev_msg  <- cli::ansi_strip(conditionMessage(e))
+      user_msg <- piptm:::piptm_user_error_message(e, fallback = NULL)
+      if (is.null(user_msg)) {
         message(sprintf(
           "[piptm][unmapped_error] %s: %s",
           paste(class(e), collapse = "/"),
           dev_msg
         ))
+        user_msg <- piptm:::.PIPTM_GENERIC_USER_ERROR
       }
-      user_msg <- piptm:::piptm_user_error_message(e)
       # Use a typed S3 class instead of a list-key sentinel to avoid
       # colliding with domain functions that legitimately return list(.__error__ = ...).
       structure(

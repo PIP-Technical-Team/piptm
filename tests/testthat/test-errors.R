@@ -37,20 +37,43 @@ test_that("piptm_abort() preserves custom condition subclasses ahead of piptm_er
   expect_identical(piptm_user_error_message(cnd), "User-safe failure message.")
 })
 
-test_that("piptm_user_error_message() returns .PIPTM_GENERIC_USER_ERROR for unmapped conditions", {
+test_that("piptm_user_error_message() returns fallback for unmapped or non-condition inputs and strips ANSI", {
   stop_cnd <- tryCatch(stop("secret internal path /srv/arrow"), error = function(e) e)
   cli_cnd  <- tryCatch(cli::cli_abort("raw internal {.arg dt} error"), error = function(e) e)
   null_cnd <- tryCatch(piptm_abort("dev msg", user_message = NULL), error = function(e) e)
+  ansi_cnd <- tryCatch(
+    piptm_abort("dev msg", user_message = "  \033[31mClean user sentence.\033[39m  "),
+    error = function(e) e
+  )
 
   expect_identical(piptm_user_error_message(stop_cnd), .PIPTM_GENERIC_USER_ERROR)
   expect_identical(piptm_user_error_message(cli_cnd),  .PIPTM_GENERIC_USER_ERROR)
   expect_identical(piptm_user_error_message(null_cnd), .PIPTM_GENERIC_USER_ERROR)
+  expect_identical(piptm_user_error_message(NULL), .PIPTM_GENERIC_USER_ERROR)
+  expect_identical(piptm_user_error_message("not_a_condition"), .PIPTM_GENERIC_USER_ERROR)
+  expect_identical(
+    piptm_user_error_message(stop_cnd, fallback = .PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR),
+    .PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR
+  )
+  expect_identical(piptm_user_error_message(ansi_cnd), "Clean user sentence.")
   expect_identical(.PIPTM_GENERIC_USER_ERROR, "Something went wrong processing this request.")
 })
 
 test_that("piptm_abort() validates user_message when provided", {
   expect_error(
     piptm_abort("dev", user_message = ""),
+    "user_message"
+  )
+  expect_error(
+    piptm_abort("dev", user_message = "   "),
+    "user_message"
+  )
+  expect_error(
+    piptm_abort("dev", user_message = "\033[31m   \033[39m"),
+    "user_message"
+  )
+  expect_error(
+    piptm_abort("dev", user_message = NA_character_),
     "user_message"
   )
   expect_error(
@@ -63,7 +86,7 @@ test_that("piptm_abort() validates user_message when provided", {
   )
 })
 
-# ── Step 3: Migrated high-traffic sites in R/table_maker.R and R/load_data.R ──
+# ── Step 3 & 4: Migrated high-traffic sites across R/ modules ────────────────
 
 test_that("pip_lookup() aborts carry user_message while preserving developer conditionMessage()", {
   cnd_len <- tryCatch(
@@ -85,7 +108,7 @@ test_that("pip_lookup() aborts carry user_message while preserving developer con
   expect_match(conditionMessage(cnd_yr), "whole-number years")
   expect_identical(
     piptm_user_error_message(cnd_yr),
-    "Survey years must be valid whole-number years (for example, 2019)."
+    .PIPTM_SURVEY_YEAR_USER_ERROR
   )
 })
 
@@ -108,7 +131,7 @@ test_that("table_maker() empty pip_id and filter_base errors carry user_message"
   expect_s3_class(cnd_fb_empty, "piptm_error")
   expect_identical(
     piptm_user_error_message(cnd_fb_empty),
-    "The selected sample filter could not be read. Please reset your filters and try again."
+    .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
   )
 
   testthat::with_mocked_bindings(
@@ -132,9 +155,82 @@ test_that("table_maker() empty pip_id and filter_base errors carry user_message"
       expect_s3_class(cnd_fb_val, "piptm_error")
       expect_identical(
         piptm_user_error_message(cnd_fb_val),
-        "One or more selected sample filter values are invalid."
+        .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
+      )
+
+      cnd_fb_inf <- tryCatch(
+        table_maker(pip_id = "COL_2010_ECH_INC_ALL", analysis_var = "welfare", measures = "mean", filter_base = list(area = Inf)),
+        error = function(e) e
+      )
+      expect_s3_class(cnd_fb_inf, "piptm_error")
+      expect_identical(
+        piptm_user_error_message(cnd_fb_inf),
+        .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
       )
     }
   )
 })
 
+test_that("measures.R, manifest.R, and load_survey_microdata() aborts carry expected user_message", {
+  cnd_meas <- tryCatch(
+    .classify_measures("not_a_measure"),
+    error = function(e) e
+  )
+  expect_s3_class(cnd_meas, "piptm_error")
+  expect_identical(
+    piptm_user_error_message(cnd_meas),
+    "One or more requested statistics are not recognized."
+  )
+
+  testthat::with_mocked_bindings(
+    piptm_layout_covariates = function(...) {
+      list(
+        list(varname = "area"),
+        list(varname = "gender"),
+        list(varname = "educ_level"),
+        list(varname = "age_group"),
+        list(varname = "pov_status")
+      )
+    },
+    .package = "piptm",
+    {
+      cnd_by_unknown <- tryCatch(.validate_by("unknown_dim"), error = function(e) e)
+      expect_s3_class(cnd_by_unknown, "piptm_error")
+      expect_identical(
+        piptm_user_error_message(cnd_by_unknown),
+        "One or more requested breakdown variables are not available for the selected release."
+      )
+
+      cnd_by_many <- tryCatch(
+        .validate_by(c("area", "gender", "educ_level", "age_group", "pov_status")),
+        error = function(e) e
+      )
+      expect_s3_class(cnd_by_many, "piptm_error")
+      expect_identical(
+        piptm_user_error_message(cnd_by_many),
+        "At most 4 breakdown variables can be used in a single table."
+      )
+    }
+  )
+
+  cnd_pl <- tryCatch(.validate_poverty_lines(poverty_lines = -1, families = "poverty"), error = function(e) e)
+  expect_s3_class(cnd_pl, "piptm_error")
+  expect_identical(piptm_user_error_message(cnd_pl), .PIPTM_POVERTY_LINE_USER_ERROR)
+
+  cnd_rel <- tryCatch(piptm_manifest("MISSING_REL_999"), error = function(e) e)
+  expect_s3_class(cnd_rel, "piptm_error")
+  expect_identical(
+    piptm_user_error_message(cnd_rel),
+    "The requested data release ('MISSING_REL_999') is not available."
+  )
+
+  testthat::with_mocked_bindings(
+    piptm_current_release = function() NULL,
+    .package = "piptm",
+    {
+      cnd_no_rel <- tryCatch(load_survey_microdata("COL", 2019L, "INC"), error = function(e) e)
+      expect_s3_class(cnd_no_rel, "piptm_error")
+      expect_identical(piptm_user_error_message(cnd_no_rel), .PIPTM_NO_ACTIVE_RELEASE_USER_ERROR)
+    }
+  )
+})

@@ -4,17 +4,27 @@
 #
 # Enforces:
 #   1. Every `piptm_abort()` call across `R/` and `inst/plumber/` explicitly
-#      passes a `user_message` named argument.
+#      passes a non-NULL, non-empty `user_message` named argument.
 #   2. Zero raw `cli_abort()` / `cli::cli_abort()` calls exist in
 #      `inst/plumber/*.R`, `pip_lookup()`, `piptm_manifest()`, or
 #      `resolve_release()`.
 #   3. Purely internal computation/formatter/startup files are listed in an
 #      explicit internal-file allowlist (protected at runtime by
 #      `.PIPTM_GENERIC_USER_ERROR` / `.PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR`).
-#   4. In mixed files (`R/table_maker.R`, `R/load_data.R`, `R/measures.R`,
-#      `R/manifest.R`, `R/description_builder.R`), any remaining raw
-#      `cli_abort()` call must match an explicit per-site allowlist keyed by
-#      `(file, enclosing_function, message_snippet)`.
+#   4. In mixed files (`R/errors.R`, `R/table_maker.R`, `R/load_data.R`,
+#      `R/measures.R`, `R/manifest.R`, `R/description_builder.R`), any
+#      remaining raw `cli_abort()` call must match an explicit per-site
+#      allowlist keyed by `(file, enclosing_function, message_snippet)`.
+
+.is_nonempty_user_message_ast <- function(um_node) {
+  if (is.null(um_node)) {
+    return(FALSE)
+  }
+  if (is.character(um_node)) {
+    return(length(um_node) == 1L && !is.na(um_node) && nzchar(trimws(um_node)))
+  }
+  TRUE
+}
 
 .collect_abort_calls <- function(expr,
                                  file_label,
@@ -39,14 +49,19 @@
 
     if (head_txt %in% c("cli_abort", "cli::cli_abort", "piptm_abort", "piptm:::piptm_abort")) {
       arg_names <- names(node)
-      has_user_msg <- !is.null(arg_names) && "user_message" %in% arg_names
+      um_node <- if (!is.null(arg_names) && "user_message" %in% arg_names) {
+        node[["user_message"]]
+      } else {
+        NULL
+      }
+      has_user_msg <- .is_nonempty_user_message_ast(um_node)
       code_txt <- paste(deparse(node, width.cutoff = 500L), collapse = " ")
       out[[length(out) + 1L]] <<- list(
-        file            = file_label,
-        fn              = current_fn,
-        call_type       = if (grepl("piptm_abort$", head_txt)) "piptm_abort" else "cli_abort",
+        file             = file_label,
+        fn               = current_fn,
+        call_type        = if (grepl("piptm_abort$", head_txt)) "piptm_abort" else "cli_abort",
         has_user_message = has_user_msg,
-        code            = code_txt
+        code             = code_txt
       )
     }
 
@@ -70,7 +85,6 @@
   "R/compute_poverty.R",
   "R/compute_shares.R",
   "R/compute_summary_stats.R",
-  "R/errors.R",
   "R/format_table_output.R",
   "R/registry.R",
   "R/schema.R",
@@ -81,6 +95,8 @@
 # Per-site allowlist of internal programmer-contract / schema-corruption checks
 # inside mixed files (`file`, `fn`, `snippet`).
 .MIXED_FILE_SITE_ALLOWLIST <- list(
+  list(file = "R/errors.R", fn = "piptm_abort", snippet = "user_message} must be"),
+  list(file = "R/errors.R", fn = "piptm_abort", snippet = "message = message"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "requires a resolved"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "produced zero selected values"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "failed to resolve labels"),
@@ -141,22 +157,24 @@ test_that("AST coverage audit: all piptm_abort() calls supply user_message and n
   r_files <- sort(list.files(file.path(pkg_root, "R"), pattern = "\\.R$", full.names = TRUE))
   plumber_files <- sort(list.files(file.path(pkg_root, "inst", "plumber"), pattern = "\\.R$", full.names = TRUE))
 
+  norm_root <- paste0(gsub("\\\\", "/", normalizePath(pkg_root, winslash = "/")), "/")
   all_records <- list()
   for (f in c(r_files, plumber_files)) {
-    rel <- sub(paste0("^", gsub("\\\\", "/", normalizePath(pkg_root, winslash = "/")), "/?"), "",
-               gsub("\\\\", "/", normalizePath(f, winslash = "/")))
-    parsed <- parse(file = f, keep.source = TRUE)
+    norm_f <- gsub("\\\\", "/", normalizePath(f, winslash = "/"))
+    rel <- if (startsWith(norm_f, norm_root)) {
+      substr(norm_f, nchar(norm_root) + 1L, nchar(norm_f))
+    } else {
+      norm_f
+    }
+    parsed <- parse(file = f, keep.source = TRUE, encoding = "UTF-8")
     all_records <- c(all_records, .collect_abort_calls(parsed, rel))
   }
 
-  # 1. Every piptm_abort() call must include user_message = ...
+  # 1. Every piptm_abort() call must include a non-NULL, non-empty user_message
   piptm_calls <- Filter(function(r) identical(r$call_type, "piptm_abort"), all_records)
   expect_gt(length(piptm_calls), 20L)
   missing_um <- Filter(function(r) !isTRUE(r$has_user_message), piptm_calls)
-  expect_length(
-    missing_um,
-    0L
-  )
+  expect_length(missing_um, 0L)
 
   # 2. Zero raw cli_abort() calls in inst/plumber/*.R, pip_lookup, piptm_manifest, or resolve_release
   cli_calls <- Filter(function(r) identical(r$call_type, "cli_abort"), all_records)
@@ -189,22 +207,27 @@ test_that("AST coverage audit: all piptm_abort() calls supply user_message and n
   expect_length(unallowlisted, 0L)
 })
 
-test_that("AST coverage audit helper flags unmigrated cli_abort() and piptm_abort() missing user_message", {
+test_that("AST coverage audit helper flags unmigrated cli_abort() and piptm_abort() missing/NULL/blank user_message", {
   bad_expr <- parse(text = '
     table_maker <- function() {
       cli_abort("unmapped error in table_maker")
       piptm_abort("dev message without user_message")
+      piptm_abort("dev message with NULL", user_message = NULL)
+      piptm_abort("dev message with blank", user_message = "   ")
     }
   ')
   recs <- .collect_abort_calls(bad_expr, "R/table_maker.R")
-  expect_length(recs, 2L)
+  expect_length(recs, 4L)
 
-  cli_rec   <- recs[[1L]]
-  piptm_rec <- recs[[2L]]
+  expect_identical(recs[[1L]]$call_type, "cli_abort")
+  expect_false(.is_allowlisted_cli_abort(recs[[1L]]))
 
-  expect_identical(cli_rec$call_type, "cli_abort")
-  expect_false(.is_allowlisted_cli_abort(cli_rec))
+  expect_identical(recs[[2L]]$call_type, "piptm_abort")
+  expect_false(recs[[2L]]$has_user_message)
 
-  expect_identical(piptm_rec$call_type, "piptm_abort")
-  expect_false(piptm_rec$has_user_message)
+  expect_identical(recs[[3L]]$call_type, "piptm_abort")
+  expect_false(recs[[3L]]$has_user_message)
+
+  expect_identical(recs[[4L]]$call_type, "piptm_abort")
+  expect_false(recs[[4L]]$has_user_message)
 })

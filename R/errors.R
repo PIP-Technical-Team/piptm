@@ -1,7 +1,3 @@
-#' @importFrom cli cli_abort ansi_strip
-#' @importFrom rlang caller_env
-NULL
-
 # ── User-facing API error constants ──────────────────────────────────────────
 
 #' Canonical generic user-facing fallback error sentence
@@ -24,6 +20,53 @@ NULL
   "The table data could not be exported because the download payload is ",
   "incomplete or invalid."
 )
+
+#' Shared user-facing error constants across domain modules
+#'
+#' @keywords internal
+#' @noRd
+.PIPTM_DESCRIPTION_METADATA_USER_ERROR <- paste0(
+  "The table description could not be generated because the provided table ",
+  "metadata is incomplete or invalid."
+)
+
+#' @keywords internal
+#' @noRd
+.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR <- paste0(
+  "The selected sample filter could not be read. Please reset your filters ",
+  "and try again."
+)
+
+#' @keywords internal
+#' @noRd
+.PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR <-
+  "One or more selected sample filter values are invalid."
+
+#' @keywords internal
+#' @noRd
+.PIPTM_POVERTY_LINE_USER_ERROR <-
+  "A valid positive poverty line is required to compute poverty statistics."
+
+#' @keywords internal
+#' @noRd
+.PIPTM_SURVEY_YEAR_USER_ERROR <-
+  "Survey years must be valid whole-number years (for example, 2019)."
+
+#' @keywords internal
+#' @noRd
+.PIPTM_NO_ACTIVE_RELEASE_USER_ERROR <-
+  "Survey data is temporarily unavailable because no active data release is loaded."
+
+#' Format user-facing error message for an unavailable data release
+#'
+#' @param release Release value passed by the caller.
+#' @return Single character string.
+#' @keywords internal
+#' @noRd
+.piptm_unknown_release_user_error <- function(release) {
+  rel_label <- if (length(release) == 1L && !is.na(release)) as.character(release) else ""
+  sprintf("The requested data release ('%s') is not available.", rel_label)
+}
 
 # ── Condition constructors and extractors ────────────────────────────────────
 
@@ -60,14 +103,19 @@ piptm_abort <- function(message,
   if (!is.null(user_message)) {
     if (!is.character(user_message) ||
         length(user_message) != 1L ||
-        is.na(user_message) ||
-        !nzchar(trimws(user_message))) {
+        is.na(user_message)) {
       cli::cli_abort(
         "{.arg user_message} must be {.code NULL} or a single non-empty character string.",
         call = call
       )
     }
-    user_message <- trimws(user_message)
+    user_message <- trimws(cli::ansi_strip(user_message))
+    if (!nzchar(user_message)) {
+      cli::cli_abort(
+        "{.arg user_message} must be {.code NULL} or a single non-empty character string.",
+        call = call
+      )
+    }
   }
 
   cli::cli_abort(
@@ -87,10 +135,11 @@ piptm_abort <- function(message,
 #' Never returns raw `conditionMessage(cnd)`.
 #'
 #' @param cnd A condition object caught by `tryCatch()`.
-#' @param fallback Single character string returned when `cnd` does not carry
-#'   a valid `user_message`.
+#' @param fallback Single character string (or `NULL`) returned when `cnd` does
+#'   not carry a valid `user_message`.
 #'
-#' @return Single plain-text character string safe for UI display.
+#' @return Single plain-text character string safe for UI display (or `fallback`
+#'   when `fallback = NULL`).
 #'
 #' @keywords internal
 #' @noRd
@@ -102,8 +151,11 @@ piptm_user_error_message <- function(cnd,
     NULL
   }
 
-  if (is.character(um) && length(um) == 1L && !is.na(um) && nzchar(trimws(um))) {
-    return(cli::ansi_strip(trimws(um)))
+  if (is.character(um) && length(um) == 1L && !is.na(um)) {
+    um_clean <- trimws(cli::ansi_strip(um))
+    if (nzchar(um_clean)) {
+      return(um_clean)
+    }
   }
 
   fallback

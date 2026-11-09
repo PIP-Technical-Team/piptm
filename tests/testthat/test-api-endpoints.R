@@ -921,10 +921,12 @@ test_that("POST /table with parsed list filter_base in JSON body does not fail f
     filter_base  = list(age = c(15L, 20L))
   )))
 
-  expect_true(res$status %in% c(200L, 422L))
+  expect_equal(res$status, 422L)
   body <- parse_api_res(res)
-  # Even if 422 due to fixture columns, it must not be the malformed JSON error
-  expect_false(any(grepl("could not be read", unlist(body$errors))))
+  expect_identical(
+    unlist(body$errors),
+    "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+  )
 })
 
 test_that("GET /table with valid filter_base JSON is accepted by endpoint", {
@@ -1014,6 +1016,19 @@ test_that("GET /table returns exact user-facing 422 messages for missing survey,
   expect_identical(
     unlist(body_fb_dim$errors),
     "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+  )
+
+  # 5. filter_base category code matches 0 rows in load_surveys() (COL_2010_ECH_INC_ALL has area = 0,1)
+  res_fb_zero <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2010_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(area = 999L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_zero$status, 422L)
+  body_fb_zero <- parse_api_res(res_fb_zero)
+  expect_identical(
+    unlist(body_fb_zero$errors),
+    "No survey observations matched the selected sample filters. Try broadening your filter selection."
   )
 })
 

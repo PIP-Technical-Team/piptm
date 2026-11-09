@@ -62,13 +62,13 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
     if (!is.numeric(year)) {
       piptm_abort(
         "{.arg year} must be an integer vector of survey years (e.g. 2010L).",
-        user_message = "Survey years must be valid whole-number years (for example, 2019)."
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
       )
     }
     if (any(is.na(year))) {
       piptm_abort(
         "{.arg year} cannot contain NA values.",
-        user_message = "Survey years must be valid whole-number years (for example, 2019)."
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
       )
     }
     fractional_years <- year != floor(year)
@@ -78,7 +78,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
           "{.arg year} must contain whole-number years (no fractional values).",
           "i" = "Offending value{?s}: {.val {unique(year[fractional_years])}}"
         ),
-        user_message = "Survey years must be valid whole-number years (for example, 2019)."
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
       )
     }
     year <- as.integer(year)
@@ -557,13 +557,13 @@ table_maker <- function(pip_id        = NULL,
     if (!is.list(filter_base)) {
       piptm_abort(
         "{.arg filter_base} must be NULL or a named list.",
-        user_message = "The selected sample filter could not be read. Please reset your filters and try again."
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
       )
     }
     if (length(filter_base) == 0L) {
       piptm_abort(
         "{.arg filter_base} must be NULL or a non-empty named list.",
-        user_message = "The selected sample filter could not be read. Please reset your filters and try again."
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
       )
     }
 
@@ -571,7 +571,7 @@ table_maker <- function(pip_id        = NULL,
     if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
       piptm_abort(
         "{.arg filter_base} must have non-empty variable names.",
-        user_message = "The selected sample filter could not be read. Please reset your filters and try again."
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
       )
     }
 
@@ -600,14 +600,15 @@ table_maker <- function(pip_id        = NULL,
           )
         }
         vals_numeric <- suppressWarnings(as.numeric(vals))
-        if (anyNA(vals_numeric)) {
+        bad_non_int  <- is.na(vals_numeric) | !is.finite(vals_numeric)
+        if (any(bad_non_int)) {
           piptm_abort(
             c(
               "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
               "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[is.na(vals_numeric)])}}"
+              "i" = "Offending value{?s}: {.val {unique(vals[bad_non_int])}}"
             ),
-            user_message = "One or more selected sample filter values are invalid."
+            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
           )
         }
         fractional_idx <- vals_numeric != floor(vals_numeric)
@@ -618,7 +619,7 @@ table_maker <- function(pip_id        = NULL,
               "i" = "Values must be integer codes stored in Parquet.",
               "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
             ),
-            user_message = "One or more selected sample filter values are invalid."
+            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
           )
         }
         vals_int <- as.integer(vals_numeric)
