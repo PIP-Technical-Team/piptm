@@ -153,6 +153,7 @@ result <- table_maker(
 representation used by the \verb{/table} API.
 
 Other api: 
+\code{\link{build_cell_explanation}()},
 \code{\link{flatten_table_response}()},
 \code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},

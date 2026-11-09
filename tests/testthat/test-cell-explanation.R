@@ -204,8 +204,17 @@ test_that("what_a_cell_is$items: <=4-cell enumeration, >4-cell per-slot breakdow
     expect_false(any(grepl("urban", unlist(res_f2$what_a_cell_is$items), ignore.case = TRUE)))
 
     # items never exceeds 4 across every multi-slot scenario above
-    for (r in list(res_2x2, res_lstatus, res_educ, res_10, res_0, res_f1, res_f2)) {
-      expect_lte(length(r$what_a_cell_is$items), 4L)
+    scenarios <- list(
+      "2x2"     = res_2x2,
+      "lstatus" = res_lstatus,
+      "educ"    = res_educ,
+      "10"      = res_10,
+      "0"       = res_0,
+      "f1"      = res_f1,
+      "f2"      = res_f2
+    )
+    for (nm in names(scenarios)) {
+      expect_lte(length(scenarios[[nm]]$what_a_cell_is$items), 4L, label = nm)
     }
   })
 })
@@ -217,11 +226,13 @@ test_that("what_a_cell_is$items is empty with no cell-count suffix when the regi
   old_regs  <- env$registries
   old_cur   <- env$current_release
   old_arrow <- env$arrow_root
+  old_cache <- env$cell_prose
   old_env_arrow <- Sys.getenv("PIPTM_ARROW_ROOT", unset = NA_character_)
   on.exit({
     env$registries      <- old_regs
     env$current_release <- old_cur
     env$arrow_root      <- old_arrow
+    env$cell_prose      <- old_cache
     if (is.na(old_env_arrow)) {
       Sys.unsetenv("PIPTM_ARROW_ROOT")
     } else {
@@ -233,6 +244,7 @@ test_that("what_a_cell_is$items is empty with no cell-count suffix when the regi
   env$registries <- list()
   env$current_release <- NULL
   env$arrow_root <- NULL
+  env$cell_prose <- NULL
 
   res <- build_cell_explanation(
     analysis_var = "welfare",

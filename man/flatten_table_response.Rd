@@ -95,6 +95,7 @@ flatten_table_response(list(survey))
 }
 \seealso{
 Other api: 
+\code{\link{build_cell_explanation}()},
 \code{\link{format_table_output}()},
 \code{\link{pip_lookup}()},
 \code{\link{run_api}()},

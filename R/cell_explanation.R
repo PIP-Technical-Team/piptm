@@ -319,12 +319,24 @@
   if (!is.null(reg_entry$categories) && length(reg_entry$categories) > 0L) {
     reg_codes <- vapply(
       reg_entry$categories,
-      function(x) as.character(x$code)[[1L]],
+      function(x) {
+        if (!is.null(x$code) && length(x$code) > 0L) {
+          as.character(x$code)[[1L]]
+        } else {
+          ""
+        }
+      },
       character(1)
     )
     reg_labels <- vapply(
       reg_entry$categories,
-      function(x) as.character(x$label)[[1L]],
+      function(x) {
+        if (!is.null(x$label) && length(x$label) > 0L) {
+          as.character(x$label)[[1L]]
+        } else {
+          ""
+        }
+      },
       character(1)
     )
   }
@@ -353,7 +365,7 @@
     return(list(codes = as.character(fb_vals), known = TRUE))
   }
 
-  list(codes = retained, known = TRUE)
+  return(list(codes = retained, known = TRUE))
 }
 
 
@@ -400,9 +412,9 @@
   head_with_mods <- paste(c(pre_modifiers, head_noun), collapse = " ")
 
   if (length(trailing) > 1L && all(startsWith(trailing, "whose "))) {
-    paste(head_with_mods, .join_natural(trailing, conj = "and"))
+    return(paste(head_with_mods, .join_natural(trailing, conj = "and")))
   } else {
-    paste(c(head_with_mods, trailing), collapse = " ")
+    return(paste(c(head_with_mods, trailing), collapse = " "))
   }
 }
 
@@ -427,7 +439,7 @@
     return(.join_natural(nouns, conj = "or"))
   }
   phrases <- vapply(cat_infos, function(ci) ci$phrase, character(1))
-  paste("people", .join_var_phrases(phrases))
+  return(paste("people", .join_var_phrases(phrases)))
 }
 
 

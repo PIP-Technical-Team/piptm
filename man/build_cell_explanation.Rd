@@ -39,7 +39,7 @@ build_cell_explanation(
 \item{ppp}{Optional integer PPP reference year (default \code{2021L}).}
 
 \item{pop_share_threshold}{Optional numeric cell-suppression threshold in
-\code{(0, 1)}, or \code{NULL} when suppression is disabled.}
+\verb{(0, 1)}, or \code{NULL} when suppression is disabled.}
 
 \item{welfare_type}{Optional \code{"INC"} or \code{"CON"} so welfare prose says
 \code{"daily income"} or \code{"daily consumption"} instead of \code{"daily welfare"}.}
@@ -48,7 +48,12 @@ build_cell_explanation(
 }
 \value{
 A named list with elements \code{schema_version}, \code{who_is_in_table},
-\code{what_a_cell_is}, \code{what_is_shown}, \code{notes}, and \code{warnings}.
+\code{what_a_cell_is}, \code{what_is_shown}, \code{notes}, and \code{warnings}. The
+\code{what_a_cell_is} element carries an \code{items} character list: a full
+combined-cell enumeration when the table has 4 or fewer cells, a per-slot
+category breakdown (one line per active layout slot) when it has more than
+4 cells, and an empty list when no layout slot is active or the registry is
+unavailable.
 }
 \description{
 Pure function of the Page 2 configuration parameters, the release variable
@@ -67,8 +72,11 @@ build_cell_explanation(
 )
 }
 \seealso{
-Other api:
+Other api: 
+\code{\link{flatten_table_response}()},
 \code{\link{format_table_output}()},
+\code{\link{pip_lookup}()},
+\code{\link{run_api}()},
 \code{\link{serialize_table_response}()},
 \code{\link{table_maker}()}
 }
