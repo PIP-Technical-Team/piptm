@@ -49,28 +49,36 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   # ── Guard: equal-length vectors ────────────────────────────────────────────
   n <- length(country_code)
   if (length(year) != n || length(welfare_type) != n) {
-    cli_abort(
+    piptm_abort(
       c(
         "{.arg country_code}, {.arg year}, and {.arg welfare_type} must all have the same length.",
         "i" = "Lengths: {.arg country_code} = {n}, {.arg year} = {length(year)}, {.arg welfare_type} = {length(welfare_type)}."
-      )
+      ),
+      user_message = "Country, year, and welfare type selections must have the same number of entries."
     )
   }
 
   if (!is.integer(year)) {
     if (!is.numeric(year)) {
-      cli_abort("{.arg year} must be an integer vector of survey years (e.g. 2010L).")
+      piptm_abort(
+        "{.arg year} must be an integer vector of survey years (e.g. 2010L).",
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
+      )
     }
     if (any(is.na(year))) {
-      cli_abort("{.arg year} cannot contain NA values.")
+      piptm_abort(
+        "{.arg year} cannot contain NA values.",
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
+      )
     }
     fractional_years <- year != floor(year)
     if (any(fractional_years)) {
-      cli_abort(
+      piptm_abort(
         c(
           "{.arg year} must contain whole-number years (no fractional values).",
           "i" = "Offending value{?s}: {.val {unique(year[fractional_years])}}"
-        )
+        ),
+        user_message = .PIPTM_SURVEY_YEAR_USER_ERROR
       )
     }
     year <- as.integer(year)
@@ -522,7 +530,10 @@ table_maker <- function(pip_id        = NULL,
   }
 
   if (length(pip_id) == 0L) {
-    cli_abort("No surveys to process: {.arg pip_id} is empty after resolution.")
+    piptm_abort(
+      "No surveys to process: {.arg pip_id} is empty after resolution.",
+      user_message = "No surveys matched your selection. Please select at least one available country and survey year."
+    )
   }
 
   # ── 2. Validate computation parameters ─────────────────────────────────────
@@ -544,15 +555,24 @@ table_maker <- function(pip_id        = NULL,
     }
 
     if (!is.list(filter_base)) {
-      cli_abort("{.arg filter_base} must be NULL or a named list.")
+      piptm_abort(
+        "{.arg filter_base} must be NULL or a named list.",
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
     }
     if (length(filter_base) == 0L) {
-      cli_abort("{.arg filter_base} must be NULL or a non-empty named list.")
+      piptm_abort(
+        "{.arg filter_base} must be NULL or a non-empty named list.",
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
     }
 
     filter_vars <- names(filter_base)
     if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
-      cli_abort("{.arg filter_base} must have non-empty variable names.")
+      piptm_abort(
+        "{.arg filter_base} must have non-empty variable names.",
+        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
     }
 
     allowed_filter_vars <- unique(
@@ -561,11 +581,12 @@ table_maker <- function(pip_id        = NULL,
 
     invalid_vars <- setdiff(filter_vars, allowed_filter_vars)
     if (length(invalid_vars) > 0L) {
-      cli_abort(
+      piptm_abort(
         c(
           "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
           "i" = "Allowed variables: {.val {allowed_filter_vars}}"
-        )
+        ),
+        user_message = "One or more selected sample filters are not valid for this data release."
       )
     }
 
@@ -573,28 +594,32 @@ table_maker <- function(pip_id        = NULL,
       lapply(filter_vars, function(varname) {
         vals <- unlist(filter_base[[varname]], use.names = FALSE)
         if (length(vals) == 0L) {
-          cli_abort(
-            "{.arg filter_base} variable {.val {varname}} must include at least one value."
+          piptm_abort(
+            "{.arg filter_base} variable {.val {varname}} must include at least one value.",
+            user_message = "Each sample filter must include at least one selected category."
           )
         }
         vals_numeric <- suppressWarnings(as.numeric(vals))
-        if (anyNA(vals_numeric)) {
-          cli_abort(
+        bad_non_int  <- is.na(vals_numeric) | !is.finite(vals_numeric)
+        if (any(bad_non_int)) {
+          piptm_abort(
             c(
               "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
               "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[is.na(vals_numeric)])}}"
-            )
+              "i" = "Offending value{?s}: {.val {unique(vals[bad_non_int])}}"
+            ),
+            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
           )
         }
         fractional_idx <- vals_numeric != floor(vals_numeric)
         if (any(fractional_idx)) {
-          cli_abort(
+          piptm_abort(
             c(
               "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
               "i" = "Values must be integer codes stored in Parquet.",
               "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
-            )
+            ),
+            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
           )
         }
         vals_int <- as.integer(vals_numeric)
@@ -626,11 +651,12 @@ table_maker <- function(pip_id        = NULL,
   }
 
   if (nrow(entries) == 0L) {
-    cli_abort(
+    piptm_abort(
       c(
         "No matching surveys found in manifest for release {.val {mf$release[[1L]] %||% piptm_current_release()}}.",
         "i" = "Requested pip_id{?s}: {.val {(.ids)}}"
-      )
+      ),
+      user_message = "The requested country or survey is not available in the selected data release."
     )
   }
 
@@ -699,20 +725,20 @@ table_maker <- function(pip_id        = NULL,
     }
 
     if (nrow(entries) == 0L) {
-      cli_abort(
+      piptm_abort(
         c(
           "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}})."
-        )
+        ),
+        user_message = .piptm_covariate_exclusion_user_error(filter_vars, release)
       )
     }
   }
 
   # ── 3. Dimension pre-filter (before loading) ────────────────────────────────
-  # For each entry, compute the overlap count between user's `by` and the
-  # survey's available dimensions (manifest list column).
-  # Keep: ≥1 overlap (full or partial match)
-  # Drop: 0 overlap — warn with pip_id list
-  # Partial: keep but warn — missing dims filled with NA in per-survey loop
+  # For each entry, check whether the survey carries ALL requested breakdown
+  # dimensions (excluding 'pov_status', which is computed dynamically).
+  # Keep: full match (all requested dimensions present)
+  # Drop: partial or zero match — excluded before load to prevent NA-filled cells
   if (!is.null(by)) {
     by_check <- by[!by %in% "pov_status"]
 
@@ -765,11 +791,12 @@ table_maker <- function(pip_id        = NULL,
       }
 
       if (nrow(entries) == 0L) {
-        cli_abort(
+        piptm_abort(
           c(
             "All requested surveys were excluded: none have all of the requested dimensions ({.val {by_check}}).",
             "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
-          )
+          ),
+          user_message = .piptm_covariate_exclusion_user_error(by_check, release)
         )
       }
     }
@@ -807,10 +834,13 @@ table_maker <- function(pip_id        = NULL,
                        release = release)
 
     if (nrow(dt) == 0L) {
-      cli_abort(c(
-        "{.fn load_surveys} returned no rows for the requested surveys.",
-        "i" = "Check the Arrow repository path and partition keys."
-))
+      piptm_abort(
+        c(
+          "{.fn load_surveys} returned no rows for the requested surveys.",
+          "i" = "Check the Arrow repository path and partition keys."
+        ),
+        user_message = "No survey observations matched the selected criteria."
+      )
     }
 
     # Guard metadata columns
@@ -857,11 +887,12 @@ table_maker <- function(pip_id        = NULL,
     if (!is.null(by) && "pov_status" %in% by) {
       if (is.null(poverty_line) || !is.numeric(poverty_line) ||
           length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
-        cli_abort(
+        piptm_abort(
           c(
             "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
             "i" = "Provide a single positive numeric scalar."
-          )
+          ),
+          user_message = "A valid positive poverty line is required when breaking down results by poverty status."
         )
       }
       dt[, pov_status := as.integer(welfare < poverty_line)]

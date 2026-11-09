@@ -19,8 +19,6 @@
 
 # Maximum number of surveys accepted per /table request.
 .MAX_SURVEYS_PER_REQUEST <- 15L
-.SESSION_TTL_SECONDS <- 3600L
-.SESSION_STORE <- new.env(parent = emptyenv())
 .PIP_ID_PATTERN <- "^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$"
 .SLOT_NAMES <- c("column", "row", "superColumn", "superRow")
 
@@ -65,102 +63,6 @@ api_error <- function(errors, status_code, res) {
     errors   = errors,
     meta     = list()
   )
-}
-
-#' Validate and normalize pip_id values for session storage
-#'
-#' @param pip_id Character vector of survey identifiers.
-#'
-#' @return A named list with fields `valid`, `errors`, and normalized `pip_id`.
-validate_session_pip_id <- function(pip_id) {
-  errors <- character()
-
-  if (is.null(pip_id) || length(pip_id) == 0L) {
-    errors <- c(errors, "`pip_id` must be a non-empty character vector.")
-    return(list(valid = FALSE, errors = errors, pip_id = NULL))
-  }
-
-  pip_id <- as.character(unlist(pip_id, use.names = FALSE))
-  pip_id <- trimws(pip_id)
-  pip_id <- pip_id[nzchar(pip_id)]
-
-  if (length(pip_id) == 0L) {
-    errors <- c(errors, "`pip_id` must contain at least one non-empty value.")
-    return(list(valid = FALSE, errors = errors, pip_id = NULL))
-  }
-
-  bad_ids <- pip_id[!grepl(.PIP_ID_PATTERN, pip_id)]
-  if (length(bad_ids) > 0L) {
-    errors <- c(
-      errors,
-      paste0(
-        "`pip_id` value(s) contain invalid characters or format: ",
-        paste(unique(bad_ids), collapse = ", "),
-        ". Expected pattern: ISO3_YYYY_<survey-info> (uppercase letters, ",
-        "digits, hyphens, underscores; max 50 characters)."
-      )
-    )
-  }
-
-  list(
-    valid = length(errors) == 0L,
-    errors = errors,
-    pip_id = unique(pip_id)
-  )
-}
-
-#' Create and store a session containing pip_id values
-#'
-#' @param pip_id Character vector of validated survey identifiers.
-#'
-#' @return Character scalar session ID.
-create_session <- function(pip_id) {
-  session_id <- NULL
-  tries <- 0L
-
-  while (is.null(session_id) && tries < 20L) {
-    candidate <- paste0(sample(c(letters, 0:9), size = 12L, replace = TRUE), collapse = "")
-    if (!exists(candidate, envir = .SESSION_STORE, inherits = FALSE)) {
-      session_id <- candidate
-    }
-    tries <- tries + 1L
-  }
-
-  if (is.null(session_id)) {
-    cli::cli_abort("Could not allocate a unique session ID. Please retry.")
-  }
-
-  .SESSION_STORE[[session_id]] <- list(
-    pip_id = pip_id,
-    created_at = Sys.time()
-  )
-
-  session_id
-}
-
-#' Fetch a non-expired session's pip_id values
-#'
-#' @param session_id Character scalar session identifier.
-#'
-#' @return Character vector of pip_id values, or `NULL` when missing/expired.
-get_session_surveys <- function(session_id) {
-  if (!is.character(session_id) || length(session_id) != 1L || !nzchar(session_id)) {
-    return(NULL)
-  }
-
-  if (!exists(session_id, envir = .SESSION_STORE, inherits = FALSE)) {
-    return(NULL)
-  }
-
-  entry <- .SESSION_STORE[[session_id]]
-  age_sec <- as.numeric(difftime(Sys.time(), entry$created_at, units = "secs"))
-
-  if (is.na(age_sec) || age_sec > .SESSION_TTL_SECONDS) {
-    rm(list = session_id, envir = .SESSION_STORE)
-    return(NULL)
-  }
-
-  as.character(entry$pip_id)
 }
 
 # List of helpers that return JSON/TEXT and set res$status. Used by the
@@ -212,16 +114,49 @@ resolve_release <- function(release) {
   }
 
   known <- names(piptm::piptm_manifests())
-  if (!release %in% known) {
-    cli::cli_abort(
+  if (!is.character(release) || length(release) != 1L || is.na(release) || !release %in% known) {
+    piptm:::piptm_abort(
       c(
         "Release {.val {release}} is not a known release.",
         "i" = "Available releases: {.val {sort(known)}}."
-      )
+      ),
+      user_message = piptm:::.piptm_unknown_release_user_error(release)
     )
   }
 
   release
+}
+
+#' Parse a `filter_base` request parameter into an R list
+#'
+#' Accepts `NULL`, an already-parsed R `list` (from JSON request bodies), or a
+#' JSON-encoded character string (from query parameters). Raises a user-safe
+#' `piptm_abort()` when JSON parsing fails.
+#'
+#' @param filter_base Raw `filter_base` parameter from query or body.
+#' @return `NULL`, a parsed list, or the input value for downstream validation.
+parse_filter_base_input <- function(filter_base) {
+  if (is.null(filter_base)) {
+    return(NULL)
+  }
+  if (is.character(filter_base)) {
+    if (length(filter_base) != 1L || is.na(filter_base)) {
+      piptm:::piptm_abort(
+        "Malformed filter_base: expected a single JSON string.",
+        user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+      )
+    }
+    return(tryCatch(
+      jsonlite::fromJSON(filter_base),
+      error = function(e) {
+        piptm:::piptm_abort(
+          "Malformed filter_base JSON: {conditionMessage(e)}",
+          user_message = piptm:::.PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+        )
+      }
+    ))
+  }
+  filter_base
 }
 
 # ── Input validators ──────────────────────────────────────────────────────────
@@ -1085,8 +1020,10 @@ validate_lookup_input <- function(country_code, year, welfare_type) {
 #'       occurred.}
 #'     \item{`warnings`}{Character vector of warning/message strings collected
 #'       during evaluation (in order of occurrence).}
-#'     \item{`error`}{`NULL` on success, or a single character string
-#'       describing the caught error.}
+#'     \item{`error`}{`NULL` on success, or a single user-safe character string
+#'       suitable for the API `errors[]` response envelope.}
+#'     \item{`dev_error`}{`NULL` on success, or a single character string
+#'       containing the raw developer `conditionMessage(e)` for diagnostics.}
 #'   }
 capture_with_warnings <- function(expr) {
   collected <- character()
@@ -1111,16 +1048,34 @@ capture_with_warnings <- function(expr) {
       }
     ),
     error = function(e) {
+      dev_msg  <- cli::ansi_strip(conditionMessage(e))
+      user_msg <- piptm:::piptm_user_error_message(e, fallback = NULL)
+      if (is.null(user_msg)) {
+        message(sprintf(
+          "[piptm][unmapped_error] %s: %s",
+          paste(class(e), collapse = "/"),
+          dev_msg
+        ))
+        user_msg <- piptm:::.PIPTM_GENERIC_USER_ERROR
+      }
       # Use a typed S3 class instead of a list-key sentinel to avoid
       # colliding with domain functions that legitimately return list(.__error__ = ...).
-      structure(list(message = conditionMessage(e)), class = "cw_error")
+      structure(
+        list(user_message = user_msg, dev_message = dev_msg),
+        class = "cw_error"
+      )
     }
   )
 
   # Distinguish a caught error from a normal return value via S3 class.
   if (inherits(result, "cw_error")) {
-    return(list(result = NULL, warnings = collected, error = result$message))
+    return(list(
+      result    = NULL,
+      warnings  = collected,
+      error     = result$user_message,
+      dev_error = result$dev_message
+    ))
   }
 
-  list(result = result, warnings = collected, error = NULL)
+  list(result = result, warnings = collected, error = NULL, dev_error = NULL)
 }

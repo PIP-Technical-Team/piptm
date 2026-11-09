@@ -67,8 +67,11 @@ Query parameters (works identically as a POST form body):
 | `analysis_var` | string | yes | e.g. `welfare`, `pov_status`, or any optional dimension from `GET /analysis-variables` |
 | `pip_id` | string[] | yes | repeatable; 1–15 survey identifiers |
 | `measures` | string[] | yes | repeatable; must be in `GET /statistics` |
-| `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or `"pov_status"` appears in any layout slot |
-| `column`, `row`, `superColumn`, `superRow` | string | no | Decision-3 layout slots (filled in order without gaps, from `GET /dimensions` / `GET /covariates`) |
+| `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or any slot contains `pov_status` |
+| `column` | string | no | Decision-3 Columns slot (single variable from `GET /dimensions`) |
+| `row` | string | no | Decision-3 Rows slot (single variable from `GET /dimensions`) |
+| `superColumn` | string | no | Decision-3 Super Columns slot (single variable from `GET /dimensions`) |
+| `superRow` | string | no | Decision-3 Super Rows slot (single variable from `GET /dimensions`) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
 | `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
@@ -78,7 +81,7 @@ Query parameters (works identically as a POST form body):
 `pip_id` format: each value must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`
 (3-letter ISO3 country code, 4-digit year, then survey-info segment), e.g.
 `ARM_2012_ILCS_CON_ALL`. This pattern is enforced server-side; it is reused
-below for `/description`, `/lookup`, and `/session/surveys` examples.
+below for `/description` and `/lookup` examples.
 
 Example (Swagger "Try it out", query parameters):
 
@@ -168,24 +171,45 @@ Request body (JSON):
       "country_code": "BIH",
       "surveyid_year": 2011,
       "welfare_type": "CON",
-      "poverty_line": 3,
-      "measure": "headcount",
-      "value": 0.0092,
-      "population": 3168295.7285
+      "poverty_line": null,
+      "analysis_var": "welfare",
+      "measures": ["mean", "gini"],
+      "layout": {
+        "columns": {
+          "varname": "gender",
+          "label": "Gender",
+          "categories": [
+            { "code": 0, "label": "Female" },
+            { "code": 1, "label": "Male" }
+          ]
+        },
+        "rows": null,
+        "superColumns": null,
+        "superRows": null
+      },
+      "cells": [
+        {
+          "superRow": null,
+          "row": null,
+          "superColumn": null,
+          "column": { "code": 0, "label": "Female" },
+          "measures": { "mean": "12.50", "gini": "45.67" }
+        }
+      ]
     }
   ]
 }
 ```
 
 - `format` is optional and defaults to `csv`; allowed values: `csv`, `rds`.
-- `data` is required and must be a non-empty array of row objects (normally
-  copied from `/table` response `data`).
+- `data` is required and must be a non-empty array of Approach C survey objects
+  copied from `/table` response `data` when `include_metadata=false`.
 
 Expected responses:
 
 - `200` + `Content-Type: text/csv; charset=utf-8` + `Content-Disposition: attachment; filename="table.csv"`
 - `200` + `Content-Type: application/octet-stream` + `Content-Disposition: attachment; filename="table.rds"`
-- `400` for malformed body / invalid `format` / empty `data`
+- `400` for malformed body / invalid `format` / empty `data` / legacy flat-row payload
 - `413` for payloads larger than 25 MB
 
 ### `GET /lookup` — resolve country/year/welfare_type to pip_id
@@ -235,22 +259,18 @@ unlike other endpoints this returns the payload directly as `data` with no
 ### `GET /analysis-variables` — Decision 2 variable dropdown
 
 Returns analysis variables for Decision 2: each entry has `varname`, `label`,
-`type` (continuous/binary/etc.), and `stat_groups`. Client code uses `type`
-and `stat_groups` to gate which statistics are enabled/disabled per
-`docs/ui-description.md`'s "Statistic gating by variable type" rules. Note:
-this endpoint does not return a `poverty_line_slider` field — the poverty-line
-slider is a client-side UI rule triggered by `analysis_var`/`by` containing
-`pov_status` (see `/table`'s `poverty_line` requirement), not a server-supplied
-flag.
+`type` (continuous/binary/etc.), `stat_groups`, and `poverty_line_slider`.
+Client code uses these fields to gate which statistics are enabled/disabled per
+`docs/ui-description.md`'s "Statistic gating by variable type" rules.
 
 ### `GET /dimensions` — valid disaggregation dimension names
 
-Returns the flat list of dimension names that pass `/table`'s outer `by`
-validation (`400`-level check). This is not guaranteed to be identical to the
-set `GET /covariates` returns; `table_maker()` runs its own internal check
-against the covariate registry, so a `by` value accepted here can still fail
-with `422` if it is not also a valid covariate. For Decision 3 layout slots,
-use `GET /covariates` as the authoritative source. No request parameters.
+Returns the flat list of dimension names that pass `/table` slot validation
+(`column`, `row`, `superColumn`, `superRow`). This is not guaranteed to be
+identical to the set `GET /covariates` returns; `table_maker()` runs its own
+internal check against the covariate registry, so a slot value accepted here can
+still fail with `422` if it is not also a valid covariate. For Decision 3 layout
+slots, use `GET /covariates` as the authoritative source. No request parameters.
 
 ### `GET /categories` — Decision 1 sample-base filter panel
 
@@ -276,23 +296,6 @@ Super Rows) instead of sample-base filter variables.
 |---|---|---|
 | `pip_id` | string[] | no — omit for the full catalog |
 | `release` | string | no |
-
-### `POST /session/surveys` — store a Step 1 survey selection
-
-Stores a validated set of `pip_id` values server-side (in-memory,
-process-local, expires after 1 hour) and returns `{ "session_id": "..." }`.
-Useful for handing off a Step 1 selection across page loads/tabs without
-re-transmitting the full list.
-
-| Parameter | Type | Required |
-|---|---|---|
-| `pip_id` | string[] | yes — repeatable; must match the canonical `pip_id` pattern |
-
-### `GET /session/:id/surveys` — retrieve a stored survey selection
-
-Path parameter `id` is the session ID returned by `POST /session/surveys`.
-Returns `{ "pip_id": [...] }`. Returns `404` if the session does not exist or
-has expired.
 
 ### `GET /statistics` — Decision 2 statistic groups
 
@@ -373,7 +376,7 @@ other endpoints.
 
 | UI step | Endpoints used |
 |---|---|
-| Step 1 — survey grid | `GET /surveys-ui`, `GET /countries`, `GET /regions`, `GET /surveys`, `POST /session/surveys`, `GET /session/:id/surveys` |
+| Step 1 — survey grid | `GET /surveys-ui`, `GET /countries`, `GET /regions`, `GET /surveys` |
 | Step 2, Decision 1 — sample base | `GET /categories` |
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |

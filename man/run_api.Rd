@@ -28,8 +28,7 @@ listening for HTTP requests.  This is a blocking call — the function
 does not return until the server is stopped (Ctrl+C / SIGINT).
 }
 \details{
-The router exposes API endpoints for compute, discovery, session, and
-download flows.\tabular{lll}{
+The router exposes API endpoints for compute, discovery, and download flows.\tabular{lll}{
    Endpoint \tab Method \tab Description \cr
    \verb{/table} \tab GET, POST \tab Compute poverty / inequality / welfare measures \cr
    \verb{/table/download} \tab POST \tab Convert \verb{/table} rows sent in the body (\verb{\{format, data\}}) into a \code{csv} or \code{rds} file \cr
@@ -45,8 +44,6 @@ download flows.\tabular{lll}{
    \verb{/countries} \tab GET \tab Country code/name metadata from manifest \cr
    \verb{/regions} \tab GET \tab Region metadata with country memberships \cr
    \verb{/surveys-ui} \tab GET \tab UI-ready survey catalog \cr
-   \verb{/session/surveys} \tab POST \tab Create a short-lived survey selection session \cr
-   \verb{/session/<id>/surveys} \tab GET \tab Retrieve survey IDs from a session \cr
    \verb{/health} \tab GET \tab Server health check \cr
 }
 

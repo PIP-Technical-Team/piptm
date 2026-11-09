@@ -133,8 +133,6 @@ Rscript inst/plumber/run.R
 | `/table` | GET, POST | Compute table output |
 | `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
 | `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
-| `/session/surveys` | POST | Create a session and store a survey selection |
-| `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 
@@ -153,9 +151,12 @@ Most endpoints return a common envelope:
 Error status conventions:
 
 - `400`: request validation failures
+- `404`: unknown route or missing resource
 - `413`: payload too large (`POST /table/download`, body > 25 MB)
 - `422`: domain/processing failures (including unknown release)
 - `500`: uncaught internal errors
+
+Every entry in `errors[]` is guaranteed to be a plain-English, user-safe sentence suitable for direct display in the UI. Unmapped internal exceptions return `"Something went wrong processing this request."` to the client while logging the developer diagnostic to `stderr` with a `[piptm][unmapped_error]` prefix.
 
 Success-response exceptions:
 

@@ -65,12 +65,6 @@
       "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
     },
     {
-      "_id": "fld_session",
-      "_type": "request_group",
-      "name": "Session Storage",
-      "parentId": "wrk_5b547f22c74f4d2c9be1d265d051b22a"
-    },
-    {
       "_id": "req_health",
       "_type": "request",
       "name": "GET /health",
@@ -230,114 +224,6 @@
         }
       ],
       "parentId": "fld_catalogue"
-    },
-    {
-      "_id": "req_session_create",
-      "_type": "request",
-      "name": "POST /session/surveys - create session",
-      "description": "Creates a new session with pip_id values and returns session_id for recovery.",
-      "url": "{{ _.base_url }}/session/surveys",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"pip_id\": [\"{{ _.pip_id }}\", \"{{ _.pip_id_2 }}\"]\n}"
-      },
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Success envelope', () => pm.expect(pm.response.json().status).to.eql('success'));\npm.test('Has session_id', () => {\n  const body = pm.response.json();\n  pm.expect(body.data).to.have.property('session_id');\n  pm.expect(body.data.session_id).to.be.a('string').and.have.lengthOf(12);\n  // Save session_id for subsequent tests\n  pm.environment.set('session_id', body.data.session_id);\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"
-    },
-    {
-      "_id": "req_session_retrieve",
-      "_type": "request",
-      "name": "GET /session/<id>/surveys - retrieve session",
-      "description": "Retrieves stored pip_id values by session_id. Run POST request first to set session_id env var.",
-      "url": "{{ _.base_url }}/session/{{ _.session_id }}/surveys",
-      "method": "GET",
-      "headers": [],
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Success envelope', () => pm.expect(pm.response.json().status).to.eql('success'));\npm.test('Has pip_id array', () => {\n  const body = pm.response.json();\n  pm.expect(body.data).to.have.property('pip_id');\n  pm.expect(body.data.pip_id).to.be.an('array');\n});\npm.test('pip_id values match', () => {\n  const body = pm.response.json();\n  // Check it returns the same pip_id values we stored\n  pm.expect(body.data.pip_id).to.include(pm.environment.get('pip_id'));\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));"
-    },
-    {
-      "_id": "req_session_create_empty",
-      "_type": "request",
-      "name": "POST /session/surveys - missing pip_id (400)",
-      "description": "Expects 400. pip_id is required and cannot be empty.",
-      "url": "{{ _.base_url }}/session/surveys",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{}"
-      },
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 400', () => pm.response.to.have.status(400));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions pip_id', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.includes('pip_id'))).to.be.true;\n});"
-    },
-    {
-      "_id": "req_session_create_invalid_format",
-      "_type": "request",
-      "name": "POST /session/surveys - invalid pip_id format (400)",
-      "description": "Expects 400. pip_id must match pattern CCC_YYYY_*.",
-      "url": "{{ _.base_url }}/session/surveys",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"pip_id\": [\"invalid_format\"]\n}"
-      },
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 400', () => pm.response.to.have.status(400));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions format', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.toLowerCase().includes('format') || e.message.toLowerCase().includes('pattern'))).to.be.true;\n});"
-    },
-    {
-      "_id": "req_session_retrieve_unknown",
-      "_type": "request",
-      "name": "GET /session/<id>/surveys - unknown session (404)",
-      "description": "Expects 404. Nonexistent or expired session returns not found.",
-      "url": "{{ _.base_url }}/session/nonexistent123/surveys",
-      "method": "GET",
-      "headers": [],
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 404', () => pm.response.to.have.status(404));\npm.test('Error envelope', () => {\n  const body = pm.response.json();\n  pm.expect(body.status).to.eql('error');\n  pm.expect(body.errors).to.be.an('array').and.not.be.empty;\n});\npm.test('Error mentions session', () => {\n  const errors = pm.response.json().errors;\n  pm.expect(errors.some(e => e.message.toLowerCase().includes('session') || e.message.toLowerCase().includes('not found'))).to.be.true;\n});"
-    },
-    {
-      "_id": "req_session_roundtrip",
-      "_type": "request",
-      "name": "POST /session/surveys - roundtrip test (5 surveys)",
-      "description": "Full workflow test: create session with 5 surveys, verify stored correctly.",
-      "url": "{{ _.base_url }}/session/surveys",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"pip_id\": [\n    \"{{ _.pip_id }}\",\n    \"{{ _.pip_id_2 }}\",\n    \"{{ _.pip_id_3 }}\",\n    \"{{ _.pip_id_4 }}\",\n    \"{{ _.pip_id_5 }}\"\n  ]\n}"
-      },
-      "parameters": [],
-      "parentId": "fld_session",
-      "tests": "pm.test('Status 200', () => pm.response.to.have.status(200));\npm.test('Session created', () => {\n  const body = pm.response.json();\n  pm.expect(body.data.session_id).to.be.a('string').and.have.lengthOf(12);\n  pm.environment.set('roundtrip_session_id', body.data.session_id);\n});\npm.test('Response time < 500ms', () => pm.expect(pm.response.responseTime).to.be.below(500));\n\n// To complete roundtrip, run GET /session/<roundtrip_session_id>/surveys next\n// and verify all 5 pip_id values are returned"
     },
     {
       "_id": "req_table_get_basic",
