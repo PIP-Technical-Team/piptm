@@ -147,7 +147,7 @@ piptm_abort <- function(message,
 #' Extract a UI-safe error message from a caught condition
 #'
 #' Returns the condition's `user_message` attribute when present and non-empty;
-#' otherwise returns `fallback` (defaults to [.PIPTM_GENERIC_USER_ERROR]).
+#' otherwise returns `fallback` (defaults to `.PIPTM_GENERIC_USER_ERROR`).
 #' Never returns raw `conditionMessage(cnd)`.
 #'
 #' @param cnd A condition object caught by `tryCatch()`.
