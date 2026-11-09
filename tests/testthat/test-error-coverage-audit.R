@@ -96,7 +96,7 @@
 # inside mixed files (`file`, `fn`, `snippet`).
 .MIXED_FILE_SITE_ALLOWLIST <- list(
   list(file = "R/errors.R", fn = "piptm_abort", snippet = "user_message} must be"),
-  list(file = "R/errors.R", fn = "piptm_abort", snippet = "message = message"),
+  list(file = "R/errors.R", fn = "piptm_abort", snippet = "class = unique(c(class"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "requires a resolved"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "produced zero selected values"),
   list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "failed to resolve labels"),

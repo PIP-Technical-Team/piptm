@@ -68,6 +68,22 @@
   sprintf("The requested data release ('%s') is not available.", rel_label)
 }
 
+#' Coerce a scalar value to a safe display label for user-facing messages
+#'
+#' Returns `as.character(x)` when `x` is a non-`NA` scalar, otherwise returns
+#' `fallback`. Used to guard `sprintf()` interpolation in `user_message`
+#' construction against non-scalar or `NA` caller inputs.
+#'
+#' @param x Value to coerce (expected scalar character/numeric/integer).
+#' @param fallback Single character string returned when `x` is not a valid
+#'   non-`NA` scalar.
+#' @return Single character string.
+#' @keywords internal
+#' @noRd
+.piptm_safe_scalar_label <- function(x, fallback) {
+  if (length(x) == 1L && !is.na(x)) as.character(x) else fallback
+}
+
 # ── Condition constructors and extractors ────────────────────────────────────
 
 #' Abort with both a developer diagnostic message and a UI-safe user message

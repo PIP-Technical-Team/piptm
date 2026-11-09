@@ -68,7 +68,7 @@ Representative domain and payload error messages:
 | Selected surveys lack requested breakdown dimensions | 422 | `"None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."` |
 | Selected surveys lack sample-filter variables | 422 | `"None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."` |
 | Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
-| Malformed/unreadable sample filter JSON | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
+| Malformed/unreadable sample filter JSON (`filter_base`) | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
 | Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
 | Incomplete/invalid `description_metadata` on `POST /description` | 422 | `"The table description could not be generated because the provided table metadata is incomplete or invalid."` |
 | Incomplete/invalid `data` payload on `POST /table/download` | 400 | `"The table data could not be exported because the download payload is incomplete or invalid."` |

@@ -716,7 +716,7 @@ test_that("capture_with_warnings() collects cli warnings", {
 test_that("capture_with_warnings() catches stop() errors with generic user-safe fallback, logs unmapped error, and preserves dev_error", {
   expect_message(
     out <- capture_with_warnings(stop("something broke")),
-    "\\[piptm\\]\\[unmapped_error\\].*something broke"
+    "\\[piptm\\]\\[unmapped_error\\] .*: .*something broke"
   )
   expect_null(out$result)
   expect_identical(out$error, piptm:::.PIPTM_GENERIC_USER_ERROR)
@@ -727,7 +727,7 @@ test_that("capture_with_warnings() catches stop() errors with generic user-safe 
 test_that("capture_with_warnings() catches unmapped cli_abort() errors with generic user-safe fallback", {
   expect_message(
     out <- capture_with_warnings(cli::cli_abort("abort message")),
-    "\\[piptm\\]\\[unmapped_error\\].*abort message"
+    "\\[piptm\\]\\[unmapped_error\\] .*: .*abort message"
   )
   expect_null(out$result)
   expect_identical(out$error, piptm:::.PIPTM_GENERIC_USER_ERROR)

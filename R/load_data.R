@@ -211,8 +211,8 @@ load_survey_microdata <- function(country_code,
   ]
 
   if (nrow(entry) == 0L) {
-    cc_label <- if (length(country_code) == 1L && !is.na(country_code)) as.character(country_code) else "the requested country"
-    yr_label <- if (length(year) == 1L && !is.na(year)) as.character(year) else "the requested year"
+    cc_label <- .piptm_safe_scalar_label(country_code, "the requested country")
+    yr_label <- .piptm_safe_scalar_label(year, "the requested year")
     piptm_abort(
       c(
         "No manifest entry found for {.val {country_code}} / {year} / {.val {welfare_type}} in release {.val {release}}.",
@@ -314,9 +314,9 @@ load_survey_microdata <- function(country_code,
       "^welfare_ppp_([0-9]+).*", "\\1",
       welfare_vars[grepl("^welfare_ppp_", welfare_vars)]
     )))
-    ppp_label <- if (length(ppp) == 1L && !is.na(ppp)) as.character(ppp) else "the requested"
-    cc_label  <- if (length(country_code) == 1L && !is.na(country_code)) as.character(country_code) else "the requested country"
-    yr_label  <- if (length(year) == 1L && !is.na(year)) as.character(year) else "the requested year"
+    ppp_label <- .piptm_safe_scalar_label(ppp, "the requested")
+    cc_label  <- .piptm_safe_scalar_label(country_code, "the requested country")
+    yr_label  <- .piptm_safe_scalar_label(year, "the requested year")
     piptm_abort(
       c(
         "PPP {.val {ppp}} not available for {.val {country_code}} / {year} / {.val {welfare_type}}.",
@@ -512,7 +512,7 @@ load_surveys <- function(entries_dt, ppp = 2021L, cols = NULL,
     entries_dt <- entries_dt[has_col]
   }
   if (nrow(entries_dt) == 0L) {
-    ppp_label <- if (length(effective_year) == 1L && !is.na(effective_year)) as.character(effective_year) else "the requested"
+    ppp_label <- .piptm_safe_scalar_label(effective_year, "the requested")
     piptm_abort(
       c(
         "No surveys remain after skipping those without PPP {.val {effective_year}} welfare column.",
