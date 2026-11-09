@@ -925,7 +925,7 @@ test_that("POST /table with parsed list filter_base in JSON body does not fail f
   body <- parse_api_res(res)
   expect_identical(
     unlist(body$errors),
-    "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+    "None of the selected surveys have data for the selected covariate: Age. Remove this covariate or choose a different survey."
   )
 })
 
@@ -1002,7 +1002,7 @@ test_that("GET /table returns exact user-facing 422 messages for missing survey,
   body_dim <- parse_api_res(res_dim)
   expect_identical(
     unlist(body_dim$errors),
-    "None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."
+    "None of the selected surveys have data for the selected covariate: Gender. Remove this covariate or choose a different survey."
   )
 
   # 4. filter_base dimension absent from requested survey
@@ -1015,7 +1015,36 @@ test_that("GET /table returns exact user-facing 422 messages for missing survey,
   body_fb_dim <- parse_api_res(res_fb_dim)
   expect_identical(
     unlist(body_fb_dim$errors),
-    "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+    "None of the selected surveys have data for the selected covariate: Gender. Remove this covariate or choose a different survey."
+  )
+
+  # 4b. Two breakdown covariates absent from requested survey (BOL_2000_ECH_INC_ALL
+  # has 0 dimensions in fixture) — covers the 2+-covariate pluralized/joined wording.
+  res_dim2 <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "BOL_2000_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "area"
+  )))
+  expect_equal(res_dim2$status, 422L)
+  body_dim2 <- parse_api_res(res_dim2)
+  expect_identical(
+    unlist(body_dim2$errors),
+    "None of the selected surveys have data for the selected covariates: Gender, Area. Remove one or more of these covariates or choose a different survey."
+  )
+
+  # 4c. Two filter_base covariates absent from requested survey (BOL_2000_ECH_INC_ALL
+  # has 0 dimensions in fixture) — covers the 2+-covariate pluralized filter_base wording.
+  res_fb_dim2 <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "BOL_2000_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(gender = 1L, area = 1L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_dim2$status, 422L)
+  body_fb_dim2 <- parse_api_res(res_fb_dim2)
+  expect_identical(
+    unlist(body_fb_dim2$errors),
+    "None of the selected surveys have data for the selected covariates: Gender, Area. Remove one or more of these covariates or choose a different survey."
   )
 
   # 5. filter_base category code matches 0 rows in load_surveys().

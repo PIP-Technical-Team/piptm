@@ -1,4 +1,103 @@
-# Unit tests for R/errors.R (piptm_abort and piptm_user_error_message)
+# Unit tests for R/errors.R (piptm_abort, piptm_user_error_message, and .piptm_covariate_labels)
+
+test_that(".piptm_covariate_labels() resolves known varnames via the registry and falls back for unknowns", {
+  fake_reg <- list(
+    area   = list(varname = "area",   ui_label = "Area"),
+    gender = list(varname = "gender", ui_label = "Gender")
+  )
+
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) fake_reg,
+    .package = "piptm",
+    {
+      labels <- .piptm_covariate_labels(c("area", "not_a_real_varname_xyz"), release = "TEST")
+      expect_identical(labels, c("Area", "not_a_real_varname_xyz"))
+    }
+  )
+})
+
+test_that(".piptm_covariate_labels() handles list unwrapping and falls back on empty, NA, factor, or missing labels", {
+  fake_reg <- list(
+    gender      = list(ui_label = list("Gender")),
+    empty_label = list(ui_label = ""),
+    empty_list  = list(ui_label = list()),
+    na_label    = list(ui_label = NA_character_),
+    no_label    = list()
+  )
+
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) fake_reg,
+    .package = "piptm",
+    {
+      labels <- .piptm_covariate_labels(
+        c("gender", "empty_label", "empty_list", "na_label", "no_label"),
+        release = "TEST"
+      )
+      expect_identical(labels, c("Gender", "empty_label", "empty_list", "na_label", "no_label"))
+
+      # Factor input does not crash or positional-index into reg
+      factor_input <- factor(c("gender", "no_label"))
+      expect_identical(.piptm_covariate_labels(factor_input, release = "TEST"), c("Gender", "no_label"))
+    }
+  )
+})
+
+test_that(".piptm_covariate_labels() falls back to raw varnames without erroring when registry lookup fails", {
+  labels <- .piptm_covariate_labels(c("area", "gender"), release = "this_release_does_not_exist_xyz")
+  expect_identical(labels, c("area", "gender"))
+
+  labels_empty <- .piptm_covariate_labels(character(0L), release = NULL)
+  expect_identical(labels_empty, character(0L))
+
+  testthat::with_mocked_bindings(
+    piptm_current_release = function() NULL,
+    .package = "piptm",
+    {
+      expect_identical(
+        .piptm_covariate_labels(c("area", "gender"), release = NULL),
+        c("area", "gender")
+      )
+    }
+  )
+})
+
+test_that(".piptm_covariate_exclusion_user_error() deduplicates labels and formats singular/plural correctly", {
+  fake_reg <- list(
+    area   = list(ui_label = "Area"),
+    gender = list(ui_label = "Gender")
+  )
+
+  testthat::with_mocked_bindings(
+    piptm_variable_registry = function(release = NULL) fake_reg,
+    .package = "piptm",
+    {
+      # Singular
+      msg1 <- .piptm_covariate_exclusion_user_error("area", release = "TEST")
+      expect_identical(
+        msg1,
+        "None of the selected surveys have data for the selected covariate: Area. Remove this covariate or choose a different survey."
+      )
+
+      # Duplicate input deduplicates to singular
+      msg1_dup <- .piptm_covariate_exclusion_user_error(c("area", "area"), release = "TEST")
+      expect_identical(msg1_dup, msg1)
+
+      # Plural
+      msg2 <- .piptm_covariate_exclusion_user_error(c("area", "gender"), release = "TEST")
+      expect_identical(
+        msg2,
+        "None of the selected surveys have data for the selected covariates: Area, Gender. Remove one or more of these covariates or choose a different survey."
+      )
+
+      # Empty input defensive fallback
+      msg0 <- .piptm_covariate_exclusion_user_error(character(0L), release = "TEST")
+      expect_identical(
+        msg0,
+        "None of the selected surveys contain the variables required for this request."
+      )
+    }
+  )
+})
 
 test_that("piptm_abort() raises piptm_error with intact developer conditionMessage() and embedded user_message", {
   cnd <- tryCatch(

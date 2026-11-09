@@ -729,17 +729,16 @@ table_maker <- function(pip_id        = NULL,
         c(
           "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}})."
         ),
-        user_message = "None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."
+        user_message = .piptm_covariate_exclusion_user_error(filter_vars, release)
       )
     }
   }
 
   # ── 3. Dimension pre-filter (before loading) ────────────────────────────────
-  # For each entry, compute the overlap count between user's `by` and the
-  # survey's available dimensions (manifest list column).
-  # Keep: ≥1 overlap (full or partial match)
-  # Drop: 0 overlap — warn with pip_id list
-  # Partial: keep but warn — missing dims filled with NA in per-survey loop
+  # For each entry, check whether the survey carries ALL requested breakdown
+  # dimensions (excluding 'pov_status', which is computed dynamically).
+  # Keep: full match (all requested dimensions present)
+  # Drop: partial or zero match — excluded before load to prevent NA-filled cells
   if (!is.null(by)) {
     by_check <- by[!by %in% "pov_status"]
 
@@ -797,7 +796,7 @@ table_maker <- function(pip_id        = NULL,
             "All requested surveys were excluded: none have all of the requested dimensions ({.val {by_check}}).",
             "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
           ),
-          user_message = "None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."
+          user_message = .piptm_covariate_exclusion_user_error(by_check, release)
         )
       }
     }

@@ -176,3 +176,81 @@ piptm_user_error_message <- function(cnd,
 
   fallback
 }
+
+#' Resolve internal variable names to UI-facing labels for user messages
+#'
+#' Looks up each `varnames` entry in the release's variable registry
+#' (`piptm_variable_registry()`) and returns its `ui_label` when present and
+#' non-empty. Falls back to the raw varname when the registry has no entry,
+#' no `ui_label`, or cannot be loaded at all (e.g. no current release set).
+#' Never raises — this is cosmetic label resolution for `user_message`
+#' construction and must not turn a message-wording lookup into a new error.
+#'
+#' @param varnames Character vector of internal variable names (e.g.
+#'   `c("area", "gender")`).
+#' @param release Optional character scalar release ID (or `NULL`); defaults to
+#'   `piptm_current_release()` inside `piptm_variable_registry()`.
+#'
+#' @return Character vector the same length and order as `varnames`, with
+#'   UI labels substituted where available.
+#'
+#' @keywords internal
+#' @noRd
+.piptm_covariate_labels <- function(varnames, release = NULL) {
+  if (is.null(varnames) || length(varnames) == 0L) {
+    return(character(0L))
+  }
+  varnames <- as.character(varnames)
+
+  reg <- tryCatch(
+    piptm_variable_registry(release),
+    error = function(e) NULL
+  )
+
+  vapply(varnames, function(v) {
+    if (is.na(v) || !nzchar(v)) {
+      return(v)
+    }
+    entry <- if (!is.null(reg) && v %in% names(reg)) reg[[v]] else NULL
+    label <- entry$ui_label
+    if (is.list(label) && length(label) >= 1L) {
+      label <- label[[1L]]
+    }
+    if (is.character(label) && length(label) == 1L && !is.na(label) && nzchar(label)) {
+      label
+    } else {
+      v
+    }
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+#' Format user-facing error message for missing covariate dimensions
+#'
+#' Resolves variable names to UI labels, deduplicates them, and builds a
+#' clean singular or plural user-facing error sentence.
+#'
+#' @param varnames Character vector of variable names.
+#' @param release Optional character scalar release ID.
+#' @return Single character string.
+#' @keywords internal
+#' @noRd
+.piptm_covariate_exclusion_user_error <- function(varnames, release = NULL) {
+  labels <- unique(.piptm_covariate_labels(varnames, release = release))
+  labels <- labels[!is.na(labels) & nzchar(labels)]
+
+  if (length(labels) == 0L) {
+    return("None of the selected surveys contain the variables required for this request.")
+  }
+
+  if (length(labels) == 1L) {
+    sprintf(
+      "None of the selected surveys have data for the selected covariate: %s. Remove this covariate or choose a different survey.",
+      labels
+    )
+  } else {
+    sprintf(
+      "None of the selected surveys have data for the selected covariates: %s. Remove one or more of these covariates or choose a different survey.",
+      paste(labels, collapse = ", ")
+    )
+  }
+}

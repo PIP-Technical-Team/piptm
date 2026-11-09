@@ -51,7 +51,7 @@ components:
 | 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies, invalid download payload |
 | 404  | Not found | Unknown route or missing resource |
 | 413  | Payload too large | `POST /table/download` body exceeds 25 MB |
-| 422  | Domain/processing failure | Survey/country unavailable, PPP year unavailable, unsupported breakdown dimensions, empty sample-filter results, unknown release |
+| 422  | Domain/processing failure | Survey/country unavailable, PPP year unavailable, unsupported breakdown covariates, empty sample-filter results, unknown release |
 | 500  | Internal error | Unexpected exception (stack traces never exposed) |
 
 ### User-Safe `errors[]` Guarantee
@@ -65,8 +65,8 @@ Representative domain and payload error messages:
 | Requested country/survey not in release | 422 | `"The requested country or survey is not available in the selected data release."` |
 | Empty survey selection after resolution | 422 | `"No surveys matched your selection. Please select at least one available country and survey year."` |
 | Requested PPP year unavailable across selected surveys | 422 | `"None of the selected surveys have data available for the <ppp> PPP standard. Please switch to another PPP year."` |
-| Selected surveys lack requested breakdown dimensions | 422 | `"None of the selected surveys support all of the requested breakdown variables. Try fewer breakdown dimensions or different surveys."` |
-| Selected surveys lack sample-filter variables | 422 | `"None of the selected surveys contain the variables needed for your sample filters. Try removing a filter or selecting different surveys."` |
+| Selected surveys lack requested breakdown covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Area. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Area, Gender. Remove one or more of these covariates or choose a different survey."`) |
+| Selected surveys lack sample-filter covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Age. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Age, Gender. Remove one or more of these covariates or choose a different survey."`) |
 | Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
 | Malformed/unreadable sample filter JSON (`filter_base`) | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
 | Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
