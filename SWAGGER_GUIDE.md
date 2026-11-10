@@ -19,6 +19,16 @@ pr$run(port = 8080)
 
 Navigate to: http://localhost:8080/__docs__/
 
+Swagger UI groups the 15 endpoints into five sections matching the Table Maker flow:
+
+1. **Step 1 — Survey Selection**: `GET /surveys-ui`, `GET /countries`, `GET /regions`
+2. **Step 2 — Table Configuration**: `GET /categories`, `GET /analysis-variables`, `GET /statistics`, `GET /covariates`, `GET /cell-definition`
+3. **Step 3 — Table Computation & Export**: `GET /table`, `POST /table`, `POST /description` *(WIP — table metadata & info)*, `POST /table/download`
+4. **System & Releases**: `GET /health`, `GET /releases`
+5. **Optional / Developer Endpoints (Not Needed for UI)**: `GET /lookup`, `GET /surveys`, `GET /dimensions` *(WIP)*
+
+Required query parameters are badged `* required`, enum-constrained parameters provide dropdown selectors, and `POST /description` and `POST /table/download` include ready-to-run JSON request-body examples in the Swagger **Examples** selector.
+
 ## Response envelope
 
 Every JSON endpoint (all endpoints except `POST /description` and
@@ -116,7 +126,7 @@ returns `400`.
       "measures": ["mean", "gini"],
       "ppp": 2021
     },
-    "provenance": { "release": "TEST_2024", "ppp_year": 2021 },
+    "provenance": { "release": "20260401_TEST", "ppp_year": 2021 },
     "surveys": { "loaded": ["..."], "summary": ["..."] },
     "resolved_labels": {}
   }

@@ -1677,3 +1677,169 @@ test_that("GET /table responses match pre-change baseline fixtures (semantic equ
     })
   }
 })
+
+# =============================================================================
+# Block 13: OpenAPI / Swagger documentation completeness across all endpoints
+# =============================================================================
+
+test_that("OpenAPI spec has populated API info and logical workflow tags", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+  expect_false(identical(spec$info$title, "API Title"))
+  expect_true(grepl("Table Maker", spec$info$title, fixed = TRUE))
+  expect_false(identical(spec$info$description, "API Description"))
+  expect_true(nchar(spec$info$description %||% "") > 100L)
+
+  expect_true(is.list(spec$tags) && length(spec$tags) >= 5L)
+  tag_names <- vapply(spec$tags, function(t) t$name %||% "", character(1))
+  expect_true(all(nzchar(tag_names)))
+  expect_true("Optional / Developer Endpoints (Not Needed for UI)" %in% tag_names)
+  # Tag headers should have clean titles without verbose paragraph descriptions
+  tag_descs <- vapply(spec$tags, function(t) t$description %||% "", character(1))
+  expect_true(all(!nzchar(tag_descs)))
+})
+
+test_that("Every OpenAPI operation has a complete summary, description, workflow tag, and response docs", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+  expected_paths <- c(
+    "/table", "/table/download", "/description", "/cell-definition",
+    "/lookup", "/surveys", "/countries", "/regions", "/surveys-ui",
+    "/releases", "/analysis-variables", "/dimensions", "/categories",
+    "/covariates", "/statistics", "/health"
+  )
+  expect_setequal(names(spec$paths), expected_paths)
+
+  for (path in names(spec$paths)) {
+    for (method in names(spec$paths[[path]])) {
+      op <- spec$paths[[path]][[method]]
+      label <- paste(toupper(method), path)
+
+      # Non-empty summary ending with a complete thought (not split mid-phrase)
+      expect_true(
+        is.character(op$summary) && nzchar(trimws(op$summary)),
+        info = paste("Missing summary on", label)
+      )
+      expect_false(
+        grepl("\\b(the|when|must be a|plus)$", trimws(op$summary)),
+        info = paste("Truncated summary on", label, ":", op$summary)
+      )
+
+      # Non-empty description without leaked @param continuation fragments
+      expect_true(
+        is.character(op$description) && nchar(trimws(op$description)) >= 40L,
+        info = paste("Missing or too-short description on", label)
+      )
+      expect_false(
+        grepl("^`analysis_var = \"pov_status\"`\\)", trimws(op$description)),
+        info = paste("Orphaned @param continuation leaked into description on", label)
+      )
+
+      # Assigned to one of the defined top-level workflow tags (never truncated to "Step" or "System")
+      defined_tags <- vapply(spec$tags, function(t) t$name %||% "", character(1))
+      op_tags <- unlist(op$tags)
+      expect_true(
+        length(op_tags) >= 1L && all(op_tags %in% defined_tags),
+        info = paste("Invalid or missing tag on", label, ":", paste(op_tags, collapse = ", "))
+      )
+
+      # Framework-injected req/res never exposed as parameters
+      params <- op$parameters %||% list()
+      if (length(params) > 0L) {
+        p_names <- vapply(params, function(p) p$name %||% "", character(1))
+        expect_false("req" %in% p_names, info = paste("req exposed on", label))
+        expect_false("res" %in% p_names, info = paste("res exposed on", label))
+      }
+    }
+  }
+})
+
+test_that("All OpenAPI parameters have untruncated descriptions, required flags, and examples", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+
+  # Required parameters per endpoint
+  required_map <- list(
+    "/table"           = c("analysis_var", "pip_id", "measures"),
+    "/cell-definition" = c("analysis_var", "measures"),
+    "/lookup"          = c("country_code", "year", "welfare_type")
+  )
+
+  for (path in names(spec$paths)) {
+    for (method in names(spec$paths[[path]])) {
+      op <- spec$paths[[path]][[method]]
+      label <- paste(toupper(method), path)
+      params <- op$parameters %||% list()
+      req_expected <- required_map[[path]] %||% character()
+
+      for (p in params) {
+        p_label <- paste0(label, " param '", p$name, "'")
+        desc <- trimws(p$description %||% "")
+        expect_true(nchar(desc) >= 25L, info = paste("Short/missing description for", p_label))
+        expect_false(
+          grepl("(required when|Must be a|filter object|suppression threshold|table plus)$", desc),
+          info = paste("Truncated description for", p_label, ":", desc)
+        )
+
+        # Required flag matches contract
+        expect_identical(
+          isTRUE(p$required),
+          p$name %in% req_expected,
+          info = paste("Unexpected required flag on", p_label)
+        )
+
+        if (identical(p$name, "release")) {
+          expect_true(grepl("20260401_TEST", desc, fixed = TRUE), info = paste("Release example in desc on", p_label))
+        }
+        if (identical(p$name, "pip_id")) {
+          expect_true(grepl("COL_2008_GEIH_INC_ALL", desc, fixed = TRUE), info = paste("pip_id example in desc on", p_label))
+        }
+
+        # Parameters must not set enum (which causes Swagger UI to render verbose "Available values" lists)
+        expect_null(p$schema$enum, info = paste("Unexpected schema$enum on", p_label))
+        expect_null(p$schema$items$enum, info = paste("Unexpected schema$items$enum on", p_label))
+        server_default_params <- c("ppp", "pop_share_threshold", "include_metadata")
+        if (!p$name %in% server_default_params) {
+          expect_null(p$example, info = paste("Unexpected pre-filled example on", p_label))
+          expect_null(p$schema$example, info = paste("Unexpected pre-filled schema$example on", p_label))
+          expect_null(p$schema$default, info = paste("Unexpected pre-filled schema$default on", p_label))
+        } else {
+          expect_false(is.null(p$schema$default), info = paste("Missing server default on", p_label))
+        }
+      }
+    }
+  }
+})
+
+test_that("POST /description and POST /table/download document top-level JSON requestBody schemas and examples", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+
+  desc_op <- spec$paths[["/description"]][["post"]]
+  expect_true(grepl("WIP", desc_op$summary, fixed = TRUE))
+  expect_true(grepl("Ignore for now", desc_op$summary, ignore.case = TRUE))
+  desc_rb <- desc_op$requestBody
+  expect_true(isTRUE(desc_rb$required))
+  desc_json <- desc_rb$content[["application/json"]]
+  expect_false(is.null(desc_json))
+  # Must not wrap the payload inside a top-level `body` property
+  expect_null(desc_json$schema$properties$body)
+  expect_true(length(desc_json$examples) >= 2L)
+
+  dl_rb <- spec$paths[["/table/download"]][["post"]]$requestBody
+  expect_true(isTRUE(dl_rb$required))
+  dl_json <- dl_rb$content[["application/json"]]
+  expect_false(is.null(dl_json))
+  expect_null(dl_json$schema$properties$body)
+  expect_true(all(c("format", "data") %in% names(dl_json$schema$properties)))
+  expect_true(!is.null(dl_json$example) || length(dl_json$examples) >= 1L)
+})
+
