@@ -354,7 +354,7 @@ enrich_openapi_spec <- function(spec) {
     ),
     "/surveys" = paste(
       "**UI Workflow Mapping**: Optional developer/manifest inspection endpoint (not needed by the UI; the UI uses `GET /surveys-ui`).\n\n",
-      "Returns every survey registered in the release manifest, including `pip_id`, `country_code`, `country_name`, `region_code`, `region_name`, `surveyid_year`, `survey_acronym`, `welfare_type`, `ppp_default`, and the per-survey `dimensions` array. For building the interactive Step 1 UI survey selector grid, use `GET /surveys-ui` instead."
+      "Returns every survey registered in the release manifest, including `pip_id`, `country_code`, `country_name`, `region_code`, `region_name`, `surveyid_year`, `survey_acronym`, `welfare_type`, `ppp_default`, and the per-survey `dimensions` array. For the Step 1 survey selector grid, use `GET /surveys-ui`, which returns only `pip_id`, `country_code`, `country_label`, `year`, `welfare_type`, `welfare_label`, and `version`."
     ),
     "/countries" = paste(
       "**UI Workflow Mapping**: Step 1 (Country search box and filter list).\n\n",
@@ -366,7 +366,7 @@ enrich_openapi_spec <- function(spec) {
     ),
     "/surveys-ui" = paste(
       "**UI Workflow Mapping**: Step 1 (Main country / year / welfare-type survey selection grid).\n\n",
-      "Returns one record per available survey containing `pip_id`, country and region labels, survey year, welfare type (`INC` or `CON`), survey acronym, and available `dimensions`. Pass up to 15 selected `pip_id` values from this catalog to `GET /categories`, `GET /covariates`, and `GET|POST /table`."
+      "Returns one record per available survey containing `pip_id`, `country_code`, `country_label`, `year`, `welfare_type` (`INC` or `CON`), `welfare_label`, and `version`. Pass up to 15 selected `pip_id` values from this catalog to `GET /categories`, `GET /covariates`, and `GET|POST /table`."
     ),
     "/releases" = paste(
       "**UI Workflow Mapping**: Cross-cutting release selector / header badge.\n\n",

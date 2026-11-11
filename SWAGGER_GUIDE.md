@@ -244,11 +244,13 @@ per row. No filters/params besides `release`.
 
 ### `GET /surveys-ui` — Step 1 survey grid data
 
-Returns a UI-ready survey catalog (`pip_id`, labels, and dimensions) — this is
-the data source for the Step 1 country/year/welfare-type grid described in
-`docs/ui-description.md`. Client-side code builds the grid rows, tooltips, and
-"N / 15 selected" counter from this payload; it is not paginated or
-pre-filtered by the API.
+Returns a UI-ready survey catalog (`pip_id`, `country_code`, `country_label`,
+`year`, `welfare_type`, `welfare_label`, and `version`) — this is the data
+source for the Step 1 country/year/welfare-type grid described in
+`docs/ui-description.md`. It does not include per-survey dimensions; use
+`GET /categories` and `GET /covariates` for variable availability. Client-side
+code builds the grid rows, tooltips, and "N / 15 selected" counter from this
+payload; it is not paginated or pre-filtered by the API.
 
 ### `GET /countries` — Step 1 country list / search
 

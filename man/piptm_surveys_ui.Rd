@@ -13,8 +13,8 @@ piptm_surveys_ui(release = NULL)
 A list of named lists suitable for JSON serialization.
 }
 \description{
-Returns one row per manifest entry enriched with UI-friendly labels and
-dimension metadata (varname + UI label). Country names are mapped from
-ISO3 codes when the \code{countrycode} package is available; otherwise the
-ISO3 code is repeated as the label.
+Returns one row per manifest entry enriched with UI-friendly labels for
+country and welfare type. \code{country_label} is the manifest
+\code{country_name} (or \code{NA} when that field is absent).
+\code{welfare_label} maps \code{INC} to Income and \code{CON} to Consumption.
 }

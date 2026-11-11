@@ -1171,6 +1171,40 @@ test_that("GET /surveys echoes release in meta", {
   expect_equal(body$meta$release, fx$release)
 })
 
+test_that("GET /surveys-ui returns the lightweight survey catalogue", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  body <- parse_api_res(
+    .ep_router$call(make_api_req("GET", "/surveys-ui")),
+    simplify = FALSE
+  )
+
+  expect_equal(unlist(body$status), "success")
+  expect_equal(length(body$data), 3L)
+  expected_names <- c(
+    "pip_id", "country_code", "country_label", "year",
+    "welfare_type", "welfare_label", "version"
+  )
+  expect_true(all(vapply(body$data, function(x) {
+    identical(names(x), expected_names)
+  }, logical(1))))
+  expect_true(all(vapply(body$data, function(x) {
+    !"dimensions" %in% names(x)
+  }, logical(1))))
+  labels <- vapply(body$data, function(x) {
+    paste(unlist(x$pip_id), unlist(x$country_label), unlist(x$welfare_label),
+          sep = "|")
+  }, character(1))
+  expect_setequal(
+    labels,
+    c("BOL_2000_ECH_INC_ALL|Bolivia|Income",
+      "COL_2010_ECH_INC_ALL|Colombia|Income",
+      "COL_2015_ECH_INC_ALL|Colombia|Income")
+  )
+  expect_equal(unlist(body$meta$release), fx$release)
+})
+
 test_that("GET /surveys with bogus release returns 422", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
@@ -1847,4 +1881,3 @@ test_that("POST /description and POST /table/download document top-level JSON re
   expect_true(all(c("format", "data") %in% names(dl_json$schema$properties)))
   expect_true(!is.null(dl_json$example) || length(dl_json$examples) >= 1L)
 })
-
