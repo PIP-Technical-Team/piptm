@@ -106,9 +106,9 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - **Response:** `data = [ { pip_id, country_code, welfare_type, dimensions, ... }, ... ]`; `meta.release` echoes the resolved release.
 
 ### `/surveys-ui` — GET (Step 1)
-- **Purpose:** Provide a UI-ready survey catalogue with friendly labels and available dimensions for Step 1 grids.
+- **Purpose:** Provide a UI-ready survey catalogue with friendly labels for Step 1 grids. Variable availability is not included; use `/categories` and `/covariates` with the selected `pip_id` values.
 - **Query parameters:** `release` *(optional)* — Defaults to current release.
-- **Response:** `data = [ { "pip_id": "COL_2019_GEIH_INC_ALL", "country_code": "COL", "country_label": "Colombia", "year": 2019, "welfare_type": "INC", "welfare_label": "Income", "version": "V2024_03", "dimensions": ["gender","area",...] }, ... ]`; `meta.release` echoes the resolved release.
+- **Response:** `data = [ { "pip_id": "COL_2019_GEIH_INC_ALL", "country_code": "COL", "country_label": "Colombia", "year": 2019, "welfare_type": "INC", "welfare_label": "Income", "version": "V2024_03" }, ... ]`; `meta.release` echoes the resolved release.
 
 ### `/countries` — GET (Step 1)
 - **Purpose:** List unique countries present in the manifest.

@@ -1,20 +1,20 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-11-09T15:57:30Z",
+  "updatedAt": "2026-11-11T19:10:30Z",
   "workflow": "/cg-work",
   "status": "completed",
-  "branch": "error_msg",
-  "plan": ".cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md",
-  "executionReport": ".cg-docs/work-reports/2026-11-09-covariate-exclusion-error-wording.md",
+  "branch": null,
+  "plan": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
+  "executionReport": ".cg-docs/work-reports/2026-11-11-remove-surveys-ui-dimensions.md",
   "currentPhase": null,
   "evidenceStatus": [
-    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-errors.R"},
-    {"id": "V2", "status": "passed", "artifact": ".cg-docs/work-reports/2026-11-09-covariate-exclusion-error-wording.md"}
+    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-surveys-ui.R"},
+    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"}
   ],
   "unresolvedDecisions": [],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md", "status": "completed"},
-    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-09-covariate-exclusion-error-wording.md", "status": "completed"}
+    {"kind": "plan", "path": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md", "status": "completed"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-11-remove-surveys-ui-dimensions.md", "status": "completed"}
   ],
   "nextCommand": "/cg-review light"
 }
