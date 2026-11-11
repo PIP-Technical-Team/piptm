@@ -1719,11 +1719,16 @@ test_that("Every OpenAPI operation has a complete summary, description, workflow
       op <- spec$paths[[path]][[method]]
       label <- paste(toupper(method), path)
 
-      # Non-empty summary ending with a complete thought (not split mid-phrase)
+      # Non-empty single-line summary without leaked description body
       expect_true(
         is.character(op$summary) && nzchar(trimws(op$summary)),
         info = paste("Missing summary on", label)
       )
+      expect_false(
+        grepl("\n|###|UI Workflow Mapping", op$summary),
+        info = paste("Body text leaked into summary on", label, ":", op$summary)
+      )
+      expect_lte(nchar(op$summary), 130L)
       expect_false(
         grepl("\\b(the|when|must be a|plus)$", trimws(op$summary)),
         info = paste("Truncated summary on", label, ":", op$summary)

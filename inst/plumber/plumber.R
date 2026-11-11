@@ -289,9 +289,154 @@ enrich_openapi_spec <- function(spec) {
     )
   }
 
+  summary_by_path <- list(
+    "/table"              = "Compute cross-tabulated poverty, inequality, summary-statistic, and share measures for up to 15 surveys.",
+    "/table/download"     = "Flatten a computed `/table` response payload into a downloadable CSV or RDS file.",
+    "/description"        = "[WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.",
+    "/lookup"             = "[Optional — Not needed in UI] Resolve `(country_code, year, welfare_type)` survey triples to canonical `pip_id` identifiers.",
+    "/surveys"            = "[Optional — Not needed in UI] Return the full survey manifest table for a release, including internal file metadata.",
+    "/countries"          = "Return all unique countries (`country_code` and `country_name`) available in the release manifest.",
+    "/regions"            = "Return World Bank regional groupings (`region_code`, `region_name`) and their member `countries` arrays.",
+    "/surveys-ui"         = "Return the lightweight, UI-ready survey catalog for populating the Step 1 survey selection grid.",
+    "/releases"           = "List all loaded PIP data releases and identify the active default release.",
+    "/analysis-variables" = "Return all valid `analysis_var` options for Decision 2, including compatible statistic groups and slider rules.",
+    "/dimensions"         = "[Optional / WIP — Not needed in UI] Return the flat list of all valid disaggregation dimension identifiers.",
+    "/categories"         = "Return categorical variables and category codes for the Decision 1 sample-base filter panel.",
+    "/covariates"         = "Return disaggregation covariates and category labels for the Decision 3 table layout slots.",
+    "/health"             = "Verify API server readiness and return `\"ok\"` status with the current default release ID.",
+    "/statistics"         = "Return all statistical measure groups and their individual measures for Decision 2.",
+    "/cell-definition"    = "Return a live three-section plain-English explanation of what each cell in the configured table represents."
+  )
+
+  description_by_path <- list(
+    "/table" = paste(
+      "**UI Workflow Mapping**: Step 2 (\"Generate table\") and Step 3 (Results view).\n\n",
+      "Computes requested `measures` for `analysis_var` across one or more harmonized household surveys (`pip_id`),",
+      "optionally restricted to a sub-population (`filter_base`) and disaggregated across up to four table layout slots (`column`, `row`, `superColumn`, `superRow`).\n\n",
+      "### How to Use Parameters\n",
+      "- **Required parameters**: Always supply `analysis_var`, at least one `pip_id` (1 to 15 surveys), and at least one `measures` value.\n",
+      "- **Conditional `poverty_line`**: Required whenever `analysis_var = \"pov_status\"` or `\"pov_status\"` is placed in any layout slot (e.g., `poverty_line=2.15` for the $2.15/day extreme poverty line).\n",
+      "- **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. Must be filled in strict order (`column` -> `row` -> `superColumn` -> `superRow`) with no gaps and no duplicate variables; `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.\n",
+      "- **Sample-base filter (`filter_base`)**: Optional JSON-encoded object mapping categorical variable names from `GET /categories` to arrays of retained category codes, e.g. `{\"gender\":[1],\"area\":[1]}`.\n",
+      "- **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `\"NR\"` (Not Representative). Pass an empty value to disable suppression.\n",
+      "- **Metadata mode (`include_metadata`)**: Leave as `\"false\"` (default) to receive the structured Approach C `{layout, cells}` payload per survey. Set to `\"true\"` to also receive `meta.description_metadata` for the `POST /description` fast path.\n\n",
+      "### Example Request (Query String)\n",
+      "`/table?analysis_var=welfare&pip_id=COL_2008_GEIH_INC_ALL&measures=mean&measures=gini&column=gender&row=area&ppp=2021`"
+    ),
+    "/table/download" = paste(
+      "**UI Workflow Mapping**: Step 3 (\"Export / Download table\" button).\n\n",
+      "Stateless converter that takes the `data` array returned by `GET /table` or `POST /table`",
+      "(with `include_metadata = \"false\"`, the default Approach C `{layout, cells}` structure) and flattens it into a rectangular table",
+      "(one row per cell, with measure values as columns) without re-querying Arrow microdata.\n\n",
+      "### Request Body Fields (JSON Object)\n",
+      "- `format` *(string, optional, default `\"csv\"`)*: Output file format — either `\"csv\"` (`text/csv; charset=utf-8` attachment `table.csv`) or `\"rds\"` (`application/octet-stream` attachment `table.rds`).\n",
+      "- `data` *(array of objects, required)*: The non-empty `data` array copied directly from a `/table` response envelope (each element containing `pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `analysis_var`, `measures`, `layout`, and `cells`). Do not wrap the outer `/table` envelope fields (`status`, `warnings`, `errors`, `meta`).\n",
+      "- Maximum request body size is **25 MB** (larger payloads return HTTP `413`)."
+    ),
+    "/description" = paste(
+      "> **Note (Work in Progress — Ignore for now)**: This endpoint is still being built and refined. UI integration can ignore this endpoint for now.\n\n",
+      "**UI Workflow Mapping**: Step 3 (\"Table metadata & provenance info\" document — work in progress).\n\n",
+      "Renders structured table metadata, configuration summary, and data provenance (rather than a narrative prose description).",
+      "Accepts a JSON object in one of **two mutually exclusive modes** (providing both `description_metadata` and table parameters in the same request returns HTTP `400`):\n\n",
+      "1. **Fast Path (`description_metadata`)**: Pass `{\"description_metadata\": <object>, \"format\": \"html\"}` using the `meta.description_metadata` object returned by `/table?include_metadata=true`. Renders immediately without reading microdata or recomputing statistics.\n",
+      "2. **Fallback Path (Table Parameters)**: Pass the table configuration parameters directly at the top level of the JSON body (`pip_id`, `analysis_var`, `measures`, and optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `filter_base`, `ppp`, `pop_share_threshold`, `release`, `format`). Recomputes metadata via `table_maker(include_metadata = TRUE)` and renders the metadata document. Note: in JSON bodies, `filter_base` can be a native nested JSON object (e.g., `{\"gender\": [1]}`).\n\n",
+      "### Output Format\n",
+      "- `format = \"html\"` (default): Returns inline-styled HTML with `Content-Type: text/html; charset=utf-8`.\n",
+      "- `format = \"markdown\"`: Returns plain Markdown text with `Content-Type: text/plain`.\n",
+      "- On HTTP `400` or `422` errors, returns a JSON-encoded standard error envelope string."
+    ),
+    "/lookup" = paste(
+      "**UI Workflow Mapping**: Optional programmatic helper (not needed by the UI; the UI uses `GET /surveys-ui`).\n\n",
+      "Translates parallel arrays of 3-letter ISO country codes (`country_code`), 4-digit survey years (`year`), and welfare types (`welfare_type`: `\"INC\"` or `\"CON\"`) into the canonical `pip_id` strings accepted by `/table`, `/categories`, and `/covariates`.\n\n",
+      "### Usage Rules\n",
+      "- `country_code`, `year`, and `welfare_type` are **all required** and must be supplied with the **exact same number of elements** (paired positionally: the *i*-th country, *i*-th year, and *i*-th welfare type form one lookup key).\n",
+      "- Example single lookup: `/lookup?country_code=COL&year=2008&welfare_type=INC`"
+    ),
+    "/surveys" = paste(
+      "**UI Workflow Mapping**: Optional developer/manifest inspection endpoint (not needed by the UI; the UI uses `GET /surveys-ui`).\n\n",
+      "Returns every survey registered in the release manifest, including `pip_id`, `country_code`, `country_name`, `region_code`, `region_name`, `surveyid_year`, `survey_acronym`, `welfare_type`, `ppp_default`, and the per-survey `dimensions` array. For building the interactive Step 1 UI survey selector grid, use `GET /surveys-ui` instead."
+    ),
+    "/countries" = paste(
+      "**UI Workflow Mapping**: Step 1 (Country search box and filter list).\n\n",
+      "Returns a sorted array of `{country_code, country_name}` records derived from the active release manifest (e.g., `{\"country_code\": \"COL\", \"country_name\": \"Colombia\"}`). Use this endpoint to populate the Step 1 country selector before filtering surveys in `GET /surveys-ui`."
+    ),
+    "/regions" = paste(
+      "**UI Workflow Mapping**: Step 1 (Region filter chips).\n\n",
+      "Returns each region present in the release manifest along with a sorted array of member ISO3 `countries` codes (e.g., `{\"region_code\": \"LAC\", \"region_name\": \"Latin America & Caribbean\", \"countries\": [\"ARG\", \"BOL\", \"COL\", ...]}`). Used by the UI to filter the Step 1 country/survey grid by World Bank region."
+    ),
+    "/surveys-ui" = paste(
+      "**UI Workflow Mapping**: Step 1 (Main country / year / welfare-type survey selection grid).\n\n",
+      "Returns one record per available survey containing `pip_id`, country and region labels, survey year, welfare type (`INC` or `CON`), survey acronym, and available `dimensions`. Pass up to 15 selected `pip_id` values from this catalog to `GET /categories`, `GET /covariates`, and `GET|POST /table`."
+    ),
+    "/releases" = paste(
+      "**UI Workflow Mapping**: Cross-cutting release selector / header badge.\n\n",
+      "Returns `{ \"releases\": [\"...\"], \"current\": \"...\" }` in `data`, showing every release manifest loaded in memory and which release ID is used when the optional `release` parameter is omitted on other endpoints. Takes no parameters."
+    ),
+    "/analysis-variables" = paste(
+      "**UI Workflow Mapping**: Step 2, Decision 2 (\"Variable of interest\" dropdown).\n\n",
+      "Returns every variable with role `analysis_var` in the release registry (`welfare`, `pov_status`, continuous variables such as `age`, `educy`, `hsize`, and binary access indicators such as `imp_wat_rec`, `imp_san_rec`, `electricity`). Each item includes:\n",
+      "- `varname`: Canonical variable identifier to pass as `analysis_var` in `/table` and `/cell-definition`.\n",
+      "- `label`: Human-readable UI label.\n",
+      "- `type`: Variable type (`continuous`, `binary`, etc.).\n",
+      "- `poverty_line_slider`: Boolean indicating whether the UI should display the poverty line input (`true` for `pov_status`).\n",
+      "- `stat_groups`: Array of compatible statistic group IDs from `GET /statistics` (used to enable/disable measure checkboxes)."
+    ),
+    "/dimensions" = paste(
+      "> **Note (Optional / Work in Progress)**: Not needed for the UI (use `GET /covariates` and `GET /categories` instead).\n\n",
+      "**UI Workflow Mapping**: Low-level dimension schema reference (for UI layout slot dropdowns with labels and survey-intersection filtering, use `GET /covariates` instead).\n\n",
+      "Returns the character array of all recognized disaggregation dimension names (e.g., `\"gender\"`, `\"area\"`, `\"age_group\"`, `\"educat4\"`, `\"educat5\"`, `\"educat7\"`, etc.). Takes no parameters."
+    ),
+    "/categories" = paste(
+      "**UI Workflow Mapping**: Step 2, Decision 1 (\"Filter sample base\" panel).\n\n",
+      "Returns filterable categorical variables along with their category codes and labels (used to construct the `filter_base` JSON parameter on `/table`, `/cell-definition`, and `/description`).\n\n",
+      "### Survey-Intersection Filtering (`pip_id`)\n",
+      "- **When `pip_id` is omitted**: Returns the full catalog of filterable variables for the release (`meta.filtered = false`, `meta.n_surveys = null`).\n",
+      "- **When `pip_id` is provided** (repeatable, e.g., `?pip_id=COL_2008_GEIH_INC_ALL`): Returns **only** variables present in *every* matched survey (the intersection of each survey's manifest `dimensions`), with `meta.filtered = true` and `meta.n_surveys` set to the number of matched surveys."
+    ),
+    "/covariates" = paste(
+      "**UI Workflow Mapping**: Step 2, Decision 3 (\"Slice table by covariates\" — `column`, `row`, `superColumn`, `superRow` selectors).\n\n",
+      "Returns the authoritative list of covariates that can be assigned to the four layout slots (`column`, `row`, `superColumn`, `superRow`) in `/table`, `/cell-definition`, and `/description`.\n\n",
+      "### Poverty Line Slider Activation (`pov_status`)\n",
+      "Each covariate entry includes `poverty_line_slider` (`true` for `pov_status`, `false` for all other covariates). **When the user selects `\"pov_status\"` in any layout slot (`column`, `row`, `superColumn`, or `superRow`), the UI must activate the poverty line slider (`poverty_line`)**, just as when `analysis_var = \"pov_status\"` in Decision 2.\n\n",
+      "### Survey-Intersection Filtering (`pip_id`)\n",
+      "- **When `pip_id` is omitted**: Returns the full covariate catalog for the release (`meta.filtered = false`, `meta.n_surveys = null`).\n",
+      "- **When `pip_id` is provided** (repeatable, e.g., `?pip_id=COL_2008_GEIH_INC_ALL`): Returns **only** covariates available across *all* matched surveys (intersection of manifest `dimensions`), preventing users from selecting a layout covariate that would exclude surveys during computation."
+    ),
+    "/health" = paste(
+      "**UI Workflow Mapping**: Infrastructure liveness probe and startup connectivity check.\n\n",
+      "Lightweight health endpoint that requires no parameters and performs no disk or Arrow I/O. Returns `data: { \"status\": \"ok\", \"release\": \"<current_release>\" }`."
+    ),
+    "/statistics" = paste(
+      "**UI Workflow Mapping**: Step 2, Decision 2 (\"Select statistics\" grouped dropdown / checkboxes).\n\n",
+      "Returns the four measure families defined in `inst/extdata/tm_measure_spec.yaml`:\n",
+      "- `summary_statistics` (*Summary Statistics*): `mean`, `median`, `sd`, `var`, `min`, `max`, `nobs`, `p10`, `p25`, `p75`, `p90`, `sum`.\n",
+      "- `poverty` (*Poverty*): `headcount`, `poverty_gap`, `severity`, `watts`, `pop_poverty`.\n",
+      "- `inequality` (*Inequality*): `gini`, `mld`.\n",
+      "- `shares` (*Shares*): `pop_share`, `target_within_group_share`, `target_survey_share`.\n\n",
+      "Cross-reference with `stat_groups` from `GET /analysis-variables` to determine which measure groups are valid for the active `analysis_var`."
+    ),
+    "/cell-definition" = paste(
+      "**UI Workflow Mapping**: Step 2 (\"What each cell in your table means\" live preview card).\n\n",
+      "Pure function of the Step 2 table configuration parameters and the release variable registry. Call this endpoint whenever the user changes filters, variables, measures, or layout slots on Page 2 to update the live explanation card.\n\n",
+      "### Response Structure (`data`)\n",
+      "- `who_is_in_table`: Explains the sample base after applying `filter_base` (or the full survey population when unfiltered).\n",
+      "- `what_a_cell_is`: Uniform `{ title, structure_text, items, example_text, dimensions, example_cell_label }` object. When the table has **4 or fewer cells**, `items` enumerates every combined cell in plain English; when it has **more than 4 cells**, `items` lists one category-breakdown line per active layout slot (max 4 lines) plus `example_text` for the first cell.\n",
+      "- `what_is_shown`: Plain-English interpretation of each requested measure in `measures` (including numerator `counts` and denominator `out_of` for share measures).\n",
+      "- `notes`: Methodological notes (PPP year, poverty line, and cell-suppression threshold).\n\n",
+      "### Example Request\n",
+      "`/cell-definition?analysis_var=welfare&measures=mean&measures=gini&column=gender&row=area&ppp=2021&welfare_type=INC`"
+    )
+  )
+
   for (path in names(spec$paths)) {
     for (method in names(spec$paths[[path]])) {
       op <- spec$paths[[path]][[method]]
+      if (!is.null(summary_by_path[[path]])) {
+        op$summary <- summary_by_path[[path]]
+      }
+      if (!is.null(description_by_path[[path]])) {
+        op$description <- description_by_path[[path]]
+      }
       if (!is.null(tag_by_path[[path]])) {
         op$tags <- list(tag_by_path[[path]])
       }
@@ -645,22 +790,6 @@ function(req) {
 # ── GET|POST /table ───────────────────────────────────────────────────────────
 
 #* Compute cross-tabulated poverty, inequality, summary-statistic, and share measures for up to 15 surveys.
-#*
-#* **UI Workflow Mapping**: Step 2 ("Generate table") and Step 3 (Results view).
-#*
-#* Computes requested `measures` for `analysis_var` across one or more harmonized household surveys (`pip_id`), optionally restricted to a sub-population (`filter_base`) and disaggregated across up to four table layout slots (`column`, `row`, `superColumn`, `superRow`).
-#*
-#* ### How to Use Parameters
-#* - **Required parameters**: Always supply `analysis_var`, at least one `pip_id` (1 to 15 surveys), and at least one `measures` value.
-#* - **Conditional `poverty_line`**: Required whenever `analysis_var = "pov_status"` or `"pov_status"` is placed in any layout slot (e.g., `poverty_line=2.15` for the $2.15/day extreme poverty line).
-#* - **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. Must be filled in strict order (`column` -> `row` -> `superColumn` -> `superRow`) with no gaps and no duplicate variables; `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.
-#* - **Sample-base filter (`filter_base`)**: Optional JSON-encoded object mapping categorical variable names from `GET /categories` to arrays of retained category codes, e.g. `{"gender":[1],"area":[1]}`.
-#* - **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `"NR"` (Not Representative). Pass an empty value to disable suppression.
-#* - **Metadata mode (`include_metadata`)**: Leave as `"false"` (default) to receive the structured Approach C `{layout, cells}` payload per survey. Set to `"true"` to also receive `meta.description_metadata` for the `POST /description` fast path.
-#*
-#* ### Example Request (Query String)
-#* `/table?analysis_var=welfare&pip_id=COL_2008_GEIH_INC_ALL&measures=mean&measures=gini&column=gender&row=area&ppp=2021`
-#*
 #* @tag "Step 3 — Table Computation & Export"
 #* @param analysis_var:character [Required] Target variable to analyze from `GET /analysis-variables` (e.g., `"welfare"` for monetary welfare, `"pov_status"` for poverty status, `"age"`/`"educy"`/`"hsize"` for continuous variables, or a binary indicator such as `"electricity"`).
 #* @param pip_id:[character] [Required] Survey identifier(s) to compute (repeatable, 1 to 15 values). Format: `ISO3_YYYY_<SURVEY>_<WELFARE>_<DOMAIN>` from `GET /surveys-ui` (e.g., `"COL_2008_GEIH_INC_ALL"`).
@@ -774,16 +903,6 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
 # -- POST /table/download ------------------------------------------------------
 
 #* Flatten a computed `/table` response payload into a downloadable CSV or RDS file.
-#*
-#* **UI Workflow Mapping**: Step 3 ("Export / Download table" button).
-#*
-#* Stateless converter that takes the `data` array returned by `GET /table` or `POST /table` (with `include_metadata = "false"`, the default Approach C `{layout, cells}` structure) and flattens it into a rectangular table (one row per cell, with measure values as columns) without re-querying Arrow microdata.
-#*
-#* ### Request Body Fields (JSON Object)
-#* - `format` *(string, optional, default `"csv"`)*: Output file format — either `"csv"` (`text/csv; charset=utf-8` attachment `table.csv`) or `"rds"` (`application/octet-stream` attachment `table.rds`).
-#* - `data` *(array of objects, required)*: The non-empty `data` array copied directly from a `/table` response envelope (each element containing `pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `analysis_var`, `measures`, `layout`, and `cells`). Do not wrap the outer `/table` envelope fields (`status`, `warnings`, `errors`, `meta`).
-#* - Maximum request body size is **25 MB** (larger payloads return HTTP `413`).
-#*
 #* @tag "Step 3 — Table Computation & Export"
 #* @param body:object [Required] JSON object containing `format` (`"csv"` or `"rds"`, default `"csv"`) and `data` (the non-empty `data` array of survey objects returned by `/table`).
 #* @parser text
@@ -874,21 +993,6 @@ function(req, body = NULL, res) {
 # ── POST /description ─────────────────────────────────────────────────────────
 
 #* [WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.
-#*
-#* > **Note (Work in Progress — Ignore for now)**: This endpoint is still being built and refined. UI integration can ignore this endpoint for now.
-#*
-#* **UI Workflow Mapping**: Step 3 ("Table metadata & provenance info" document — work in progress).
-#*
-#* Renders structured table metadata, configuration summary, and data provenance (rather than a narrative prose description). Accepts a JSON object in one of **two mutually exclusive modes** (providing both `description_metadata` and table parameters in the same request returns HTTP `400`):
-#*
-#* 1. **Fast Path (`description_metadata`)**: Pass `{"description_metadata": <object>, "format": "html"}` using the `meta.description_metadata` object returned by `/table?include_metadata=true`. Renders immediately without reading microdata or recomputing statistics.
-#* 2. **Fallback Path (Table Parameters)**: Pass the table configuration parameters directly at the top level of the JSON body (`pip_id`, `analysis_var`, `measures`, and optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `filter_base`, `ppp`, `pop_share_threshold`, `release`, `format`). Recomputes metadata via `table_maker(include_metadata = TRUE)` and renders the metadata document. Note: in JSON bodies, `filter_base` can be a native nested JSON object (e.g., `{"gender": [1]}`).
-#*
-#* ### Output Format
-#* - `format = "html"` (default): Returns inline-styled HTML with `Content-Type: text/html; charset=utf-8`.
-#* - `format = "markdown"`: Returns plain Markdown text with `Content-Type: text/plain`.
-#* - On HTTP `400` or `422` errors, returns a JSON-encoded standard error envelope string.
-#*
 #* @tag "Step 3 — Table Computation & Export"
 #* @param body:object [Required] JSON object supplying EITHER `description_metadata` (fast path) OR top-level table parameters (`pip_id`, `analysis_var`, `measures`, etc. — fallback path), plus optional `format` (`"html"` or `"markdown"`, default `"html"`).
 #* @parser json
@@ -1025,16 +1129,6 @@ function(req, body = NULL, res) {
 # ── GET /lookup ───────────────────────────────────────────────────────────────
 
 #* [Optional — Not needed in UI] Resolve `(country_code, year, welfare_type)` survey triples to canonical `pip_id` identifiers.
-#*
-#* **UI Workflow Mapping**: Optional programmatic helper (not needed by the UI; the UI uses `GET /surveys-ui`).
-#*
-#* Translates parallel arrays of 3-letter ISO country codes (`country_code`), 4-digit survey years (`year`), and welfare types (`welfare_type`: `"INC"` or `"CON"`) into the canonical `pip_id` strings accepted by `/table`, `/categories`, and `/covariates`.
-#*
-#* ### Usage Rules
-#* - `country_code`, `year`, and `welfare_type` are **all required** and must be supplied with the **exact same number of elements** (paired positionally: the *i*-th country, *i*-th year, and *i*-th welfare type form one lookup key).
-#* - Example single lookup: `/lookup?country_code=COL&year=2010&welfare_type=INC`
-#* - Example batch lookup: `/lookup?country_code=COL&country_code=ARM&year=2010&year=2012&welfare_type=INC&welfare_type=CON`
-#*
 #* @tag "Optional / Developer Endpoints (Not Needed for UI)"
 #* @param country_code:[character] [Required] 3-letter ISO3 country code(s) (repeatable, paired by position with `year` and `welfare_type`; e.g., `"COL"`, `"ARM"`).
 #* @param year:[integer] [Required] 4-digit survey year(s) (repeatable, same length as `country_code`; e.g., `2010`, `2012`).
@@ -1064,11 +1158,6 @@ function(country_code = NULL, year = NULL, welfare_type = NULL, release = NULL, 
 # ── GET /surveys ──────────────────────────────────────────────────────────────
 
 #* [Optional — Not needed in UI] Return the full survey manifest table for a release, including internal file metadata.
-#*
-#* **UI Workflow Mapping**: Optional developer/manifest inspection endpoint (not needed by the UI; the UI uses `GET /surveys-ui`).
-#*
-#* Returns every survey registered in the release manifest, including `pip_id`, `country_code`, `country_name`, `region_code`, `region_name`, `surveyid_year`, `survey_acronym`, `welfare_type`, `ppp_default`, and the per-survey `dimensions` array. For building the interactive Step 1 UI survey selector grid, use `GET /surveys-ui` instead.
-#*
 #* @tag "Optional / Developer Endpoints (Not Needed for UI)"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1091,11 +1180,6 @@ function(release = NULL, res) {
 # ── GET /countries ────────────────────────────────────────────────────────────
 
 #* Return all unique countries (`country_code` and `country_name`) available in the release manifest.
-#*
-#* **UI Workflow Mapping**: Step 1 (Country search box and filter list).
-#*
-#* Returns a sorted array of `{country_code, country_name}` records derived from the active release manifest (e.g., `{"country_code": "ARM", "country_name": "Armenia"}`). Use this endpoint to populate the Step 1 country selector before filtering surveys in `GET /surveys-ui`.
-#*
 #* @tag "Step 1 — Survey Selection"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1124,11 +1208,6 @@ function(release = NULL, res) {
 # ── GET /regions ──────────────────────────────────────────────────────────────
 
 #* Return World Bank regional groupings (`region_code`, `region_name`) and their member `countries` arrays.
-#*
-#* **UI Workflow Mapping**: Step 1 (Region filter chips).
-#*
-#* Returns each region present in the release manifest along with a sorted array of member ISO3 `countries` codes (e.g., `{"region_code": "LAC", "region_name": "Latin America & Caribbean", "countries": ["ARG", "BOL", "COL", ...]}`). Used by the UI to filter the Step 1 country/survey grid by World Bank region.
-#*
 #* @tag "Step 1 — Survey Selection"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1158,11 +1237,6 @@ function(release = NULL, res) {
 # ── GET /surveys-ui ───────────────────────────────────────────────────────────
 
 #* Return the lightweight, UI-ready survey catalog for populating the Step 1 survey selection grid.
-#*
-#* **UI Workflow Mapping**: Step 1 (Main country / year / welfare-type survey selection grid).
-#*
-#* Returns one record per available survey containing `pip_id`, country and region labels, survey year, welfare type (`INC` or `CON`), survey acronym, and available `dimensions`. Pass up to 15 selected `pip_id` values from this catalog to `GET /categories`, `GET /covariates`, and `GET|POST /table`.
-#*
 #* @tag "Step 1 — Survey Selection"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1185,11 +1259,6 @@ function(release = NULL, res) {
 # ── GET /releases ─────────────────────────────────────────────────────────────
 
 #* List all loaded PIP data releases and identify the active default release.
-#*
-#* **UI Workflow Mapping**: Cross-cutting release selector / header badge.
-#*
-#* Returns `{ "releases": ["..."], "current": "..." }` in `data`, showing every release manifest loaded in memory and which release ID is used when the optional `release` parameter is omitted on other endpoints. Takes no parameters.
-#*
 #* @tag "System & Releases"
 #* @serializer json list(na = "null")
 #* @get /releases
@@ -1203,16 +1272,6 @@ function() {
 # ── GET /analysis-variables ───────────────────────────────────────────────────
 
 #* Return all valid `analysis_var` options for Decision 2, including compatible statistic groups and slider rules.
-#*
-#* **UI Workflow Mapping**: Step 2, Decision 2 ("Variable of interest" dropdown).
-#*
-#* Returns every variable with role `analysis_var` in the release registry (`welfare`, `pov_status`, continuous variables such as `age`, `educy`, `hsize`, and binary access indicators such as `imp_wat_rec`, `imp_san_rec`, `electricity`). Each item includes:
-#* - `varname`: Canonical variable identifier to pass as `analysis_var` in `/table` and `/cell-definition`.
-#* - `label`: Human-readable UI label.
-#* - `type`: Variable type (`continuous`, `binary`, etc.).
-#* - `poverty_line_slider`: Boolean indicating whether the UI should display the poverty line input (`true` for `pov_status`).
-#* - `stat_groups`: Array of compatible statistic group IDs from `GET /statistics` (used to enable/disable measure checkboxes).
-#*
 #* @tag "Step 2 — Table Configuration"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1231,13 +1290,6 @@ function(release = NULL, res) {
 # ── GET /dimensions ───────────────────────────────────────────────────────────
 
 #* [Optional / WIP — Not needed in UI] Return the flat list of all valid disaggregation dimension identifiers.
-#*
-#* > **Note (Optional / Work in Progress)**: Not needed for the UI (use `GET /covariates` and `GET /categories` instead).
-#*
-#* **UI Workflow Mapping**: Low-level dimension schema reference (for UI layout slot dropdowns with labels and survey-intersection filtering, use `GET /covariates` instead).
-#*
-#* Returns the character array of all recognized disaggregation dimension names (e.g., `"gender"`, `"area"`, `"age_group"`, `"educat4"`, `"educat5"`, `"educat7"`, etc.). Takes no parameters.
-#*
 #* @tag "Optional / Developer Endpoints (Not Needed for UI)"
 #* @serializer json list(na = "null")
 #* @get /dimensions
@@ -1248,15 +1300,6 @@ function() {
 # ── GET /categories ──────────────────────────────────────────────────────────
 
 #* Return categorical variables and category codes for the Decision 1 sample-base filter panel.
-#*
-#* **UI Workflow Mapping**: Step 2, Decision 1 ("Filter sample base" panel).
-#*
-#* Returns filterable categorical variables along with their category codes and labels (used to construct the `filter_base` JSON parameter on `/table`, `/cell-definition`, and `/description`).
-#*
-#* ### Survey-Intersection Filtering (`pip_id`)
-#* - **When `pip_id` is omitted**: Returns the full catalog of filterable variables for the release (`meta.filtered = false`, `meta.n_surveys = null`).
-#* - **When `pip_id` is provided** (repeatable, e.g., `?pip_id=COL_2008_GEIH_INC_ALL`): Returns **only** variables present in *every* matched survey (the intersection of each survey's manifest `dimensions`), with `meta.filtered = true` and `meta.n_surveys` set to the number of matched surveys.
-#*
 #* @tag "Step 2 — Table Configuration"
 #* @param pip_id:[character] [Optional] Survey identifier(s) selected in Step 1 (repeatable; e.g., `"COL_2008_GEIH_INC_ALL"`). When supplied, restricts the response to filter variables available across all specified surveys.
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
@@ -1326,18 +1369,6 @@ function(pip_id = NULL, release = NULL, res) {
 # ── GET /covariates ───────────────────────────────────────────────────────────
 
 #* Return disaggregation covariates and category labels for the Decision 3 table layout slots.
-#*
-#* **UI Workflow Mapping**: Step 2, Decision 3 ("Slice table by covariates" — `column`, `row`, `superColumn`, `superRow` selectors).
-#*
-#* Returns the authoritative list of covariates that can be assigned to the four layout slots (`column`, `row`, `superColumn`, `superRow`) in `/table`, `/cell-definition`, and `/description`.
-#*
-#* ### Poverty Line Slider Activation (`pov_status`)
-#* Each covariate entry includes `poverty_line_slider` (`true` for `pov_status`, `false` for all other covariates). **When the user selects `"pov_status"` in any layout slot (`column`, `row`, `superColumn`, or `superRow`), the UI must activate the poverty line slider (`poverty_line`)**, just as when `analysis_var = "pov_status"` in Decision 2.
-#*
-#* ### Survey-Intersection Filtering (`pip_id`)
-#* - **When `pip_id` is omitted**: Returns the full covariate catalog for the release (`meta.filtered = false`, `meta.n_surveys = null`).
-#* - **When `pip_id` is provided** (repeatable, e.g., `?pip_id=COL_2008_GEIH_INC_ALL`): Returns **only** covariates available across *all* matched surveys (intersection of manifest `dimensions`), preventing users from selecting a layout covariate that would exclude surveys during computation.
-#*
 #* @tag "Step 2 — Table Configuration"
 #* @param pip_id:[character] [Optional] Survey identifier(s) selected in Step 1 (repeatable; e.g., `"COL_2008_GEIH_INC_ALL"`). When supplied, restricts the response to layout covariates common to all specified surveys.
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
@@ -1407,11 +1438,6 @@ function(pip_id = NULL, release = NULL, res) {
 # ── GET /health ───────────────────────────────────────────────────────────────
 
 #* Verify API server readiness and return `"ok"` status with the current default release ID.
-#*
-#* **UI Workflow Mapping**: Infrastructure liveness probe and startup connectivity check.
-#*
-#* Lightweight health endpoint that requires no parameters and performs no disk or Arrow I/O. Returns `data: { "status": "ok", "release": "<current_release>" }`.
-#*
 #* @tag "System & Releases"
 #* @serializer json list(na = "null")
 #* @get /health
@@ -1425,17 +1451,6 @@ function() {
 # ── GET /statistics ───────────────────────────────────────────────────────────
 
 #* Return all statistical measure groups and their individual measures for Decision 2.
-#*
-#* **UI Workflow Mapping**: Step 2, Decision 2 ("Select statistics" grouped dropdown / checkboxes).
-#*
-#* Returns the four measure families defined in `inst/extdata/tm_measure_spec.yaml`:
-#* - `summary_statistics` (*Summary Statistics*): `mean`, `median`, `sd`, `var`, `min`, `max`, `nobs`, `p10`, `p25`, `p75`, `p90`, `sum`.
-#* - `poverty` (*Poverty*): `headcount`, `poverty_gap`, `severity`, `watts`, `pop_poverty`.
-#* - `inequality` (*Inequality*): `gini`, `mld`.
-#* - `shares` (*Shares*): `pop_share`, `target_within_group_share`, `target_survey_share`.
-#*
-#* Cross-reference with `stat_groups` from `GET /analysis-variables` to determine which measure groups are valid for the active `analysis_var`.
-#*
 #* @tag "Step 2 — Table Configuration"
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
 #* @serializer json list(na = "null")
@@ -1454,20 +1469,6 @@ function(release = NULL, res) {
 # ── GET /cell-definition ──────────────────────────────────────────────────────
 
 #* Return a live three-section plain-English explanation of what each cell in the configured table represents.
-#*
-#* **UI Workflow Mapping**: Step 2 ("What each cell in your table means" live preview card).
-#*
-#* Pure function of the Step 2 table configuration parameters and the release variable registry — **does not require `pip_id` and does not access Arrow survey microdata**. Call this endpoint whenever the user changes filters, variables, measures, or layout slots on Page 2 to update the live explanation card.
-#*
-#* ### Response Structure (`data`)
-#* - `who_is_in_table`: Explains the sample base after applying `filter_base` (or the full survey population when unfiltered).
-#* - `what_a_cell_is`: Uniform `{ title, structure_text, items, example_text, dimensions, example_cell_label }` object. When the table has **4 or fewer cells**, `items` enumerates every combined cell in plain English; when it has **more than 4 cells**, `items` lists one category-breakdown line per active layout slot (max 4 lines) plus `example_text` for the first cell.
-#* - `what_is_shown`: Plain-English interpretation of each requested measure in `measures` (including numerator `counts` and denominator `out_of` for share measures).
-#* - `notes`: Methodological notes (PPP year, poverty line, and cell-suppression threshold).
-#*
-#* ### Example Request
-#* `/cell-definition?analysis_var=welfare&measures=mean&measures=gini&column=gender&row=area&ppp=2021&welfare_type=INC`
-#*
 #* @tag "Step 2 — Table Configuration"
 #* @param analysis_var:character [Required] Target variable being analyzed from `GET /analysis-variables` (e.g., `"welfare"`, `"pov_status"`, `"age"`, `"electricity"`).
 #* @param measures:[character] [Required] Statistical measure ID(s) selected in Step 2 (repeatable, 1 or more values from `GET /statistics`; e.g., `"mean"`, `"gini"`, `"pop_share"`). Note: `target_within_group_share` and `target_survey_share` require a binary target `analysis_var`.
