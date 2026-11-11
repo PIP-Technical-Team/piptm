@@ -17,7 +17,7 @@
 #' |---|---|---|
 #' | `/table` | GET, POST | Compute poverty / inequality / welfare measures |
 #' | `/table/download` | POST | Convert `/table` rows sent in the body (`{format, data}`) into a `csv` or `rds` file |
-#' | `/description` | POST | Render a table description as HTML or Markdown |
+#' | `/metadata` | POST | Render table metadata as HTML or Markdown |
 #' | `/lookup` | GET | Resolve country-year-welfare triplets to pip_ids |
 #' | `/surveys` | GET | Full manifest rows for a release |
 #' | `/releases` | GET | List all loaded release IDs and current release |

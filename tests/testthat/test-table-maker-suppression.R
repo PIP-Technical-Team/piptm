@@ -196,12 +196,12 @@ test_that("captured suppression warnings surfaced via include_metadata are plain
   # sequences (bold/color spans, "i" bullet glyph) when the ambient session
   # is detected as color-capable. table_maker()'s withCallingHandlers()
   # captures conditionMessage(w) verbatim, so those escape codes leak into
-  # execution$warnings and are ultimately rendered in the /description
+  # execution$warnings and are ultimately rendered in the /metadata
   # endpoint's plain-text warning payload as garbled characters.
   #
   # Expected behavior source (package-convention): warnings surfaced through
   # description metadata are plain human-readable text with no ANSI/terminal
-  # escape sequences, since the description endpoint is consumed by non-
+  # escape sequences, since the metadata endpoint is consumed by non-
   # terminal clients (JSON/text API response, PIP platform UI).
   fx <- make_sup_fixture()
   activate_sup_fixture(fx)

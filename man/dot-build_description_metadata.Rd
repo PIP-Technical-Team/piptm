@@ -31,6 +31,6 @@ Named list conforming to spec §2.1 schema
 }
 \description{
 Internal helper that assembles execution metadata, provenance, and resolved
-labels for use by the \verb{/description} endpoint.
+labels for use by the \verb{/metadata} endpoint.
 }
 \keyword{internal}

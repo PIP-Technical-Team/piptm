@@ -13,7 +13,7 @@
 # Endpoints (this file, bottom section — see Step 3)
 #   GET|POST /table
 #   POST /table/download
-#   POST /description
+#   POST /metadata
 #   GET /cell-definition
 #   GET /lookup
 #   GET /surveys
@@ -116,7 +116,7 @@ enrich_openapi_spec <- function(spec) {
       "explanation of what each cell in the configured table represents.\n",
       "3. **Step 3 — Table Computation & Export**:\n",
       "   - **Compute Table**: Call `GET /table` or `POST /table` to compute cell estimates.\n",
-      "   - **Table Metadata & Info** *(WIP — ignore for now)*: `POST /description` renders an HTML or Markdown",
+      "   - **Table Metadata & Info** *(WIP — ignore for now)*: `POST /metadata` renders an HTML or Markdown",
       "metadata and provenance document for the table (currently still being built).\n",
       "   - **Download File**: Call `POST /table/download` to flatten the `/table` response `data`",
       "array into a downloadable `.csv` or `.rds` file.\n\n",
@@ -131,7 +131,7 @@ enrich_openapi_spec <- function(spec) {
       "  \"meta\": { \"release\": \"20260401_TEST\" }\n",
       "}\n",
       "```\n",
-      "- **Exceptions**: `POST /description` returns raw HTML (`text/html; charset=utf-8`) or",
+      "- **Exceptions**: `POST /metadata` returns raw HTML (`text/html; charset=utf-8`) or",
       "Markdown (`text/plain`) on `200`; `POST /table/download` returns binary file bytes",
       "(`text/csv` or `application/octet-stream`) on `200`. On error, both return the standard",
       "JSON error envelope.\n",
@@ -180,7 +180,7 @@ enrich_openapi_spec <- function(spec) {
     "/covariates"         = "Step 2 — Table Configuration",
     "/cell-definition"    = "Step 2 — Table Configuration",
     "/table"              = "Step 3 — Table Computation & Export",
-    "/description"        = "Step 3 — Table Computation & Export",
+    "/metadata"           = "Step 3 — Table Computation & Export",
     "/table/download"     = "Step 3 — Table Computation & Export",
     "/health"             = "System & Releases",
     "/releases"           = "System & Releases",
@@ -292,7 +292,7 @@ enrich_openapi_spec <- function(spec) {
   summary_by_path <- list(
     "/table"              = "Compute cross-tabulated poverty, inequality, summary-statistic, and share measures for up to 15 surveys.",
     "/table/download"     = "Flatten a computed `/table` response payload into a downloadable CSV or RDS file.",
-    "/description"        = "[WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.",
+    "/metadata"           = "[WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.",
     "/lookup"             = "[Optional — Not needed in UI] Resolve `(country_code, year, welfare_type)` survey triples to canonical `pip_id` identifiers.",
     "/surveys"            = "[Optional — Not needed in UI] Return the full survey manifest table for a release, including internal file metadata.",
     "/countries"          = "Return all unique countries (`country_code` and `country_name`) available in the release manifest.",
@@ -319,7 +319,7 @@ enrich_openapi_spec <- function(spec) {
       "- **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. Must be filled in strict order (`column` -> `row` -> `superColumn` -> `superRow`) with no gaps and no duplicate variables; `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.\n",
       "- **Sample-base filter (`filter_base`)**: Optional JSON-encoded object mapping categorical variable names from `GET /categories` to arrays of retained category codes, e.g. `{\"gender\":[1],\"area\":[1]}`.\n",
       "- **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `\"NR\"` (Not Representative). Pass an empty value to disable suppression.\n",
-      "- **Metadata mode (`include_metadata`)**: Leave as `\"false\"` (default) to receive the structured Approach C `{layout, cells}` payload per survey. Set to `\"true\"` to also receive `meta.description_metadata` for the `POST /description` fast path.\n\n",
+      "- **Metadata mode (`include_metadata`)**: Leave as `\"false\"` (default) to receive the structured Approach C `{layout, cells}` payload per survey. Set to `\"true\"` to also receive `meta.description_metadata` for the `POST /metadata` fast path.\n\n",
       "### Example Request (Query String)\n",
       "`/table?analysis_var=welfare&pip_id=COL_2008_GEIH_INC_ALL&measures=mean&measures=gini&column=gender&row=area&ppp=2021`"
     ),
@@ -333,7 +333,7 @@ enrich_openapi_spec <- function(spec) {
       "- `data` *(array of objects, required)*: The non-empty `data` array copied directly from a `/table` response envelope (each element containing `pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `analysis_var`, `measures`, `layout`, and `cells`). Do not wrap the outer `/table` envelope fields (`status`, `warnings`, `errors`, `meta`).\n",
       "- Maximum request body size is **25 MB** (larger payloads return HTTP `413`)."
     ),
-    "/description" = paste(
+    "/metadata" = paste(
       "> **Note (Work in Progress — Ignore for now)**: This endpoint is still being built and refined. UI integration can ignore this endpoint for now.\n\n",
       "**UI Workflow Mapping**: Step 3 (\"Table metadata & provenance info\" document — work in progress).\n\n",
       "Renders structured table metadata, configuration summary, and data provenance (rather than a narrative prose description).",
@@ -388,14 +388,14 @@ enrich_openapi_spec <- function(spec) {
     ),
     "/categories" = paste(
       "**UI Workflow Mapping**: Step 2, Decision 1 (\"Filter sample base\" panel).\n\n",
-      "Returns filterable categorical variables along with their category codes and labels (used to construct the `filter_base` JSON parameter on `/table`, `/cell-definition`, and `/description`).\n\n",
+      "Returns filterable categorical variables along with their category codes and labels (used to construct the `filter_base` JSON parameter on `/table`, `/cell-definition`, and `/metadata`).\n\n",
       "### Survey-Intersection Filtering (`pip_id`)\n",
       "- **When `pip_id` is omitted**: Returns the full catalog of filterable variables for the release (`meta.filtered = false`, `meta.n_surveys = null`).\n",
       "- **When `pip_id` is provided** (repeatable, e.g., `?pip_id=COL_2008_GEIH_INC_ALL`): Returns **only** variables present in *every* matched survey (the intersection of each survey's manifest `dimensions`), with `meta.filtered = true` and `meta.n_surveys` set to the number of matched surveys."
     ),
     "/covariates" = paste(
       "**UI Workflow Mapping**: Step 2, Decision 3 (\"Slice table by covariates\" — `column`, `row`, `superColumn`, `superRow` selectors).\n\n",
-      "Returns the authoritative list of covariates that can be assigned to the four layout slots (`column`, `row`, `superColumn`, `superRow`) in `/table`, `/cell-definition`, and `/description`.\n\n",
+      "Returns the authoritative list of covariates that can be assigned to the four layout slots (`column`, `row`, `superColumn`, `superRow`) in `/table`, `/cell-definition`, and `/metadata`.\n\n",
       "### Poverty Line Slider Activation (`pov_status`)\n",
       "Each covariate entry includes `poverty_line_slider` (`true` for `pov_status`, `false` for all other covariates). **When the user selects `\"pov_status\"` in any layout slot (`column`, `row`, `superColumn`, or `superRow`), the UI must activate the poverty line slider (`poverty_line`)**, just as when `analysis_var = \"pov_status\"` in Decision 2.\n\n",
       "### Survey-Intersection Filtering (`pip_id`)\n",
@@ -464,11 +464,11 @@ enrich_openapi_spec <- function(spec) {
     }
   }
 
-  # ── POST /description requestBody & responses ──────────────────────────────
-  if (!is.null(spec$paths[["/description"]][["post"]])) {
-    desc_op <- spec$paths[["/description"]][["post"]]
-    desc_op$parameters <- list()
-    desc_op$requestBody <- list(
+  # ── POST /metadata requestBody & responses ──────────────────────────────────
+  if (!is.null(spec$paths[["/metadata"]][["post"]])) {
+    metadata_op <- spec$paths[["/metadata"]][["post"]]
+    metadata_op$parameters <- list()
+    metadata_op$requestBody <- list(
       required    = TRUE,
       description = paste(
         "JSON object specifying **either** `description_metadata` (Fast Path, from `/table?include_metadata=true`)",
@@ -606,20 +606,20 @@ enrich_openapi_spec <- function(spec) {
         )
       )
     )
-    desc_op$responses[["200"]] <- list(
+    metadata_op$responses[["200"]] <- list(
       description = "Rendered table metadata and info document (HTML when `format = \"html\"`, Markdown when `format = \"markdown\"`).",
       content = list(
         "text/html"  = list(schema = list(type = "string")),
         "text/plain" = list(schema = list(type = "string"))
       )
     )
-    desc_op$responses[["400"]] <- json_error_response(
+    metadata_op$responses[["400"]] <- json_error_response(
       "Bad Request — Empty/malformed JSON body, invalid `format`, both `description_metadata` and table parameters supplied, or invalid table parameters."
     )
-    desc_op$responses[["422"]] <- json_error_response(
+    metadata_op$responses[["422"]] <- json_error_response(
       "Unprocessable Entity — Malformed `description_metadata` structure or domain error during fallback recomputation."
     )
-    spec$paths[["/description"]][["post"]] <- desc_op
+    spec$paths[["/metadata"]][["post"]] <- metadata_op
   }
 
   # ── POST /table/download requestBody & responses ───────────────────────────
@@ -803,7 +803,7 @@ function(req) {
 #* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of kept category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`). Omit to include the full survey sample.
 #* @param pop_share_threshold:numeric [Optional] Minimum cell population-share threshold strictly between `0` and `1` (default `0.001`, i.e., 0.1% of the sample base) below which cell estimates are masked as `"NR"`. Send empty/null to disable suppression.
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
-#* @param include_metadata:character [Optional] Set to `"true"` to include `description_metadata` in `meta` (for passing to `POST /description` fast path) and return flat data rows; defaults to `"false"` (returns structured `{layout, cells}` survey objects).
+#* @param include_metadata:character [Optional] Set to `"true"` to include `description_metadata` in `meta` (for passing to `POST /metadata` fast path) and return flat data rows; defaults to `"false"` (returns structured `{layout, cells}` survey objects).
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
@@ -990,14 +990,14 @@ function(req, body = NULL, res) {
   readBin(tmp, "raw", n = file.size(tmp))
 }
 
-# ── POST /description ─────────────────────────────────────────────────────────
+# ── POST /metadata ────────────────────────────────────────────────────────────
 
 #* [WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.
 #* @tag "Step 3 — Table Computation & Export"
 #* @param body:object [Required] JSON object supplying EITHER `description_metadata` (fast path) OR top-level table parameters (`pip_id`, `analysis_var`, `measures`, etc. — fallback path), plus optional `format` (`"html"` or `"markdown"`, default `"html"`).
 #* @parser json
 #* @serializer text
-#* @post /description
+#* @post /metadata
 function(req, body = NULL, res) {
   # ── Parse + validate body ───────────────────────────────────────────────────
   # For Swagger UI (and plumber's automatic parsing), body will be populated.
@@ -1037,7 +1037,7 @@ function(req, body = NULL, res) {
   # Verified: res$setHeader("Content-Type", ...) below overrides this route's
   # `@serializer text` default on the installed plumber version (>= 1.1.0) --
   # see the Step 4 spike in .cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md
-  # and the regression guard in tests/testthat/test-api-description.R.
+  # and the regression guard in tests/testthat/test-api-metadata.R.
   # format == "markdown" leaves Content-Type as text/plain; format defaults to
   # "html" (Content-Type: text/html; charset=utf-8) when omitted.
   render_description <- function(model) {

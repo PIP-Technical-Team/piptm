@@ -32,7 +32,7 @@ The router exposes API endpoints for compute, discovery, and download flows.\tab
    Endpoint \tab Method \tab Description \cr
    \verb{/table} \tab GET, POST \tab Compute poverty / inequality / welfare measures \cr
    \verb{/table/download} \tab POST \tab Convert \verb{/table} rows sent in the body (\verb{\{format, data\}}) into a \code{csv} or \code{rds} file \cr
-   \verb{/description} \tab POST \tab Render a table description as HTML or Markdown \cr
+   \verb{/metadata} \tab POST \tab Render table metadata as HTML or Markdown \cr
    \verb{/lookup} \tab GET \tab Resolve country-year-welfare triplets to pip_ids \cr
    \verb{/surveys} \tab GET \tab Full manifest rows for a release \cr
    \verb{/releases} \tab GET \tab List all loaded release IDs and current release \cr

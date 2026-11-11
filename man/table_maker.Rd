@@ -63,7 +63,7 @@ Default: \code{0.001} (0.1\%).}
 a \code{\link[data.table:data.table]{data.table::data.table()}} directly (default behavior). When \code{TRUE}, returns
 a list with two elements: \code{data} (the data.table) and \code{description_metadata}
 (a structured list containing execution logs, provenance, and resolved labels
-for use by the \verb{/description} endpoint).}
+for use by the \verb{/metadata} endpoint).}
 }
 \value{
 When \code{include_metadata = FALSE} (default): A \code{\link[data.table:data.table]{data.table::data.table()}}

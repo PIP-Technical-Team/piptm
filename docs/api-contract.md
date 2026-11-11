@@ -70,7 +70,7 @@ Representative domain and payload error messages:
 | Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
 | Malformed/unreadable sample filter JSON (`filter_base`) | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
 | Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
-| Incomplete/invalid `description_metadata` on `POST /description` | 422 | `"The table description could not be generated because the provided table metadata is incomplete or invalid."` |
+| Incomplete/invalid `description_metadata` on `POST /metadata` | 422 | `"The table description could not be generated because the provided table metadata is incomplete or invalid."` |
 | Incomplete/invalid `data` payload on `POST /table/download` | 400 | `"The table data could not be exported because the download payload is incomplete or invalid."` |
 | Any unmapped internal/schema error | 422 / 500 | `"Something went wrong processing this request."` *(raw developer diagnostic is logged server-side to `stderr` with the `[piptm][unmapped_error]` prefix)* |
 
@@ -80,7 +80,7 @@ Representative domain and payload error messages:
 |---------|-------------|-----------|
 | Step 1 — Survey selection | Discover releases, manifest rows, and categories | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup` |
 | Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions` |
-| Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
+| Step 3 — Results | Run computations, render metadata, and download table outputs | `/table` (GET+POST), `/metadata`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
 
 ---
@@ -273,7 +273,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 
 ---
 
-### `/description` — POST (Step 3)
+### `/metadata` — POST (Step 3)
 
 - **Purpose:** Render a natural-language table description either from cached metadata or by recomputing.
 - **Body modes (mutually exclusive):**
@@ -318,7 +318,7 @@ TableRow:
 
 ### Description Metadata
 
-When `include_metadata=true`, `/table` returns an additional object consumed by `/description`:
+When `include_metadata=true`, `/table` returns an additional object consumed by `/metadata`:
 
 ```yaml
 DescriptionMetadata:
@@ -366,7 +366,7 @@ Access-Control-Allow-Headers: Content-Type
 |----------|---------|-------------|
 | `/table` | GET, POST | Execute tables for selected surveys |
 | `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
-| `/description` | POST | Render natural-language table description |
+| `/metadata` | POST | Render table metadata and provenance |
 | `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |

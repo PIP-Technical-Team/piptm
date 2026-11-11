@@ -132,7 +132,7 @@ Rscript inst/plumber/run.R
 | `/lookup` | GET | Resolve triplets to `pip_id` |
 | `/table` | GET, POST | Compute table output |
 | `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
-| `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
+| `/metadata` | POST | Render table metadata and provenance as HTML or Markdown (from metadata or by recomputation) |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 
@@ -160,7 +160,7 @@ Every entry in `errors[]` is guaranteed to be a plain-English, user-safe sentenc
 
 Success-response exceptions:
 
-- `POST /description`: returns rendered Markdown/HTML text, not the JSON envelope.
+- `POST /metadata`: returns rendered Markdown/HTML text, not the JSON envelope.
 - `POST /table/download`: returns file bytes (`text/csv` or `application/octet-stream`), not the JSON envelope.
 
 ## Insomnia collection

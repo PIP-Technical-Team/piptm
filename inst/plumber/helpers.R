@@ -66,7 +66,7 @@ api_error <- function(errors, status_code, res) {
 }
 
 # List of helpers that return JSON/TEXT and set res$status. Used by the
-# /description endpoint whose serializer is text (so error envelopes are
+# /metadata endpoint whose serializer is text (so error envelopes are
 # serialized explicitly as JSON strings).
 
 #' Build a JSON-serialized error envelope and set the HTTP status code
@@ -862,7 +862,7 @@ validate_cell_definition_input <- function(body) {
   )
 }
 
-#' Validate inputs for the /description fallback path
+#' Validate inputs for the /metadata fallback path
 #'
 #' Ensures the fallback body contains at least the required table parameters.
 #' The heavy lifting is delegated to [validate_table_input()]; this helper

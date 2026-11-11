@@ -1,13 +1,15 @@
-# Integration Tests — /description endpoint & /table include_metadata
+# Integration Tests — /metadata endpoint & /table include_metadata
 #
 # Plan: .cg-docs/plans/2026-08-26-description-endpoint-implementation.md
 #   Phase 5 (Steps 10-12)
+# Updated by: .cg-docs/plans/2026-11-11-rename-description-to-metadata.md
+#   (route rename to /metadata)
 #
 # Strategy: build a plumber router from the installed package file and drive
 # it programmatically via pr$call() — no network socket is opened.
 #
 # Blocks:
-#   1.  Fast path: POST /description with description_metadata → Markdown
+#   1.  Fast path: POST /metadata with description_metadata → Markdown
 #   2.  Error: empty body → 400
 #   3.  Error: both description_metadata and params → 400
 #   4.  Fast path: invalid metadata structure → 422
@@ -135,13 +137,13 @@ if (!nzchar(.desc_plumber_path) || !file.exists(.desc_plumber_path)) {
 # Block 1: Fast path returns Markdown
 # =============================================================================
 
-test_that("POST /description fast path returns Markdown (200) when format=markdown", {
+test_that("POST /metadata fast path returns Markdown (200) when format=markdown", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   meta <- .make_desc_metadata()
   res  <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(
       format = "markdown",
       description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE))
@@ -154,16 +156,16 @@ test_that("POST /description fast path returns Markdown (200) when format=markdo
   expect_type(body, "character")
   expect_true(grepl("## Table Overview", body, fixed = TRUE))
   expect_false(grepl("## Cell Definition", body, fixed = TRUE))
-  expect_true(grepl("## Execution Details", body, fixed = TRUE))
+  expect_true(grepl("## Execution Summary", body, fixed = TRUE))
 })
 
-test_that("POST /description fast path defaults to HTML when format is omitted", {
+test_that("POST /metadata fast path defaults to HTML when format is omitted", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   meta <- .make_desc_metadata()
   res  <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE)))
   ))
 
@@ -177,13 +179,13 @@ test_that("POST /description fast path defaults to HTML when format is omitted",
   expect_false(grepl("## Table Overview", body, fixed = TRUE))
 })
 
-test_that("POST /description fast path returns HTML when format=html in body", {
+test_that("POST /metadata fast path returns HTML when format=html in body", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   meta <- .make_desc_metadata()
   res  <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(
       format = "html",
       description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE))
@@ -201,23 +203,23 @@ test_that("POST /description fast path returns HTML when format=html in body", {
   expect_false(grepl("## Table Overview", body, fixed = TRUE))
 })
 
-test_that("POST /description returns 400 for empty body", {
+test_that("POST /metadata returns 400 for empty body", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description", body = list()
+    method = "POST", path = "/metadata", body = list()
   ))
   expect_equal(res$status, 400L)
 })
 
-test_that("POST /description returns 400 for invalid format", {
+test_that("POST /metadata returns 400 for invalid format", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   meta <- .make_desc_metadata()
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(format = "pdf", description_metadata = meta)
   ))
 
@@ -226,7 +228,7 @@ test_that("POST /description returns 400 for invalid format", {
   expect_true(grepl("format", paste(unlist(err$error), collapse = " "), ignore.case = TRUE))
 })
 
-test_that("POST /description returns 400 when both metadata and params supplied", {
+test_that("POST /metadata returns 400 when both metadata and params supplied", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
@@ -237,18 +239,18 @@ test_that("POST /description returns 400 when both metadata and params supplied"
     analysis_var = "welfare",
     measures = "mean"
   )
-  res <- .desc_router$call(make_api_req(method = "POST", path = "/description", body = body))
+  res <- .desc_router$call(make_api_req(method = "POST", path = "/metadata", body = body))
   expect_equal(res$status, 400L)
 })
 
-test_that("POST /description returns 422 for metadata missing params", {
+test_that("POST /metadata returns 422 for metadata missing params", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   bad <- .make_desc_metadata()
   bad$params <- NULL
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
@@ -332,29 +334,41 @@ test_that("GET /table with invalid include_metadata does not error at param leve
 # Block 4: Router introspection + CORS (Step 12)
 # =============================================================================
 
-test_that("/description appears in router endpoint introspection", {
+test_that("/metadata appears in router endpoint introspection and /description is absent", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   ep_list <- unlist(.desc_router$endpoints, recursive = FALSE)
   paths <- vapply(ep_list, function(ep) ep$path, character(1))
-  expect_true("/description" %in% paths)
+  expect_true("/metadata" %in% paths)
+  expect_false("/description" %in% paths)
 })
 
-test_that("POST /description OpenAPI spec does not expose req as a parameter", {
+test_that("POST /description returns 404 after rename to /metadata", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+
+  res <- .desc_router$call(make_api_req(
+    method = "POST", path = "/description", body = list()
+  ))
+  expect_equal(res$status, 404L)
+})
+
+test_that("POST /metadata OpenAPI spec does not expose req as a parameter", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   # Generate the OpenAPI spec
   spec <- .desc_router$getApiSpec()
   
-  # Navigate to POST /description
-  desc_post <- spec$paths[["/description"]][["post"]]
-  expect_false(is.null(desc_post), "POST /description should exist in OpenAPI spec")
+  # Navigate to POST /metadata
+  desc_post <- spec$paths[["/metadata"]][["post"]]
+  expect_false(is.null(desc_post), "POST /metadata should exist in OpenAPI spec")
+  expect_null(spec$paths[["/description"]])
   
   # Check that 'req' is NOT listed as a parameter
   # req is a Plumber-injected request object, not a user-supplied parameter
-  # The bug was: @param req caused Swagger to show POST /description?req=<string>
+  # The bug was: @param req caused Swagger to show POST /metadata?req=<string>
   params <- desc_post$parameters
   if (!is.null(params) && length(params) > 0) {
     param_names <- vapply(params, function(p) p$name %||% "", character(1))
@@ -363,16 +377,16 @@ test_that("POST /description OpenAPI spec does not expose req as a parameter", {
   }
   
   # Success criterion: no 'req' parameter means Swagger won't generate
-  # POST /description?req=<string> interface. The endpoint will be
+  # POST /metadata?req=<string> interface. The endpoint will be
   # callable with a JSON body (even if Plumber doesn't auto-generate
   # full requestBody schema for manually-parsed bodies).
 })
 
-test_that("OPTIONS preflight works for /description (CORS)", {
+test_that("OPTIONS preflight works for /metadata (CORS)", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  res <- .desc_router$call(make_api_req(method = "OPTIONS", path = "/description"))
+  res <- .desc_router$call(make_api_req(method = "OPTIONS", path = "/metadata"))
   expect_equal(res$status, 204L)
   headers <- res$headers
   expect_identical(headers[["Access-Control-Allow-Origin"]], "*")
@@ -383,14 +397,14 @@ test_that("OPTIONS preflight works for /description (CORS)", {
 # Block 5: P1-1 Malformed metadata structure tests
 # =============================================================================
 
-test_that("POST /description returns 422 for metadata with invalid provenance structure", {
+test_that("POST /metadata returns 422 for metadata with invalid provenance structure", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   bad <- .make_desc_metadata()
   bad$provenance <- "string"  # should be list
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
@@ -401,14 +415,14 @@ test_that("POST /description returns 422 for metadata with invalid provenance st
   )
 })
 
-test_that("POST /description returns 422 for metadata with invalid surveys structure", {
+test_that("POST /metadata returns 422 for metadata with invalid surveys structure", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   bad <- .make_desc_metadata()
   bad$surveys <- NULL  # surveys is required
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
@@ -419,14 +433,14 @@ test_that("POST /description returns 422 for metadata with invalid surveys struc
   )
 })
 
-test_that("POST /description returns 422 for metadata with invalid resolved_labels", {
+test_that("POST /metadata returns 422 for metadata with invalid resolved_labels", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
   bad <- .make_desc_metadata()
   bad$resolved_labels <- "not_a_list"
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(description_metadata = bad)
   ))
   expect_equal(res$status, 422L)
@@ -441,7 +455,7 @@ test_that("POST /description returns 422 for metadata with invalid resolved_labe
 # Block 6: P1-2 Fallback path test
 # =============================================================================
 
-test_that("POST /description fallback path accepts slot parameters and disaggregates", {
+test_that("POST /metadata fallback path accepts slot parameters and disaggregates", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
   skip_if_not_installed("arrow")
@@ -449,7 +463,7 @@ test_that("POST /description fallback path accepts slot parameters and disaggreg
   activate_single_col_survey_fixture()
 
   res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(
       pip_id = "COL_2010_ECH_INC_ALL",
       analysis_var = "welfare",
@@ -466,14 +480,14 @@ test_that("POST /description fallback path accepts slot parameters and disaggreg
 
   # Legacy 'by'-only body is not recognized as a fallback table parameter (400)
   res_legacy <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(by = "gender")
   ))
   expect_equal(res_legacy$status, 400L)
 
   # Gapped slots on fallback path are rejected with 400
   res_gap <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(
       pip_id = "COL_2010_ECH_INC_ALL",
       analysis_var = "welfare",
@@ -486,7 +500,7 @@ test_that("POST /description fallback path accepts slot parameters and disaggreg
 
   # Duplicate slot variable on fallback path is rejected with 400
   res_dup <- .desc_router$call(make_api_req(
-    method = "POST", path = "/description",
+    method = "POST", path = "/metadata",
     body = list(
       pip_id = "COL_2010_ECH_INC_ALL",
       analysis_var = "welfare",

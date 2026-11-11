@@ -1741,7 +1741,7 @@ test_that("Every OpenAPI operation has a complete summary, description, workflow
 
   spec <- .ep_router$getApiSpec()
   expected_paths <- c(
-    "/table", "/table/download", "/description", "/cell-definition",
+    "/table", "/table/download", "/metadata", "/cell-definition",
     "/lookup", "/surveys", "/countries", "/regions", "/surveys-ui",
     "/releases", "/analysis-variables", "/dimensions", "/categories",
     "/covariates", "/statistics", "/health"
@@ -1856,13 +1856,13 @@ test_that("All OpenAPI parameters have untruncated descriptions, required flags,
   }
 })
 
-test_that("POST /description and POST /table/download document top-level JSON requestBody schemas and examples", {
+test_that("POST /metadata and POST /table/download document top-level JSON requestBody schemas and examples", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
   spec <- .ep_router$getApiSpec()
 
-  desc_op <- spec$paths[["/description"]][["post"]]
+  desc_op <- spec$paths[["/metadata"]][["post"]]
   expect_true(grepl("WIP", desc_op$summary, fixed = TRUE))
   expect_true(grepl("Ignore for now", desc_op$summary, ignore.case = TRUE))
   desc_rb <- desc_op$requestBody

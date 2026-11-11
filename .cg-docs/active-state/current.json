@@ -1,20 +1,25 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-11-11T19:10:30Z",
+  "updatedAt": "2026-11-11T20:39:00Z",
   "workflow": "/cg-work",
   "status": "completed",
-  "branch": null,
-  "plan": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
-  "executionReport": ".cg-docs/work-reports/2026-11-11-remove-surveys-ui-dimensions.md",
+  "branch": "step3_metadata",
+  "plan": ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md",
+  "executionReport": ".cg-docs/work-reports/2026-11-11-rename-description-to-metadata.md",
   "currentPhase": null,
   "evidenceStatus": [
-    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-surveys-ui.R"},
-    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"}
+    {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
+    {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-api-description.R"},
+    {"id": "V3", "status": "passed", "artifact": "README.md,R/,inst/plumber/,docs/,SWAGGER_GUIDE.md,man/"},
+    {"id": "V4", "status": "passed", "artifact": "tests/testthat/test-api-description.R,tests/testthat/test-api-endpoints.R"},
+    {"id": "FULL", "status": "exception-accepted", "artifact": "tests/testthat/test-error-coverage-audit.R (2 failures; user-approved)"}
   ],
-  "unresolvedDecisions": [],
+  "unresolvedDecisions": [
+    {"id": "D1", "summary": "Repeated unrelated full-suite failure accepted by user and recorded in execution report", "blocking": false}
+  ],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md", "status": "completed"},
-    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-11-remove-surveys-ui-dimensions.md", "status": "completed"}
+    {"kind": "plan", "path": ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md", "status": "completed"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-11-rename-description-to-metadata.md", "status": "completed"}
   ],
-  "nextCommand": "/cg-review light"
+  "nextCommand": "/cg-review architecture"
 }

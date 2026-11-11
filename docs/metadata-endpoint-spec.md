@@ -1,11 +1,11 @@
 # RE-ENGINEERED TECHNICAL SPECIFICATION & EXECUTION PROMPT
-## `/description` Endpoint — Step 3 Dynamic Table Description Generation
+## `/metadata` Endpoint — Step 3 Dynamic Table Metadata Generation
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-**Objective:** Design and implement a new `/description` endpoint that generates factual, dynamically constructed natural-language descriptions of tabular results produced by `table_maker()`. This endpoint serves **Step 3 of the user experience** (ui-description.md), providing users with a comprehensive, human-readable overview of:
+**Objective:** Design and implement a `/metadata` endpoint that generates factual, dynamically constructed metadata documents for tabular results produced by `table_maker()`. This endpoint serves **Step 3 of the user experience** (ui-description.md), providing users with a comprehensive, human-readable overview of:
 
 1. **What the table contains** (cell semantics, weighting, structure)
 2. **Provenance metadata** (release, PPP year, surveys)
@@ -30,7 +30,7 @@ A **3-tier decoupled system**:
 
 ```
 ┌─────────────────────────┐
-│  API: /description      │
+│  API: /metadata         │
 │  (new endpoint)         │
 └────────────┬────────────┘
              │
@@ -103,7 +103,7 @@ A **3-tier decoupled system**:
 - When `FALSE`: return `data.table` (current contract preserved)
 - When `TRUE`: return `list(data = <data.table>, description_metadata = <list>)`
 
-**For `/description` endpoint**: Always call with `include_metadata = TRUE`.
+**For `/metadata` endpoint**: Always call with `include_metadata = TRUE`.
 
 ---
 
@@ -835,7 +835,7 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 **Tasks:**
 
-1. **Add `/description` route**
+1. **Add `/metadata` route**
    ```r
    #* Generate table description
    #* @param pip_id:character
@@ -847,7 +847,7 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
    #* @param ppp:int
    #* @param release:character
    #* @param pop_share_threshold:numeric
-   #* @get /description
+   #* @post /metadata
    #* @serializer text
    api_description <- function(pip_id, analysis_var, measures, ...) {
 
@@ -958,4 +958,4 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 - **Developer adoption**: `include_metadata = TRUE` used in 100% of internal testing workflows within 2 sprints
 - **User satisfaction**: Step 3 UI descriptions reduce support tickets related to table interpretation by >=30%
 - **Code quality**: No P0/P1 bugs in description logic within first 3 months post-launch
-- **Performance**: `/description` endpoint latency <1.5x `/table_maker` latency for equivalent queries
+- **Performance**: `/metadata` endpoint latency <1.5x `/table_maker` latency for equivalent queries

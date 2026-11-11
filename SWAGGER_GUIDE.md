@@ -23,15 +23,15 @@ Swagger UI groups the 15 endpoints into five sections matching the Table Maker f
 
 1. **Step 1 — Survey Selection**: `GET /surveys-ui`, `GET /countries`, `GET /regions`
 2. **Step 2 — Table Configuration**: `GET /categories`, `GET /analysis-variables`, `GET /statistics`, `GET /covariates`, `GET /cell-definition`
-3. **Step 3 — Table Computation & Export**: `GET /table`, `POST /table`, `POST /description` *(WIP — table metadata & info)*, `POST /table/download`
+3. **Step 3 — Table Computation & Export**: `GET /table`, `POST /table`, `POST /metadata` *(WIP — table metadata & info)*, `POST /table/download`
 4. **System & Releases**: `GET /health`, `GET /releases`
 5. **Optional / Developer Endpoints (Not Needed for UI)**: `GET /lookup`, `GET /surveys`, `GET /dimensions` *(WIP)*
 
-Required query parameters are badged `* required`, enum-constrained parameters provide dropdown selectors, and `POST /description` and `POST /table/download` include ready-to-run JSON request-body examples in the Swagger **Examples** selector.
+Required query parameters are badged `* required`, enum-constrained parameters provide dropdown selectors, and `POST /metadata` and `POST /table/download` include ready-to-run JSON request-body examples in the Swagger **Examples** selector.
 
 ## Response envelope
 
-Every JSON endpoint (all endpoints except `POST /description` and
+Every JSON endpoint (all endpoints except `POST /metadata` and
 `POST /table/download`) returns the
 same envelope shape:
 
@@ -53,7 +53,7 @@ same envelope shape:
 - `meta` commonly includes `release`; some endpoints add `filtered` and
   `n_surveys` (see `/categories` and `/covariates`).
 
-`POST /description` is one exception: its serializer is `text`, so a
+`POST /metadata` is one exception: its serializer is `text`, so a
 successful response body is raw HTML or Markdown (not the JSON envelope), and
 only its error responses are JSON-encoded strings using the same envelope
 shape.
@@ -86,12 +86,12 @@ Query parameters (works identically as a POST form body):
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
 | `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
 | `release` | string | no | defaults to the current release |
-| `include_metadata` | string | no | `"true"` to also return `description_metadata` in `meta` (used to power `POST /description` fast path); default `"false"` |
+| `include_metadata` | string | no | `"true"` to also return `description_metadata` in `meta` (used to power `POST /metadata` fast path); default `"false"` |
 
 `pip_id` format: each value must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`
 (3-letter ISO3 country code, 4-digit year, then survey-info segment), e.g.
 `ARM_2012_ILCS_CON_ALL`. This pattern is enforced server-side; it is reused
-below for `/description` and `/lookup` examples.
+below for `/metadata` and `/lookup` examples.
 
 Example (Swagger "Try it out", query parameters):
 
@@ -108,7 +108,7 @@ Errors: `400` for invalid parameters (e.g. too many `pip_id`, malformed
 passes but computation fails (e.g. unknown release, malformed `filter_base`
 JSON, domain error from `table_maker()`).
 
-### `POST /description` — render a natural-language table description
+### `POST /metadata` — render table metadata
 
 Request body must be JSON. Two mutually exclusive modes; supplying both
 returns `400`.
@@ -393,18 +393,18 @@ other endpoints.
 | Step 2, Decision 2 — statistics | `GET /analysis-variables`, `GET /statistics` |
 | Step 2, Decision 3 — layout slots | `GET /covariates` |
 | Step 2 — live cell explanation | `GET /cell-definition` |
-| Step 2 footer / Step 3 results | `GET|POST /table`, `POST /description`, `POST /table/download` |
+| Step 2 footer / Step 3 results | `GET|POST /table`, `POST /metadata`, `POST /table/download` |
 | Cross-cutting | `GET /releases`, `GET /health`, `GET /dimensions` |
 
 ## Key points
 
 1. All JSON endpoints return the envelope described above; check `status`
    before reading `data`.
-2. `POST /description` and `POST /table/download` do not use the JSON envelope
+2. `POST /metadata` and `POST /table/download` do not use the JSON envelope
    on success — they return rendered text and file bytes respectively.
 3. `filter_base` encoding differs by endpoint: on query-string endpoints
    (`/table` and `GET /cell-definition`) it is a **JSON-encoded string** that
-   the server parses with `jsonlite::fromJSON()`. On `/description`'s fallback
+   the server parses with `jsonlite::fromJSON()`. On `/metadata`'s fallback
    path (a JSON body) it must be a **native nested JSON object**, not a string
    — it is used as-is with no parsing step. On `GET /cell-definition`, malformed
    JSON returns `400` (consistent with validation).

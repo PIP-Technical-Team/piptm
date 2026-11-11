@@ -123,7 +123,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #' Build description metadata for table_maker results
 #'
 #' Internal helper that assembles execution metadata, provenance, and resolved
-#' labels for use by the `/description` endpoint.
+#' labels for use by the `/metadata` endpoint.
 #'
 #' @param params Named list of function parameters echoed from table_maker()
 #' @param result data.table result from table_maker()
@@ -434,7 +434,7 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   a [data.table::data.table()] directly (default behavior). When `TRUE`, returns
 #'   a list with two elements: `data` (the data.table) and `description_metadata`
 #'   (a structured list containing execution logs, provenance, and resolved labels
-#'   for use by the `/description` endpoint).
+#'   for use by the `/metadata` endpoint).
 #'
 #' @return When `include_metadata = FALSE` (default): A [data.table::data.table()] 
 #'   in **long format** with columns:
@@ -1023,7 +1023,7 @@ table_maker <- function(pip_id        = NULL,
         # cli_warn() styles its message with ANSI escape codes (bold spans,
         # "i" bullet glyphs, colors) whenever the ambient session is detected
         # as color-capable. These captured warnings are surfaced verbatim in
-        # the /description endpoint's text/JSON payload, which is consumed by
+        # the /metadata endpoint's text/JSON payload, which is consumed by
         # non-terminal clients, so strip ANSI styling before capturing.
         captured_warnings <<- c(captured_warnings, cli::ansi_strip(conditionMessage(w)))
         tryCatch(invokeRestart("muffleWarning"), error = function(e) NULL)
