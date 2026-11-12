@@ -23,7 +23,7 @@ Swagger UI groups the 15 endpoints into five sections matching the Table Maker f
 
 1. **Step 1 — Survey Selection**: `GET /surveys-ui`, `GET /countries`, `GET /regions`
 2. **Step 2 — Table Configuration**: `GET /categories`, `GET /analysis-variables`, `GET /statistics`, `GET /covariates`, `GET /cell-definition`
-3. **Step 3 — Table Computation & Export**: `GET /table`, `POST /table`, `POST /metadata` *(WIP — table metadata & info)*, `POST /table/download`
+3. **Step 3 — Table Computation & Export**: `GET /table`, `POST /table`, `GET /metadata`, `POST /metadata`, `POST /table/download`
 4. **System & Releases**: `GET /health`, `GET /releases`
 5. **Optional / Developer Endpoints (Not Needed for UI)**: `GET /lookup`, `GET /surveys`, `GET /dimensions` *(WIP)*
 
@@ -31,7 +31,7 @@ Required query parameters are badged `* required`, enum-constrained parameters p
 
 ## Response envelope
 
-Every JSON endpoint (all endpoints except `POST /metadata` and
+Every JSON endpoint (all endpoints except `GET|POST /metadata` and
 `POST /table/download`) returns the
 same envelope shape:
 
@@ -53,8 +53,9 @@ same envelope shape:
 - `meta` commonly includes `release`; some endpoints add `filtered` and
   `n_surveys` (see `/categories` and `/covariates`).
 
-`POST /metadata` is one exception: its serializer is `text`, so a
-successful response body is raw HTML or Markdown (not the JSON envelope), and
+`GET|POST /metadata` is one exception: its serializer is `text`, so a
+successful response body is raw HTML or Markdown with a `Content-Disposition: attachment`
+header (`table-metadata.html` or `table-metadata.md`), and
 only its error responses are JSON-encoded strings using the same envelope
 shape.
 
@@ -70,7 +71,7 @@ Computes poverty, inequality, and summary-statistic measures for one or more
 surveys. This is the endpoint behind the Step 2 "Generate table" button and
 Step 3 results.
 
-Query parameters (works identically as a POST form body):
+Query parameters (works identically as a POST form or JSON body):
 
 | Parameter | Type | Required | Notes |
 |---|---|---|---|
@@ -78,15 +79,14 @@ Query parameters (works identically as a POST form body):
 | `pip_id` | string[] | yes | repeatable; 1–15 survey identifiers |
 | `measures` | string[] | yes | repeatable; must be in `GET /statistics` |
 | `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or any slot contains `pov_status` |
-| `column` | string | no | Decision-3 Columns slot (single variable from `GET /dimensions`) |
-| `row` | string | no | Decision-3 Rows slot (single variable from `GET /dimensions`) |
-| `superColumn` | string | no | Decision-3 Super Columns slot (single variable from `GET /dimensions`) |
-| `superRow` | string | no | Decision-3 Super Rows slot (single variable from `GET /dimensions`) |
+| `column` | string | no | Decision-3 Columns slot (single variable from `GET /covariates`) |
+| `row` | string | no | Decision-3 Rows slot (single variable from `GET /covariates`) |
+| `superColumn` | string | no | Decision-3 Super Columns slot (single variable from `GET /covariates`) |
+| `superRow` | string | no | Decision-3 Super Rows slot (single variable from `GET /covariates`) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
 | `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
 | `release` | string | no | defaults to the current release |
-| `include_metadata` | string | no | `"true"` to also return `description_metadata` in `meta` (used to power `POST /metadata` fast path); default `"false"` |
 
 `pip_id` format: each value must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`
 (3-letter ISO3 country code, 4-digit year, then survey-info segment), e.g.
@@ -108,61 +108,33 @@ Errors: `400` for invalid parameters (e.g. too many `pip_id`, malformed
 passes but computation fails (e.g. unknown release, malformed `filter_base`
 JSON, domain error from `table_maker()`).
 
-### `POST /metadata` — render table metadata
+### `GET|POST /metadata` — render downloadable table metadata
 
-Request body must be JSON. Two mutually exclusive modes; supplying both
-returns `400`.
+Renders a 6-section table metadata and provenance document directly from the
+in-memory release manifest and variable registry (zero Arrow microdata I/O).
+Accepts the same table parameters as `GET|POST /table`, plus `format`
+(`"html"` or `"markdown"`, default `"html"`).
 
-**Fast path** — render only, no recomputation. Wrap the metadata returned by
-`/table?include_metadata=true` (or previously cached) under
-`description_metadata`:
-
-```json
-{
-  "description_metadata": {
-    "params": {
-      "pip_id": ["ARM_2012_ILCS_CON_ALL"],
-      "analysis_var": "welfare",
-      "measures": ["mean", "gini"],
-      "ppp": 2021
-    },
-    "provenance": { "release": "20260401_TEST", "ppp_year": 2021 },
-    "surveys": { "loaded": ["..."], "summary": ["..."] },
-    "resolved_labels": {}
-  }
-}
-```
-
-Note: the fast path does not re-validate `params.pip_id` against the
-`pip_id` pattern above — it trusts `description_metadata` as already-validated
-metadata (typically echoed back from a prior `/table?include_metadata=true`
-call) and only checks that `description_metadata` and `params` are present.
-
-**Fallback path** — recomputes via `table_maker(include_metadata = TRUE)`.
-Supply table parameters directly at the top level of the body (same field
-names as `/table`, but as native JSON types rather than query-string values —
-see note below on `filter_base`). Unlike `/table`, this path has no query-arg
-defaults: omitting `ppp` or `pop_share_threshold` here does not fall back to
-`2021`/`0.01` — it passes `NULL` through to `table_maker()`, which falls back
-to the manifest's PPP default and disables cell suppression entirely. Send
-explicit values if you want `/table`-equivalent behavior. The `pip_id` values
-here ARE validated against the pattern above (unlike the fast path).
+Example (`POST /metadata` JSON body):
 
 ```json
 {
   "pip_id": ["ARM_2012_ILCS_CON_ALL"],
   "analysis_var": "welfare",
   "measures": ["mean", "gini"],
-  "ppp": 2021
+  "column": "gender",
+  "ppp": 2021,
+  "format": "html"
 }
 ```
 
-Optional `format` field (either mode): `"html"` (default —
-`Content-Type: text/html; charset=utf-8`, inline-styled) or `"markdown"`
-(`Content-Type: text/plain`). Any other value returns `400`.
+Optional `format` parameter: `"html"` (default —
+`Content-Type: text/html; charset=utf-8`, `Content-Disposition: attachment; filename="table-metadata.html"`)
+or `"markdown"` (`Content-Type: text/plain`, `Content-Disposition: attachment; filename="table-metadata.md"`).
+Any other value returns `400`.
 
-Click **Execute** → the response body is the rendered description directly
-(HTML or Markdown text), not a JSON envelope. Validation and runtime failures
+Click **Execute** → the response body is the rendered metadata document directly
+(HTML or Markdown text), not a JSON envelope. Validation and domain failures
 return a JSON-encoded error string with status `400` or `422`.
 
 ### `POST /table/download` — convert an existing table result to CSV/RDS
@@ -213,7 +185,7 @@ Request body (JSON):
 
 - `format` is optional and defaults to `csv`; allowed values: `csv`, `rds`.
 - `data` is required and must be a non-empty array of Approach C survey objects
-  copied from `/table` response `data` when `include_metadata=false`.
+  copied from `/table` response `data`.
 
 Expected responses:
 

@@ -132,7 +132,8 @@ Rscript inst/plumber/run.R
 | `/lookup` | GET | Resolve triplets to `pip_id` |
 | `/table` | GET, POST | Compute table output |
 | `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
-| `/metadata` | POST | Render table metadata and provenance as HTML or Markdown (from metadata or by recomputation) |
+| `/metadata` | GET, POST | Render downloadable table metadata and provenance as HTML or Markdown |
+| `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 

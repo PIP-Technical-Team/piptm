@@ -1,12 +1,11 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-11-12T21:40:00Z",
+  "updatedAt": "2026-11-12T21:48:00Z",
   "workflow": "/cg-work",
-  "status": "handoff",
+  "status": "completed",
   "branch": "step3_metadata",
   "plan": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
   "executionReport": ".cg-docs/work-reports/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
-  "currentPhase": 3,
   "evidenceStatus": [
     {"id": "V1", "status": "passed", "artifact": "tests/testthat/test-description-builder.R"},
     {"id": "V2", "status": "passed", "artifact": "tests/testthat/test-description-builder.R"},
@@ -14,15 +13,13 @@
     {"id": "V4", "status": "passed", "artifact": "tests/testthat/test-api-metadata.R"},
     {"id": "V5", "status": "passed", "artifact": "tests/testthat/test-api-endpoints.R"},
     {"id": "V6", "status": "passed", "artifact": "tests/testthat/test-table-maker-v2.R"},
-    {"id": "V7", "status": "pending", "artifact": "docs/api-contract.md"},
-    {"id": "V8", "status": "pending", "artifact": "tests/testthat"}
+    {"id": "V7", "status": "passed", "artifact": "docs/api-contract.md"},
+    {"id": "V8", "status": "passed", "artifact": "tests/testthat"}
   ],
-  "unresolvedDecisions": [
-    {"id": "D1", "summary": "Pre-existing cli_abort audit failures in R/cell_explanation.R (out of scope, accepted)", "blocking": false}
-  ],
+  "unresolvedDecisions": [],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md", "status": "active"},
-    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-12-metadata-rework-and-table-maker-decoupling.md", "status": "open"}
+    {"kind": "plan", "path": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md", "status": "completed"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-12-metadata-rework-and-table-maker-decoupling.md", "status": "completed"}
   ],
-  "nextCommand": "/cg-work phase3"
+  "nextCommand": "/cg-review architecture"
 }

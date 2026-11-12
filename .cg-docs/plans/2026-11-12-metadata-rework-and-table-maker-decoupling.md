@@ -1,15 +1,15 @@
 ---
 date: 2026-11-12
 title: "Table Metadata Rework and Decoupling from table_maker()"
-status: active
+status: completed
+completed-date: 2026-11-12
 scope: "Deep"
 brainstorm: ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md"
 language: "R"
 estimated-effort: "medium"
 deviation-policy: "ask"
 phases: 3
-completed-phases: [1, 2]
-current-phase: 3
+completed-phases: [1, 2, 3]
 execution-report: ".cg-docs/work-reports/2026-11-12-metadata-rework-and-table-maker-decoupling.md"
 artifact-schema-version: 1
 tags: [metadata, table-maker, api, endpoint, description-builder, registry, manifest, decoupling, breaking-change]

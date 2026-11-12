@@ -8,21 +8,17 @@
 #' (for example, `structure_description` -> "Description") without modifying
 #' the model schema itself.
 #'
-#' @param model List produced by [`build_description_model()`] with 9 sections,
+#' @param model List produced by [`build_description_model()`] with 6 sections,
 #'   each containing `visible`, `title`, and `content` fields.
 #' @return A single character scalar containing rendered HTML.
 #' @export
 #' @examples
 #' \dontrun{
-#' result <- table_maker(
+#' model <- build_description_model(
 #'   pip_id = "COL_2010_GEIH_INC_ALL",
 #'   analysis_var = "welfare",
 #'   measures = c("mean", "gini"),
-#'   include_metadata = TRUE
-#' )
-#' model <- build_description_model(
-#'   description_metadata = result$description_metadata,
-#'   params = result$description_metadata$params
+#'   column = "gender"
 #' )
 #' cat(render_description_html(model))
 #' }

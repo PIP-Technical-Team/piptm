@@ -274,7 +274,7 @@
         {
           "id": "table-metadata-rework-and-decoupling-from-table-maker",
           "title": "Table Metadata Rework and Decoupling from table_maker()",
-          "status": "active",
+          "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
           "plan": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md"
         },

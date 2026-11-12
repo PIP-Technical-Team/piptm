@@ -195,4 +195,35 @@
 
 ### Phase 3
 
-(not started)
+#### Step 8 — Update live documentation, regenerate man/, and run the full suite
+
+- Updated `@examples` and `@param model` in `R/description_renderer.R` and
+  `R/description_renderer_html.R` to call `build_description_model()` directly
+  with table parameters (6-section model) instead of
+  `table_maker(..., include_metadata = TRUE)`.
+- Updated endpoint tables and contracts in `R/api.R`, `README.md`,
+  `SWAGGER_GUIDE.md`, and `docs/api-contract.md` (removed `include_metadata`,
+  `validate_description_input`, the 422 `description_metadata` row, and the
+  `DescriptionMetadata` schema; documented `GET|POST /metadata` and
+  `Content-Disposition: attachment`).
+- Added a top-level historical/superseded note in `docs/metadata-endpoint-spec.md`.
+- Added breaking-change entry in `NEWS.md`.
+- Regenerated `man/render_description_markdown.Rd`, `man/render_description_html.Rd`,
+  and `man/run_api.Rd` via `devtools::document()`.
+
+#### Phase 3 & Final Evidence Gate
+
+- **V7**: Grep over `R/`, `inst/plumber/`, `man/`, `README.md`,
+  `SWAGGER_GUIDE.md`, and `docs/api-contract.md` found zero callable
+  `include_metadata` parameters or `description_metadata` request modes (only
+  the 3-line HTTP 400 rejection guard in `inst/plumber/plumber.R:982-985`). PASS.
+- **V8**: `devtools::document()` clean + full suite `PASS=2782 FAIL=2 WARN=4 SKIP=8`
+  (only the 2 pre-existing out-of-scope `R/cell_explanation.R` sites in
+  `test-error-coverage-audit.R`). PASS.
+- **Mechanical self-review**: No debug statements, broken imports, new TODOs,
+  or secrets found. Out-of-scope files (`R/cell_explanation.R`,
+  `inst/extdata/tm_cell_prose.yaml`, `R/manifest.R`, `R/registry.R`,
+  `DESCRIPTION`) are untouched.
+- Plan marked `status: completed` (`completed-phases: [1, 2, 3]`,
+  `completed-date: 2026-11-12`). Roadmap feature
+  `table-metadata-rework-and-decoupling-from-table-maker` updated to `done`.

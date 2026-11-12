@@ -1,6 +1,12 @@
 # RE-ENGINEERED TECHNICAL SPECIFICATION & EXECUTION PROMPT
 ## `/metadata` Endpoint — Step 3 Dynamic Table Metadata Generation
 
+> **Historical / Superseded Note (2026-11-12):** The `table_maker(..., include_metadata = TRUE)` / `.build_description_metadata()` / `description_metadata` handoff architecture and the 9-section model (`cell_definition`, `execution_summary`, `warnings`) described in this initial specification have been **superseded** by `.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md`. Under the current architecture:
+> - `table_maker()` computes tables only and always returns a `data.table` (`include_metadata` is removed from both `table_maker()` and `GET|POST /table`).
+> - `GET|POST /metadata` accepts table parameters directly and builds a streamlined 6-section metadata document (`overview`, `provenance`, `surveys_selected`, `filters_applied`, `layout_configuration`, `statistics_selected`) purely from the in-memory release manifest and variable registry (zero Arrow microdata I/O), delivered with a downloadable `Content-Disposition: attachment` header (`table-metadata.html` or `table-metadata.md`).
+> - Page-2 cell reading explanations live exclusively in `GET /cell-definition` (`R/cell_explanation.R`).
+> - See `docs/api-contract.md` and `SWAGGER_GUIDE.md` for the authoritative live contract.
+
 ---
 
 ## EXECUTIVE SUMMARY
