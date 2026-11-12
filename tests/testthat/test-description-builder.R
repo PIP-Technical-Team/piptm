@@ -375,32 +375,14 @@ test_that("build_description_model() degrades when registry unavailable", {
 })
 
 # ── Zero-microdata guard (Step 3: R2, R19) ────────────────────────────────────
-
-test_that("build_description_model() never reads microdata", {
-  activate_builder_fixture()
-
-  # If the builder ever enters the data path, these mocks abort the call.
-  testthat::local_mocked_bindings(
-    load_surveys = function(...) stop("load_surveys must not be called"),
-    .package = "piptm"
-  )
-  testthat::local_mocked_bindings(
-    load_survey_microdata = function(...) {
-      stop("load_survey_microdata must not be called")
-    },
-    .package = "piptm"
-  )
-
-  expect_no_error(
-    piptm::build_description_model(
-      pip_id = "COL_2010_ECH_INC_ALL",
-      analysis_var = "welfare",
-      measures = "mean",
-      column = "gender",
-      release = "20260401_TEST"
-    )
-  )
-})
+#
+# Note: a mock-based guard (local_mocked_bindings() aborting load_surveys()/
+# load_survey_microdata()) was deliberately NOT used here -- neither function
+# is called by name anywhere in R/description_builder.R, so such mocks would
+# never be invoked and the test would pass vacuously even if the builder read
+# microdata through a different path. The static source-scan test below is
+# the real, meaningful guard: it directly inspects R/description_builder.R for
+# any reference to the known microdata-path symbols.
 
 test_that("R/description_builder.R contains no microdata-path references", {
   pkg_root <- tryCatch(

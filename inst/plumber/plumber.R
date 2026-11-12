@@ -13,7 +13,7 @@
 # Endpoints (this file, bottom section — see Step 3)
 #   GET|POST /table
 #   POST /table/download
-#   POST /metadata
+#   GET|POST /metadata
 #   GET /cell-definition
 #   GET /lookup
 #   GET /surveys

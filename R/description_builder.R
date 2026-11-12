@@ -1,4 +1,4 @@
-#' @importFrom data.table data.table copy fifelse setorder as.data.table
+#' @importFrom data.table data.table setorder as.data.table
 NULL
 
 # Null-coalescing operator (used internally; not exported)
@@ -296,7 +296,9 @@ build_description_model <- function(pip_id,
   }
 
   excluded_list <- if (n_excluded > 0L) {
-    data.table::as.data.table(excluded)[, .(pip_id, reason)]
+    out <- data.table::as.data.table(excluded)[, .(pip_id, reason)]
+    data.table::setorder(out, pip_id)
+    out
   } else {
     NULL
   }
@@ -317,13 +319,17 @@ build_description_model <- function(pip_id,
     piptm_filter_categories(release),
     error = function(e) list()
   )
+  # O(1) name-indexed lookup instead of an O(n) Filter() scan per requested
+  # filter variable.
+  cats_by_var <- stats::setNames(
+    filter_cats,
+    vapply(filter_cats, function(x) as.character(x$varname %||% NA_character_),
+           character(1))
+  )
 
   rows <- lapply(names(normalized_filter_base), function(varname) {
-    matches <- Filter(
-      function(x) !is.null(x$varname) && identical(x$varname, varname),
-      filter_cats
-    )
-    entry <- if (length(matches) > 0L) matches[[1L]] else list(label = varname)
+    entry <- cats_by_var[[varname]]
+    if (is.null(entry)) entry <- list(label = varname)
 
     subcats <- entry$subcategories
     if (is.null(subcats)) subcats <- list()
@@ -379,6 +385,12 @@ build_description_model <- function(pip_id,
     piptm_layout_covariates(release),
     error = function(e) list()
   )
+  # O(1) name-indexed lookup instead of an O(n) Filter() scan per active slot.
+  covs_by_var <- stats::setNames(
+    layout_covs,
+    vapply(layout_covs, function(x) as.character(x$varname %||% NA_character_),
+           character(1))
+  )
 
   rows <- list()
   for (slot_name in names(active_slots)) {
@@ -397,11 +409,7 @@ build_description_model <- function(pip_id,
       next
     }
 
-    matches <- Filter(
-      function(x) !is.null(x$varname) && identical(x$varname, varname),
-      layout_covs
-    )
-    cov_entry <- if (length(matches) > 0L) matches[[1L]] else NULL
+    cov_entry <- covs_by_var[[varname]]
     ui_label <- as.character((cov_entry$label %||% varname))
 
     cat_labels <- .resolve_covariate_category_labels(varname, registry)
