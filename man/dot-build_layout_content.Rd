@@ -2,17 +2,11 @@
 % Please edit documentation in R/description_builder.R
 \name{.build_layout_content}
 \alias{.build_layout_content}
-\title{Build layout section content for the description model.}
+\title{Build layout section content from the active slots.}
 \usage{
-.build_layout_content(meta)
-}
-\arguments{
-\item{meta}{Description metadata list.}
-}
-\value{
-List detailing covariate slots and labels.
+.build_layout_content(active_slots, poverty_line, release, registry)
 }
 \description{
-Build layout section content for the description model.
+Build layout section content from the active slots.
 }
 \keyword{internal}

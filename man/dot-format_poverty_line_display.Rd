@@ -2,7 +2,7 @@
 % Please edit documentation in R/description_builder.R
 \name{.format_poverty_line_display}
 \alias{.format_poverty_line_display}
-\title{Format one or more poverty lines for natural-language descriptions.}
+\title{Format one or more poverty lines for display.}
 \usage{
 .format_poverty_line_display(
   poverty_line,
@@ -10,18 +10,7 @@
   suffix = ""
 )
 }
-\arguments{
-\item{poverty_line}{Numeric vector of poverty thresholds.}
-
-\item{include_currency}{Logical; prefix values with \code{$} when TRUE.}
-
-\item{suffix}{Character scalar appended to each formatted value (e.g.
-\code{"/day"}); default \code{""} adds no suffix.}
-}
-\value{
-Character scalar.
-}
 \description{
-Format one or more poverty lines for natural-language descriptions.
+Format one or more poverty lines for display.
 }
 \keyword{internal}

@@ -97,12 +97,8 @@
 .MIXED_FILE_SITE_ALLOWLIST <- list(
   list(file = "R/errors.R", fn = "piptm_abort", snippet = "user_message} must be"),
   list(file = "R/errors.R", fn = "piptm_abort", snippet = "class = unique(c(class"),
-  list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "requires a resolved"),
-  list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "produced zero selected values"),
-  list(file = "R/table_maker.R", fn = ".build_description_metadata", snippet = "failed to resolve labels"),
-  list(file = "R/table_maker.R", fn = "table_maker", snippet = "include_metadata"),
   list(file = "R/table_maker.R", fn = "table_maker", snippet = "pip_id} must be provided"),
-  list(file = "R/table_maker.R", fn = "table_maker", snippet = "Manifest contains duplicate entries"),
+  list(file = "R/table_params.R", fn = ".partition_surveys_by_dimensions", snippet = "Manifest contains duplicate entries"),
   list(file = "R/table_maker.R", fn = "compute_core", snippet = "missing expected metadata columns"),
   list(file = "R/table_maker.R", fn = "compute_core", snippet = "returned inconsistent metadata"),
   list(file = "R/table_maker.R", fn = "compute_core", snippet = "surveyid_year metadata must be numeric"),
@@ -127,10 +123,7 @@
   list(file = "R/measures.R", fn = ".validate_by", snippet = "by} must be"),
   list(file = "R/measures.R", fn = ".validate_by", snippet = "Could not derive valid dimensions"),
   list(file = "R/manifest.R", fn = ".load_manifests", snippet = "Manifest directory does not exist"),
-  list(file = "R/manifest.R", fn = "set_arrow_root", snippet = "Arrow root directory does not exist"),
-  list(file = "R/description_builder.R", fn = ".build_filters_content", snippet = "filters_dt missing required columns"),
-  list(file = "R/description_builder.R", fn = ".build_statistics_content", snippet = "resolved_labels$measures"),
-  list(file = "R/description_builder.R", fn = "build_cell_definition", snippet = "filters_dt missing required columns")
+  list(file = "R/manifest.R", fn = "set_arrow_root", snippet = "Arrow root directory does not exist")
 )
 
 .is_allowlisted_cli_abort <- function(rec) {

@@ -2,19 +2,20 @@
 % Please edit documentation in R/description_builder.R
 \name{.build_overview_content}
 \alias{.build_overview_content}
-\title{Build overview section content for the description model.}
+\title{Build overview section content.}
 \usage{
-.build_overview_content(meta, params)
-}
-\arguments{
-\item{meta}{Description metadata list.}
-
-\item{params}{Original table_maker() parameters.}
-}
-\value{
-List with textual overview details.
+.build_overview_content(
+  n_measures,
+  n_surveys,
+  by,
+  active_slots,
+  registry,
+  ppp,
+  is_monetary,
+  pop_share_threshold
+)
 }
 \description{
-Build overview section content for the description model.
+Build overview section content.
 }
 \keyword{internal}

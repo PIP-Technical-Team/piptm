@@ -730,7 +730,7 @@ test_that("GET /table with 1 survey returns 200 success envelope (fixture)", {
   expect_false(is.null(body$meta))
 })
 
-test_that("GET /table with include_metadata=false (default) returns Approach C shape, distinct from include_metadata=true", {
+test_that("GET /table always returns Approach C shape and meta carries no description_metadata", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -741,23 +741,21 @@ test_that("GET /table with include_metadata=false (default) returns Approach C s
   )))
   expect_equal(res_default$status, 200L)
   body_default <- parse_api_res(res_default)
-  # Approach C: data is a per-survey object array with layout+cells; no
-  # top-level description_metadata in meta.
   expect_true(is.null(body_default$data$pip_id) || is.list(body_default$data))
   expect_false(is.null(body_default$data$layout) && is.null(body_default$data[[1L]]$layout))
   expect_null(body_default$meta$description_metadata)
 
-  res_meta <- .ep_router$call(make_api_req("GET", "/table", query = list(
+  # Even if an unadvertised include_metadata=true query string is passed,
+  # /table ignores it and returns Approach C without description_metadata.
+  res_ignored <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id   = "COL_2010_ECH_INC_ALL",
     measures = "mean",
     include_metadata = "true"
   )))
-  expect_equal(res_meta$status, 200L)
-  body_meta <- parse_api_res(res_meta)
-  # Legacy flat shape: data has no `layout`/`cells` keys at all; metadata is
-  # surfaced via meta.description_metadata instead.
-  expect_null(body_meta$data$layout)
-  expect_false(is.null(body_meta$meta$description_metadata))
+  expect_equal(res_ignored$status, 200L)
+  body_ignored <- parse_api_res(res_ignored)
+  expect_false(is.null(body_ignored$data$layout) && is.null(body_ignored$data[[1L]]$layout))
+  expect_null(body_ignored$meta$description_metadata)
 })
 
 test_that("GET /table with no release param — meta.release equals current release", {
@@ -1806,6 +1804,7 @@ test_that("All OpenAPI parameters have untruncated descriptions, required flags,
   # Required parameters per endpoint
   required_map <- list(
     "/table"           = c("analysis_var", "pip_id", "measures"),
+    "/metadata"        = c("analysis_var", "pip_id", "measures"),
     "/cell-definition" = c("analysis_var", "measures"),
     "/lookup"          = c("country_code", "year", "welfare_type")
   )
@@ -1843,7 +1842,7 @@ test_that("All OpenAPI parameters have untruncated descriptions, required flags,
         # Parameters must not set enum (which causes Swagger UI to render verbose "Available values" lists)
         expect_null(p$schema$enum, info = paste("Unexpected schema$enum on", p_label))
         expect_null(p$schema$items$enum, info = paste("Unexpected schema$items$enum on", p_label))
-        server_default_params <- c("ppp", "pop_share_threshold", "include_metadata")
+        server_default_params <- c("ppp", "pop_share_threshold", "format")
         if (!p$name %in% server_default_params) {
           expect_null(p$example, info = paste("Unexpected pre-filled example on", p_label))
           expect_null(p$schema$example, info = paste("Unexpected pre-filled schema$example on", p_label))
@@ -1862,15 +1861,19 @@ test_that("POST /metadata and POST /table/download document top-level JSON reque
 
   spec <- .ep_router$getApiSpec()
 
-  desc_op <- spec$paths[["/metadata"]][["post"]]
-  expect_true(grepl("WIP", desc_op$summary, fixed = TRUE))
-  expect_true(grepl("Ignore for now", desc_op$summary, ignore.case = TRUE))
+  desc_get <- spec$paths[["/metadata"]][["get"]]
+  desc_op  <- spec$paths[["/metadata"]][["post"]]
+  expect_false(is.null(desc_get))
+  expect_false(is.null(desc_op))
+  expect_false(grepl("WIP", desc_op$summary, fixed = TRUE))
+  expect_false(grepl("Ignore for now", desc_op$summary, ignore.case = TRUE))
   desc_rb <- desc_op$requestBody
   expect_true(isTRUE(desc_rb$required))
   desc_json <- desc_rb$content[["application/json"]]
   expect_false(is.null(desc_json))
-  # Must not wrap the payload inside a top-level `body` property
+  # Must not wrap the payload inside a top-level `body` property or expose description_metadata
   expect_null(desc_json$schema$properties$body)
+  expect_null(desc_json$schema$properties$description_metadata)
   expect_true(length(desc_json$examples) >= 2L)
 
   dl_rb <- spec$paths[["/table/download"]][["post"]]$requestBody

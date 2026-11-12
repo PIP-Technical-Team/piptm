@@ -2,17 +2,20 @@
 % Please edit documentation in R/description_builder.R
 \name{format_slot_label}
 \alias{format_slot_label}
-\title{Format slot name to display label}
+\title{Format a layout-slot name to its display label.}
 \usage{
 format_slot_label(slot)
 }
 \arguments{
-\item{slot}{Character vector: internal slot names.}
+\item{slot}{Character vector of slot names.}
 }
 \value{
-Character vector: display labels.
+Character vector of display labels.
 }
 \description{
-Format slot name to display label
+Accepts both the singular camelCase slot names used by the metadata builder
+(\code{superRow}, \code{row}, \code{superColumn}, \code{column}) and the plural keys used
+elsewhere (\code{super_rows}/\code{superRows}, \code{rows}, \code{super_columns}/\code{superColumns},
+\code{columns}).
 }
 \keyword{internal}

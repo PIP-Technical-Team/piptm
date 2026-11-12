@@ -268,13 +268,6 @@ render_description_html <- function(model) {
 
     if (
       identical(section_name, "statistics_selected") &&
-      key %in% c("analysis_var_label", "analysis_var_type")
-    ) {
-      next
-    }
-
-    if (
-      identical(section_name, "statistics_selected") &&
       identical(key, "poverty_line") &&
       is.list(value)
     ) {
@@ -330,22 +323,6 @@ render_description_html <- function(model) {
             rendered
           )
         )
-      }
-    } else if (
-      identical(section_name, "cell_definition") &&
-      identical(key, "measure_interpretation") &&
-      is.list(value) &&
-      !is.data.frame(value)
-    ) {
-      # Share measures: render non-share prose first, then the structured
-      # shares table (escaped via .render_table_html()/.html_escape()), then
-      # the identity footer (if present). Character-vector
-      # `measure_interpretation` (no shares requested) falls through to the
-      # branch below unchanged.
-      flush_list_items()
-      rendered <- .render_measure_interpretation_shares_html(value)
-      if (!is.null(rendered) && nzchar(rendered)) {
-        blocks <- c(blocks, rendered)
       }
     } else if (is.list(value)) {
       rendered <- .render_named_list_html(value, section_name, parent_key = key)
@@ -413,65 +390,27 @@ render_description_html <- function(model) {
   mapping <- c(
     pip_id = "Survey identifier",
     country_code = "Country",
+    country_label = "Country name",
     surveyid_year = "Survey year",
     welfare_type_label = "Welfare type",
+    version = "Version",
+    reason = "Exclusion reason",
+    measure = "Measure code",
     measure_label = "Measure",
     stat_group = "Group",
     analysis_var_label = "Variable of analysis",
     slot_label = "Dimension",
     varname = "Variable",
+    variable = "Label",
     ui_label = "Label",
     n_categories = "Categories",
-    measure = "Measure",
-    denominator = "Denominator",
-    numerator = "Numerator",
-    plain_meaning = "Plain meaning"
+    selected_categories = "Selected categories"
   )
 
   if (col_name %in% names(mapping)) {
     return(unname(mapping[[col_name]]))
   }
   return(col_name)
-}
-
-
-#' Render the structured shares payload of `cell_definition$measure_interpretation`.
-#'
-#' Emits non-share prose (ordered list, matching the legacy character-vector
-#' rendering), then the shares table (with mandatory HTML escaping via
-#' `.render_table_html()`), then the identity footer.
-#'
-#' @param value List with `prose`, `shares_table`, `shares_footer`.
-#' @return Character scalar HTML, or NULL when there is nothing to render.
-#' @keywords internal
-.render_measure_interpretation_shares_html <- function(value) {
-  blocks <- character()
-
-  prose_rendered <- .render_char_vector_html(value$prose)
-  if (!is.null(prose_rendered) && nzchar(prose_rendered)) {
-    blocks <- c(blocks, prose_rendered)
-  }
-
-  table_rendered <- .render_table_html(value$shares_table)
-  if (!is.null(table_rendered)) {
-    blocks <- c(blocks, table_rendered)
-  }
-
-  if (!is.null(value$shares_footer) && nzchar(value$shares_footer)) {
-    blocks <- c(
-      blocks,
-      paste0(
-        "<p style=\"margin: 8px 0 0 0; font-style: italic; color: #486581;\">",
-        .html_escape(value$shares_footer),
-        "</p>"
-      )
-    )
-  }
-
-  if (length(blocks) == 0) {
-    return(NULL)
-  }
-  return(paste(blocks, collapse = ""))
 }
 
 
@@ -576,11 +515,13 @@ render_description_html <- function(model) {
     if (identical(key, "structure_description")) return("Description")
     if (identical(key, "weighting_note")) return("Population note")
     if (identical(key, "ppp_note")) return("PPP note")
+    if (identical(key, "suppression_note")) return("Cell suppression")
   }
 
   if (identical(section_name, "provenance")) {
     if (identical(key, "release_id")) return("Release")
     if (identical(key, "ppp_year")) return("PPP year")
+    if (identical(key, "poverty_line")) return("Poverty line")
     if (identical(key, "generated_at")) return("Generated at")
   }
 
@@ -592,6 +533,7 @@ render_description_html <- function(model) {
   }
 
   if (identical(section_name, "statistics_selected")) {
+    if (identical(key, "analysis_var_name")) return("Analysis variable code")
     if (identical(key, "analysis_var_label")) return("Analysis variable")
     if (identical(key, "analysis_var_type")) return("Analysis variable type")
     if (identical(key, "measures")) return("Measures")
@@ -604,25 +546,6 @@ render_description_html <- function(model) {
 
   if (identical(section_name, "layout_configuration")) {
     if (identical(key, "layout")) return("Layout dimensions")
-  }
-
-  if (identical(section_name, "cell_definition")) {
-    if (identical(key, "population_scope")) return("Population scope")
-    if (identical(key, "measure_interpretation")) return("Measure interpretation")
-    if (identical(key, "note")) return("Note")
-  }
-
-  if (identical(section_name, "execution_summary")) {
-    if (identical(key, "n_surveys_loaded")) return("Surveys loaded")
-    if (identical(key, "n_surveys_excluded")) return("Surveys excluded")
-    if (identical(key, "n_filters_applied")) return("Filters applied")
-    if (identical(key, "n_measures_computed")) return("Measures computed")
-    if (identical(key, "suppression_summary")) return("Suppression summary")
-    if (identical(key, "suppressed_cells")) return("Suppressed cells")
-  }
-
-  if (identical(section_name, "warnings") && identical(key, "warnings")) {
-    return("Warnings")
   }
 
   label <- gsub("_", " ", key, fixed = TRUE)

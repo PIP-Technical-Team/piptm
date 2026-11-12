@@ -1,32 +1,23 @@
-# Integration Tests — /metadata endpoint & /table include_metadata
+# Integration Tests — GET|POST /metadata endpoint
 #
-# Plan: .cg-docs/plans/2026-08-26-description-endpoint-implementation.md
-#   Phase 5 (Steps 10-12)
-# Updated by: .cg-docs/plans/2026-11-11-rename-description-to-metadata.md
-#   (route rename to /metadata)
+# Plan: .cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md
+#   Phase 2 (Step 5)
 #
-# Strategy: build a plumber router from the installed package file and drive
-# it programmatically via pr$call() — no network socket is opened.
-#
-# Blocks:
-#   1.  Fast path: POST /metadata with description_metadata → Markdown
-#   2.  Error: empty body → 400
-#   3.  Error: both description_metadata and params → 400
-#   4.  Fast path: invalid metadata structure → 422
-#   5.  Fallback path: recompute via params (fixture Arrow data)
-#   6.  /table include_metadata handling
-#   7.  validate_description_input() helper unit checks
+# Strategy: build a plumber router from inst/plumber/plumber.R and drive it
+# programmatically via pr$call() — no network socket is opened, and no Arrow
+# microdata is read by /metadata.
 
 library(data.table)
 library(jsonlite)
 
-# ── Request / response helpers (mirrors test-api-endpoints.R) ─────────────────
+# ── Request / response helpers ────────────────────────────────────────────────
 
 make_api_req <- function(method = "GET", path = "/",
                          query = list(), body = NULL) {
   qs <- if (length(query) > 0L) {
     parts <- unlist(lapply(names(query), function(k) {
-      paste0(k, "=", as.character(query[[k]]))
+      v <- query[[k]]
+      paste0(k, "=", utils::URLencode(as.character(v), reserved = TRUE))
     }))
     paste(parts, collapse = "&")
   } else {
@@ -62,7 +53,7 @@ parse_api_res <- function(res, simplify = TRUE) {
   jsonlite::fromJSON(body, simplifyVector = simplify)
 }
 
-# ── Router ─────────────────────────────────────────────────────────────────────
+# ── Router ────────────────────────────────────────────────────────────────────
 
 .desc_plumber_path <- tryCatch(
   file.path(rprojroot::find_package_root_file(), "inst", "plumber", "plumber.R"),
@@ -77,261 +68,275 @@ if (!nzchar(.desc_plumber_path) || !file.exists(.desc_plumber_path)) {
   NULL
 }
 
-# ── Synthetic metadata for the fast path ───────────────────────────────────────
+# ── Manifest + registry fixture (no Arrow microdata needed for /metadata) ─────
 
-.make_desc_metadata <- function() {
-  list(
-    params = list(
-      pip_id = c("TEST_2020_SURVEY_CON_ALL"),
-      analysis_var = "welfare",
-      measures = c("mean", "gini"),
-      poverty_line = NULL,
-      ppp = 2021L,
-      release = "TEST_2024",
-      by = "gender",
-      filter_base = NULL,
-      pop_share_threshold = NULL,
-      include_metadata = TRUE
+activate_metadata_api_fixture <- function(release = "20260401_TEST",
+                                          env = parent.frame()) {
+  tmp_arrow    <- withr::local_tempdir(.local_envir = env)
+  tmp_manifest <- withr::local_tempdir(.local_envir = env)
+
+  entries <- list(
+    list(
+      pip_id = "COL_2010_ECH_INC_ALL", survey_id = "S1", country_code = "COL",
+      country_name = "Colombia", year = 2010L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list("gender", "area"),
+      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     ),
-    provenance = list(
-      release = "TEST_2024",
-      ppp_year = 2021L,
-      generated_at = "2026-08-27 12:00:00"
-    ),
-    surveys = list(
-      loaded = data.table(
-        pip_id = "TEST_2020_SURVEY_CON_ALL",
-        country_code = "TST",
-        surveyid_year = "2020",
-        welfare_type = "CON"
-      ),
-      excluded = data.table(pip_id = character(0), reason = character(0))
-    ),
-    resolved_labels = list(
-      analysis_var = list(varname = "welfare", ui_label = "Welfare", tm_type = "continuous"),
-      measures = data.table(
-        measure = c("mean", "gini"),
-        ui_label = c("Mean", "Gini index"),
-        stat_group = c("summary_statistics", "inequality")
-      ),
-      filters = NULL,
-      covariates = data.table(
-        slot = "columns", varname = "gender", ui_label = "Gender", n_categories = 2L
-      )
-    ),
-    execution = list(
-      n_surveys_loaded = 1L,
-      n_surveys_excluded = 0L,
-      n_filters_applied = 0L,
-      n_measures_computed = 2L,
-      suppression = list(
-        triggered = FALSE, threshold = NULL,
-        n_cells_suppressed = 0L, suppressed_cells = NULL
-      ),
-      warnings = NULL
+    list(
+      pip_id = "BOL_2000_ECH_INC_ALL", survey_id = "S2", country_code = "BOL",
+      country_name = "Bolivia", year = 2000L, welfare_type = "INC",
+      version = "v01_v01", survey_acronym = "ECH", module = "ALL",
+      dimensions = list(),
+      welfare_vars = list("welfare_ppp_2021_01_02"), ppp_sort = 2021L
     )
   )
+  write_fixture_manifest_tm(tmp_manifest, release, entries)
+
+  suppressMessages({
+    piptm::set_manifest_dir(tmp_manifest)
+    piptm::set_arrow_root(tmp_arrow)
+  })
+  activate_test_registry(release, .local_envir = env)
+  withr::defer(reset_piptm_env_tm(), envir = env)
+  invisible(release)
 }
 
 # =============================================================================
-# Block 1: Fast path returns Markdown
+# Block 1: Happy path — GET and POST /metadata (HTML and Markdown + download)
 # =============================================================================
 
-test_that("POST /metadata fast path returns Markdown (200) when format=markdown", {
+test_that("GET /metadata defaults to HTML (200) with attachment header", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
+  activate_metadata_api_fixture()
 
-  meta <- .make_desc_metadata()
-  res  <- .desc_router$call(make_api_req(
+  res <- .desc_router$call(make_api_req(
+    method = "GET", path = "/metadata",
+    query = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = c("mean", "gini"),
+      column = "gender"
+    )
+  ))
+
+  expect_equal(res$status, 200L)
+  expect_identical(res$headers[["Content-Type"]], "text/html; charset=utf-8")
+  expect_identical(
+    res$headers[["Content-Disposition"]],
+    'attachment; filename="table-metadata.html"'
+  )
+  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
+  expect_type(body, "character")
+  expect_match(body, "<h2[^>]*>Table Overview</h2>", perl = TRUE)
+  expect_match(body, "<h2[^>]*>Data Provenance</h2>", perl = TRUE)
+  expect_match(body, "<h2[^>]*>Surveys Selected</h2>", perl = TRUE)
+  expect_match(body, "<h2[^>]*>Table Layout Configuration</h2>", perl = TRUE)
+  expect_match(body, "<h2[^>]*>Statistics Computed</h2>", perl = TRUE)
+  expect_false(grepl("Cell Definition", body, fixed = TRUE))
+  expect_false(grepl("Execution Summary", body, fixed = TRUE))
+})
+
+test_that("POST /metadata returns Markdown (200) with attachment header when format=markdown", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+  activate_metadata_api_fixture()
+
+  res <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata",
     body = list(
-      format = "markdown",
-      description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE))
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = c("mean", "gini"),
+      column = "gender",
+      format = "markdown"
     )
   ))
 
   expect_equal(res$status, 200L)
   expect_identical(res$headers[["Content-Type"]], "text/plain; charset=UTF-8")
+  expect_identical(
+    res$headers[["Content-Disposition"]],
+    'attachment; filename="table-metadata.md"'
+  )
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  expect_type(body, "character")
-  expect_true(grepl("## Table Overview", body, fixed = TRUE))
+  expect_match(body, "## Table Overview", fixed = TRUE)
+  expect_match(body, "## Data Provenance", fixed = TRUE)
+  expect_match(body, "## Surveys Selected", fixed = TRUE)
+  expect_match(body, "## Table Layout Configuration", fixed = TRUE)
+  expect_match(body, "## Statistics Computed", fixed = TRUE)
   expect_false(grepl("## Cell Definition", body, fixed = TRUE))
-  expect_true(grepl("## Execution Summary", body, fixed = TRUE))
+  expect_false(grepl("## Execution Summary", body, fixed = TRUE))
 })
 
-test_that("POST /metadata fast path defaults to HTML when format is omitted", {
+test_that("GET and POST /metadata produce equivalent documents including filter_base", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
+  activate_metadata_api_fixture()
 
-  meta <- .make_desc_metadata()
-  res  <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE)))
-  ))
-
-  expect_equal(res$status, 200L)
-  expect_identical(res$headers[["Content-Type"]], "text/html; charset=utf-8")
-  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  expect_type(body, "character")
-  expect_true(grepl("<h2", body, fixed = TRUE))
-  expect_true(grepl("Table Overview", body, fixed = TRUE))
-  expect_false(grepl("Cell Definition", body, fixed = TRUE))
-  expect_false(grepl("## Table Overview", body, fixed = TRUE))
-})
-
-test_that("POST /metadata fast path returns HTML when format=html in body", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  meta <- .make_desc_metadata()
-  res  <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(
-      format = "html",
-      description_metadata = jsonlite::fromJSON(jsonlite::toJSON(meta, auto_unbox = TRUE))
+  res_get <- .desc_router$call(make_api_req(
+    method = "GET", path = "/metadata",
+    query = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      row = "area",
+      filter_base = '{"gender":[1]}',
+      format = "markdown"
     )
   ))
 
-  expect_equal(res$status, 200L)
-  expect_identical(res$headers[["Content-Type"]], "text/html; charset=utf-8")
-  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  expect_type(body, "character")
-  expect_true(grepl("<h2", body, fixed = TRUE))
-  expect_true(grepl("Table Overview", body, fixed = TRUE))
-  expect_true(grepl("Description:", body, fixed = TRUE))
-  expect_false(grepl("Cell Definition", body, fixed = TRUE))
-  expect_false(grepl("## Table Overview", body, fixed = TRUE))
+  res_post <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      row = "area",
+      filter_base = list(gender = list(1L)),
+      format = "markdown"
+    )
+  ))
+
+  expect_equal(res_get$status, 200L)
+  expect_equal(res_post$status, 200L)
+
+  strip_ts <- function(x) {
+    gsub("- Generated at: [^\n]+", "- Generated at: <TS>", x)
+  }
+  body_get  <- strip_ts(if (is.raw(res_get$body)) rawToChar(res_get$body) else res_get$body)
+  body_post <- strip_ts(if (is.raw(res_post$body)) rawToChar(res_post$body) else res_post$body)
+  expect_identical(body_get, body_post)
+  expect_match(body_get, "## Sample Base Filters", fixed = TRUE)
+  expect_match(body_get, "| Rows | area |", fixed = TRUE)
+  expect_match(body_get, "| Columns | gender |", fixed = TRUE)
 })
 
-test_that("POST /metadata returns 400 for empty body", {
+# =============================================================================
+# Block 2: Validation & error paths (400 and 422)
+# =============================================================================
+
+test_that("GET and POST /metadata return 400 when required parameters are missing", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  res <- .desc_router$call(make_api_req(
+  res_empty_post <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata", body = list()
   ))
-  expect_equal(res$status, 400L)
+  expect_equal(res_empty_post$status, 400L)
+
+  res_missing_pip <- .desc_router$call(make_api_req(
+    method = "GET", path = "/metadata",
+    query = list(analysis_var = "welfare", measures = "mean")
+  ))
+  expect_equal(res_missing_pip$status, 400L)
 })
 
-test_that("POST /metadata returns 400 for invalid format", {
+test_that("/metadata returns 400 for invalid format", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  meta <- .make_desc_metadata()
   res <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata",
-    body = list(format = "pdf", description_metadata = meta)
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      format = "pdf"
+    )
   ))
 
   expect_equal(res$status, 400L)
   err <- parse_api_res(res, simplify = FALSE)
-  expect_true(grepl("format", paste(unlist(err$error), collapse = " "), ignore.case = TRUE))
+  expect_true(grepl("format", paste(unlist(err$errors), collapse = " "), ignore.case = TRUE))
 })
 
-test_that("POST /metadata returns 400 when both metadata and params supplied", {
+test_that("POST /metadata rejects legacy description_metadata bodies with 400", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  meta <- .make_desc_metadata()
-  body <- list(
-    description_metadata = meta,
-    pip_id = "COL_2010_ECH_INC_ALL",
-    analysis_var = "welfare",
-    measures = "mean"
-  )
-  res <- .desc_router$call(make_api_req(method = "POST", path = "/metadata", body = body))
-  expect_equal(res$status, 400L)
-})
-
-test_that("POST /metadata returns 422 for metadata missing params", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  bad <- .make_desc_metadata()
-  bad$params <- NULL
-  res <- .desc_router$call(make_api_req(
+  res_meta_only <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata",
-    body = list(description_metadata = bad)
+    body = list(description_metadata = list(params = list(pip_id = "COL_2010_ECH_INC_ALL")))
   ))
-  expect_equal(res$status, 422L)
-  body <- parse_api_res(res)
-  expect_identical(
-    unlist(body$errors),
-    "The table description could not be generated because the provided table metadata is incomplete or invalid."
-  )
-})
+  expect_equal(res_meta_only$status, 400L)
 
-# =============================================================================
-# Block 2: validate_description_input() helper unit checks
-# =============================================================================
-
-test_that("validate_description_input distinguishes fast vs fallback modes", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  # Source helpers.R into a scratch environment to call the non-exported helper.
-  # helpers.R lives alongside plumber.R.
-  helpers_path <- file.path(dirname(.desc_plumber_path), "helpers.R")
-  skip_if(!file.exists(helpers_path),
-          "helpers.R not found alongside plumber.R")
-  src_env <- new.env(parent = globalenv())
-  source(helpers_path, local = src_env)
-  vdd <- get("validate_description_input", envir = src_env)
-
-  meta <- .make_desc_metadata()
-  meta_only <- vdd(list(description_metadata = meta))
-  expect_true(meta_only$valid)
-  expect_identical(meta_only$mode, "metadata")
-
-  params_only <- vdd(list(pip_id = "COL_2010_ECH_INC_ALL", analysis_var = "welfare",
-                          measures = "mean"))
-  expect_true(params_only$valid)
-  expect_identical(params_only$mode, "fallback")
-
-  slots_only <- vdd(list(pip_id = "COL_2010_ECH_INC_ALL", analysis_var = "welfare",
-                         measures = "mean", column = "gender"))
-  expect_true(slots_only$valid)
-  expect_identical(slots_only$mode, "fallback")
-
-  both <- vdd(list(
-    description_metadata = meta,
-    pip_id = "COL_2010_ECH_INC_ALL"
-  ))
-  expect_false(both$valid)
-  expect_true(any(grepl("not both", both$errors)))
-
-  none <- vdd(list(foo = "bar"))
-  expect_false(none$valid)
-  expect_identical(none$mode, NA_character_)
-
-  empty <- vdd(list())
-  expect_false(empty$valid)
-})
-
-# =============================================================================
-# Block 3: /table include_metadata param handling (validation only, no Arrow)
-# =============================================================================
-
-test_that("GET /table with invalid include_metadata does not error at param level", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  # include_metadata defaults to "false"; an invalid value falls back to FALSE.
-  # Without Arrow fixtures the request still fails on missing data, but not on
-  # the include_metadata param itself. Expect a 400/422 from validation, not a
-  # plumber 500.
-  res <- .desc_router$call(make_api_req(
-    method = "GET", path = "/table",
-    query = list(
-      pip_id = "BAD", analysis_var = "welfare",
-      measures = "mean", include_metadata = "notabool"
+  res_both <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      description_metadata = list(params = list()),
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean"
     )
   ))
-  expect_true(res$status %in% c(400L, 422L))
+  expect_equal(res_both$status, 400L)
+})
+
+test_that("/metadata rejects gapped or duplicate layout slots with 400", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+
+  res_gap <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      superColumn = "area"
+    )
+  ))
+  expect_equal(res_gap$status, 400L)
+
+  res_dup <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      row = "gender"
+    )
+  ))
+  expect_equal(res_dup$status, 400L)
+})
+
+test_that("/metadata returns 422 on domain errors (all surveys excluded or unknown release)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.desc_router), "Router could not be created")
+  activate_metadata_api_fixture()
+
+  # BOL_2000 has no gender dimension -> all surveys excluded -> 422
+  res_excl <- .desc_router$call(make_api_req(
+    method = "GET", path = "/metadata",
+    query = list(
+      pip_id = "BOL_2000_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender"
+    )
+  ))
+  expect_equal(res_excl$status, 422L)
+
+  # Unknown release -> 422
+  res_rel <- .desc_router$call(make_api_req(
+    method = "GET", path = "/metadata",
+    query = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      release = "UNKNOWN_RELEASE_9999"
+    )
+  ))
+  expect_equal(res_rel$status, 422L)
 })
 
 # =============================================================================
-# Block 4: Router introspection + CORS (Step 12)
+# Block 3: Router introspection, OpenAPI, and CORS
 # =============================================================================
 
 test_that("/metadata appears in router endpoint introspection and /description is absent", {
@@ -354,32 +359,30 @@ test_that("POST /description returns 404 after rename to /metadata", {
   expect_equal(res$status, 404L)
 })
 
-test_that("POST /metadata OpenAPI spec does not expose req as a parameter", {
+test_that("GET and POST /metadata OpenAPI spec does not expose req or description_metadata", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  # Generate the OpenAPI spec
   spec <- .desc_router$getApiSpec()
-  
-  # Navigate to POST /metadata
+
+  desc_get  <- spec$paths[["/metadata"]][["get"]]
   desc_post <- spec$paths[["/metadata"]][["post"]]
-  expect_false(is.null(desc_post), "POST /metadata should exist in OpenAPI spec")
-  expect_null(spec$paths[["/description"]])
-  
-  # Check that 'req' is NOT listed as a parameter
-  # req is a Plumber-injected request object, not a user-supplied parameter
-  # The bug was: @param req caused Swagger to show POST /metadata?req=<string>
-  params <- desc_post$parameters
-  if (!is.null(params) && length(params) > 0) {
-    param_names <- vapply(params, function(p) p$name %||% "", character(1))
-    expect_false("req" %in% param_names,
-                 "req should not appear as a parameter in OpenAPI spec")
+  expect_false(is.null(desc_get))
+  expect_false(is.null(desc_post))
+
+  for (op in list(desc_get, desc_post)) {
+    params <- op$parameters %||% list()
+    if (length(params) > 0L) {
+      param_names <- vapply(params, function(p) p$name %||% "", character(1))
+      expect_false("req" %in% param_names)
+      expect_false("res" %in% param_names)
+      expect_false("description_metadata" %in% param_names)
+    }
   }
-  
-  # Success criterion: no 'req' parameter means Swagger won't generate
-  # POST /metadata?req=<string> interface. The endpoint will be
-  # callable with a JSON body (even if Plumber doesn't auto-generate
-  # full requestBody schema for manually-parsed bodies).
+
+  rb_props <- names(desc_post$requestBody$content[["application/json"]]$schema$properties)
+  expect_false("description_metadata" %in% rb_props)
+  expect_true(all(c("pip_id", "analysis_var", "measures", "format") %in% rb_props))
 })
 
 test_that("OPTIONS preflight works for /metadata (CORS)", {
@@ -391,123 +394,4 @@ test_that("OPTIONS preflight works for /metadata (CORS)", {
   headers <- res$headers
   expect_identical(headers[["Access-Control-Allow-Origin"]], "*")
   expect_true(grepl("POST", headers[["Access-Control-Allow-Methods"]], fixed = TRUE))
-})
-
-# =============================================================================
-# Block 5: P1-1 Malformed metadata structure tests
-# =============================================================================
-
-test_that("POST /metadata returns 422 for metadata with invalid provenance structure", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  bad <- .make_desc_metadata()
-  bad$provenance <- "string"  # should be list
-  res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(description_metadata = bad)
-  ))
-  expect_equal(res$status, 422L)
-  body <- parse_api_res(res)
-  expect_identical(
-    unlist(body$errors),
-    "The table description could not be generated because the provided table metadata is incomplete or invalid."
-  )
-})
-
-test_that("POST /metadata returns 422 for metadata with invalid surveys structure", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  bad <- .make_desc_metadata()
-  bad$surveys <- NULL  # surveys is required
-  res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(description_metadata = bad)
-  ))
-  expect_equal(res$status, 422L)
-  body <- parse_api_res(res)
-  expect_identical(
-    unlist(body$errors),
-    "The table description could not be generated because the provided table metadata is incomplete or invalid."
-  )
-})
-
-test_that("POST /metadata returns 422 for metadata with invalid resolved_labels", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-
-  bad <- .make_desc_metadata()
-  bad$resolved_labels <- "not_a_list"
-  res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(description_metadata = bad)
-  ))
-  expect_equal(res$status, 422L)
-  body <- parse_api_res(res)
-  expect_identical(
-    unlist(body$errors),
-    "The table description could not be generated because the provided table metadata is incomplete or invalid."
-  )
-})
-
-# =============================================================================
-# Block 6: P1-2 Fallback path test
-# =============================================================================
-
-test_that("POST /metadata fallback path accepts slot parameters and disaggregates", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.desc_router), "Router could not be created")
-  skip_if_not_installed("arrow")
-
-  activate_single_col_survey_fixture()
-
-  res <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(
-      pip_id = "COL_2010_ECH_INC_ALL",
-      analysis_var = "welfare",
-      measures = "mean",
-      column = "gender",
-      format = "markdown"
-    )
-  ))
-
-  expect_equal(res$status, 200L)
-  body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  expect_match(body, "gender", ignore.case = TRUE)
-  expect_false(grepl("Cell Definition", body, fixed = TRUE))
-
-  # Legacy 'by'-only body is not recognized as a fallback table parameter (400)
-  res_legacy <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(by = "gender")
-  ))
-  expect_equal(res_legacy$status, 400L)
-
-  # Gapped slots on fallback path are rejected with 400
-  res_gap <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(
-      pip_id = "COL_2010_ECH_INC_ALL",
-      analysis_var = "welfare",
-      measures = "mean",
-      column = "gender",
-      superColumn = "area"
-    )
-  ))
-  expect_equal(res_gap$status, 400L)
-
-  # Duplicate slot variable on fallback path is rejected with 400
-  res_dup <- .desc_router$call(make_api_req(
-    method = "POST", path = "/metadata",
-    body = list(
-      pip_id = "COL_2010_ECH_INC_ALL",
-      analysis_var = "welfare",
-      measures = "mean",
-      column = "gender",
-      row = "gender"
-    )
-  ))
-  expect_equal(res_dup$status, 400L)
 })

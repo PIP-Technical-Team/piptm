@@ -25,13 +25,6 @@
 #'
 #' @keywords internal
 #' @noRd
-.PIPTM_DESCRIPTION_METADATA_USER_ERROR <- paste0(
-  "The table description could not be generated because the provided table ",
-  "metadata is incomplete or invalid."
-)
-
-#' @keywords internal
-#' @noRd
 .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR <- paste0(
   "The selected sample filter could not be read. Please reset your filters ",
   "and try again."

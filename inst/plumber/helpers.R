@@ -862,63 +862,6 @@ validate_cell_definition_input <- function(body) {
   )
 }
 
-#' Validate inputs for the /metadata fallback path
-#'
-#' Ensures the fallback body contains at least the required table parameters.
-#' The heavy lifting is delegated to [validate_table_input()]; this helper
-#' mainly checks the distinction between the fast and fallback paths and
-#' rejects ambiguous bodies.
-#'
-#' @param body Parsed JSON request body (a list).
-#'
-#' @return A named list with `valid` (logical), `errors` (character vector),
-#'   and `mode` ("metadata" | "fallback").
-validate_description_input <- function(body) {
-  errors <- character()
-
-  if (!is.list(body) || length(body) == 0L) {
-    return(list(
-      valid = FALSE,
-      errors = "Request body must be a non-empty JSON object.",
-      mode = NA_character_
-    ))
-  }
-
-  fmt <- body$format %||% NULL
-  if (!is.null(fmt)) {
-    if (!is.character(fmt) || length(fmt) != 1L || is.na(fmt)) {
-      errors <- c(errors, "`format` must be a single string when provided.")
-    } else {
-      fmt <- tolower(trimws(fmt))
-      if (!(fmt %in% c("markdown", "html"))) {
-        errors <- c(errors, "`format` must be one of: markdown, html.")
-      }
-    }
-  }
-
-  has_metadata <- "description_metadata" %in% names(body)
-  param_fields <- intersect(
-    names(body),
-    c("pip_id", "analysis_var", "measures", "poverty_line",
-      .SLOT_NAMES,
-      "filter_base", "ppp", "release", "pop_share_threshold")
-  )
-  has_params <- length(param_fields) > 0L
-
-  if (has_metadata && has_params) {
-    errors <- c(errors,
-      "Request must provide either `description_metadata` OR table parameters, not both.")
-  }
-
-  mode <- if (has_metadata) "metadata" else if (has_params) "fallback" else NA_character_
-  if (is.na(mode)) {
-    errors <- c(errors,
-      "Request body must contain `description_metadata` or table parameters.")
-  }
-
-  list(valid = length(errors) == 0L, errors = errors, mode = mode)
-}
-
 #' Validate inputs for the /lookup endpoint
 #'
 #' Checks that `country_code`, `year`, and `welfare_type` are all provided,

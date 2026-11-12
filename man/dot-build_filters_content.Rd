@@ -2,17 +2,11 @@
 % Please edit documentation in R/description_builder.R
 \name{.build_filters_content}
 \alias{.build_filters_content}
-\title{Build filters section content for the description model.}
+\title{Build filters section content from the normalized filter_base.}
 \usage{
-.build_filters_content(meta)
-}
-\arguments{
-\item{meta}{Description metadata list.}
-}
-\value{
-List describing active filters, or NULL when absent.
+.build_filters_content(normalized_filter_base, release)
 }
 \description{
-Build filters section content for the description model.
+Build filters section content from the normalized filter_base.
 }
 \keyword{internal}

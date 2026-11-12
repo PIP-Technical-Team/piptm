@@ -14,7 +14,7 @@ A list of named lists suitable for JSON serialization.
 }
 \description{
 Returns one row per manifest entry enriched with UI-friendly labels for
-country and welfare type. \code{country_label} is the manifest
-\code{country_name} (or \code{NA} when that field is absent).
-\code{welfare_label} maps \code{INC} to Income and \code{CON} to Consumption.
+country and welfare type. \code{country_label} is the manifest \code{country_name}
+(or \code{NA} when that field is absent). \code{welfare_label} maps \code{INC} to
+Income and \code{CON} to Consumption.
 }

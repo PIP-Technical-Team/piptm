@@ -2,44 +2,73 @@
 % Please edit documentation in R/description_builder.R
 \name{build_description_model}
 \alias{build_description_model}
-\title{Build structured description data model from metadata}
+\title{Build a structured table-metadata model from table parameters}
 \usage{
-build_description_model(description_metadata, params)
+build_description_model(
+  pip_id,
+  analysis_var = "welfare",
+  measures = "mean",
+  poverty_line = NULL,
+  column = NULL,
+  row = NULL,
+  superColumn = NULL,
+  superRow = NULL,
+  filter_base = NULL,
+  ppp = 2021L,
+  pop_share_threshold = 0.001,
+  release = NULL
+)
 }
 \arguments{
-\item{description_metadata}{List returned by \code{.build_description_metadata()} in
-\code{table_maker()}. Must contain \code{params}, \code{provenance}, \code{surveys},
-\code{resolved_labels}, and \code{execution} fields.}
+\item{pip_id}{Character vector of requested survey identifiers.}
 
-\item{params}{Original \code{table_maker()} parameter list for reference.}
+\item{analysis_var}{Character scalar analysis variable name.}
+
+\item{measures}{Character vector of requested measure keys, in request order.}
+
+\item{poverty_line}{Numeric scalar/vector poverty line(s), or \code{NULL}.}
+
+\item{column, row, superColumn, superRow}{Character scalar layout-slot
+covariate names, or \code{NULL} for an unused slot.}
+
+\item{filter_base}{Named list sample filter, or \code{NULL}.}
+
+\item{ppp}{Integer scalar PPP reference year.}
+
+\item{pop_share_threshold}{Numeric scalar cell-suppression threshold in
+\verb{(0, 1)}, or \code{NULL} to disable suppression.}
+
+\item{release}{Character scalar release ID, or \code{NULL} for the current release.}
 }
 \value{
-List with 9 section keys: \code{overview}, \code{provenance}, \code{surveys_selected},
-\code{filters_applied}, \code{statistics_selected}, \code{layout_configuration},
-\code{cell_definition}, \code{execution_summary}, \code{warnings}. Each section has
-\code{visible}, \code{title}, and \code{content} fields.
+A named list of 6 sections (\code{overview}, \code{provenance},
+\code{surveys_selected}, \code{filters_applied}, \code{layout_configuration},
+\code{statistics_selected}), each with \code{visible}, \code{title}, and \code{content} fields.
 }
 \description{
-Constructs a structured description model with 9 sections, each with
-conditional visibility logic. This model serves as an intermediate
-representation that can be rendered to multiple formats (Markdown, HTML, JSON).
+Constructs the 6-section table-metadata document model directly from the
+request parameters plus the in-memory release manifest and variable registry.
+This builder performs \strong{no} Arrow/microdata I/O and never calls
+\code{\link[=table_maker]{table_maker()}}: survey inclusion/exclusion is resolved from the manifest via
+the shared \code{\link[=.partition_surveys_by_dimensions]{.partition_surveys_by_dimensions()}} helper, and all variable,
+category, and measure labels come from the release registry accessors
+(\code{piptm_analysis_variables()}, \code{piptm_filter_categories()},
+\code{piptm_layout_covariates()}, \code{piptm_stat_groups()},
+\code{piptm_variable_registry()}).
+}
+\details{
+The returned model is rendered to HTML or Markdown by
+\code{\link[=render_description_html]{render_description_html()}} / \code{\link[=render_description_markdown]{render_description_markdown()}}.
 }
 \examples{
 \dontrun{
-result <- table_maker(
+model <- build_description_model(
   pip_id = "COL_2010_GEIH_INC_ALL",
   analysis_var = "welfare",
   measures = c("mean", "gini"),
-  include_metadata = TRUE
+  column = "gender"
 )
-
-description_model <- build_description_model(
-  description_metadata = result$description_metadata,
-  params = result$description_metadata$params
-)
-
-description_model$overview
-description_model$cell_definition
+model$overview
+model$statistics_selected
 }
 }
-\keyword{internal}

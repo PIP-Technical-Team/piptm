@@ -2,7 +2,7 @@
 % Please edit documentation in R/description_builder.R
 \name{format_welfare_type}
 \alias{format_welfare_type}
-\title{Format welfare type code to label}
+\title{Format welfare type code to label.}
 \usage{
 format_welfare_type(welfare_type_code)
 }
@@ -13,6 +13,6 @@ format_welfare_type(welfare_type_code)
 Character vector: "Income" or "Consumption".
 }
 \description{
-Format welfare type code to label
+Format welfare type code to label.
 }
 \keyword{internal}

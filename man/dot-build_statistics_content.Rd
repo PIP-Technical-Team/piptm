@@ -2,19 +2,19 @@
 % Please edit documentation in R/description_builder.R
 \name{.build_statistics_content}
 \alias{.build_statistics_content}
-\title{Build statistics section content for the description model.}
+\title{Build statistics section content from the registry.}
 \usage{
-.build_statistics_content(meta, params)
-}
-\arguments{
-\item{meta}{Description metadata list.}
-
-\item{params}{Original table_maker() parameters.}
-}
-\value{
-List describing measures and analysis variable metadata.
+.build_statistics_content(
+  analysis_var,
+  analysis_var_label,
+  analysis_var_type,
+  measures,
+  poverty_line,
+  ppp,
+  release
+)
 }
 \description{
-Build statistics section content for the description model.
+Build statistics section content from the registry.
 }
 \keyword{internal}

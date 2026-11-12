@@ -270,6 +270,20 @@
           "status": "done",
           "brainstorm": ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
           "plan": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md"
+        },
+        {
+          "id": "table-metadata-rework-and-decoupling-from-table-maker",
+          "title": "Table Metadata Rework and Decoupling from table_maker()",
+          "status": "active",
+          "brainstorm": ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+          "plan": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md"
+        },
+        {
+          "id": "structured-json-output-format-for-get-post-metadata",
+          "title": "Structured JSON output format for GET|POST /metadata",
+          "description": "The /metadata endpoint currently renders only HTML and Markdown documents. A structured JSON `format` option would return the 6 metadata sections (overview, provenance, surveys_selected, filters_applied, layout_configuration, statistics_selected) in the standard API JSON envelope, so the PIP platform UI could render table metadata natively instead of embedding a pre-rendered document. Surfaced as an out-of-scope side idea during planning of `.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md`, which explicitly scopes JSON output out.",
+          "status": "idea",
+          "plan": null
         }
       ]
     },

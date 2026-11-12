@@ -2,17 +2,11 @@
 % Please edit documentation in R/description_builder.R
 \name{.build_surveys_content}
 \alias{.build_surveys_content}
-\title{Build surveys section content for the description model.}
+\title{Build surveys section content from the manifest partition.}
 \usage{
-.build_surveys_content(meta)
-}
-\arguments{
-\item{meta}{Description metadata list.}
-}
-\value{
-List with loaded/excluded survey tables and counts.
+.build_surveys_content(included, excluded, release)
 }
 \description{
-Build surveys section content for the description model.
+Build surveys section content from the manifest partition.
 }
 \keyword{internal}

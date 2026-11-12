@@ -118,271 +118,6 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
   matched$pip_id
 }
 
-# ── .build_description_metadata ───────────────────────────────────────────────
-
-#' Build description metadata for table_maker results
-#'
-#' Internal helper that assembles execution metadata, provenance, and resolved
-#' labels for use by the `/metadata` endpoint.
-#'
-#' @param params Named list of function parameters echoed from table_maker()
-#' @param result data.table result from table_maker()
-#' @param release Character scalar release ID
-#' @param excluded_surveys data.table with pip_id and reason columns
-#' @param suppressed_cells data.table of suppressed cells, or NULL
-#' @param captured_warnings Character vector of warning messages
-#'
-#' @return Named list conforming to spec §2.1 schema
-#' @keywords internal
-.build_description_metadata <- function(
-    params,
-    result,
-    release,
-    excluded_surveys,
-    suppressed_cells,
-    captured_warnings) {
-  if (is.null(release) || !nzchar(release)) {
-    cli::cli_abort(
-      c(
-        "{.fn .build_description_metadata} requires a resolved {.arg release} identifier.",
-        "i" = "Callers must resolve the manifest release before assembling metadata."
-      )
-    )
-  }
-  # ── Provenance ────────────────────────────────────────────────────────────
-  provenance <- list(
-    release = release,
-    ppp_year = params$ppp,
-    generated_at = sprintf(
-      "%s UTC",
-      format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC", usetz = FALSE)
-    )
-  )
-  
-  # ── Surveys ───────────────────────────────────────────────────────────────
-  # Loaded surveys are derived from the result table, which reliably carries
-  # pip_id, country_code, surveyid_year, and welfare_type. The manifest does
-  # not expose `country_name` or `surveyid_year` columns, so we must not query
-  # it for these (see piptm_surveys_ui note). Attempt to enrich with a
-  # country label best-effort without breaking the assembly.
-  loaded_pip_ids <- unique(result$pip_id)
-  loaded_surveys <- unique(result[, .(pip_id, country_code, surveyid_year,
-                                      welfare_type)])
-  data.table::setorder(loaded_surveys, pip_id)
-  
-  # ── Resolved Labels ───────────────────────────────────────────────────────
-  # All registry lookups are best-effort: a missing registry or measure spec
-  # must never abort the primary table_maker() result. Failures degrade to
-  # fallback values instead of raising.
-  empty_measures <- data.table::data.table(
-    measure = character(0), ui_label = character(0), stat_group = character(0)
-  )
-  empty_covariates <- data.table::data.table(
-    slot = character(0), varname = character(0), ui_label = character(0),
-    n_categories = integer(0)
-  )
-
-  # Analysis variable
-  reg <- tryCatch(piptm_variable_registry(release), error = function(e) NULL)
-  analysis_var_entry <- if (is.null(reg)) NULL else reg[[params$analysis_var]]
-  if (is.null(analysis_var_entry)) {
-    analysis_var_info <- list(
-      varname = params$analysis_var,
-      ui_label = params$analysis_var,
-      tm_type = "unknown"
-    )
-  } else {
-    analysis_var_info <- list(
-      varname = analysis_var_entry$varname %||% params$analysis_var,
-      ui_label = analysis_var_entry$ui_label %||% params$analysis_var,
-      tm_type = analysis_var_entry$tm_type %||% "unknown"
-    )
-  }
-
-  # Measures
-  stat_groups <- tryCatch(piptm_stat_groups(release), error = function(e) list())
-  measures_dt <- empty_measures
-  if (length(stat_groups) > 0L) {
-    group_tables <- lapply(stat_groups, function(group) {
-      group_measures <- group$measures
-      if (is.null(group_measures) || length(group_measures) == 0L) {
-        return(NULL)
-      }
-      data.table::data.table(
-        measure = vapply(group_measures, function(m) m$measure %||% "unknown", character(1)),
-        ui_label = vapply(
-          group_measures,
-          function(m) m$label %||% (m$measure %||% "unknown"),
-          character(1)
-        ),
-        stat_group = group$group %||% ""
-      )
-    })
-    group_tables <- Filter(Negate(is.null), group_tables)
-    if (length(group_tables) > 0L) {
-      measures_dt <- data.table::rbindlist(group_tables, use.names = TRUE, fill = TRUE)
-      measures_dt <- measures_dt[measure %chin% params$measures]
-    }
-  }
-  if (nrow(measures_dt) == 0L && length(params$measures) > 0L) {
-    cli::cli_warn(
-      c(
-        "No stat_groups registry entries found for requested measures: {.val {params$measures}}.",
-        "i" = "Descriptions will fall back to raw measure keys."
-      )
-    )
-  }
-
-  # Filters
-  filters_dt <- NULL
-  if (!is.null(params$filter_base)) {
-    filter_cats <- tryCatch(piptm_filter_categories(release), error = function(e) list())
-    filters_list <- lapply(names(params$filter_base), function(varname) {
-      matches <- Filter(function(x) !is.null(x$varname) && identical(x$varname, varname),
-                        filter_cats)
-      if (length(matches) == 0L) matches <- list(list(label = varname))
-      filter_entry <- matches[[1]]
-
-      selected_codes <- unlist(params$filter_base[[varname]], use.names = FALSE)
-      if (length(selected_codes) == 0L) {
-        cli_abort(
-          c(
-            "Internal error: {.arg filter_base} variable {.val {varname}} produced zero selected values during metadata assembly.",
-            "i" = "Metadata requires at least one selected category per filter."
-          )
-        )
-      }
-      subcats        <- filter_entry$subcategories
-      if (is.null(subcats)) subcats <- list()
-      if (length(subcats) > 0) {
-        subcat_codes <- vapply(subcats, function(s) as.character(s$code %||% ""), character(1))
-        subcat_labels <- vapply(
-          subcats,
-          function(s) s$label %||% as.character(s$code %||% ""),
-          character(1)
-        )
-        subcat_map <- stats::setNames(subcat_labels, subcat_codes)
-      } else {
-        subcat_map <- character(0)
-      }
-      selected_labels <- vapply(selected_codes, function(code) {
-        code_char <- as.character(code)
-        resolved <- subcat_map[code_char]
-        if (length(resolved) == 0L || is.na(resolved[[1L]]) || !nzchar(resolved[[1L]])) {
-          code_char
-        } else {
-          unname(resolved[[1L]])
-        }
-      }, character(1))
-      if (length(selected_labels) == 0L) {
-        cli_abort(
-          c(
-            "Internal error: {.arg filter_base} variable {.val {varname}} failed to resolve labels for its selections.",
-            "i" = "Check registry entries for {.val {varname}}."
-          )
-        )
-      }
-
-      list(
-        varname          = varname,
-        ui_label         = filter_entry$label %||% varname,
-        selected_codes   = list(as.integer(selected_codes)),
-        selected_labels  = list(unname(selected_labels))
-      )
-    })
-    filters_list <- Filter(Negate(is.null), filters_list)
-    if (length(filters_list) > 0) {
-      filters_dt <- data.table::rbindlist(filters_list, use.names = TRUE, fill = TRUE)
-    }
-  }
-
-  # Covariates
-  covariates_dt <- empty_covariates
-  if (!is.null(params$by) && length(params$by) > 0) {
-    layout_covs <- tryCatch(piptm_layout_covariates(release), error = function(e) list())
-    covariates_list <- lapply(params$by, function(varname) {
-      cov_entry <- NULL
-      matches   <- Filter(function(x) !is.null(x$varname) && identical(x$varname, varname),
-                          layout_covs)
-      if (length(matches) > 0) cov_entry <- matches[[1]]
-      if (identical(varname, "pov_status")) {
-        pov_line <- params$poverty_line
-        pov_valid <- !is.null(pov_line) && is.numeric(pov_line) &&
-          length(pov_line) == 1L && is.finite(pov_line) && pov_line > 0
-        if (!pov_valid) {
-          return(NULL)
-        }
-      }
-
-      if (!is.null(cov_entry)) {
-        list(
-          slot         = cov_entry$slot %||% "rows",
-          varname      = cov_entry$varname,
-          ui_label     = cov_entry$label %||% varname,
-          n_categories = cov_entry$n_categories %||% NA_integer_
-        )
-      } else if (identical(varname, "pov_status")) {
-        # Special case for pov_status
-        list(
-          slot = "rows", varname = "pov_status",
-          ui_label = "Poverty Status", n_categories = 2L
-        )
-      } else {
-        list(
-          slot = "rows", varname = varname,
-          ui_label = varname, n_categories = NA_integer_
-        )
-      }
-    })
-    covariates_list <- Filter(Negate(is.null), covariates_list)
-    if (length(covariates_list) > 0) {
-      covariates_dt <- data.table::rbindlist(covariates_list, use.names = TRUE, fill = TRUE)
-    }
-  }
-  
-  # ── Execution ─────────────────────────────────────────────────────────────
-  n_surveys_loaded <- length(loaded_pip_ids)
-  n_surveys_excluded <- nrow(excluded_surveys)
-  n_filters_applied <- if (is.null(params$filter_base)) 0L else length(params$filter_base)
-  n_measures_computed <- length(params$measures)
-  
-  # Suppression
-  suppression_triggered <- !is.null(suppressed_cells) && nrow(suppressed_cells) > 0
-  suppression <- list(
-    triggered = suppression_triggered,
-    threshold = params$pop_share_threshold,
-    n_cells_suppressed = if (suppression_triggered) nrow(suppressed_cells) else 0L,
-    suppressed_cells = suppressed_cells
-  )
-  
-  # Warnings
-  warnings <- if (length(captured_warnings) > 0) captured_warnings else NULL
-  
-  # ── Assemble ──────────────────────────────────────────────────────────────
-  list(
-    params = params,
-    provenance = provenance,
-    surveys = list(
-      loaded = loaded_surveys,
-      excluded = excluded_surveys
-    ),
-    resolved_labels = list(
-      analysis_var = analysis_var_info,
-      measures = measures_dt,
-      filters = filters_dt,
-      covariates = covariates_dt
-    ),
-    execution = list(
-      n_surveys_loaded = n_surveys_loaded,
-      n_surveys_excluded = n_surveys_excluded,
-      n_filters_applied = n_filters_applied,
-      n_measures_computed = n_measures_computed,
-      suppression = suppression,
-      warnings = warnings
-    )
-  )
-}
-
 # ── table_maker ───────────────────────────────────────────────────────────────
 
 #' Compute cross-tabulated welfare, inequality, and poverty measures
@@ -430,14 +165,8 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'   evaluation — it does not appear in the output. Has no effect when `by = NULL`
 #'   (aggregate mode: each cell is a full survey with pop_share = 1.0).
 #'   Default: `0.001` (0.1%).
-#' @param include_metadata Logical scalar (default `FALSE`). When `FALSE`, returns
-#'   a [data.table::data.table()] directly (default behavior). When `TRUE`, returns
-#'   a list with two elements: `data` (the data.table) and `description_metadata`
-#'   (a structured list containing execution logs, provenance, and resolved labels
-#'   for use by the `/metadata` endpoint).
 #'
-#' @return When `include_metadata = FALSE` (default): A [data.table::data.table()] 
-#'   in **long format** with columns:
+#' @return A [data.table::data.table()] in **long format** with columns:
 #' \describe{
 #'   \item{`pip_id`}{Survey identifier.}
 #'   \item{`country_code`}{ISO3 country code.}
@@ -455,20 +184,6 @@ pip_lookup <- function(country_code, year, welfare_type, release = NULL) {
 #'     because their population share is below `pop_share_threshold` (or could
 #'     not be computed); otherwise the value is `NA`.}
 #' }
-#'   When `include_metadata = TRUE`: A list with elements:
-#' \describe{
-#'   \item{`data`}{The [data.table::data.table()] described above.}
-#'   \item{`description_metadata`}{A named list containing:
-#'     \describe{
-#'       \item{`params`}{Echo of all function arguments.}
-#'       \item{`provenance`}{Release ID, PPP year, and generation timestamp.}
-#'       \item{`surveys`}{Data tables of loaded and excluded surveys.}
-#'       \item{`resolved_labels`}{UI labels for analysis_var, measures, filters, and covariates.}
-#'       \item{`execution`}{Execution logs including warnings and suppression events.}
-#'     }
-#'   }
-#' }
-#'
 #'
 #' @section Downstream formatting:
 #' Suppressed cells are returned as raw `value = NA_real_` with
@@ -515,14 +230,7 @@ table_maker <- function(pip_id        = NULL,
                         filter_base   = NULL,
                         ppp           = 2021L,
                         release       = NULL,
-                        pop_share_threshold = 0.001,
-                        include_metadata = FALSE) {
-
-  # ── 0. Validate metadata parameter ─────────────────────────────────────────
-  if (!is.logical(include_metadata) || length(include_metadata) != 1L ||
-      is.na(include_metadata)) {
-    cli_abort("{.arg include_metadata} must be a logical scalar (TRUE or FALSE).")
-  }
+                        pop_share_threshold = 0.001) {
 
   # ── 1. Resolve survey identifiers ──────────────────────────────────────────
   if (is.null(pip_id)) {
@@ -536,271 +244,42 @@ table_maker <- function(pip_id        = NULL,
     )
   }
 
-  # ── 2. Validate computation parameters ─────────────────────────────────────
-  families <- .classify_measures(measures)
-  .validate_poverty_lines(poverty_line, names(families))
-  by_validate <- by
-  if (!is.null(by_validate)) {
-    by_validate <- setdiff(by_validate, "pov_status")
-    if (length(by_validate) == 0L) by_validate <- NULL
-  }
-  .validate_by(by_validate, release = release)
+  # ── 2. Validate and normalize computation parameters ───────────────────────
+  # Domain validation (measure families, poverty-line coherence, release-scoped
+  # covariates, and filter_base schema/codes) is shared with
+  # build_description_model() via .validate_and_normalize_table_params() so the
+  # computation and metadata paths can never diverge.
+  param_check <- .validate_and_normalize_table_params(
+    analysis_var = analysis_var,
+    measures     = measures,
+    poverty_line = poverty_line,
+    by           = by,
+    filter_base  = filter_base,
+    release      = release
+  )
+  families               <- param_check$families
+  by_validate            <- param_check$by_validate
+  normalized_filter_base <- param_check$normalized_filter_base
+  filter_vars            <- param_check$filter_vars
 
-  # ── 2b. Validate and normalize sample-base filters ─────────────────────────
-  normalized_filter_base <- NULL
-  filter_vars <- character(0L)
-  if (!is.null(filter_base)) {
-    if (is.data.frame(filter_base)) {
-      filter_base <- as.list(filter_base)
-    }
-
-    if (!is.list(filter_base)) {
-      piptm_abort(
-        "{.arg filter_base} must be NULL or a named list.",
-        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
-      )
-    }
-    if (length(filter_base) == 0L) {
-      piptm_abort(
-        "{.arg filter_base} must be NULL or a non-empty named list.",
-        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
-      )
-    }
-
-    filter_vars <- names(filter_base)
-    if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
-      piptm_abort(
-        "{.arg filter_base} must have non-empty variable names.",
-        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
-      )
-    }
-
-    allowed_filter_vars <- unique(
-      vapply(piptm_filter_categories(), `[[`, character(1), "varname")
-    )
-
-    invalid_vars <- setdiff(filter_vars, allowed_filter_vars)
-    if (length(invalid_vars) > 0L) {
-      piptm_abort(
-        c(
-          "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
-          "i" = "Allowed variables: {.val {allowed_filter_vars}}"
-        ),
-        user_message = "One or more selected sample filters are not valid for this data release."
-      )
-    }
-
-    normalized_filter_base <- setNames(
-      lapply(filter_vars, function(varname) {
-        vals <- unlist(filter_base[[varname]], use.names = FALSE)
-        if (length(vals) == 0L) {
-          piptm_abort(
-            "{.arg filter_base} variable {.val {varname}} must include at least one value.",
-            user_message = "Each sample filter must include at least one selected category."
-          )
-        }
-        vals_numeric <- suppressWarnings(as.numeric(vals))
-        bad_non_int  <- is.na(vals_numeric) | !is.finite(vals_numeric)
-        if (any(bad_non_int)) {
-          piptm_abort(
-            c(
-              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
-              "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[bad_non_int])}}"
-            ),
-            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
-          )
-        }
-        fractional_idx <- vals_numeric != floor(vals_numeric)
-        if (any(fractional_idx)) {
-          piptm_abort(
-            c(
-              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
-              "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
-            ),
-            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
-          )
-        }
-        vals_int <- as.integer(vals_numeric)
-        unique(vals_int)
-      }),
-      filter_vars
-    )
-  }
-
-  # ── 2. Manifest lookup ──────────────────────────────────────────────────────
-  # Resolve the release once. When the caller leaves `release = NULL`, fall back
-  # to the current release so downstream metadata provenance carries the real
-  # release identifier instead of NULL.
+  # ── 2b. Manifest lookup + two-stage survey partition ───────────────────────
+  # Resolve the release once and partition requested surveys into included vs.
+  # excluded using the shared helper (also consumed by the metadata builder).
+  # warn = TRUE preserves the exact exclusion/partial-match warnings this path
+  # has always emitted.
   if (is.null(release)) {
     release <- piptm_current_release()
   }
-  mf      <- piptm_manifest(release)
-  .ids    <- pip_id  # local copy avoids data.table column-name ambiguity
-  entries <- mf[pip_id %chin% .ids]
-  if (data.table::uniqueN(entries, by = "pip_id") != nrow(entries)) {
-    dup_ids <- entries[duplicated(entries, by = "pip_id"), pip_id]
-    cli::cli_abort(
-      c(
-        "Manifest contains duplicate entries for {length(dup_ids)} pip_id{?s}.",
-        "i" = "Each pip_id must map to exactly one manifest row.",
-        "i" = "Duplicates: {.val {unique(dup_ids)}}"
-      )
-    )
-  }
-
-  if (nrow(entries) == 0L) {
-    piptm_abort(
-      c(
-        "No matching surveys found in manifest for release {.val {mf$release[[1L]] %||% piptm_current_release()}}.",
-        "i" = "Requested pip_id{?s}: {.val {(.ids)}}"
-      ),
-      user_message = "The requested country or survey is not available in the selected data release."
-    )
-  }
-
-  # Warn about pip_ids that exist in the request but not in the manifest
-  missing_ids <- setdiff(pip_id, entries$pip_id)
-  if (length(missing_ids)) {
-    cli_warn(
-      c(
-        "{length(missing_ids)} pip_id{?s} not found in manifest:",
-        "i" = "{.val {missing_ids}}"
-      )
-    )
-  }
-
-  # ── Initialize execution log trackers ──────────────────────────────────────
-  # Only used when include_metadata = TRUE
-  excluded_surveys <- data.table::data.table(
-    pip_id = character(0),
-    reason = character(0)
+  partition <- .partition_surveys_by_dimensions(
+    release                = release,
+    pip_id                 = pip_id,
+    normalized_filter_base = normalized_filter_base,
+    filter_vars            = filter_vars,
+    by                     = by,
+    warn                   = TRUE
   )
-  captured_warnings <- character()
-  suppressed_cells <- NULL
-
-  # ── 2b. Filter-base manifest pre-filter (before loading) ──────────────────
-  if (!is.null(normalized_filter_base)) {
-    overlap_fb <- vapply(
-      entries$dimensions,
-      function(d) length(intersect(filter_vars, d)),
-      integer(1L)
-    )
-
-    full_filter_idx <- overlap_fb == length(filter_vars)
-    dropped_filter_idx <- !full_filter_idx
-
-    if (any(dropped_filter_idx)) {
-      dropped_entries <- entries[dropped_filter_idx]
-      dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
-        have <- dropped_entries$dimensions[[i]]
-        miss <- setdiff(filter_vars, have)
-        if (length(miss) == length(filter_vars)) {
-          paste0(dropped_entries$pip_id[[i]], ": no filter_base dimensions")
-        } else {
-          paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
-        }
-      }, character(1L))
-
-      # Capture exclusions for metadata
-      if (include_metadata) {
-        excluded_surveys <- data.table::rbindlist(list(
-          excluded_surveys,
-          data.table::data.table(
-            pip_id = dropped_entries$pip_id,
-            reason = dropped_info
-          )
-        ), use.names = TRUE, fill = TRUE)
-      }
-
-      cli_warn(
-        c(
-          "Excluding {length(dropped_info)} survey{?s} that lack all required {.arg filter_base} dimensions ({.val {filter_vars}}):",
-          "i" = "{dropped_info}"
-        )
-      )
-
-      entries <- entries[full_filter_idx]
-    }
-
-    if (nrow(entries) == 0L) {
-      piptm_abort(
-        c(
-          "All requested surveys were excluded: none have all required {.arg filter_base} dimensions ({.val {filter_vars}})."
-        ),
-        user_message = .piptm_covariate_exclusion_user_error(filter_vars, release)
-      )
-    }
-  }
-
-  # ── 3. Dimension pre-filter (before loading) ────────────────────────────────
-  # For each entry, check whether the survey carries ALL requested breakdown
-  # dimensions (excluding 'pov_status', which is computed dynamically).
-  # Keep: full match (all requested dimensions present)
-  # Drop: partial or zero match — excluded before load to prevent NA-filled cells
-  if (!is.null(by)) {
-    by_check <- by[!by %in% "pov_status"]
-
-    if (length(by_check) == 0L) {
-      by_check <- NULL
-    }
-
-    if (!is.null(by_check)) {
-      overlap <- vapply(
-        entries$dimensions,
-        function(d) length(intersect(by_check, d)),
-        integer(1L)
-      )
-
-      # A survey must carry ALL requested dimensions; partial matches are
-      # excluded before loading so no NA-fill is ever needed downstream.
-      full_idx <- overlap == length(by_check)
-      dropped_idx <- !full_idx
-
-      if (any(dropped_idx)) {
-        dropped_entries <- entries[dropped_idx]
-        dropped_info <- vapply(seq_len(nrow(dropped_entries)), function(i) {
-          have <- dropped_entries$dimensions[[i]]
-          miss <- setdiff(by_check, have)
-          if (length(miss) == length(by_check)) {
-            paste0(dropped_entries$pip_id[[i]], ": no requested dimensions")
-          } else {
-            paste0(dropped_entries$pip_id[[i]], ": missing ", paste(miss, collapse = ", "))
-          }
-        }, character(1L))
-
-        # Capture exclusions for metadata
-        if (include_metadata) {
-          excluded_surveys <- data.table::rbindlist(list(
-            excluded_surveys,
-            data.table::data.table(
-              pip_id = dropped_entries$pip_id,
-              reason = dropped_info
-            )
-          ), use.names = TRUE, fill = TRUE)
-        }
-
-        cli_warn(
-          c(
-            "Excluding {length(dropped_info)} survey{?s} that lack all requested dimensions ({.val {by_check}}):",
-            "i" = "{dropped_info}"
-          )
-        )
-        entries <- entries[full_idx]
-      }
-
-      if (nrow(entries) == 0L) {
-        piptm_abort(
-          c(
-            "All requested surveys were excluded: none have all of the requested dimensions ({.val {by_check}}).",
-            "i" = "Check {.fn piptm_manifest} for available dimensions per survey."
-          ),
-          user_message = .piptm_covariate_exclusion_user_error(by_check, release)
-        )
-      }
-    }
-  }
+  release <- partition$release
+  entries <- partition$included
 
   # ── 4. Load ─────────────────────────────────────────────────────────────────
   # Column pruning: request only the columns needed for computation.
@@ -820,12 +299,7 @@ table_maker <- function(pip_id        = NULL,
     filter_vars   # NULL is silently dropped by c()
   ))
 
-  # ── 4. Load surveys & compute (warning-captured when included) ─────────────
-  # Wrapping the core computation in withCallingHandlers lets us collect
-  # warnings for description metadata. When include_metadata = FALSE the
-  # handler is inert, so behavior and output are byte-for-byte identical to
-  # the pre-feature code path. cli_abort() errors are not warnings and are NOT
-  # muffled, so abort-path behavior is unchanged.
+  # ── 4. Load surveys & compute ─────────────────────────────────────────────
   compute_core <- function() {
     dt <- load_surveys(entries,
                        ppp = ppp,
@@ -966,10 +440,6 @@ table_maker <- function(pip_id        = NULL,
 
         suppressed <- pop_rows[is.na(value) | value < pop_share_threshold]
 
-        if (include_metadata && nrow(suppressed) > 0L) {
-          suppressed_cells <- suppressed
-        }
-
         if (nrow(suppressed) > 0L) {
           # Vectorized label construction (no row-wise vapply): build one
           # "key=value" character vector per cell_keys column, paste them
@@ -1007,80 +477,11 @@ table_maker <- function(pip_id        = NULL,
       }
     }
 
-    list(
-      dt = dt,
-      result = result,
-      pip_metadata = pip_metadata,
-      suppressed_cells = suppressed_cells
-    )
+    result
   }
 
-  if (include_metadata) {
-    captured_warnings <- character()
-    core_out <- withCallingHandlers(
-      compute_core(),
-      warning = function(w) {
-        # cli_warn() styles its message with ANSI escape codes (bold spans,
-        # "i" bullet glyphs, colors) whenever the ambient session is detected
-        # as color-capable. These captured warnings are surfaced verbatim in
-        # the /metadata endpoint's text/JSON payload, which is consumed by
-        # non-terminal clients, so strip ANSI styling before capturing.
-        captured_warnings <<- c(captured_warnings, cli::ansi_strip(conditionMessage(w)))
-        tryCatch(invokeRestart("muffleWarning"), error = function(e) NULL)
-      }
-    )
-  } else {
-    captured_warnings <- character()
-    core_out <- compute_core()
-  }
-
-  dt <- core_out$dt
-  result <- core_out$result
-  pip_metadata <- core_out$pip_metadata
-  suppressed_cells <- core_out$suppressed_cells
+  result <- compute_core()
 
   # ── 11. Return ──────────────────────────────────────────────────────────────
-  if (include_metadata) {
-    # Never let metadata assembly abort the primary result. Registry and
-    # manifest lookups inside .build_description_metadata() are best-effort and
-    # degrade to fallback values, so `release` may be NULL here.
-    metadata <- tryCatch(
-      .build_description_metadata(
-        params = list(
-          pip_id = pip_id,
-          analysis_var = analysis_var,
-          measures = measures,
-          poverty_line = poverty_line,
-          by = by,
-          filter_base = filter_base,
-          ppp = ppp,
-          release = release,
-          pop_share_threshold = pop_share_threshold,
-          include_metadata = include_metadata
-        ),
-        result = result,
-        release = release,
-        excluded_surveys = excluded_surveys,
-        suppressed_cells = suppressed_cells,
-        captured_warnings = captured_warnings
-      ),
-      error = function(e) {
-        cli_warn(
-          c(
-            "Description metadata assembly failed; returning data without metadata.",
-            "i" = conditionMessage(e)
-          )
-        )
-        NULL
-      }
-    )
-
-    return(list(
-      data = result,
-      description_metadata = metadata
-    ))
-  } else {
-    # Default: return data.table only (backward compatible)
-    return(result[])
-  }
+  return(result[])
 }

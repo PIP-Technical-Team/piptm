@@ -116,8 +116,8 @@ enrich_openapi_spec <- function(spec) {
       "explanation of what each cell in the configured table represents.\n",
       "3. **Step 3 — Table Computation & Export**:\n",
       "   - **Compute Table**: Call `GET /table` or `POST /table` to compute cell estimates.\n",
-      "   - **Table Metadata & Info** *(WIP — ignore for now)*: `POST /metadata` renders an HTML or Markdown",
-      "metadata and provenance document for the table (currently still being built).\n",
+      "   - **Table Metadata & Info**: Call `GET /metadata` or `POST /metadata` to download an HTML or Markdown",
+      "metadata and provenance document for the configured table.\n",
       "   - **Download File**: Call `POST /table/download` to flatten the `/table` response `data`",
       "array into a downloadable `.csv` or `.rds` file.\n\n",
       "### Response Envelope & HTTP Status Codes\n",
@@ -131,7 +131,7 @@ enrich_openapi_spec <- function(spec) {
       "  \"meta\": { \"release\": \"20260401_TEST\" }\n",
       "}\n",
       "```\n",
-      "- **Exceptions**: `POST /metadata` returns raw HTML (`text/html; charset=utf-8`) or",
+      "- **Exceptions**: `GET|POST /metadata` returns raw HTML (`text/html; charset=utf-8`) or",
       "Markdown (`text/plain`) on `200`; `POST /table/download` returns binary file bytes",
       "(`text/csv` or `application/octet-stream`) on `200`. On error, both return the standard",
       "JSON error envelope.\n",
@@ -166,6 +166,7 @@ enrich_openapi_spec <- function(spec) {
 
   required_by_path <- list(
     "/table"           = c("analysis_var", "pip_id", "measures"),
+    "/metadata"        = c("analysis_var", "pip_id", "measures"),
     "/cell-definition" = c("analysis_var", "measures"),
     "/lookup"          = c("country_code", "year", "welfare_type")
   )
@@ -206,7 +207,7 @@ enrich_openapi_spec <- function(spec) {
         type    = "string",
         pattern = .PIP_ID_PATTERN
       )
-      if (identical(path, "/table")) {
+      if (path %in% c("/table", "/metadata")) {
         p$schema$minItems <- 1L
         p$schema$maxItems <- .MAX_SURVEYS_PER_REQUEST
       }
@@ -239,9 +240,9 @@ enrich_openapi_spec <- function(spec) {
       p$schema$exclusiveMaximum <- TRUE
     } else if (identical(nm, "release")) {
       p$schema$type <- "string"
-    } else if (identical(nm, "include_metadata")) {
+    } else if (identical(nm, "format")) {
       p$schema$type <- "string"
-      p$schema$default <- "false"
+      p$schema$default <- "html"
     } else if (identical(nm, "welfare_type")) {
       if (identical(path, "/lookup")) {
         p$schema$type <- "array"
@@ -292,7 +293,7 @@ enrich_openapi_spec <- function(spec) {
   summary_by_path <- list(
     "/table"              = "Compute cross-tabulated poverty, inequality, summary-statistic, and share measures for up to 15 surveys.",
     "/table/download"     = "Flatten a computed `/table` response payload into a downloadable CSV or RDS file.",
-    "/metadata"           = "[WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.",
+    "/metadata"           = "Render a downloadable structured table metadata and provenance document in HTML or Markdown.",
     "/lookup"             = "[Optional — Not needed in UI] Resolve `(country_code, year, welfare_type)` survey triples to canonical `pip_id` identifiers.",
     "/surveys"            = "[Optional — Not needed in UI] Return the full survey manifest table for a release, including internal file metadata.",
     "/countries"          = "Return all unique countries (`country_code` and `country_name`) available in the release manifest.",
@@ -318,15 +319,14 @@ enrich_openapi_spec <- function(spec) {
       "- **Conditional `poverty_line`**: Required whenever `analysis_var = \"pov_status\"` or `\"pov_status\"` is placed in any layout slot (e.g., `poverty_line=2.15` for the $2.15/day extreme poverty line).\n",
       "- **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. Must be filled in strict order (`column` -> `row` -> `superColumn` -> `superRow`) with no gaps and no duplicate variables; `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.\n",
       "- **Sample-base filter (`filter_base`)**: Optional JSON-encoded object mapping categorical variable names from `GET /categories` to arrays of retained category codes, e.g. `{\"gender\":[1],\"area\":[1]}`.\n",
-      "- **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `\"NR\"` (Not Representative). Pass an empty value to disable suppression.\n",
-      "- **Metadata mode (`include_metadata`)**: Leave as `\"false\"` (default) to receive the structured Approach C `{layout, cells}` payload per survey. Set to `\"true\"` to also receive `meta.description_metadata` for the `POST /metadata` fast path.\n\n",
+      "- **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `\"NR\"` (Not Representative). Pass an empty value to disable suppression.\n\n",
       "### Example Request (Query String)\n",
       "`/table?analysis_var=welfare&pip_id=COL_2008_GEIH_INC_ALL&measures=mean&measures=gini&column=gender&row=area&ppp=2021`"
     ),
     "/table/download" = paste(
       "**UI Workflow Mapping**: Step 3 (\"Export / Download table\" button).\n\n",
       "Stateless converter that takes the `data` array returned by `GET /table` or `POST /table`",
-      "(with `include_metadata = \"false\"`, the default Approach C `{layout, cells}` structure) and flattens it into a rectangular table",
+      "(the Approach C `{layout, cells}` structure) and flattens it into a rectangular table",
       "(one row per cell, with measure values as columns) without re-querying Arrow microdata.\n\n",
       "### Request Body Fields (JSON Object)\n",
       "- `format` *(string, optional, default `\"csv\"`)*: Output file format — either `\"csv\"` (`text/csv; charset=utf-8` attachment `table.csv`) or `\"rds\"` (`application/octet-stream` attachment `table.rds`).\n",
@@ -334,15 +334,14 @@ enrich_openapi_spec <- function(spec) {
       "- Maximum request body size is **25 MB** (larger payloads return HTTP `413`)."
     ),
     "/metadata" = paste(
-      "> **Note (Work in Progress — Ignore for now)**: This endpoint is still being built and refined. UI integration can ignore this endpoint for now.\n\n",
-      "**UI Workflow Mapping**: Step 3 (\"Table metadata & provenance info\" document — work in progress).\n\n",
-      "Renders structured table metadata, configuration summary, and data provenance (rather than a narrative prose description).",
-      "Accepts a JSON object in one of **two mutually exclusive modes** (providing both `description_metadata` and table parameters in the same request returns HTTP `400`):\n\n",
-      "1. **Fast Path (`description_metadata`)**: Pass `{\"description_metadata\": <object>, \"format\": \"html\"}` using the `meta.description_metadata` object returned by `/table?include_metadata=true`. Renders immediately without reading microdata or recomputing statistics.\n",
-      "2. **Fallback Path (Table Parameters)**: Pass the table configuration parameters directly at the top level of the JSON body (`pip_id`, `analysis_var`, `measures`, and optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `filter_base`, `ppp`, `pop_share_threshold`, `release`, `format`). Recomputes metadata via `table_maker(include_metadata = TRUE)` and renders the metadata document. Note: in JSON bodies, `filter_base` can be a native nested JSON object (e.g., `{\"gender\": [1]}`).\n\n",
-      "### Output Format\n",
-      "- `format = \"html\"` (default): Returns inline-styled HTML with `Content-Type: text/html; charset=utf-8`.\n",
-      "- `format = \"markdown\"`: Returns plain Markdown text with `Content-Type: text/plain`.\n",
+      "**UI Workflow Mapping**: Step 3 (\"Download metadata\" button).\n\n",
+      "Renders a structured 6-section table metadata, configuration summary, and data provenance document directly from the in-memory release manifest and variable registry (zero Arrow microdata I/O).\n\n",
+      "### How to Use Parameters\n",
+      "- Accepts the exact same table configuration parameters as `GET|POST /table` (`analysis_var`, `pip_id`, `measures`, and optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `filter_base`, `ppp`, `pop_share_threshold`, `release`), plus `format` (`\"html\"` or `\"markdown\"`, default `\"html\"`).\n",
+      "- On `GET /metadata`, pass `filter_base` as a JSON-encoded string (e.g., `{\"gender\":[1]}`); on `POST /metadata`, `filter_base` may be either a JSON string or a native nested JSON object.\n\n",
+      "### Output Format & Download Headers\n",
+      "- `format = \"html\"` (default): Returns inline-styled HTML with `Content-Type: text/html; charset=utf-8` and `Content-Disposition: attachment; filename=\"table-metadata.html\"`.\n",
+      "- `format = \"markdown\"`: Returns plain Markdown text with `Content-Type: text/plain` and `Content-Disposition: attachment; filename=\"table-metadata.md\"`.\n",
       "- On HTTP `400` or `422` errors, returns a JSON-encoded standard error envelope string."
     ),
     "/lookup" = paste(
@@ -441,15 +440,19 @@ enrich_openapi_spec <- function(spec) {
         op$tags <- list(tag_by_path[[path]])
       }
       if (!is.null(op$parameters) && length(op$parameters) > 0L) {
+        op$parameters <- Filter(
+          function(p) !(p$name %||% "") %in% c("req", "res"),
+          op$parameters
+        )
         op$parameters <- lapply(op$parameters, enrich_param, path = path)
       }
 
-      if (path %in% c("/table", "/cell-definition", "/lookup")) {
+      if (path %in% c("/table", "/metadata", "/cell-definition", "/lookup")) {
         op$responses[["400"]] <- json_error_response(
           "Bad Request — Missing required parameter, invalid parameter value/type, or layout-slot ordering violation."
         )
       }
-      if (path %in% c("/table", "/cell-definition", "/lookup", "/surveys", "/countries",
+      if (path %in% c("/table", "/metadata", "/cell-definition", "/lookup", "/surveys", "/countries",
                       "/regions", "/surveys-ui", "/analysis-variables", "/categories",
                       "/covariates", "/statistics")) {
         op$responses[["422"]] <- json_error_response(
@@ -464,100 +467,106 @@ enrich_openapi_spec <- function(spec) {
     }
   }
 
-  # ── POST /metadata requestBody & responses ──────────────────────────────────
+  # ── GET|POST /metadata requestBody & responses ──────────────────────────────
+  if (!is.null(spec$paths[["/metadata"]][["get"]])) {
+    spec$paths[["/metadata"]][["get"]]$responses[["200"]] <- list(
+      description = "Rendered table metadata and provenance document (HTML when `format = \"html\"`, Markdown when `format = \"markdown\"`).",
+      content = list(
+        "text/html"  = list(schema = list(type = "string")),
+        "text/plain" = list(schema = list(type = "string"))
+      )
+    )
+  }
   if (!is.null(spec$paths[["/metadata"]][["post"]])) {
     metadata_op <- spec$paths[["/metadata"]][["post"]]
     metadata_op$parameters <- list()
     metadata_op$requestBody <- list(
       required    = TRUE,
       description = paste(
-        "JSON object specifying **either** `description_metadata` (Fast Path, from `/table?include_metadata=true`)",
-        "**or** top-level table configuration parameters (`pip_id`, `analysis_var`, `measures`, etc. — Fallback Path).",
-        "Supplying both in the same request returns HTTP `400`."
+        "JSON object specifying the table configuration parameters (`pip_id`, `analysis_var`, `measures`,",
+        "and optional `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `filter_base`, `ppp`,",
+        "`pop_share_threshold`, `release`, and `format`)."
       ),
       content = list(
         "application/json" = list(
           schema = list(
             type        = "object",
-            description = "Mutually exclusive Fast Path (`description_metadata`) or Fallback Path (table parameters) payload.",
+            required    = list("analysis_var", "pip_id", "measures"),
+            description = "Table configuration parameters and output `format` for metadata generation.",
             properties  = list(
               format = list(
                 type        = "string",
                 enum        = list("html", "markdown"),
                 default     = "html",
-                description = "Output format: `\"html\"` (default, inline-styled HTML) or `\"markdown\"` (plain Markdown text)."
-              ),
-              description_metadata = list(
-                type        = "object",
-                description = "[Fast Path only] The `meta.description_metadata` object returned by a prior `/table?include_metadata=true` call. Do not combine with top-level table parameters."
+                description = "Output format: `\"html\"` (default, inline-styled HTML attachment `table-metadata.html`) or `\"markdown\"` (plain Markdown attachment `table-metadata.md`)."
               ),
               analysis_var = list(
                 type        = "string",
                 enum        = as.list(valid_analysis_vars),
-                description = "[Fallback Path — Required] Target analysis variable from `GET /analysis-variables` (e.g., `\"welfare\"`, `\"pov_status\"`)."
+                description = "[Required] Target analysis variable from `GET /analysis-variables` (e.g., `\"welfare\"`, `\"pov_status\"`)."
               ),
               pip_id = list(
                 type        = "array",
                 minItems    = 1L,
                 maxItems    = .MAX_SURVEYS_PER_REQUEST,
                 items       = list(type = "string", pattern = .PIP_ID_PATTERN),
-                description = "[Fallback Path — Required] Array of 1 to 15 survey IDs (e.g., `[\"COL_2008_GEIH_INC_ALL\"]`)."
+                description = "[Required] Array of 1 to 15 survey IDs (e.g., `[\"COL_2008_GEIH_INC_ALL\"]`)."
               ),
               measures = list(
                 type        = "array",
                 minItems    = 1L,
                 items       = list(type = "string", enum = as.list(valid_measures)),
-                description = "[Fallback Path — Required] Array of measure names from `GET /statistics` (e.g., `[\"mean\", \"gini\"]`)."
+                description = "[Required] Array of measure names from `GET /statistics` (e.g., `[\"mean\", \"gini\"]`)."
               ),
               poverty_line = list(
                 type        = "number",
-                description = "[Fallback Path — Conditional] Daily poverty line in PPP dollars (e.g., `2.15`). Required when `analysis_var = \"pov_status\"` or `\"pov_status\"` is in a layout slot."
+                description = "[Conditional] Daily poverty line in PPP dollars (e.g., `2.15`). Required when `analysis_var = \"pov_status\"` or `\"pov_status\"` is in a layout slot."
               ),
               column = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Fallback Path — Optional] 1st layout slot (Columns) covariate from `GET /covariates`."
+                description = "[Optional] 1st layout slot (Columns) covariate from `GET /covariates`."
               ),
               row = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Fallback Path — Optional] 2nd layout slot (Rows) covariate from `GET /covariates` (requires `column`)."
+                description = "[Optional] 2nd layout slot (Rows) covariate from `GET /covariates` (requires `column`)."
               ),
               superColumn = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Fallback Path — Optional] 3rd layout slot (Super Columns) covariate from `GET /covariates` (requires `column` and `row`)."
+                description = "[Optional] 3rd layout slot (Super Columns) covariate from `GET /covariates` (requires `column` and `row`)."
               ),
               superRow = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Fallback Path — Optional] 4th layout slot (Super Rows) covariate from `GET /covariates` (requires `column`, `row`, and `superColumn`)."
+                description = "[Optional] 4th layout slot (Super Rows) covariate from `GET /covariates` (requires `column`, `row`, and `superColumn`)."
               ),
               filter_base = list(
                 type        = "object",
-                description = "[Fallback Path — Optional] Sample-base filter object mapping variable names from `GET /categories` to arrays of category codes (e.g., `{\"gender\": [1]}`)."
+                description = "[Optional] Sample-base filter object mapping variable names from `GET /categories` to arrays of category codes (e.g., `{\"gender\": [1]}`)."
               ),
               ppp = list(
                 type        = "integer",
                 default     = 2021L,
-                description = "[Fallback Path — Optional] PPP reference year (positive integer, default `2021`)."
+                description = "[Optional] PPP reference year (positive integer, default `2021`)."
               ),
               pop_share_threshold = list(
                 type        = "number",
                 default     = 0.001,
-                description = "[Fallback Path — Optional] Cell-suppression threshold in `(0, 1)` (default `0.001`)."
+                description = "[Optional] Cell-suppression threshold in `(0, 1)` (default `0.001`)."
               ),
               release = list(
                 type        = "string",
                 example     = "20260401_TEST",
-                description = "[Fallback Path — Optional] Release ID from `GET /releases` (e.g., `\"20260401_TEST\"`; defaults to current release)."
+                description = "[Optional] Release ID from `GET /releases` (e.g., `\"20260401_TEST\"`; defaults to current release)."
               )
             )
           ),
           examples = list(
-            fallback_path_html = list(
-              summary     = "Fallback Path (HTML output from table parameters)",
-              description = "Recomputes metadata for the specified survey and table parameters and returns inline-styled HTML.",
+            metadata_html = list(
+              summary     = "HTML metadata document",
+              description = "Builds metadata from the release manifest and registry and returns inline-styled HTML.",
               value       = list(
                 pip_id       = list("COL_2008_GEIH_INC_ALL"),
                 analysis_var = "welfare",
@@ -567,9 +576,9 @@ enrich_openapi_spec <- function(spec) {
                 format       = "html"
               )
             ),
-            fallback_path_markdown = list(
-              summary     = "Fallback Path (Markdown output)",
-              description = "Recomputes metadata and returns plain Markdown text.",
+            metadata_markdown = list(
+              summary     = "Markdown metadata document",
+              description = "Builds metadata from the release manifest and registry and returns plain Markdown text.",
               value       = list(
                 pip_id       = list("COL_2008_GEIH_INC_ALL"),
                 analysis_var = "welfare",
@@ -577,47 +586,23 @@ enrich_openapi_spec <- function(spec) {
                 ppp          = 2021L,
                 format       = "markdown"
               )
-            ),
-            fast_path_metadata = list(
-              summary     = "Fast Path (pre-computed description_metadata)",
-              description = "Renders directly from the `meta.description_metadata` object returned by `/table?include_metadata=true` without touching microdata.",
-              value       = list(
-                format = "html",
-                description_metadata = list(
-                  params = list(
-                    pip_id       = list("COL_2008_GEIH_INC_ALL"),
-                    analysis_var = "welfare",
-                    measures     = list("mean", "gini"),
-                    ppp          = 2021L
-                  ),
-                  provenance = list(
-                    release  = "20260401_TEST",
-                    ppp_year = 2021L
-                  ),
-                  surveys = list(
-                    loaded  = list("COL_2008_GEIH_INC_ALL"),
-                    summary = list()
-                  ),
-                  resolved_labels = list()
-                )
-              )
             )
           )
         )
       )
     )
     metadata_op$responses[["200"]] <- list(
-      description = "Rendered table metadata and info document (HTML when `format = \"html\"`, Markdown when `format = \"markdown\"`).",
+      description = "Rendered table metadata and provenance document (HTML when `format = \"html\"`, Markdown when `format = \"markdown\"`).",
       content = list(
         "text/html"  = list(schema = list(type = "string")),
         "text/plain" = list(schema = list(type = "string"))
       )
     )
     metadata_op$responses[["400"]] <- json_error_response(
-      "Bad Request — Empty/malformed JSON body, invalid `format`, both `description_metadata` and table parameters supplied, or invalid table parameters."
+      "Bad Request — Missing required parameter, invalid `format`, or invalid table parameters."
     )
     metadata_op$responses[["422"]] <- json_error_response(
-      "Unprocessable Entity — Malformed `description_metadata` structure or domain error during fallback recomputation."
+      "Unprocessable Entity — Unknown release ID, unreadable filter JSON, or domain validation error (e.g., all surveys excluded by requested filters/covariates)."
     )
     spec$paths[["/metadata"]][["post"]] <- metadata_op
   }
@@ -671,7 +656,7 @@ enrich_openapi_spec <- function(spec) {
       required    = TRUE,
       description = paste(
         "JSON object with optional `format` (`\"csv\"` or `\"rds\"`, default `\"csv\"`) and required `data`",
-        "(the non-empty `data` array of Approach C survey objects returned by `GET|POST /table` when `include_metadata = \"false\"`).",
+        "(the non-empty `data` array of Approach C survey objects returned by `GET|POST /table`).",
         "Maximum request size is 25 MB."
       ),
       content = list(
@@ -690,7 +675,7 @@ enrich_openapi_spec <- function(spec) {
               data = list(
                 type        = "array",
                 minItems    = 1L,
-                description = "Non-empty array of survey table objects copied directly from the `data` field of a `/table` response (`include_metadata = \"false\"`).",
+                description = "Non-empty array of survey table objects copied directly from the `data` field of a `/table` response.",
                 items       = list(
                   type       = "object",
                   required   = list("pip_id", "country_code", "surveyid_year", "welfare_type", "analysis_var", "measures", "layout", "cells"),
@@ -803,14 +788,13 @@ function(req) {
 #* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of kept category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`). Omit to include the full survey sample.
 #* @param pop_share_threshold:numeric [Optional] Minimum cell population-share threshold strictly between `0` and `1` (default `0.001`, i.e., 0.1% of the sample base) below which cell estimates are masked as `"NR"`. Send empty/null to disable suppression.
 #* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
-#* @param include_metadata:character [Optional] Set to `"true"` to include `description_metadata` in `meta` (for passing to `POST /metadata` fast path) and return flat data rows; defaults to `"false"` (returns structured `{layout, cells}` survey objects).
 #* @serializer json list(na = "null")
 #* @get /table
 #* @post /table
 function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL,
          column = NULL, row = NULL, superColumn = NULL, superRow = NULL,
          ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.001,
-         release = NULL, include_metadata = "false", res) {
+         release = NULL, res) {
 
   check <- validate_table_input(
     analysis_var = analysis_var,
@@ -830,15 +814,12 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
   pop_share_threshold <- check$pop_share_threshold
   by                  <- check$by
 
-  # Parse include_metadata ("true"/"false"; anything else defaults to FALSE).
-  include_meta <- identical(tolower(include_metadata), "true")
-
   out <- capture_with_warnings({
     parsed_filter_base <- parse_filter_base_input(filter_base)
 
     rel  <- resolve_release(release)
 
-    data <- piptm::table_maker(
+    result_data <- piptm::table_maker(
       pip_id        = pip_id,
       analysis_var  = analysis_var,
       measures      = measures,
@@ -847,40 +828,26 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
       ppp           = ppp,
       filter_base   = parsed_filter_base,
       release       = rel,
-      pop_share_threshold = pop_share_threshold,
-      include_metadata = include_meta
+      pop_share_threshold = pop_share_threshold
     )
-
-    if (include_meta) {
-      # table_maker returns list(data, description_metadata); keep the table
-      # as `data` and surface metadata in the response `meta` field.
-      result_data <- data$data
-      description_metadata <- data$description_metadata
-    } else {
-      result_data <- data
-      description_metadata <- NULL
-    }
 
     result_data <- piptm::format_table_output(result_data)
 
     n_surveys <- data.table::uniqueN(result_data, by = "pip_id")
 
-    if (!include_meta) {
-      result_data <- piptm::serialize_table_response(
-        dt           = result_data,
-        slots        = check$slots,
-        analysis_var = analysis_var,
-        poverty_line = poverty_line,
-        measures     = measures,
-        release      = rel
-      )
-    }
+    result_data <- piptm::serialize_table_response(
+      dt           = result_data,
+      slots        = check$slots,
+      analysis_var = analysis_var,
+      poverty_line = poverty_line,
+      measures     = measures,
+      release      = rel
+    )
 
     list(
       data = result_data,
       rel = rel,
-      n_surveys = n_surveys,
-      description_metadata = description_metadata
+      n_surveys = n_surveys
     )
   })
   if (!is.null(out$error)) return(api_error(out$error, 422L, res))
@@ -889,9 +856,6 @@ function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NUL
     release   = out$result$rel,
     n_surveys = out$result$n_surveys
   )
-  if (include_meta) {
-    meta$description_metadata <- out$result$description_metadata
-  }
 
   api_response(
     out$result$data,
@@ -990,137 +954,94 @@ function(req, body = NULL, res) {
   readBin(tmp, "raw", n = file.size(tmp))
 }
 
-# ── POST /metadata ────────────────────────────────────────────────────────────
+# ── GET|POST /metadata ────────────────────────────────────────────────────────
 
-#* [WIP — Ignore for now / still being built] Render a structured table metadata and info document in HTML or Markdown.
+#* Render a downloadable structured table metadata and provenance document in HTML or Markdown.
 #* @tag "Step 3 — Table Computation & Export"
-#* @param body:object [Required] JSON object supplying EITHER `description_metadata` (fast path) OR top-level table parameters (`pip_id`, `analysis_var`, `measures`, etc. — fallback path), plus optional `format` (`"html"` or `"markdown"`, default `"html"`).
-#* @parser json
+#* @param analysis_var:character [Required] Target variable to analyze from `GET /analysis-variables` (e.g., `"welfare"` for monetary welfare, `"pov_status"` for poverty status, `"age"`/`"educy"`/`"hsize"` for continuous variables, or a binary indicator such as `"electricity"`).
+#* @param pip_id:[character] [Required] Survey identifier(s) to document (repeatable, 1 to 15 values). Format: `ISO3_YYYY_<SURVEY>_<WELFARE>_<DOMAIN>` from `GET /surveys-ui` (e.g., `"COL_2008_GEIH_INC_ALL"`).
+#* @param measures:[character] [Required] Statistical measure ID(s) to document (repeatable, 1 or more values) from `GET /statistics` (e.g., `"mean"`, `"median"`, `"gini"`, `"headcount"`, `"poverty_gap"`, `"pop_share"`). Must be compatible with the selected `analysis_var`.
+#* @param poverty_line:numeric [Conditional] Daily poverty line in constant international PPP dollars (positive number, e.g., `2.15`, `3.65`, or `6.85`). Required when `analysis_var = "pov_status"` or when `"pov_status"` is assigned to any layout slot.
+#* @param column:character [Optional] Disaggregation covariate assigned to the 1st layout slot (Columns), chosen from `GET /covariates` (e.g., `"gender"` or `"area"`). Leave empty for a national-level table without disaggregation.
+#* @param row:character [Optional] Disaggregation covariate assigned to the 2nd layout slot (Rows), chosen from `GET /covariates` (e.g., `"area"` or `"educat4"`). Requires `column` to be filled first.
+#* @param superColumn:character [Optional] Disaggregation covariate assigned to the 3rd layout slot (Super Columns), chosen from `GET /covariates`. Requires both `column` and `row` to be filled first.
+#* @param superRow:character [Optional] Disaggregation covariate assigned to the 4th layout slot (Super Rows), chosen from `GET /covariates`. Requires `column`, `row`, and `superColumn` to be filled first.
+#* @param ppp:integer [Optional] Purchasing Power Parity (PPP) reference year used for monetary welfare conversion (positive integer, default `2021`; e.g., `2021` or `2017`).
+#* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of kept category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`). Omit to include the full survey sample.
+#* @param pop_share_threshold:numeric [Optional] Minimum cell population-share threshold strictly between `0` and `1` (default `0.001`, i.e., 0.1% of the sample base) below which cell estimates are masked as `"NR"`. Send empty/null to disable suppression.
+#* @param release:character [Optional] PIP release identifier from `GET /releases` (e.g., `"20260401_TEST"`). Omit to use the active default release.
+#* @param format:character [Optional] Output document format: `"html"` (default, inline-styled HTML download `table-metadata.html`) or `"markdown"` (plain Markdown download `table-metadata.md`).
 #* @serializer text
+#* @get /metadata
 #* @post /metadata
-function(req, body = NULL, res) {
-  # ── Parse + validate body ───────────────────────────────────────────────────
-  # For Swagger UI (and plumber's automatic parsing), body will be populated.
-  # For test harness and some proxies, body might be NULL and we fall back to req$postBody.
-  if (is.null(body) || !is.list(body) || length(body) == 0L) {
-    # Fallback: read raw body manually (for backwards compat with tests)
-    raw_body <- tryCatch(
-      if (!is.null(req$postBody)) {
-        req$postBody
-      } else {
-        req$rook.input$read_lines()
-      },
-      error = function(e) NULL
-    )
-    if (is.null(raw_body) || !nzchar(raw_body)) {
-      return(error_json("Request body must be a non-empty JSON object.", 400L, res))
-    }
-    
-    body <- tryCatch(
-      jsonlite::fromJSON(raw_body),
-      error = function(e) NULL
-    )
-    if (is.null(body) || !is.list(body) || length(body) == 0L) {
-      return(error_json("Request body must be a non-empty JSON object.", 400L, res))
-    }
+function(analysis_var = NULL, pip_id = NULL, measures = NULL, poverty_line = NULL,
+         column = NULL, row = NULL, superColumn = NULL, superRow = NULL,
+         ppp = 2021L, filter_base = NULL, pop_share_threshold = 0.001,
+         release = NULL, format = "html", req, res) {
+
+  # Reject legacy `description_metadata` request bodies explicitly (HTTP 400).
+  if (!is.null(req$argsBody) && "description_metadata" %in% names(req$argsBody)) {
+    return(error_json(
+      "`description_metadata` is no longer supported; pass table parameters directly.",
+      400L, res
+    ))
   }
 
-  check <- validate_description_input(body)
-  if (!check$valid) {
-    return(error_json(check$errors, 400L, res))
+  if (is.null(format) || !is.character(format) || length(format) != 1L || is.na(format)) {
+    return(error_json("`format` must be a single string (`html` or `markdown`).", 400L, res))
+  }
+  fmt <- tolower(trimws(format))
+  if (!(fmt %in% c("html", "markdown"))) {
+    return(error_json("`format` must be one of: markdown, html.", 400L, res))
   }
 
-  format <- body$format %||% "html"
-  format <- tolower(trimws(as.character(format)[1]))
-  has_metadata <- identical(check$mode, "metadata")
+  check <- validate_table_input(
+    analysis_var        = analysis_var,
+    pip_id              = pip_id,
+    measures            = measures,
+    poverty_line        = poverty_line,
+    column              = column,
+    row                 = row,
+    superColumn         = superColumn,
+    superRow            = superRow,
+    ppp                 = ppp,
+    pop_share_threshold = pop_share_threshold
+  )
+  if (!check$valid) return(error_json(check$errors, 400L, res))
 
-  # Verified: res$setHeader("Content-Type", ...) below overrides this route's
-  # `@serializer text` default on the installed plumber version (>= 1.1.0) --
-  # see the Step 4 spike in .cg-docs/plans/2026-09-08-description-html-renderer-and-wording.md
-  # and the regression guard in tests/testthat/test-api-metadata.R.
-  # format == "markdown" leaves Content-Type as text/plain; format defaults to
-  # "html" (Content-Type: text/html; charset=utf-8) when omitted.
-  render_description <- function(model) {
-    if ("cell_definition" %in% names(model)) {
-      model$cell_definition$visible <- FALSE
-    }
+  out <- capture_with_warnings({
+    parsed_filter_base <- parse_filter_base_input(filter_base)
+    rel                <- resolve_release(release)
 
-    if (identical(format, "html")) {
+    model <- piptm::build_description_model(
+      pip_id              = pip_id,
+      analysis_var        = analysis_var,
+      measures            = measures,
+      poverty_line        = check$poverty_line,
+      column              = check$slots$column,
+      row                 = check$slots$row,
+      superColumn         = check$slots$superColumn,
+      superRow            = check$slots$superRow,
+      filter_base         = parsed_filter_base,
+      ppp                 = check$ppp %||% 2021L,
+      pop_share_threshold = check$pop_share_threshold,
+      release             = rel
+    )
+
+    rendered <- if (identical(fmt, "html")) {
       piptm::render_description_html(model)
     } else {
       piptm::render_description_markdown(model)
     }
-  }
-
-  fcheck <- NULL
-  if (!has_metadata) {
-    raw_threshold <- if ("pop_share_threshold" %in% names(body)) body$pop_share_threshold else 0.001
-    fcheck <- validate_table_input(
-      analysis_var = body$analysis_var %||% NULL,
-      pip_id = body$pip_id %||% NULL,
-      measures = body$measures %||% NULL,
-      poverty_line = body$poverty_line %||% NULL,
-      column = body$column %||% NULL,
-      row = body$row %||% NULL,
-      superColumn = body$superColumn %||% NULL,
-      superRow = body$superRow %||% NULL,
-      ppp = body$ppp %||% NULL,
-      pop_share_threshold = raw_threshold
-    )
-    if (!fcheck$valid) return(error_json(fcheck$errors, 400L, res))
-  }
-
-  out <- capture_with_warnings({
-    if (has_metadata) {
-      description_metadata <- body$description_metadata
-      if (is.null(description_metadata) || !is.list(description_metadata)) {
-        piptm:::piptm_abort(
-          "`description_metadata` must be a JSON object.",
-          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
-        )
-      }
-
-      # Fast path: validate + build model + render. Table params derive from
-      # the embedded metadata.
-      params <- description_metadata$params
-      if (is.null(params)) {
-        piptm:::piptm_abort(
-          "`description_metadata` is missing the `params` field.",
-          user_message = piptm:::.PIPTM_DESCRIPTION_METADATA_USER_ERROR
-        )
-      }
-
-      model <- piptm::build_description_model(description_metadata, params)
-      rendered <- render_description(model)
-      list(content = rendered)
-    } else {
-      # Fallback path: recompute via table_maker(include_metadata = TRUE).
-      parsed_filter_base <- parse_filter_base_input(body$filter_base)
-
-      rel <- resolve_release(body$release %||% NULL)
-      tm_out <- piptm::table_maker(
-        pip_id        = body$pip_id,
-        analysis_var  = body$analysis_var,
-        measures      = body$measures,
-        poverty_line  = fcheck$poverty_line,
-        by            = fcheck$by,
-        ppp           = fcheck$ppp %||% 2021L,
-        filter_base   = parsed_filter_base,
-        release       = rel,
-        pop_share_threshold = fcheck$pop_share_threshold,
-        include_metadata = TRUE
-      )
-
-      desc_meta  <- tm_out$description_metadata
-      model      <- piptm::build_description_model(desc_meta, desc_meta$params)
-      rendered <- render_description(model)
-      list(content = rendered)
-    }
+    list(content = rendered)
   })
   if (!is.null(out$error)) return(error_json(out$error, 422L, res))
 
-  if (identical(format, "html")) {
+  if (identical(fmt, "html")) {
     res$setHeader("Content-Type", "text/html; charset=utf-8")
+    res$setHeader("Content-Disposition", 'attachment; filename="table-metadata.html"')
+  } else {
+    res$setHeader("Content-Disposition", 'attachment; filename="table-metadata.md"')
   }
 
   out$result$content
