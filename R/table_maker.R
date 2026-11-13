@@ -358,17 +358,10 @@ table_maker <- function(pip_id        = NULL,
     }
 
     # Derived covariates
+    # poverty_line coherence for a pov_status breakdown is enforced earlier by
+    # the shared .validate_and_normalize_table_params() (step 2), so by the
+    # time compute_core() runs, poverty_line is already known valid here.
     if (!is.null(by) && "pov_status" %in% by) {
-      if (is.null(poverty_line) || !is.numeric(poverty_line) ||
-          length(poverty_line) != 1L || !is.finite(poverty_line) || poverty_line <= 0) {
-        piptm_abort(
-          c(
-            "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
-            "i" = "Provide a single positive numeric scalar."
-          ),
-          user_message = "A valid positive poverty line is required when breaking down results by poverty status."
-        )
-      }
       dt[, pov_status := as.integer(welfare < poverty_line)]
     }
 

@@ -110,6 +110,56 @@ test_that(".validate_and_normalize_table_params drops pov_status from by_validat
   expect_null(out$by_validate)
 })
 
+test_that(".validate_and_normalize_table_params aborts on pov_status breakdown without a valid poverty_line", {
+  # Review finding P1.3 (.cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md):
+  # this coherence check used to live only inline inside table_maker()'s
+  # compute_core(), so build_description_model() (which never reaches
+  # compute_core()) could silently skip it. It must now be enforced here so
+  # both callers agree.
+  fx <- make_tm_fixtures_v2()
+  activate_tm_fixtures_v2(fx)
+  withr::defer(reset_piptm_env_v2())
+
+  # Missing poverty_line entirely, with a non-poverty measure (so
+  # .validate_poverty_lines()'s own "poverty" family check does not trigger).
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      poverty_line = NULL,
+      by = "pov_status",
+      filter_base = NULL,
+      release = "20260401_TEST"
+    ),
+    "pov_status"
+  )
+
+  # Non-positive poverty_line.
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      poverty_line = -1,
+      by = c("gender", "pov_status"),
+      filter_base = NULL,
+      release = "20260401_TEST"
+    ),
+    "pov_status"
+  )
+
+  # Valid poverty_line passes through without error.
+  expect_no_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      poverty_line = 2.15,
+      by = "pov_status",
+      filter_base = NULL,
+      release = "20260401_TEST"
+    )
+  )
+})
+
 test_that(".validate_and_normalize_table_params rejects poverty measure without poverty_line", {
   fx <- make_tm_fixtures_v2()
   activate_tm_fixtures_v2(fx)
@@ -160,6 +210,69 @@ test_that(".validate_and_normalize_table_params rejects non-integer filter_base 
       filter_base = list(gender = "not_an_int"),
       release = "20260401_TEST"
     )
+  )
+})
+
+test_that(".validate_and_normalize_table_params treats empty filter_base list as no filter", {
+  fx <- make_tm_fixtures_v2()
+  activate_tm_fixtures_v2(fx)
+  withr::defer(reset_piptm_env_v2())
+
+  out <- piptm:::.validate_and_normalize_table_params(
+    analysis_var = "welfare",
+    measures = "mean",
+    poverty_line = NULL,
+    by = NULL,
+    filter_base = list(),
+    release = "20260401_TEST"
+  )
+
+  expect_null(out$normalized_filter_base)
+  expect_identical(out$filter_vars, character(0))
+})
+
+test_that(".validate_and_normalize_table_params rejects duplicate by variables", {
+  fx <- make_tm_fixtures_v2()
+  activate_tm_fixtures_v2(fx)
+  withr::defer(reset_piptm_env_v2())
+
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      poverty_line = NULL,
+      by = c("gender", "gender"),
+      release = "20260401_TEST"
+    ),
+    regexp = "Duplicate variable|used only once"
+  )
+})
+
+test_that(".validate_and_normalize_table_params validates slot arity and order for direct callers", {
+  fx <- make_tm_fixtures_v2()
+  activate_tm_fixtures_v2(fx)
+  withr::defer(reset_piptm_env_v2())
+
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = c("gender", "area"),
+      superColumn = "area",
+      release = "20260401_TEST"
+    ),
+    regexp = "filled in order|left to right"
+  )
+
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = c("gender", "area"),
+      column = c("gender", "area"),
+      release = "20260401_TEST"
+    ),
+    regexp = "single non-empty character scalar"
   )
 })
 

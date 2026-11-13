@@ -36,6 +36,8 @@ NULL
 #' @return A named list of 6 sections (`overview`, `provenance`,
 #'   `surveys_selected`, `filters_applied`, `layout_configuration`,
 #'   `statistics_selected`), each with `visible`, `title`, and `content` fields.
+#'   For identical inputs, the only run-to-run varying field is
+#'   `provenance$content$generated_at`.
 #' @export
 #' @examples
 #' \dontrun{
@@ -78,6 +80,10 @@ build_description_model <- function(pip_id,
     measures     = measures,
     poverty_line = poverty_line,
     by           = by,
+    column       = column,
+    row          = row,
+    superColumn  = superColumn,
+    superRow     = superRow,
     filter_base  = filter_base,
     release      = release
   )
@@ -106,6 +112,12 @@ build_description_model <- function(pip_id,
   analysis_var_label <- analysis_var_entry$ui_label %||% analysis_var
   analysis_var_type  <- analysis_var_entry$tm_type %||% "unknown"
   is_monetary <- analysis_var %in% c("welfare", "pov_status")
+
+  # Derive all role-specific registry slices once per request to avoid repeated
+  # release resolution and full-registry scans.
+  filter_cats <- .registry_filter_categories(registry)
+  layout_covs <- .registry_layout_covariates(registry)
+  stat_groups <- .registry_stat_groups(registry)
 
   has_filters    <- !is.null(normalized_filter_base) &&
     length(normalized_filter_base) > 0L
@@ -156,24 +168,24 @@ build_description_model <- function(pip_id,
     ),
 
     filters_applied = list(
-      visible = has_filters,
-      title = "Sample Base Filters",
-      content = if (has_filters) {
-        .build_filters_content(normalized_filter_base, resolved_release)
-      } else {
-        NULL
-      }
+        visible = has_filters,
+        title = "Sample Base Filters",
+        content = if (has_filters) {
+          .build_filters_content(normalized_filter_base, filter_cats)
+        } else {
+          NULL
+        }
     ),
 
     layout_configuration = list(
-      visible = has_covariates,
-      title = "Table Layout Configuration",
-      content = if (has_covariates) {
-        .build_layout_content(active_slots, poverty_line, resolved_release,
-                              registry)
-      } else {
-        NULL
-      }
+        visible = has_covariates,
+        title = "Table Layout Configuration",
+        content = if (has_covariates) {
+          .build_layout_content(active_slots, poverty_line, registry,
+                                layout_covs)
+        } else {
+          NULL
+        }
     ),
 
     statistics_selected = list(
@@ -186,7 +198,7 @@ build_description_model <- function(pip_id,
         measures = measures,
         poverty_line = poverty_line,
         ppp = ppp,
-        release = resolved_release
+        stat_groups = stat_groups
       )
     )
   )
@@ -314,11 +326,7 @@ build_description_model <- function(pip_id,
 
 #' Build filters section content from the normalized filter_base.
 #' @keywords internal
-.build_filters_content <- function(normalized_filter_base, release) {
-  filter_cats <- tryCatch(
-    piptm_filter_categories(release),
-    error = function(e) list()
-  )
+.build_filters_content <- function(normalized_filter_base, filter_cats = list()) {
   # O(1) name-indexed lookup instead of an O(n) Filter() scan per requested
   # filter variable.
   cats_by_var <- stats::setNames(
@@ -379,12 +387,8 @@ build_description_model <- function(pip_id,
 
 #' Build layout section content from the active slots.
 #' @keywords internal
-.build_layout_content <- function(active_slots, poverty_line, release,
-                                   registry) {
-  layout_covs <- tryCatch(
-    piptm_layout_covariates(release),
-    error = function(e) list()
-  )
+.build_layout_content <- function(active_slots, poverty_line, registry,
+                                  layout_covs = list()) {
   # O(1) name-indexed lookup instead of an O(n) Filter() scan per active slot.
   covs_by_var <- stats::setNames(
     layout_covs,
@@ -443,11 +447,8 @@ build_description_model <- function(pip_id,
 #' @keywords internal
 .build_statistics_content <- function(analysis_var, analysis_var_label,
                                        analysis_var_type, measures,
-                                       poverty_line, ppp, release) {
-  stat_groups <- tryCatch(
-    piptm_stat_groups(release),
-    error = function(e) list()
-  )
+                                       poverty_line, ppp,
+                                       stat_groups = list()) {
 
   measures_dt <- data.table::data.table(
     measure = character(0), measure_label = character(0),
@@ -514,6 +515,89 @@ build_description_model <- function(pip_id,
 
 
 # ── Shared formatting helpers ─────────────────────────────────────────────────
+
+#' Build filter-category entries from an already-loaded registry.
+#' @keywords internal
+.registry_filter_categories <- function(registry) {
+  if (is.null(registry) || !is.list(registry) || length(registry) == 0L) {
+    return(list())
+  }
+
+  out <- lapply(registry, function(entry) {
+    roles <- entry$roles
+    if (is.null(roles) || !"filter" %in% roles) {
+      return(NULL)
+    }
+    subcats <- entry$categories
+    if (is.null(subcats)) subcats <- list()
+    subcats <- lapply(subcats, function(cat) {
+      list(
+        code  = as.character(cat$code),
+        label = as.character(cat$label)
+      )
+    })
+
+    list(
+      varname = as.character(entry$varname),
+      label = as.character(entry$ui_label),
+      subcategories = subcats
+    )
+  })
+  unname(Filter(Negate(is.null), out))
+}
+
+#' Build layout-covariate entries from an already-loaded registry.
+#' @keywords internal
+.registry_layout_covariates <- function(registry) {
+  if (is.null(registry) || !is.list(registry) || length(registry) == 0L) {
+    return(list())
+  }
+
+  out <- lapply(registry, function(entry) {
+    roles <- entry$roles
+    if (is.null(roles) || !"covariate" %in% roles) {
+      return(NULL)
+    }
+    list(
+      varname = as.character(entry$varname),
+      label = as.character(entry$ui_label),
+      n_categories = if (is.null(entry$n_categories)) NULL else as.integer(entry$n_categories)
+    )
+  })
+  unname(Filter(Negate(is.null), out))
+}
+
+#' Build stat-group entries from an already-loaded registry.
+#' @keywords internal
+.registry_stat_groups <- function(registry) {
+  if (is.null(registry) || !is.list(registry) || length(registry) == 0L) {
+    return(list())
+  }
+  measure_spec <- registry[["measure_spec"]]
+  if (is.null(measure_spec) || length(measure_spec) == 0L) {
+    return(list())
+  }
+
+  out <- lapply(names(measure_spec), function(group_key) {
+    group <- measure_spec[[group_key]]
+    measures <- group$measures
+    if (is.null(measures)) measures <- list()
+    measures_out <- lapply(names(measures), function(measure_key) {
+      list(
+        measure = as.character(measure_key),
+        label = as.character(measures[[measure_key]]$label)
+      )
+    })
+
+    list(
+      group = as.character(group_key),
+      group_label = as.character(group$label %||% group_key),
+      measures = measures_out
+    )
+  })
+
+  out
+}
 
 #' Resolve category labels for a covariate from the variable registry.
 #' @keywords internal

@@ -11,6 +11,8 @@
 
 ## EXECUTIVE SUMMARY
 
+> SUPERSEDED (historical section): kept for archival context only.
+
 **Objective:** Design and implement a `/metadata` endpoint that generates factual, dynamically constructed metadata documents for tabular results produced by `table_maker()`. This endpoint serves **Step 3 of the user experience** (ui-description.md), providing users with a comprehensive, human-readable overview of:
 
 1. **What the table contains** (cell semantics, weighting, structure)
@@ -31,6 +33,8 @@ A **3-tier decoupled system**:
 ---
 
 ## I. ARCHITECTURE & DATA FLOW
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 ### 1.1 End-to-End Request Flow
 
@@ -114,6 +118,8 @@ A **3-tier decoupled system**:
 ---
 
 ## II. DESCRIPTION METADATA SCHEMA
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 ### 2.1 Required Metadata Structure
 
@@ -226,6 +232,8 @@ list(
 ---
 
 ## III. DESCRIPTION DATA MODEL SPECIFICATION
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 ### 3.1 Structured Model with Conditional Visibility
 
@@ -403,6 +411,8 @@ description_model <- list(
 ---
 
 ## IV. CELL DEFINITION ALGORITHM & MATRIX
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 **The Core Challenge:** Generate mathematically accurate natural-language descriptions of cell population scope that adapt to all permutations of:
 
@@ -656,6 +666,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 ## V. REGISTRY & DEPENDENCY INVENTORY
 
+> SUPERSEDED (historical section): kept for archival context only.
+
 ### 5.1 Parameter-to-Label Mapping Requirements
 
 | Parameter | Registry Function | Returns |
@@ -698,6 +710,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 ---
 
 ## VI. IMPLEMENTATION ROADMAP
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 ### Phase 1: Backend Enhancements (3-5 days)
 
@@ -905,6 +919,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 ## VII. ACCEPTANCE CRITERIA
 
+> SUPERSEDED (historical section): kept for archival context only.
+
 ### Functional Requirements
 
 1. **Completeness**: Description covers all 9 input parameters and 4 execution log categories
@@ -935,6 +951,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 ## VIII. OPEN QUESTIONS FOR IMPLEMENTATION TEAM
 
+> SUPERSEDED (historical section): kept for archival context only.
+
 1. **Measure definition enhancement**: Should we extend `tm_measure_spec.yaml` to include `definition` fields, or keep cell interpretation logic purely algorithmic?
 
 2. **Internationalization**: Are non-English descriptions in scope for v1, or defer to v2?
@@ -949,6 +967,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 
 ## IX. RISK MITIGATION
 
+> SUPERSEDED (historical section): kept for archival context only.
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Cell definition logic errors | High | Extensive unit tests with binary matrix of (filter x measure x covariate) combinations |
@@ -960,6 +980,8 @@ Note: Poverty status groups are defined using a threshold of $6.85/day (PPP 2021
 ---
 
 ## X. SUCCESS METRICS
+
+> SUPERSEDED (historical section): kept for archival context only.
 
 - **Developer adoption**: `include_metadata = TRUE` used in 100% of internal testing workflows within 2 sprints
 - **User satisfaction**: Step 3 UI descriptions reduce support tickets related to table interpretation by >=30%

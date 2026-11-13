@@ -25,6 +25,9 @@ NULL
 #' @param measures Character vector of measure names.
 #' @param poverty_line Numeric scalar/vector poverty line(s), or `NULL`.
 #' @param by Character vector of breakdown covariates, or `NULL`.
+#' @param column,row,superColumn,superRow Optional layout-slot values used by
+#'   API-adjacent direct callers (for example, [build_description_model()]).
+#'   Each must be `NULL` or a single non-blank character scalar.
 #' @param filter_base Named list sample filter, or `NULL`.
 #' @param release Character scalar release ID, or `NULL`.
 #'
@@ -37,12 +40,109 @@ NULL
                                                  measures,
                                                  poverty_line = NULL,
                                                  by = NULL,
+                                                 column = NULL,
+                                                 row = NULL,
+                                                 superColumn = NULL,
+                                                 superRow = NULL,
                                                  filter_base = NULL,
                                                  release = NULL) {
   families <- .classify_measures(measures)
   .validate_poverty_lines(poverty_line, names(families))
 
+  # `pov_status` as a breakdown dimension requires a valid poverty line
+  # regardless of which measures were requested (poverty-family measures are
+  # already covered by .validate_poverty_lines() above via `families`, but a
+  # non-poverty measure disaggregated by pov_status would otherwise slip
+  # through). This check is shared so table_maker() and
+  # build_description_model() can never disagree on when a poverty line is
+  # required for a pov_status breakdown.
+  if (!is.null(by) && "pov_status" %in% by) {
+    if (is.null(poverty_line) || !is.numeric(poverty_line) ||
+        length(poverty_line) != 1L || !is.finite(poverty_line) ||
+        poverty_line <= 0) {
+      piptm_abort(
+        c(
+          "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
+          "i" = "Provide a single positive numeric scalar."
+        ),
+        user_message = "A valid positive poverty line is required when breaking down results by poverty status."
+      )
+    }
+  }
+
+  # Optional slot-level validation for direct callers that pass layout slots
+  # rather than a pre-built `by` vector.
+  slot_values <- list(
+    column = column,
+    row = row,
+    superColumn = superColumn,
+    superRow = superRow
+  )
+  if (any(!vapply(slot_values, is.null, logical(1)))) {
+    slot_order <- c("column", "row", "superColumn", "superRow")
+    filled <- character(0)
+    slot_dims <- character(0)
+
+    for (slot_name in slot_order) {
+      value <- slot_values[[slot_name]]
+      if (is.null(value)) {
+        next
+      }
+
+      if (!is.character(value) || length(value) != 1L ||
+          is.na(value) || !nzchar(trimws(value))) {
+        piptm_abort(
+          c(
+            "{.arg {slot_name}} must be NULL or a single non-empty character scalar.",
+            "i" = "Example: {.code {slot_name} = 'gender'}"
+          ),
+          user_message = "Each table layout slot must contain exactly one valid variable name."
+        )
+      }
+
+      value <- trimws(value)
+      filled <- c(filled, slot_name)
+      slot_dims <- c(slot_dims, value)
+    }
+
+    if (length(filled) > 0L) {
+      expected_prefix <- slot_order[seq_along(filled)]
+      if (!identical(filled, expected_prefix)) {
+        missing_slot <- setdiff(expected_prefix, filled)[[1L]]
+        piptm_abort(
+          c(
+            "Layout slots must be filled in order (column, row, superColumn, superRow).",
+            "i" = "{.arg {missing_slot}} is empty but a later slot is set."
+          ),
+          user_message = "Layout fields must be filled from left to right with no gaps."
+        )
+      }
+
+      if (anyDuplicated(slot_dims) > 0L) {
+        dup_vals <- unique(slot_dims[duplicated(slot_dims)])
+        piptm_abort(
+          c(
+            "A layout variable is assigned to more than one slot.",
+            "i" = "Duplicate value{?s}: {.val {dup_vals}}"
+          ),
+          user_message = "The same variable cannot be assigned to multiple layout slots."
+        )
+      }
+    }
+  }
+
   by_validate <- by
+  if (!is.null(by_validate) && anyDuplicated(by_validate) > 0L) {
+    dup_vals <- unique(by_validate[duplicated(by_validate)])
+    piptm_abort(
+      c(
+        "Duplicate variable(s) in {.arg by}: {.val {dup_vals}}.",
+        "i" = "Each disaggregation variable may be used only once."
+      ),
+      user_message = "Each table disaggregation variable can be used only once."
+    )
+  }
+
   if (!is.null(by_validate)) {
     by_validate <- setdiff(by_validate, "pov_status")
     if (length(by_validate) == 0L) by_validate <- NULL
@@ -63,72 +163,73 @@ NULL
       )
     }
     if (length(filter_base) == 0L) {
-      piptm_abort(
-        "{.arg filter_base} must be NULL or a non-empty named list.",
-        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
-      )
+      # Treat explicit empty list as an intentional "no filters" request.
+      filter_base <- NULL
     }
 
-    filter_vars <- names(filter_base)
-    if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
-      piptm_abort(
-        "{.arg filter_base} must have non-empty variable names.",
-        user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+    if (!is.null(filter_base)) {
+
+      filter_vars <- names(filter_base)
+      if (is.null(filter_vars) || anyNA(filter_vars) || any(!nzchar(filter_vars))) {
+        piptm_abort(
+          "{.arg filter_base} must have non-empty variable names.",
+          user_message = .PIPTM_SAMPLE_FILTER_UNREADABLE_USER_ERROR
+        )
+      }
+
+      allowed_filter_vars <- unique(
+        vapply(piptm_filter_categories(release), `[[`, character(1), "varname")
+      )
+
+      invalid_vars <- setdiff(filter_vars, allowed_filter_vars)
+      if (length(invalid_vars) > 0L) {
+        piptm_abort(
+          c(
+            "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
+            "i" = "Allowed variables: {.val {allowed_filter_vars}}"
+          ),
+          user_message = "One or more selected sample filters are not valid for this data release."
+        )
+      }
+
+      normalized_filter_base <- stats::setNames(
+        lapply(filter_vars, function(varname) {
+          vals <- unlist(filter_base[[varname]], use.names = FALSE)
+          if (length(vals) == 0L) {
+            piptm_abort(
+              "{.arg filter_base} variable {.val {varname}} must include at least one value.",
+              user_message = "Each sample filter must include at least one selected category."
+            )
+          }
+          vals_numeric <- suppressWarnings(as.numeric(vals))
+          bad_non_int  <- is.na(vals_numeric) | !is.finite(vals_numeric)
+          if (any(bad_non_int)) {
+            piptm_abort(
+              c(
+                "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+                "i" = "Values must be integer codes stored in Parquet.",
+                "i" = "Offending value{?s}: {.val {unique(vals[bad_non_int])}}"
+              ),
+              user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
+            )
+          }
+          fractional_idx <- vals_numeric != floor(vals_numeric)
+          if (any(fractional_idx)) {
+            piptm_abort(
+              c(
+                "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
+                "i" = "Values must be integer codes stored in Parquet.",
+                "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
+              ),
+              user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
+            )
+          }
+          vals_int <- as.integer(vals_numeric)
+          unique(vals_int)
+        }),
+        filter_vars
       )
     }
-
-    allowed_filter_vars <- unique(
-      vapply(piptm_filter_categories(release), `[[`, character(1), "varname")
-    )
-
-    invalid_vars <- setdiff(filter_vars, allowed_filter_vars)
-    if (length(invalid_vars) > 0L) {
-      piptm_abort(
-        c(
-          "Invalid {.arg filter_base} variable{?s}: {.val {invalid_vars}}.",
-          "i" = "Allowed variables: {.val {allowed_filter_vars}}"
-        ),
-        user_message = "One or more selected sample filters are not valid for this data release."
-      )
-    }
-
-    normalized_filter_base <- stats::setNames(
-      lapply(filter_vars, function(varname) {
-        vals <- unlist(filter_base[[varname]], use.names = FALSE)
-        if (length(vals) == 0L) {
-          piptm_abort(
-            "{.arg filter_base} variable {.val {varname}} must include at least one value.",
-            user_message = "Each sample filter must include at least one selected category."
-          )
-        }
-        vals_numeric <- suppressWarnings(as.numeric(vals))
-        bad_non_int  <- is.na(vals_numeric) | !is.finite(vals_numeric)
-        if (any(bad_non_int)) {
-          piptm_abort(
-            c(
-              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
-              "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[bad_non_int])}}"
-            ),
-            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
-          )
-        }
-        fractional_idx <- vals_numeric != floor(vals_numeric)
-        if (any(fractional_idx)) {
-          piptm_abort(
-            c(
-              "{.arg filter_base} variable {.val {varname}} has non-integer value{?s}.",
-              "i" = "Values must be integer codes stored in Parquet.",
-              "i" = "Offending value{?s}: {.val {unique(vals[fractional_idx])}}"
-            ),
-            user_message = .PIPTM_SAMPLE_FILTER_VALUES_USER_ERROR
-          )
-        }
-        vals_int <- as.integer(vals_numeric)
-        unique(vals_int)
-      }),
-      filter_vars
-    )
   }
 
   list(

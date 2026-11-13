@@ -310,6 +310,26 @@ test_that("build_description_model() rejects poverty measure without poverty_lin
   )
 })
 
+test_that("build_description_model() rejects a pov_status layout slot without a valid poverty_line", {
+  # Review finding P1.3: previously .build_layout_content() silently dropped
+  # the pov_status row instead of erroring, so a direct caller (bypassing the
+  # plumber route's separate .validate_table_shape() check) got a metadata
+  # document that misrepresented the requested table shape instead of an
+  # error. .validate_and_normalize_table_params() now enforces this for both
+  # table_maker() and build_description_model().
+  activate_builder_fixture()
+  expect_error(
+    piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "pov_status",
+      release = "20260401_TEST"
+    ),
+    "pov_status"
+  )
+})
+
 test_that("build_description_model() rejects unknown filter_base variable", {
   activate_builder_fixture()
   expect_error(
@@ -321,6 +341,151 @@ test_that("build_description_model() rejects unknown filter_base variable", {
       release = "20260401_TEST"
     )
   )
+})
+
+test_that("build_description_model() accepts empty filter_base list the same as NULL", {
+  activate_builder_fixture()
+
+  model_empty <- piptm::build_description_model(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = list(),
+    release = "20260401_TEST"
+  )
+
+  model_null <- piptm::build_description_model(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    filter_base = NULL,
+    release = "20260401_TEST"
+  )
+
+  expect_false(model_empty$filters_applied$visible)
+  expect_null(model_empty$filters_applied$content)
+  expect_identical(model_empty$layout_configuration$visible, model_null$layout_configuration$visible)
+  expect_identical(model_empty$statistics_selected$content$measures$measure,
+                   model_null$statistics_selected$content$measures$measure)
+})
+
+test_that("build_description_model() degrades gracefully when a specific pip_id is missing in registry", {
+  activate_builder_fixture()
+
+  reg <- piptm::piptm_variable_registry("20260401_TEST")
+  reg[["gender"]]$categories <- NULL
+  reg[["gender"]]$n_categories <- NULL
+  piptm:::.piptm_env$registries[["20260401_TEST"]] <- reg
+
+  expect_no_error(
+    model <- piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      release = "20260401_TEST"
+    )
+  )
+
+  layout <- model$layout_configuration$content$layout
+  expect_identical(layout$varname[[1]], "gender")
+  expect_true(nchar(layout$n_categories[[1]]) >= 0L)
+})
+
+test_that("build_description_model() tolerates partial pip_id manifest matches", {
+  activate_builder_fixture()
+
+  expect_no_error(
+    model <- piptm::build_description_model(
+      pip_id = c("COL_2010_ECH_INC_ALL", "XXX_9999_NONE_INC_ALL"),
+      analysis_var = "welfare",
+      measures = "mean",
+      release = "20260401_TEST"
+    )
+  )
+
+  surveys <- model$surveys_selected$content
+  expect_identical(surveys$n_loaded, 1L)
+  expect_identical(surveys$loaded_list$pip_id[[1]], "COL_2010_ECH_INC_ALL")
+})
+
+test_that("build_description_model() rejects gapped or duplicate layout slots for direct callers", {
+  activate_builder_fixture()
+
+  expect_error(
+    piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      superColumn = "area",
+      release = "20260401_TEST"
+    ),
+    regexp = "filled in order|left to right"
+  )
+
+  expect_error(
+    piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      row = "gender",
+      release = "20260401_TEST"
+    ),
+    regexp = "multiple layout slots|more than one slot|Duplicate"
+  )
+})
+
+test_that("build_description_model() rejects multi-valued slot inputs for direct callers", {
+  activate_builder_fixture()
+
+  expect_error(
+    piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = c("gender", "area"),
+      release = "20260401_TEST"
+    ),
+    regexp = "single non-empty character scalar|single variable"
+  )
+})
+
+test_that(".build_layout_content handles missing category metadata defensively", {
+  layout <- piptm:::.build_layout_content(
+    active_slots = list(column = "gender"),
+    poverty_line = NULL,
+    registry = list(),
+    layout_covs = list(
+      list(varname = "gender", label = "Gender", n_categories = NA_integer_)
+    )
+  )
+
+  expect_type(layout, "list")
+  expect_true("layout" %in% names(layout))
+  expect_identical(layout$layout$varname[[1]], "gender")
+  expect_identical(layout$layout$n_categories[[1]], "")
+})
+
+test_that(".build_surveys_content keeps included rows when excluded is empty", {
+  included <- data.table::data.table(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    country_code = "COL",
+    country_name = "Colombia",
+    year = 2010L,
+    welfare_type = "INC",
+    version = "v01_v01"
+  )
+  excluded <- data.table::data.table(
+    pip_id = character(0),
+    reason = character(0)
+  )
+
+  out <- piptm:::.build_surveys_content(included, excluded, release = "20260401_TEST")
+  expect_identical(out$n_loaded, 1L)
+  expect_identical(out$n_excluded, 0L)
+  expect_identical(out$loaded_list$pip_id[[1]], "COL_2010_ECH_INC_ALL")
+  expect_null(out$excluded_list)
 })
 
 test_that("build_description_model() aborts when all surveys excluded", {
