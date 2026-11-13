@@ -30,6 +30,9 @@
   full Cartesian enumeration for <= 4 cells, per-slot category breakdown for
   > 4 cells) with JSON array unbox protection and filter-aware category
   intersections.
+- `.validate_and_normalize_table_params()` (`R/table_params.R`) — shared
+  table-shaping validator used by both compute and metadata paths to enforce
+  slot semantics and normalize request contracts before downstream execution.
 <!-- cg:auto:end -->
 
 <!-- cg:auto:parameters -->
@@ -42,6 +45,15 @@ Common parameters across measure functions:
   `education`, `geography`) to cross-tabulate results against.
 - `measures` — character vector naming which measures to compute (e.g.
   `"fgt"`, `"gini"`, `"mean_welfare"`).
+- `column`, `row`, `superColumn`, `superRow` — optional layout slot
+  variables validated as scalar, non-empty character values with strict
+  left-to-right contiguous fill order.
+- `poverty_line` — required as a single positive finite value whenever
+  `by` includes `pov_status`; validated in shared table-parameter
+  normalization.
+- `filter_base` — sample-base filter specification; an explicit empty list
+  (`list()`) is normalized to `NULL` and treated as intentional
+  no-filter behavior.
 
 Refer to each function's roxygen2 documentation (`?table_maker`,
 `?compute_measures`, etc.) for full parameter definitions.
@@ -65,6 +77,12 @@ array with at most 4 entries (full Cartesian enumeration for <= 4 total cells,
 1 summary line per active slot for > 4 cells, or empty when no slots are active
 or the registry is unresolved), preventing Plumber scalar-string unboxing and
 combinatorial text bloat.
+
+For metadata and compute entry points, table-shaping inputs now share a single
+upstream validation boundary: invalid slot gaps/duplicates and malformed
+multi-valued slots are rejected consistently, `pov_status` requires coherent
+`poverty_line` values, and `filter_base = list()` is normalized to `NULL` for
+parity with API no-filter intent.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)

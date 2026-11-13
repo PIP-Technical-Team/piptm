@@ -37,7 +37,9 @@ NULL
 #'   `surveys_selected`, `filters_applied`, `layout_configuration`,
 #'   `statistics_selected`), each with `visible`, `title`, and `content` fields.
 #'   For identical inputs, the only run-to-run varying field is
-#'   `provenance$content$generated_at`.
+#'   `provenance$content$generated_at`. In `statistics_selected`,
+#'   `poverty_line$value` is formatted display text and
+#'   `poverty_line$value_raw` stores the raw numeric value(s).
 #' @export
 #' @examples
 #' \dontrun{
@@ -417,12 +419,11 @@ build_description_model <- function(pip_id,
     ui_label <- as.character((cov_entry$label %||% varname))
 
     cat_labels <- .resolve_covariate_category_labels(varname, registry)
-    n_categories <- if (length(cat_labels) > 0L) {
-      sprintf("%d: %s", length(cat_labels), paste(cat_labels, collapse = ", "))
-    } else {
-      count <- cov_entry$n_categories %||% NA_integer_
-      if (is.na(count)) "" else as.character(as.integer(count))
-    }
+    count <- cov_entry$n_categories %||% NA_integer_
+    n_categories <- .format_category_count_display(
+      labels = cat_labels,
+      count = count
+    )
 
     rows[[length(rows) + 1L]] <- data.table::data.table(
       slot_label = format_slot_label(slot_name),
@@ -507,6 +508,7 @@ build_description_model <- function(pip_id,
     poverty_line = list(
       applicable = has_poverty,
       value = if (has_poverty) .format_poverty_line_display(pl) else NULL,
+      value_raw = if (has_poverty) pl else NULL,
       ppp_year = if (has_poverty) ppp else NULL
     ),
     measures = measures_dt
@@ -655,6 +657,30 @@ build_description_model <- function(pip_id,
     values <- paste0(values, suffix)
   }
   paste(values, collapse = " / ")
+}
+
+
+#' Format category metadata as a consistent "N: labels" display string.
+#' @keywords internal
+.format_category_count_display <- function(labels, count = NA_integer_) {
+  if (length(labels) > 0L) {
+    labels <- as.character(labels)
+    labels <- labels[nzchar(labels)]
+    if (length(labels) > 0L) {
+      return(sprintf("%d: %s", length(labels), paste(labels, collapse = ", ")))
+    }
+  }
+
+  count <- suppressWarnings(as.integer(count))[1L]
+  if (is.na(count) || count < 0L) {
+    return("0: Unspecified")
+  }
+  if (count == 0L) {
+    return("0: Unspecified")
+  }
+
+  synthetic <- sprintf("Category %d", seq_len(count))
+  sprintf("%d: %s", count, paste(synthetic, collapse = ", "))
 }
 
 

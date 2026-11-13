@@ -221,3 +221,27 @@ When endpoints return natural-language explanations of user-configured multi-dim
 3. **Guard fallback paths against false counts**: When metadata or registries are unavailable, drop numeric count suffixes entirely rather than deriving false cell counts from dummy fallback items.
 
 See `.cg-docs/solutions/testing-patterns/2026-11-09-bounded-adaptive-prose-enumeration.md` for full details.
+
+### Shared table-parameter parity for metadata and compute paths (established 2026-11-13)
+
+When table-shaping parameters are accepted by both compute and metadata flows
+(`table_maker()` and `build_description_model()`), enforce domain rules in
+`R/table_params.R:.validate_and_normalize_table_params()` and treat endpoint
+validators as transport-only guards.
+
+Rules:
+
+1. **Centralize slot-shape validation in the shared helper**: `column`, `row`,
+   `superColumn`, `superRow` must be scalar non-empty strings, filled
+   left-to-right with no gaps, and must not duplicate each other.
+2. **Enforce `pov_status` + `poverty_line` coherence upstream**: if
+   `pov_status` appears in disaggregation, require a single positive finite
+   poverty line at shared-validation time so direct metadata calls cannot bypass
+   the invariant.
+3. **Normalize empty filter intent explicitly**: treat `filter_base = list()`
+   as no-filter (`NULL`) rather than malformed input.
+4. **Avoid repeated registry scans per metadata section**: derive role-specific
+   slices once per request and pass them through section builders.
+
+Reference:
+`.cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md`.

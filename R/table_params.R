@@ -30,6 +30,9 @@ NULL
 #'   Each must be `NULL` or a single non-blank character scalar.
 #' @param filter_base Named list sample filter, or `NULL`.
 #' @param release Character scalar release ID, or `NULL`.
+#' @details
+#' Executable behavior is pinned in `tests/testthat/test-table-params.R`, which
+#' serves as the contract for direct and shared callers.
 #'
 #' @return A named list with elements `families` (measure family classification),
 #'   `by_validate` (`by` with `pov_status` removed, or `NULL`),
@@ -267,6 +270,9 @@ NULL
 #' @param warn Logical; emit `cli_warn()` for excluded surveys and partial
 #'   `pip_id` matches. Defaults to `TRUE` (computation path); the metadata
 #'   builder passes `FALSE`.
+#' @details
+#' See `tests/testthat/test-table-params.R` for agreement tests against
+#' [table_maker()] and exclusion-reason edge cases.
 #'
 #' @return A named list with `release` (the resolved release),
 #'   `included` (a manifest-entry `data.table`), and `excluded`

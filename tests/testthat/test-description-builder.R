@@ -292,6 +292,7 @@ test_that("statistics_selected reports poverty line when applicable", {
   pl <- model$statistics_selected$content$poverty_line
   expect_true(pl$applicable)
   expect_match(pl$value, "3.65")
+  expect_equal(pl$value_raw, 3.65)
   expect_equal(pl$ppp_year, 2021L)
 })
 
@@ -464,7 +465,26 @@ test_that(".build_layout_content handles missing category metadata defensively",
   expect_type(layout, "list")
   expect_true("layout" %in% names(layout))
   expect_identical(layout$layout$varname[[1]], "gender")
-  expect_identical(layout$layout$n_categories[[1]], "")
+  expect_identical(layout$layout$n_categories[[1]], "0: Unspecified")
+})
+
+test_that(".build_layout_content uses consistent n_categories string shape", {
+  layout <- piptm:::.build_layout_content(
+    active_slots = list(column = "gender", row = "area"),
+    poverty_line = 2.15,
+    registry = list(
+      gender = list(categories = list(list(label = "Male"), list(label = "Female")))
+    ),
+    layout_covs = list(
+      list(varname = "gender", label = "Gender", n_categories = 2L),
+      list(varname = "area", label = "Area", n_categories = 2L)
+    )
+  )
+
+  nc <- layout$layout$n_categories
+  expect_true(all(grepl("^[0-9]+: ", nc)))
+  expect_match(nc[[1]], "Male")
+  expect_match(nc[[2]], "Category")
 })
 
 test_that(".build_surveys_content keeps included rows when excluded is empty", {

@@ -37,6 +37,18 @@ load).
   bloat). Plumber array unboxing is guarded via `as.list()` so single-element
   lists serialize as JSON arrays, slot categories intersect with `filter_base`,
   and unresolved registry fallbacks omit false cell counts.
+- 2026-11-13 — metadata direct callers and compute paths now share a single
+  table-parameter validation boundary through
+  `.validate_and_normalize_table_params()` in `R/table_params.R`. Slot
+  guardrails (`column`/`row`/`superColumn`/`superRow`) now enforce scalar
+  non-empty values, contiguous left-to-right fill, and duplicate rejection at
+  shared-validation time; `by` values containing `pov_status` require a single
+  positive finite `poverty_line`; and `filter_base = list()` normalizes to
+  `NULL` as intentional no-filter semantics. `build_description_model()` now
+  reuses one-time role-specific registry slices to avoid repeated full-registry
+  scans, and regression coverage was expanded in
+  `tests/testthat/test-table-params.R` and
+  `tests/testthat/test-description-builder.R`.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)

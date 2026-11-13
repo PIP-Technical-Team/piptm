@@ -128,3 +128,4 @@ Call these directly without constructing intermediate lists.
 - `.cg-docs/plans/2026-11-04-cell-definition-get-only.md` — implementation plan; no refactoring requested by user
 - `inst/plumber/helpers.R:validate_cell_definition_query()` — the deferred simplification target
 - `.cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md` — companion solution on testing and validator hardening
+- `.cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md` — follow-on implementation of shared slot-shape and parity guardrails in the metadata/table parameter path

@@ -1,5 +1,5 @@
 {
-  "edge_count": 81,
+  "edge_count": 96,
   "edges": [
     {
       "edge_type": "decided_from",
@@ -129,6 +129,24 @@
     },
     {
       "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints-corrected.md",
+      "target": ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints.md",
+      "target": ".cg-docs/brainstorms/2026-07-31-session-storage-endpoints.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
+      "target": ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
       "source": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
       "target": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
       "target_missing": false
@@ -137,6 +155,12 @@
       "edge_type": "decided_from",
       "source": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
       "target": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "decided_from",
+      "source": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "target": ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
       "target_missing": false
     },
     {
@@ -339,6 +363,24 @@
     },
     {
       "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md",
+      "target": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review-2.md",
+      "target": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
       "source": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
       "target": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
       "target_missing": false
@@ -347,6 +389,42 @@
       "edge_type": "verifies",
       "source": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md",
       "target": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-09-covariate-exclusion-error-wording-review.md",
+      "target": ".cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-review.md",
+      "target": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review-2.md",
+      "target": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-review.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-11-rename-description-to-metadata-review.md",
+      "target": ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
+      "target": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
       "target_missing": false
     },
     {
@@ -435,8 +513,20 @@
     },
     {
       "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
+      "target": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
       "source": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
       "target": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "references",
+      "source": ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "target": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
       "target_missing": false
     },
     {
@@ -477,14 +567,14 @@
     },
     {
       "edge_type": "implements",
-      "source": ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
-      "target": "roadmap.json#page2-cell-definition-endpoint",
+      "source": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
+      "target": "roadmap.json#user-facing-api-error-messages",
       "target_missing": false
     },
     {
       "edge_type": "implements",
-      "source": ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
-      "target": "roadmap.json#cell-definition-get-only",
+      "source": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "target": "roadmap.json#table-metadata-rework-and-decoupling-from-table-maker",
       "target_missing": false
     }
   ],
@@ -1317,6 +1407,34 @@
       ]
     },
     {
+      "date": "2026-11-08",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
+      "slug": "2026-11-08-user-facing-api-error-messages",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "api",
+        "error-handling",
+        "plumber",
+        "ui-contract",
+        "cli_abort"
+      ],
+      "title": "User-Facing API Error Messages",
+      "top_keywords": [
+        "user_message",
+        "cli_abort()",
+        "table_maker.r",
+        "class",
+        "api",
+        "readme.md",
+        "approach",
+        "load_data.r",
+        "measures.r",
+        "condition"
+      ]
+    },
+    {
       "date": "2026-11-09",
       "entity_type": "brainstorm",
       "path": ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
@@ -1344,6 +1462,38 @@
         "dimensions",
         "r/cell_explanation.r",
         "{ title, structure_text, items, example_text }"
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "entity_type": "brainstorm",
+      "path": ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "slug": "2026-11-12-metadata-rework-and-table-maker-decoupling",
+      "status": "decided",
+      "summary": "<!-- Valid status values: decided, in-progress, abandoned -->",
+      "tags": [
+        "metadata",
+        "table-maker",
+        "api",
+        "endpoint",
+        "description-builder",
+        "registry",
+        "manifest",
+        "download",
+        "decoupling"
+      ],
+      "title": "Table Metadata Rework and Decoupling from table_maker()",
+      "top_keywords": [
+        "table_maker()",
+        "r/description_builder.r",
+        "description_metadata",
+        "include_metadata",
+        "/table",
+        "description_builder.r",
+        "metadata",
+        "pip_id",
+        ".build_description_metadata()",
+        "build_description_model()"
       ]
     },
     {
@@ -2409,6 +2559,92 @@
       ]
     },
     {
+      "date": "2026-11-04",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints-corrected.md",
+      "slug": "2026-11-04-remove-session-surveys-endpoints-corrected",
+      "status": "completed",
+      "summary": "Remove the obsolete `POST /session/surveys` and `GET /session/<id>/surveys` endpoints from the `piptm` Plumber API, purge their unused validation and in-memory storage helpers, verify route absence, and remove endpoint references from package documentation, API contracts, guides, and the Insomnia collection.",
+      "tags": [
+        "api",
+        "plumber",
+        "session",
+        "cleanup",
+        "breaking-change",
+        "documentation"
+      ],
+      "title": "Remove Obsolete Session Survey API Endpoints and Documentation",
+      "top_keywords": [
+        "insomnia-collection.json",
+        "readme.md",
+        "swagger_guide.md",
+        "documentation",
+        "man/run_api.rd",
+        "tests/testthat/test-api-endpoints.r",
+        "r/api.r",
+        "test scenarios",
+        "session",
+        "post /session/surveys"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints.md",
+      "slug": "2026-11-04-remove-session-surveys-endpoints",
+      "status": "active",
+      "summary": "Remove the obsolete `POST /session/surveys` and `GET /session/<id>/surveys` endpoints from the `piptm` Plumber API, purge all unused session validation and in-memory storage helpers, update unit tests to assert route absence (HTTP 404), and remove all references from package documentation, API contracts, guides, and the Insomnia collection.",
+      "tags": [
+        "api",
+        "plumber",
+        "session",
+        "cleanup",
+        "breaking-change",
+        "documentation"
+      ],
+      "title": "Remove Obsolete Session Survey API Endpoints and Documentation",
+      "top_keywords": [
+        "insomnia-collection.json",
+        "readme.md",
+        "swagger_guide.md",
+        "test-api-endpoints.r",
+        "tests/testthat/test-api-endpoints.r",
+        "r/api.r",
+        "man/run_api.rd",
+        "/session/surveys",
+        "docs/api-contract.md",
+        "api.r"
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
+      "slug": "2026-11-08-user-facing-api-error-messages",
+      "status": "completed",
+      "summary": "Prevent raw developer-facing `cli::cli_abort()` strings (containing `pip_id`, `manifest`, `triplet`, glue/cli markup, or file paths) from leaking through the Plumber API's `errors[]` response envelope. Introduce an internal condition helper (`piptm_abort()`) that preserves the rich developer diagnostic message on `conditionMessage(e)` for interactive R users and server logs while embedding a plain-English, user-safe `user_message` attribute on the condition object for the UI. Update the API boundary (`capture_with_warnings()` and `POST /table/download`) to extract `user_message` when present and fall back to a fixed generic safe message (`\"Something went wrong processing this request.\"`) while logging the raw developer diagnostic to `stderr()`.",
+      "tags": [
+        "api",
+        "error-handling",
+        "plumber",
+        "ui-contract",
+        "cli_abort"
+      ],
+      "title": "User-Facing API Error Messages",
+      "top_keywords": [
+        "cli_abort()",
+        "filter_base",
+        "piptm_abort()",
+        "user_message",
+        "readme.md",
+        "docs/api-contract.md",
+        "test-api-endpoints.r",
+        "r/table_maker.r",
+        "inst/plumber/",
+        "errors[]"
+      ]
+    },
+    {
       "date": "2026-11-09",
       "entity_type": "plan",
       "path": ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
@@ -2466,6 +2702,148 @@
         "test-cell-definition.r",
         "docs/api-contract.md",
         "test-api-cell-definition.r"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md",
+      "slug": "2026-11-09-covariate-exclusion-error-wording",
+      "status": "completed",
+      "summary": "Replace the two generic, jargon-mixing `user_message` strings in `table_maker()`'s dimension-exclusion paths with messages that name the actual covariate(s) the user must remove, using their UI-facing labels. Replace \"breakdown\" wording with \"covariate\" throughout.",
+      "tags": [
+        "api",
+        "error-handling",
+        "table_maker",
+        "ux-wording"
+      ],
+      "title": "Name Specific Covariates in Table Exclusion Error Messages",
+      "top_keywords": [
+        "user_message",
+        "test-errors.r",
+        "r/table_maker.r",
+        "test-api-endpoints.r",
+        "tests/testthat/test-errors.r",
+        "table_maker.r",
+        "filter_base",
+        "docs/api-contract.md",
+        "tests/testthat/test-api-endpoints.r",
+        "api-contract.md"
+      ]
+    },
+    {
+      "date": "2026-11-10",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-10-swagger-api-documentation.md",
+      "slug": "2026-11-10-swagger-api-documentation",
+      "status": "completed",
+      "summary": "Rewrite and enrich the OpenAPI/Swagger documentation generated by `inst/plumber/plumber.R` so that Swagger UI (`/__docs__/`) clearly documents the API overview, groups all 15 endpoints into intuitive workflow tags, provides complete single-line `@param` descriptions (fixing Plumber's multi-line truncation bug), marks required vs. optional parameters with concrete examples/enums/defaults, and exposes accurate top-level JSON `requestBody` schemas and examples for `POST /description` and `POST /table/download`.",
+      "tags": [
+        "api",
+        "swagger",
+        "openapi",
+        "plumber",
+        "documentation"
+      ],
+      "title": "Overhaul Swagger/OpenAPI Documentation for All Plumber Endpoints",
+      "top_keywords": [
+        "inst/plumber/plumber.r",
+        "test-api-endpoints.r",
+        "plumber",
+        "tests/testthat/test-api-endpoints.r",
+        "plumber.r",
+        "requestbody",
+        "post /description",
+        "@param",
+        "post /table/download",
+        "pr$getapispec()"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
+      "slug": "2026-11-11-remove-surveys-ui-dimensions",
+      "status": "completed",
+      "summary": "Remove the unused `dimensions` field (and the unused variable registry lookup) from `piptm_surveys_ui()` and the `GET /surveys-ui` endpoint response so the Step 1 survey selection catalog does not return unnecessary per-survey dimension arrays.",
+      "tags": [
+        "api",
+        "plumber",
+        "surveys-ui",
+        "manifest"
+      ],
+      "title": "Remove Unused dimensions Field from surveys-ui Endpoint",
+      "top_keywords": [
+        "dimensions",
+        "piptm_surveys_ui()",
+        "get /surveys-ui",
+        "surveys-ui",
+        "pip_id",
+        "country_code",
+        "country_label",
+        "year",
+        "welfare_type",
+        "welfare_label"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md",
+      "slug": "2026-11-11-rename-description-to-metadata",
+      "status": "completed",
+      "summary": "Rename the public Plumber route `POST /description` to `POST /metadata` and update every live dependent (router maps, OpenAPI path keys, tests, and current-state docs) so the old path is no longer advertised or callable. Request body, serializers, status codes, and internal builder/renderer names stay unchanged.",
+      "tags": [
+        "api",
+        "plumber",
+        "metadata",
+        "breaking-change",
+        "rename"
+      ],
+      "title": "Rename POST /description to POST /metadata",
+      "top_keywords": [
+        "/description",
+        "/metadata",
+        "roadmap.json",
+        "req",
+        "description_metadata",
+        "readme.md",
+        "swagger_guide.md",
+        "post /description",
+        "inst/plumber/plumber.r",
+        "plumber.r"
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "slug": "2026-11-12-metadata-rework-and-table-maker-decoupling",
+      "status": "completed",
+      "summary": "Make `table_maker()` compute tables and nothing else, and make `GET|POST /metadata` a pure, fast (`< 5 ms`), zero-microdata document generator driven entirely by the in-memory release manifest and variable registry. Remove the `include_metadata` parameter from both the engine and `/table`, replace the legacy 9-section description model with a streamlined 6-section table metadata document, and deliver that document as a downloadable HTML or Markdown companion to `POST /table/download`.",
+      "tags": [
+        "metadata",
+        "table-maker",
+        "api",
+        "endpoint",
+        "description-builder",
+        "registry",
+        "manifest",
+        "decoupling",
+        "breaking-change"
+      ],
+      "title": "Table Metadata Rework and Decoupling from table_maker()",
+      "top_keywords": [
+        "table_maker()",
+        "include_metadata",
+        "/table",
+        "description_metadata",
+        "test-error-coverage-audit.r",
+        "/metadata",
+        "r/description_builder.r",
+        "description_builder.r",
+        "table_maker.r",
+        "pip_id"
       ]
     },
     {
@@ -3223,6 +3601,72 @@
       ]
     },
     {
+      "date": "2026-11-08",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md",
+      "slug": "2026-11-08-user-facing-api-error-messages-review",
+      "status": "",
+      "summary": "**Review mode**: architecture **Files reviewed**: 21 **Findings**: 14 (P0: 0, P1: 2, P2: 8, P3: 4)",
+      "tags": [],
+      "title": "2026-11-08-user-facing-api-error-messages-review",
+      "top_keywords": [
+        "[safe_auto]",
+        "r/errors.r",
+        "filter_base",
+        "test-errors.r",
+        "errors.r",
+        "user_message",
+        "namespace",
+        "piptm_abort()",
+        "test-api-endpoints.r",
+        "api-contract.md"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review-2.md",
+      "slug": "2026-11-08-user-facing-api-error-messages-verify-review-2",
+      "status": "",
+      "summary": "**Review mode**: light (forced by `mode:verify`) **Files reviewed**: 6 (changed in `4168044..115431a`) **Findings**: 1 (P0: 0, P1: 0, P2: 0, P3: 1)",
+      "tags": [],
+      "title": "2026-11-08-user-facing-api-error-messages-verify-review-2",
+      "top_keywords": [
+        "fix",
+        "stopifnot()",
+        ".piptm_safe_scalar_label()",
+        ".mixed_file_site_allowlist",
+        "expect_message()",
+        "%||% ...$categories",
+        "categories",
+        "subcategories",
+        "fixed",
+        "review"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review.md",
+      "slug": "2026-11-08-user-facing-api-error-messages-verify-review",
+      "status": "",
+      "summary": "**Review mode**: light (forced by `mode:verify`) **Files reviewed**: 13 (changed in `eb912d7..4168044`) **Findings**: 5 (P0: 0, P1: 0, P2: 1, P3: 4)",
+      "tags": [],
+      "title": "2026-11-08-user-facing-api-error-messages-verify-review",
+      "top_keywords": [
+        "filter_base",
+        "area",
+        "load_data.r",
+        "fix",
+        "dev_msg",
+        "r/errors.r",
+        "manifest.r",
+        "2026-11-08-user-facing-api-error-messages-review.md",
+        "errors.r",
+        "fixed"
+      ]
+    },
+    {
       "date": "2026-11-09",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
@@ -3264,6 +3708,138 @@
         "report",
         "blocking",
         "critical"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-09-covariate-exclusion-error-wording-review.md",
+      "slug": "2026-11-09-covariate-exclusion-error-wording-review",
+      "status": "",
+      "summary": "**Review mode**: standard **Files reviewed**: 5 (`R/errors.R`, `R/table_maker.R`, `docs/api-contract.md`, `tests/testthat/test-errors.R`, `tests/testthat/test-api-endpoints.R`) **Findings**: 11 (P0: 0, P1: 2, P2: 5, P3: 4)",
+      "tags": [],
+      "title": "2026-11-09-covariate-exclusion-error-wording-review",
+      "top_keywords": [
+        "[safe_auto]",
+        "test-api-endpoints.r",
+        "filter_base",
+        "r/errors.r",
+        "errors.r",
+        "test-errors.r",
+        "table_maker.r",
+        "ui_label",
+        ".piptm_covariate_labels()",
+        "current.json"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-review.md",
+      "slug": "2026-11-11-remove-surveys-ui-dimensions-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 4 (`R/manifest.R`, `man/piptm_surveys_ui.Rd`, `inst/plumber/plumber.R`, `tests/testthat/test-surveys-ui.R`) **Findings**: 7 (P0: 0, P1: 0, P2: 4, P3: 3)",
+      "tags": [],
+      "title": "2026-11-11-remove-surveys-ui-dimensions-review",
+      "top_keywords": [
+        "dimensions",
+        "r/manifest.r",
+        "/surveys",
+        "get /surveys-ui",
+        "/surveys-ui",
+        "manifest.r",
+        "country_name",
+        "countrycode",
+        "country_label",
+        "man/piptm_surveys_ui.rd"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review-2.md",
+      "slug": "2026-11-11-remove-surveys-ui-dimensions-verify-review-2",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 7 (`R/manifest.R`, `inst/plumber/plumber.R`, `man/piptm_surveys_ui.Rd`, `docs/api-contract.md`, `SWAGGER_GUIDE.md`, `tests/testthat/test-api-endpoints.R`, `tests/testthat/test-surveys-ui.R`) **Findings**: 0 (P0: 0, P1: 0, P2: 0, P3: 0)",
+      "tags": [],
+      "title": "2026-11-11-remove-surveys-ui-dimensions-verify-review-2",
+      "top_keywords": [
+        "swagger_guide.md",
+        "review",
+        "dimensions",
+        "report",
+        "passed",
+        "r/manifest.r",
+        "inst/plumber/plumber.r",
+        "man/piptm_surveys_ui.rd",
+        "docs/api-contract.md",
+        "tests/testthat/test-api-endpoints.r"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md",
+      "slug": "2026-11-11-remove-surveys-ui-dimensions-verify-review",
+      "status": "",
+      "summary": "**Review mode**: light **Files reviewed**: 5 (`R/manifest.R`, `inst/plumber/plumber.R`, `man/piptm_surveys_ui.Rd`, `tests/testthat/test-surveys-ui.R`, `tests/testthat/test-api-endpoints.R`) **Findings**: 2 (P0: 0, P1: 0, P2: 2, P3: 0)",
+      "tags": [],
+      "title": "2026-11-11-remove-surveys-ui-dimensions-verify-review",
+      "top_keywords": [
+        "dimensions",
+        "/surveys-ui",
+        "test-api-endpoints.r",
+        "fix",
+        "review",
+        "pip_id",
+        "country_code",
+        "country_label",
+        "year",
+        "welfare_type"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-11-rename-description-to-metadata-review.md",
+      "slug": "2026-11-11-rename-description-to-metadata-review",
+      "status": "",
+      "summary": "**Review mode**: architecture (explicit user mode; mandatory emphasis on `@cg-architecture`, `@cg-performance`, `@cg-testing`) **Files reviewed**: 15 changed + 2 new (`.cg-docs/plans/2026-11-11-rename-description-to-metadata.md`, `.cg-docs/work-reports/2026-11-11-rename-description-to-metadata.md`) **Findings**: 13 (P0: 0, P1: 3, P2: 6, P3: 4)",
+      "tags": [],
+      "title": "2026-11-11-rename-description-to-metadata-review",
+      "top_keywords": [
+        "[advisory]",
+        "/metadata",
+        "/description",
+        "inst/plumber/plumber.r",
+        "execution summary",
+        "news.md",
+        "post /description",
+        "test-api-description.r",
+        "plumber.r",
+        "description_builder.r"
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
+      "slug": "2026-11-12-metadata-rework-and-table-maker-decoupling-review",
+      "status": "",
+      "summary": "**Review mode**: architecture (explicit user mode; mandatory emphasis on `@cg-architecture`, `@cg-performance`, `@cg-testing`) **Scope**: `git diff 8ddde07 -- . ':!.cg-docs'` — full metadata-rework plan (`.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md`, all 3 phases, committed `4ee5758` + uncommitted Phase 3 docs). 56 files, ~2,350 insertions / 5,630 deletions. **Findings**: 20 (P0: 0, P1: 3, P2: 9, P3: 8)",
+      "tags": [],
+      "title": "2026-11-12-metadata-rework-and-table-maker-decoupling-review",
+      "top_keywords": [
+        "build_description_model()",
+        "r/description_builder.r",
+        "table_maker()",
+        "description_builder.r",
+        "[manual]",
+        "[advisory]",
+        "test-description-builder.r",
+        ".build_layout_content()",
+        "[safe_auto]",
+        ".validate_and_normalize_table_params()"
       ]
     },
     {
@@ -3751,6 +4327,37 @@
         "/cell-definition",
         "validate_cell_definition_query()",
         "layer"
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md",
+      "slug": "2026-11-13-metadata-direct-caller-validation-parity",
+      "status": "",
+      "summary": "Metadata generation and compute generation accepted the same conceptual inputs (`pip_id`, slots, measures, `filter_base`, `poverty_line`) but did not always enforce the same rules on the same boundary. Symptoms observed in review and triage: - direct callers of `build_description_model()` could hit edge cases where slot-shape checks were weaker than route-level checks; - `filter_base = list()` behaved as a malformed filter in one path instead of as an intentional \"no filters\" request; - repeated registry scans inside metadata section builders added avoidable overhead and made behavior harder to reason about. This created a drift risk: identical user intent could produce different validation...",
+      "tags": [
+        "metadata",
+        "validation",
+        "build_description_model",
+        "table_params",
+        "slot-shape",
+        "filter_base",
+        "registry",
+        "api"
+      ],
+      "title": "Metadata direct-caller validation parity via shared table-params guardrails",
+      "top_keywords": [
+        "metadata",
+        "validation",
+        "build_description_model()",
+        "filter_base = list()",
+        "shared",
+        "direct-caller",
+        "filter",
+        "pip_id",
+        "poverty_line",
+        "pov_status"
       ]
     },
     {
@@ -4881,20 +5488,42 @@
     {
       "date": "",
       "entity_type": "feature",
-      "path": "roadmap.json#page2-cell-definition-endpoint",
-      "slug": "page2-cell-definition-endpoint",
+      "path": "roadmap.json#user-facing-api-error-messages",
+      "slug": "user-facing-api-error-messages",
       "status": "done",
-      "summary": "Page 2 cell definition endpoint (POST /cell-definition)",
+      "summary": "User-facing API error messages",
       "tags": [],
-      "title": "Page 2 cell definition endpoint (POST /cell-definition)",
+      "title": "User-facing API error messages",
       "top_keywords": [
         "service layer",
-        "page",
-        "cell",
-        "definition",
-        "endpoint",
-        "post",
-        "cell-definition",
+        "api",
+        "user-facing",
+        "error",
+        "messages",
+        "feature",
+        "milestone",
+        "phase",
+        "service",
+        "layer"
+      ]
+    },
+    {
+      "date": "",
+      "entity_type": "feature",
+      "path": "roadmap.json#table-metadata-rework-and-decoupling-from-table-maker",
+      "slug": "table-metadata-rework-and-decoupling-from-table-maker",
+      "status": "done",
+      "summary": "Table Metadata Rework and Decoupling from table_maker()",
+      "tags": [],
+      "title": "Table Metadata Rework and Decoupling from table_maker()",
+      "top_keywords": [
+        "table metadata rework",
+        "service layer",
+        "table",
+        "metadata",
+        "rework",
+        "decoupling",
+        "table_maker",
         "feature",
         "milestone",
         "phase"
@@ -4903,45 +5532,23 @@
     {
       "date": "",
       "entity_type": "feature",
-      "path": "roadmap.json#cell-definition-get-only",
-      "slug": "cell-definition-get-only",
-      "status": "done",
-      "summary": "Replace POST /cell-definition with GET /cell-definition",
+      "path": "roadmap.json#structured-json-output-format-for-get-post-metadata",
+      "slug": "structured-json-output-format-for-get-post-metadata",
+      "status": "idea",
+      "summary": "Structured JSON output format for GET|POST /metadata",
       "tags": [],
-      "title": "Replace POST /cell-definition with GET /cell-definition",
+      "title": "Structured JSON output format for GET|POST /metadata",
       "top_keywords": [
-        "cell-definition",
         "service layer",
-        "replace",
+        "structured",
+        "json",
+        "format",
         "post",
+        "metadata",
         "feature",
         "milestone",
         "phase",
-        "api",
-        "service",
-        "layer"
-      ]
-    },
-    {
-      "date": "",
-      "entity_type": "feature",
-      "path": "roadmap.json#adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
-      "slug": "adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
-      "status": "done",
-      "summary": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
-      "tags": [],
-      "title": "Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition",
-      "top_keywords": [
-        "service layer",
-        "adaptive",
-        "cell",
-        "enumeration",
-        "per-slot",
-        "category",
-        "breakdown",
-        "cell-definition",
-        "feature",
-        "milestone"
+        "api"
       ]
     },
     {
@@ -5098,13 +5705,13 @@
       ]
     }
   ],
-  "entity_count": 178,
-  "generated": "2026-11-09",
+  "entity_count": 198,
+  "generated": "2026-11-12",
   "schema_version": "0.2.0",
-  "topic_count": 3,
+  "topic_count": 2,
   "topics": [
     {
-      "entity_count": 113,
+      "entity_count": 137,
       "entity_paths": [
         ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
         ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
@@ -5135,7 +5742,9 @@
         ".cg-docs/brainstorms/2026-10-22-table-endpoint-explicit-slot-parameters.md",
         ".cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md",
         ".cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md",
+        ".cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md",
         ".cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md",
+        ".cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
         ".cg-docs/plans/2026-03-17-arrow-data-preparation.md",
         ".cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md",
         ".cg-docs/plans/2026-04-03-manifest-generation-version-partition.md",
@@ -5167,8 +5776,16 @@
         ".cg-docs/plans/2026-10-26-table-layout-cells-response-format.md",
         ".cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md",
         ".cg-docs/plans/2026-11-04-cell-definition-get-only.md",
+        ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints-corrected.md",
+        ".cg-docs/plans/2026-11-04-remove-session-surveys-endpoints.md",
+        ".cg-docs/plans/2026-11-08-user-facing-api-error-messages.md",
         ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md",
         ".cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md",
+        ".cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md",
+        ".cg-docs/plans/2026-11-10-swagger-api-documentation.md",
+        ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
+        ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md",
+        ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
         ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
         ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
         ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
@@ -5179,6 +5796,10 @@
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
         ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
+        ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
         ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
         ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
         ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
@@ -5198,8 +5819,17 @@
         ".cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md",
         ".cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md",
         ".cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md",
+        ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md",
+        ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review-2.md",
+        ".cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review.md",
         ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md",
         ".cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md",
+        ".cg-docs/reviews/2026-11-09-covariate-exclusion-error-wording-review.md",
+        ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-review.md",
+        ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review-2.md",
+        ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md",
+        ".cg-docs/reviews/2026-11-11-rename-description-to-metadata-review.md",
+        ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
         ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
         ".cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md",
         ".cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md",
@@ -5211,6 +5841,7 @@
         ".cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md",
         ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
         ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
+        ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md",
         ".cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md",
         ".cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md",
         ".cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md",
@@ -5253,9 +5884,9 @@
         "roadmap.json#table-response-format-layout-slot-assignment",
         "roadmap.json#table-request-contract-explicit-slot-parameters-replacing-ordered-by",
         "roadmap.json#table-download-has-no-flat-rows-under-cells-response-format",
-        "roadmap.json#page2-cell-definition-endpoint",
-        "roadmap.json#cell-definition-get-only",
-        "roadmap.json#adaptive-cell-enumeration-and-per-slot-category-breakdown-in-get-cell-definition",
+        "roadmap.json#user-facing-api-error-messages",
+        "roadmap.json#table-metadata-rework-and-decoupling-from-table-maker",
+        "roadmap.json#structured-json-output-format-for-get-post-metadata",
         "roadmap.json#ppp-load-data-resolution",
         "roadmap.json#ppp-api-input-validation",
         "roadmap.json#ppp-edge-case-test-coverage",
@@ -5265,28 +5896,11 @@
       ],
       "keywords": [
         "service layer",
-        "endpoint",
-        "table"
+        "table",
+        "api"
       ],
-      "label": "Service Layer / Endpoint / Table",
-      "slug": "service-layer-endpoint-table"
-    },
-    {
-      "entity_count": 5,
-      "entity_paths": [
-        ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
-        ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md"
-      ],
-      "keywords": [
-        "description_builder.r",
-        "null",
-        "test"
-      ],
-      "label": "Description_Builder.R / Null / Test",
-      "slug": "description-builder-r-null-test"
+      "label": "Service Layer / Table / Api",
+      "slug": "service-layer-table-api"
     }
   ]
 }
