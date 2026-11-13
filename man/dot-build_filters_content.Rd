@@ -4,7 +4,7 @@
 \alias{.build_filters_content}
 \title{Build filters section content from the normalized filter_base.}
 \usage{
-.build_filters_content(normalized_filter_base, release)
+.build_filters_content(normalized_filter_base, filter_cats = list())
 }
 \description{
 Build filters section content from the normalized filter_base.

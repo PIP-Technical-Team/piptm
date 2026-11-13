@@ -9,6 +9,10 @@
   measures,
   poverty_line = NULL,
   by = NULL,
+  column = NULL,
+  row = NULL,
+  superColumn = NULL,
+  superRow = NULL,
   filter_base = NULL,
   release = NULL
 )
@@ -21,6 +25,10 @@
 \item{poverty_line}{Numeric scalar/vector poverty line(s), or \code{NULL}.}
 
 \item{by}{Character vector of breakdown covariates, or \code{NULL}.}
+
+\item{column, row, superColumn, superRow}{Optional layout-slot values used by
+API-adjacent direct callers (for example, \code{\link[=build_description_model]{build_description_model()}}).
+Each must be \code{NULL} or a single non-blank character scalar.}
 
 \item{filter_base}{Named list sample filter, or \code{NULL}.}
 
@@ -38,5 +46,9 @@ release-scoped breakdown covariates, and validates + normalizes the
 \code{filter_base} sample filter into an integer-coded named list. All failures
 raise via \code{\link[=piptm_abort]{piptm_abort()}} with a user-facing message, matching the behavior
 previously inlined in \code{\link[=table_maker]{table_maker()}}.
+}
+\details{
+Executable behavior is pinned in \code{tests/testthat/test-table-params.R}, which
+serves as the contract for direct and shared callers.
 }
 \keyword{internal}

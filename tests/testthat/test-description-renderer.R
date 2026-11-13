@@ -1,23 +1,13 @@
 # Test: description renderer — render_description_markdown() and dispatcher
 #
 # Operates on the 6-section table-metadata model produced by
-# build_description_model() (overview, provenance, surveys_selected,
-# filters_applied, layout_configuration, statistics_selected).
+# build_description_model() (provenance, surveys_selected,
+# filters_applied, layout_configuration, statistics_selected, notes).
 
 library(data.table)
 
 .make_render_model <- function(overrides = list()) {
   base <- list(
-    overview = list(
-      visible = TRUE,
-      title = "Table Overview",
-      content = list(
-        structure_description = "This table reports 2 statistics for 1 selected survey, with results disaggregated by Gender.",
-        weighting_note = "All calculations use survey sampling weights.",
-        ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
-        suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
-      )
-    ),
     provenance = list(
       visible = TRUE,
       title = "Data Provenance",
@@ -39,7 +29,8 @@ library(data.table)
           country_label = "Testland",
           surveyid_year = 2020L,
           welfare_type_label = "Consumption",
-          version = "v01_v01"
+          vermast = "v01",
+          veralt = "v02"
         ),
         excluded_list = NULL
       )
@@ -76,6 +67,16 @@ library(data.table)
           stat_group = c("summary_statistics", "inequality")
         )
       )
+    ),
+    notes = list(
+      visible = TRUE,
+      title = "Notes",
+      content = list(
+        weighting_note = "All calculations use survey sampling weights.",
+        version_note = "Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).",
+        ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
+        suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
+      )
     )
   )
 
@@ -93,14 +94,21 @@ test_that("render_description_markdown() returns a character scalar", {
   expect_true(nzchar(out))
 })
 
-test_that("render_description_markdown() renders the 6 visible sections as headings", {
+test_that("render_description_markdown() renders top-level Metadata heading and the visible sections in order", {
   out <- render_description_markdown(.make_render_model())
-  expect_match(out, "## Table Overview", fixed = TRUE)
+  expect_match(out, "^# Metadata\n\n## Data Provenance", perl = TRUE)
   expect_match(out, "## Data Provenance", fixed = TRUE)
   expect_match(out, "## Surveys Selected", fixed = TRUE)
   expect_match(out, "## Table Layout Configuration", fixed = TRUE)
   expect_match(out, "## Statistics Computed", fixed = TRUE)
+  expect_match(out, "## Notes", fixed = TRUE)
+  # Notes comes after Statistics Computed.
+  expect_lt(
+    regexpr("## Statistics Computed", out, fixed = TRUE),
+    regexpr("## Notes", out, fixed = TRUE)
+  )
   # No removed sections.
+  expect_false(grepl("## Table Overview", out, fixed = TRUE))
   expect_false(grepl("## Cell Definition", out, fixed = TRUE))
   expect_false(grepl("## Execution Summary", out, fixed = TRUE))
   expect_false(grepl("## Warnings", out, fixed = TRUE))
@@ -111,11 +119,16 @@ test_that("render_description_markdown() skips invisible sections", {
   expect_false(grepl("## Sample Base Filters", out, fixed = TRUE))
 })
 
-test_that("render_description_markdown() renders overview notes including suppression", {
+test_that("render_description_markdown() renders notes as plain unlabeled bullets and maps vermast/veralt headers", {
   out <- render_description_markdown(.make_render_model())
-  expect_match(out, "survey sampling weights", fixed = TRUE)
-  expect_match(out, "PPP international dollars", fixed = TRUE)
-  expect_match(out, "reported as \"NR\"", fixed = TRUE)
+  expect_match(out, "| Master version | Alternative version |", fixed = TRUE)
+  expect_match(out, "- All calculations use survey sampling weights.", fixed = TRUE)
+  expect_match(out, "- Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).", fixed = TRUE)
+  expect_match(out, "- Welfare values are expressed in 2021 PPP international dollars per day.", fixed = TRUE)
+  expect_match(out, "- Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported).", fixed = TRUE)
+  expect_false(grepl("Population note:", out, fixed = TRUE))
+  expect_false(grepl("Cell suppression:", out, fixed = TRUE))
+  expect_false(grepl("Description:", out, fixed = TRUE))
 })
 
 test_that("render_description_markdown() renders data.table content as pipe tables", {
@@ -123,7 +136,8 @@ test_that("render_description_markdown() renders data.table content as pipe tabl
   # Survey table headers use display labels.
   expect_match(out, "Country name", fixed = TRUE)
   expect_match(out, "Welfare type", fixed = TRUE)
-  expect_match(out, "Version", fixed = TRUE)
+  expect_match(out, "Master version", fixed = TRUE)
+  expect_match(out, "Alternative version", fixed = TRUE)
   expect_match(out, "Consumption", fixed = TRUE)
   # Measures table.
   expect_match(out, "Gini index", fixed = TRUE)
@@ -138,6 +152,29 @@ test_that("render_description_markdown() renders analysis variable fields", {
   expect_match(out, "Welfare", fixed = TRUE)
 })
 
+test_that("render_description_markdown() renders poverty_line sub-bullets when applicable", {
+  model_yes <- .make_render_model(list(
+    statistics_selected = list(
+      visible = TRUE,
+      title = "Statistics Computed",
+      content = list(
+        analysis_var_name = "pov_status",
+        analysis_var_label = "Poverty status",
+        analysis_var_type = "poverty",
+        poverty_line = list(applicable = TRUE, value = "2.15", ppp_year = 2021L),
+        measures = data.table(
+          measure = "headcount",
+          measure_label = "Headcount",
+          stat_group = "poverty"
+        )
+      )
+    )
+  ))
+  out_yes <- render_description_markdown(model_yes)
+  expect_match(out_yes, "- Poverty line:\n  - Value: 2.15\n  - PPP year: 2021", fixed = TRUE)
+  expect_false(grepl("Applicable:", out_yes, fixed = TRUE))
+})
+
 test_that("render_description_markdown() renders excluded surveys when present", {
   model <- .make_render_model(list(
     surveys_selected = list(
@@ -149,7 +186,7 @@ test_that("render_description_markdown() renders excluded surveys when present",
         loaded_list = data.table(
           pip_id = "TST_2020_ECH_CON_ALL", country_code = "TST",
           country_label = "Testland", surveyid_year = 2020L,
-          welfare_type_label = "Consumption", version = "v01_v01"
+          welfare_type_label = "Consumption", vermast = "v01", veralt = "v01"
         ),
         excluded_list = data.table(
           pip_id = "BOL_2000_ECH_INC_ALL",
@@ -165,11 +202,11 @@ test_that("render_description_markdown() renders excluded surveys when present",
 
 test_that("render_description_markdown() returns empty string for no visible content", {
   model <- .make_render_model(list(
-    overview = list(visible = TRUE, title = "Table Overview", content = NULL),
     provenance = list(visible = TRUE, title = "Data Provenance", content = NULL),
     surveys_selected = list(visible = TRUE, title = "Surveys Selected", content = NULL),
     statistics_selected = list(visible = TRUE, title = "Statistics Computed", content = NULL),
-    layout_configuration = list(visible = TRUE, title = "Table Layout Configuration", content = NULL)
+    layout_configuration = list(visible = TRUE, title = "Table Layout Configuration", content = NULL),
+    notes = list(visible = TRUE, title = "Notes", content = NULL)
   ))
   out <- render_description_markdown(model)
   expect_identical(out, "")

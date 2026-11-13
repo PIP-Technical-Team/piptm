@@ -270,7 +270,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 
 ### `/metadata` — GET & POST (Step 3)
 
-- **Purpose:** Render a downloadable 6-section table metadata and provenance document directly from the in-memory release manifest and variable registry (zero Arrow microdata I/O).
+- **Purpose:** Render a downloadable 6-section table metadata and provenance document directly from the in-memory release manifest and variable registry (zero Arrow microdata I/O), headed by a top-level `Metadata` title (`# Metadata` / `<h1>Metadata</h1>`) and ordered: `Data Provenance` (`provenance`), `Surveys Selected` (`surveys_selected`), `Sample Base Filters` (`filters_applied`, conditional), `Table Layout Configuration` (`layout_configuration`, conditional), `Statistics Computed` (`statistics_selected`), and `Notes` (`notes`, unlabeled plain-bullet notes at the bottom).
 - **Parameters (query for GET; JSON body for POST):**
   - Accepts the exact same table configuration parameters as `/table` (`pip_id`, `analysis_var`, `measures`, `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `ppp`, `filter_base`, `pop_share_threshold`, `release`), plus:
   - `format` *(optional, string)* — `"html"` (default) or `"markdown"`.

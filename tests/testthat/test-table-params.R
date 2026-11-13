@@ -403,34 +403,35 @@ test_that("partition helper agrees with table_maker included/excluded surveys", 
 test_that("partition helper agrees with table_maker under combined filter_base + by", {
   fx <- make_tm_fixtures_v2()
   activate_tm_fixtures_v2(fx)
+  activate_test_registry("20260401_TEST")
   withr::defer(reset_piptm_env_v2())
 
   params <- piptm:::.validate_and_normalize_table_params(
     analysis_var = "welfare",
     measures = "mean",
     poverty_line = NULL,
-    by = "gender",
-    filter_base = list(area = 1L),
+    by = "age",
+    filter_base = list(age = 10L),
     release = "20260401_TEST"
   )
 
   suppressWarnings(
     res <- piptm::table_maker(
-      pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+      pip_id = c("COL_2015_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
       analysis_var = "welfare",
       measures = "mean",
-      by = "gender",
-      filter_base = list(area = 1L),
+      by = "age",
+      filter_base = list(age = 10L),
       release = "20260401_TEST"
     )
   )
 
   part <- piptm:::.partition_surveys_by_dimensions(
     release = "20260401_TEST",
-    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
+    pip_id = c("COL_2015_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL"),
     normalized_filter_base = params$normalized_filter_base,
     filter_vars = params$filter_vars,
-    by = "gender",
+    by = "age",
     warn = FALSE
   )
 

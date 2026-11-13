@@ -5,7 +5,7 @@
 #' visible are rendered; sections with `NULL` content are skipped.
 #'
 #' The renderer applies context-aware display labels for internal model keys
-#' (for example, `structure_description` -> "Description") without modifying
+#' (for example, `release_id` -> "Release") without modifying
 #' the model schema itself.
 #'
 #' @param model List produced by [`build_description_model()`] with 6 sections,
@@ -77,6 +77,7 @@ render_description_html <- function(model) {
   return(
     paste0(
       "<div style=\"max-width: 980px; margin: 0 auto; background: #ffffff; border: 1px solid #d9e2ec; border-radius: 10px; padding: 24px 28px; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);\">",
+      "<h1 style=\"margin: 0 0 18px 0; font-size: 24px; font-weight: 700; color: #102a43;\">Metadata</h1>",
       paste(section_blocks, collapse = ""),
       "</div>"
     )
@@ -94,6 +95,26 @@ render_description_html <- function(model) {
 .render_section_content_html <- function(content, section_name, parent_key = NULL) {
   if (is.null(content)) {
     return(NULL)
+  }
+
+  if (identical(section_name, "notes")) {
+    items <- .normalize_notes_items(content)
+    if (length(items) == 0L) {
+      return(NULL)
+    }
+    li <- paste0(
+      "<li style=\"margin: 0 0 7px 0; color: #334e68;\">",
+      .html_escape(items),
+      "</li>",
+      collapse = ""
+    )
+    return(
+      paste0(
+        "<ul style=\"margin: 0 0 10px 0; padding-left: 20px;\">",
+        li,
+        "</ul>"
+      )
+    )
   }
 
   if (inherits(content, "data.table") || is.data.frame(content)) {
@@ -171,29 +192,7 @@ render_description_html <- function(model) {
 #' @return Display-ready text.
 #' @keywords internal
 .display_table_value_html <- function(col_name, value) {
-  if (length(value) == 0 || is.null(value) || is.na(value)) {
-    return("")
-  }
-
-  text <- as.character(value)
-
-  if (identical(col_name, "stat_group")) {
-    stat_group_map <- c(
-      summary_statistics = "Summary statistics",
-      poverty = "Poverty",
-      inequality = "Inequality",
-      shares = "Shares"
-    )
-
-    if (text %in% names(stat_group_map)) {
-      return(unname(stat_group_map[[text]]))
-    }
-
-    text <- gsub("_", " ", text, fixed = TRUE)
-    return(paste0(toupper(substr(text, 1, 1)), substring(text, 2)))
-  }
-
-  return(text)
+  .display_table_value_markdown(col_name, value)
 }
 
 
@@ -239,21 +238,6 @@ render_description_html <- function(model) {
       )
     }
     content <- content[names(content) != "description"]
-  }
-
-  if (identical(section_name, "overview") && "ppp_note" %in% names(content)) {
-    ppp_note_text <- .scalar_text_html(content[["ppp_note"]])
-    if (!is.null(ppp_note_text)) {
-      blocks <- c(
-        blocks,
-        paste0(
-          "<p style=\"margin: 0 0 10px 0; color: #334e68;\">",
-          .html_escape(ppp_note_text),
-          "</p>"
-        )
-      )
-    }
-    content <- content[names(content) != "ppp_note"]
   }
 
   for (key in names(content)) {
@@ -383,30 +367,7 @@ render_description_html <- function(model) {
 #' @return Display label.
 #' @keywords internal
 .display_table_header_html <- function(col_name) {
-  mapping <- c(
-    pip_id = "Survey identifier",
-    country_code = "Country",
-    country_label = "Country name",
-    surveyid_year = "Survey year",
-    welfare_type_label = "Welfare type",
-    version = "Version",
-    reason = "Exclusion reason",
-    measure = "Measure code",
-    measure_label = "Measure",
-    stat_group = "Group",
-    analysis_var_label = "Variable of analysis",
-    slot_label = "Dimension",
-    varname = "Variable",
-    variable = "Label",
-    ui_label = "Label",
-    n_categories = "Categories",
-    selected_categories = "Selected categories"
-  )
-
-  if (col_name %in% names(mapping)) {
-    return(unname(mapping[[col_name]]))
-  }
-  return(col_name)
+  .display_table_header_markdown(col_name)
 }
 
 
@@ -505,13 +466,6 @@ render_description_html <- function(model) {
     if (identical(key, "value")) return("Value")
     if (identical(key, "ppp_year")) return("PPP year")
     if (identical(key, "applicable")) return("Applicable")
-  }
-
-  if (identical(section_name, "overview")) {
-    if (identical(key, "structure_description")) return("Description")
-    if (identical(key, "weighting_note")) return("Population note")
-    if (identical(key, "ppp_note")) return("PPP note")
-    if (identical(key, "suppression_note")) return("Cell suppression")
   }
 
   if (identical(section_name, "provenance")) {

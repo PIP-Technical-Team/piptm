@@ -52,5 +52,8 @@ Partial \code{pip_id} matches warn and continue (when \code{warn = TRUE}), mirro
 reason (e.g. \code{"missing gender"}, \code{"no requested dimensions"}) WITHOUT the
 \verb{<pip_id>: } prefix, while the emitted \code{cli_warn()} bullets keep the prefix
 so existing warning text is unchanged.
+
+See \code{tests/testthat/test-table-params.R} for agreement tests against
+\code{\link[=table_maker]{table_maker()}} and exclusion-reason edge cases.
 }
 \keyword{internal}

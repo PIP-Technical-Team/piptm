@@ -71,15 +71,15 @@ test_that("build_description_model() returns exactly the 6 sections", {
 
   expect_named(
     model,
-    c("overview", "provenance", "surveys_selected", "filters_applied",
-      "layout_configuration", "statistics_selected"),
+    c("provenance", "surveys_selected", "filters_applied",
+      "layout_configuration", "statistics_selected", "notes"),
     ignore.order = FALSE
   )
   for (section in names(model)) {
     expect_true(all(c("visible", "title", "content") %in% names(model[[section]])))
   }
   # No legacy sections survive.
-  expect_false(any(c("cell_definition", "execution_summary", "warnings") %in%
+  expect_false(any(c("overview", "cell_definition", "execution_summary", "warnings") %in%
                      names(model)))
 })
 
@@ -95,7 +95,7 @@ test_that("build_description_model() visibility flags respond to inputs", {
   )
   expect_false(m1$filters_applied$visible)
   expect_false(m1$layout_configuration$visible)
-  expect_true(m1$overview$visible)
+  expect_true(m1$notes$visible)
   expect_true(m1$statistics_selected$visible)
 
   # Filter + layout slot -> both visible.
@@ -111,9 +111,9 @@ test_that("build_description_model() visibility flags respond to inputs", {
   expect_true(m2$layout_configuration$visible)
 })
 
-# ── Overview ──────────────────────────────────────────────────────────────────
+# ── Notes ─────────────────────────────────────────────────────────────────────
 
-test_that("overview reports counts, weighting, ppp, and suppression rule", {
+test_that("notes section is placed last and reports weighting, ppp, and suppression rule without structure_description", {
   activate_builder_fixture()
 
   model <- piptm::build_description_model(
@@ -124,18 +124,22 @@ test_that("overview reports counts, weighting, ppp, and suppression rule", {
     pop_share_threshold = 0.001,
     release = "20260401_TEST"
   )
-  ov <- model$overview$content
-  expect_match(ov$structure_description, "2 statistics")
-  expect_match(ov$structure_description, "1 selected survey")
-  expect_true(nzchar(ov$weighting_note))
-  expect_match(ov$ppp_note, "PPP")
-  expect_match(ov$suppression_note, "NR")
+  expect_identical(tail(names(model), 1L), "notes")
+  expect_identical(model$notes$title, "Notes")
+  notes <- model$notes$content
+  expect_null(notes$structure_description)
+  expect_false(any(grepl("This table reports", unlist(notes), fixed = TRUE)))
+  expect_true(nzchar(notes$weighting_note))
+  expect_match(notes$version_note, "vermast", fixed = TRUE)
+  expect_match(notes$version_note, "veralt", fixed = TRUE)
+  expect_match(notes$ppp_note, "PPP")
+  expect_match(notes$suppression_note, "NR")
 
-  # No cell counts leak into overview.
-  expect_false(any(grepl("cell(s)? (was|were) suppressed", unlist(ov))))
+  # No cell counts leak into notes.
+  expect_false(any(grepl("cell(s)? (was|were) suppressed", unlist(notes))))
 })
 
-test_that("overview omits suppression note when no layout slot is active", {
+test_that("notes omits suppression note when no layout slot is active", {
   activate_builder_fixture()
   model <- piptm::build_description_model(
     pip_id = "COL_2010_ECH_INC_ALL",
@@ -144,7 +148,7 @@ test_that("overview omits suppression note when no layout slot is active", {
     pop_share_threshold = 0.001,
     release = "20260401_TEST"
   )
-  expect_null(model$overview$content$suppression_note)
+  expect_null(model$notes$content$suppression_note)
 })
 
 # ── Provenance ────────────────────────────────────────────────────────────────
@@ -182,9 +186,29 @@ test_that("surveys_selected lists included surveys with manifest labels", {
   expect_identical(loaded$pip_id[[1]], "COL_2010_ECH_INC_ALL")
   expect_identical(loaded$country_label[[1]], "Colombia")
   expect_identical(loaded$welfare_type_label[[1]], "Income")
-  expect_identical(loaded$version[[1]], "v01_v01")
+  expect_false("version" %in% names(loaded))
+  expect_identical(loaded$vermast[[1]], "v01")
+  expect_identical(loaded$veralt[[1]], "v01")
   # Excluded table omitted when empty.
   expect_null(surveys$excluded_list)
+})
+
+test_that(".build_surveys_content splits version into vermast and veralt with graceful fallback", {
+  included <- data.table::data.table(
+    pip_id = c("A_2020_S_INC_ALL", "B_2020_S_INC_ALL", "C_2020_S_INC_ALL"),
+    country_code = c("AAA", "BBB", "CCC"),
+    country_name = c("Alpha", "Beta", "Gamma"),
+    year = c(2020L, 2020L, 2020L),
+    welfare_type = c("INC", "CON", "INC"),
+    version = c("v02_v03", "v05", NA_character_)
+  )
+  out <- piptm:::.build_surveys_content(included, NULL, release = "20260401_TEST")
+  expect_identical(out$loaded_list$vermast, c("v02", "v05", ""))
+  expect_identical(out$loaded_list$veralt, c("v03", "", ""))
+
+  empty_out <- piptm:::.build_surveys_content(included[0], NULL, release = "20260401_TEST")
+  expect_true(all(c("vermast", "veralt") %in% names(empty_out$loaded_list)))
+  expect_false("version" %in% names(empty_out$loaded_list))
 })
 
 test_that("surveys_selected shows excluded surveys with clean reason", {
@@ -208,24 +232,25 @@ test_that("surveys_selected shows excluded surveys with clean reason", {
 
 # ── Filters ───────────────────────────────────────────────────────────────────
 
-test_that("filters_applied resolves category labels, not raw codes", {
+test_that("filters_applied resolves category labels and falls back to raw code when unmapped", {
   activate_builder_fixture()
+  env <- asNamespace("piptm")$.piptm_env
+  env$registries[["20260401_TEST"]][["area"]]$categories <- list(
+    list(code = "1", label = "Urban"),
+    list(code = "2", label = "Rural")
+  )
+
   model <- piptm::build_description_model(
     pip_id = "COL_2010_ECH_INC_ALL",
     analysis_var = "welfare",
     measures = "mean",
-    filter_base = list(area = 1L),
+    filter_base = list(area = c(1L, 99L)),
     release = "20260401_TEST"
   )
   filt <- model$filters_applied$content$filters
   expect_identical(filt$varname[[1]], "area")
   expect_identical(filt$variable[[1]], "Area")
-  # Registry maps code 1 -> "Rural" in the test registry fixture category order
-  # (codes "urban","rural" -> labels "Urban","Rural"). Codes here are integer
-  # positions; the label resolution falls back to the raw code when the filter
-  # category codes are non-integer strings, so assert a human-readable label or
-  # a graceful fallback (never an internal crash).
-  expect_true(nzchar(filt$selected_categories[[1]]))
+  expect_identical(filt$selected_categories[[1]], "Urban, 99")
 })
 
 # ── Layout ────────────────────────────────────────────────────────────────────
@@ -278,6 +303,23 @@ test_that("statistics_selected reports analysis var and measures in order", {
   # Request order preserved: median before mean.
   expect_identical(stats$measures$measure, c("median", "mean"))
   expect_identical(stats$measures$measure_label, c("Median", "Mean"))
+})
+
+test_that("statistics_selected coerces list-wrapped registry ui_label and tm_type from disk JSON", {
+  activate_builder_fixture()
+  env <- asNamespace("piptm")$.piptm_env
+  env$registries[["20260401_TEST"]][["welfare"]]$ui_label <- list("Welfare")
+  env$registries[["20260401_TEST"]][["welfare"]]$tm_type  <- list("welfare")
+
+  model <- piptm::build_description_model(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    release = "20260401_TEST"
+  )
+  stats <- model$statistics_selected$content
+  expect_identical(stats$analysis_var_label, "Welfare")
+  expect_identical(stats$analysis_var_type, "welfare")
 })
 
 test_that("statistics_selected reports poverty line when applicable", {
@@ -376,7 +418,8 @@ test_that("build_description_model() degrades gracefully when a specific pip_id 
   reg <- piptm::piptm_variable_registry("20260401_TEST")
   reg[["gender"]]$categories <- NULL
   reg[["gender"]]$n_categories <- NULL
-  piptm:::.piptm_env$registries[["20260401_TEST"]] <- reg
+  env <- asNamespace("piptm")$.piptm_env
+  env$registries[["20260401_TEST"]] <- reg
 
   expect_no_error(
     model <- piptm::build_description_model(
@@ -390,7 +433,7 @@ test_that("build_description_model() degrades gracefully when a specific pip_id 
 
   layout <- model$layout_configuration$content$layout
   expect_identical(layout$varname[[1]], "gender")
-  expect_true(nchar(layout$n_categories[[1]]) >= 0L)
+  expect_identical(layout$n_categories[[1]], "0: Unspecified")
 })
 
 test_that("build_description_model() tolerates partial pip_id manifest matches", {

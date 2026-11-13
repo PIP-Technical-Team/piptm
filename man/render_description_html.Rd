@@ -20,7 +20,7 @@ visible are rendered; sections with \code{NULL} content are skipped.
 }
 \details{
 The renderer applies context-aware display labels for internal model keys
-(for example, \code{structure_description} -> "Description") without modifying
+(for example, \code{release_id} -> "Release") without modifying
 the model schema itself.
 }
 \note{

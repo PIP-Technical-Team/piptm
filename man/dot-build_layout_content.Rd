@@ -4,7 +4,12 @@
 \alias{.build_layout_content}
 \title{Build layout section content from the active slots.}
 \usage{
-.build_layout_content(active_slots, poverty_line, release, registry)
+.build_layout_content(
+  active_slots,
+  poverty_line,
+  registry,
+  layout_covs = list()
+)
 }
 \description{
 Build layout section content from the active slots.

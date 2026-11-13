@@ -41,9 +41,13 @@ covariate names, or \code{NULL} for an unused slot.}
 \item{release}{Character scalar release ID, or \code{NULL} for the current release.}
 }
 \value{
-A named list of 6 sections (\code{overview}, \code{provenance},
+A named list of 6 sections (\code{provenance},
 \code{surveys_selected}, \code{filters_applied}, \code{layout_configuration},
-\code{statistics_selected}), each with \code{visible}, \code{title}, and \code{content} fields.
+\code{statistics_selected}, \code{notes}), each with \code{visible}, \code{title}, and \code{content} fields.
+For identical inputs, the only run-to-run varying field is
+\code{provenance$content$generated_at}. In \code{statistics_selected},
+\code{poverty_line$value} is formatted display text and
+\code{poverty_line$value_raw} stores the raw numeric value(s).
 }
 \description{
 Constructs the 6-section table-metadata document model directly from the
@@ -51,10 +55,10 @@ request parameters plus the in-memory release manifest and variable registry.
 This builder performs \strong{no} Arrow/microdata I/O and never calls
 \code{\link[=table_maker]{table_maker()}}: survey inclusion/exclusion is resolved from the manifest via
 the shared \code{\link[=.partition_surveys_by_dimensions]{.partition_surveys_by_dimensions()}} helper, and all variable,
-category, and measure labels come from the release registry accessors
-(\code{piptm_analysis_variables()}, \code{piptm_filter_categories()},
-\code{piptm_layout_covariates()}, \code{piptm_stat_groups()},
-\code{piptm_variable_registry()}).
+category, and measure labels come from the release registry loaded once via
+\code{piptm_variable_registry()} and projected into role-specific slices
+(\code{.registry_filter_categories()}, \code{.registry_layout_covariates()},
+\code{.registry_stat_groups()}).
 }
 \details{
 The returned model is rendered to HTML or Markdown by
@@ -68,7 +72,8 @@ model <- build_description_model(
   measures = c("mean", "gini"),
   column = "gender"
 )
-model$overview
+model$provenance
 model$statistics_selected
+model$notes
 }
 }

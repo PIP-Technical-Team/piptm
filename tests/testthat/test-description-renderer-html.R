@@ -4,16 +4,6 @@ library(data.table)
 
 .make_render_model_html <- function(overrides = list()) {
   base <- list(
-    overview = list(
-      visible = TRUE,
-      title = "Table Overview",
-      content = list(
-        structure_description = "This table reports 2 statistics for 1 selected survey.",
-        weighting_note = "All calculations use survey sampling weights.",
-        ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
-        suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
-      )
-    ),
     provenance = list(
       visible = TRUE,
       title = "Data Provenance",
@@ -35,7 +25,8 @@ library(data.table)
           country_label = "Testland",
           surveyid_year = 2020L,
           welfare_type_label = "Consumption",
-          version = "v01_v01"
+          vermast = "v01",
+          veralt = "v02"
         ),
         excluded_list = NULL
       )
@@ -77,6 +68,16 @@ library(data.table)
           stat_group = c("summary_statistics", "poverty")
         )
       )
+    ),
+    notes = list(
+      visible = TRUE,
+      title = "Notes",
+      content = list(
+        weighting_note = "All calculations use survey sampling weights.",
+        version_note = "Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).",
+        ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
+        suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
+      )
     )
   )
 
@@ -87,17 +88,31 @@ library(data.table)
 }
 
 
-test_that("render_description_html() renders the 6 sections and human labels", {
+test_that("render_description_html() renders Metadata title, the 6 sections, and unlabeled notes bullets", {
   out <- render_description_html(.make_render_model_html())
 
   expect_type(out, "character")
   expect_length(out, 1L)
   expect_true(nzchar(out))
 
-  expect_match(out, "<h2[^>]*>Table Overview</h2>", perl = TRUE)
-  expect_match(out, "Description:</b>", fixed = TRUE)
-  expect_match(out, "Population note:</b>", fixed = TRUE)
-  expect_match(out, "Cell suppression:</b>", fixed = TRUE)
+  expect_match(out, "<h1[^>]*>Metadata</h1>", perl = TRUE)
+  expect_match(out, "<h2[^>]*>Data Provenance</h2>", perl = TRUE)
+  expect_match(out, "<h2[^>]*>Notes</h2>", perl = TRUE)
+  expect_lt(
+    regexpr("Statistics Computed", out, fixed = TRUE),
+    regexpr(">Notes<", out, fixed = TRUE)
+  )
+  expect_match(out, "<th[^>]*>Master version</th><th[^>]*>Alternative version</th>", perl = TRUE)
+  expect_match(out, "<li[^>]*>All calculations use survey sampling weights.</li>", perl = TRUE)
+  expect_match(out, "<li[^>]*>Survey versions report the master version \\(vermast", perl = TRUE)
+  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 PPP international dollars per day.</li>", perl = TRUE)
+  expect_match(out, "<li[^>]*>Cells whose population share is below 0.1% of the table sample base are reported as &quot;NR&quot; \\(not reported\\).</li>", perl = TRUE)
+
+  # No key/label prefixes in Notes.
+  expect_false(grepl("Description:</b>", out, fixed = TRUE))
+  expect_false(grepl("Population note:</b>", out, fixed = TRUE))
+  expect_false(grepl("Cell suppression:</b>", out, fixed = TRUE))
+  expect_false(grepl("Table Overview", out, fixed = TRUE))
 
   # Internal keys never leak.
   expect_false(grepl("structure_description", out, fixed = TRUE))
@@ -113,7 +128,8 @@ test_that("render_description_html() renders the 6 sections and human labels", {
   expect_match(out, "<th[^>]*>Country name</th>", perl = TRUE)
   expect_match(out, "<th[^>]*>Survey year</th>", perl = TRUE)
   expect_match(out, "<th[^>]*>Welfare type</th>", perl = TRUE)
-  expect_match(out, "<th[^>]*>Version</th>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Master version</th>", perl = TRUE)
+  expect_match(out, "<th[^>]*>Alternative version</th>", perl = TRUE)
   expect_match(out, "TEST_2020_SURVEY_CON_ALL", fixed = TRUE)
 
   # Measures and layout headers.
@@ -162,11 +178,11 @@ test_that("render_description_html() handles poverty_line block per approved rul
 
 test_that("render_description_html() escapes special characters including apostrophe", {
   model <- .make_render_model_html(list(
-    overview = list(
+    notes = list(
       visible = TRUE,
-      title = "Table Overview",
+      title = "Notes",
       content = list(
-        structure_description = "Tom & Jerry's <test> \"quote\""
+        weighting_note = "Tom & Jerry's <test> \"quote\""
       )
     )
   ))
@@ -196,9 +212,9 @@ test_that("render_description_html() escapes dynamic table cell values", {
 })
 
 
-test_that("render_description_html() renders ppp_note as unlabeled paragraph", {
+test_that("render_description_html() renders ppp_note as unlabeled list item in Notes", {
   out <- render_description_html(.make_render_model_html())
-  expect_match(out, "<p[^>]*>Welfare values are expressed in 2021 PPP international dollars per day.</p>", perl = TRUE)
+  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 PPP international dollars per day.</li>", perl = TRUE)
   expect_false(grepl("PPP note:", out, fixed = TRUE))
 })
 

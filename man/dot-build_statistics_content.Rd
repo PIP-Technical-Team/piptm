@@ -11,7 +11,7 @@
   measures,
   poverty_line,
   ppp,
-  release
+  stat_groups = list()
 )
 }
 \description{

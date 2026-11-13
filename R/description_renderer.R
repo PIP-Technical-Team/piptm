@@ -52,24 +52,35 @@ render_description_markdown <- function(model) {
   if (length(section_blocks) == 0) {
     return("")
   }
-  return(paste(section_blocks, collapse = "\n\n"))
+  return(paste(c("# Metadata", section_blocks), collapse = "\n\n"))
 }
 
 
 #' Render a single section's content to Markdown by type.
 #'
-#' Dispatches on the structure of `content`:
+#' Dispatches on `section_name` and the structure of `content`:
+#' - when `section_name == "notes"`, renders non-empty entries as unlabeled bullets;
 #' - an object coercible to a data.frame renders as a Markdown table;
 #' - a named list renders as key-value bullets (or nested structures);
 #' - a character vector renders as a numbered list (with names as labels);
 #' - otherwise the value is flattened to text.
 #'
 #' @param content The `content` field of a description model section.
+#' @param section_name Optional section key used for section-specific formatting
+#'   and context-aware display labels.
 #' @return Character scalar Markdown, or `NULL` when there is nothing to render.
 #' @keywords internal
 .render_section_content <- function(content, section_name = NULL) {
   if (is.null(content)) {
     return(NULL)
+  }
+
+  if (identical(section_name, "notes")) {
+    items <- .normalize_notes_items(content)
+    if (length(items) == 0L) {
+      return(NULL)
+    }
+    return(paste(paste0("- ", items), collapse = "\n"))
   }
 
   if (inherits(content, "data.table") || is.data.frame(content)) {
@@ -134,11 +145,6 @@ render_description_markdown <- function(model) {
   if ("description" %in% names(content)) {
     lines <- c(lines, as.character(content[["description"]]))
     content <- content[names(content) != "description"]
-  }
-
-  if (identical(section_name, "overview") && "ppp_note" %in% names(content)) {
-    lines <- c(lines, as.character(content[["ppp_note"]]))
-    content <- content[names(content) != "ppp_note"]
   }
 
   for (key in names(content)) {
@@ -287,13 +293,6 @@ render_description_markdown <- function(model) {
     if (identical(key, "applicable")) return("Applicable")
   }
 
-  if (identical(section_name, "overview")) {
-    if (identical(key, "structure_description")) return("Description")
-    if (identical(key, "weighting_note")) return("Population note")
-    if (identical(key, "ppp_note")) return("PPP note")
-    if (identical(key, "suppression_note")) return("Cell suppression")
-  }
-
   if (identical(section_name, "provenance")) {
     if (identical(key, "release_id")) return("Release")
     if (identical(key, "ppp_year")) return("PPP year")
@@ -336,6 +335,17 @@ render_description_markdown <- function(model) {
 }
 
 
+#' Extract non-empty character note items for the `notes` section.
+#'
+#' @param content The `content` field of the `notes` section.
+#' @return Character vector of non-empty note strings.
+#' @keywords internal
+.normalize_notes_items <- function(content) {
+  items <- as.character(unlist(content, use.names = FALSE))
+  items[!is.na(items) & nzchar(items)]
+}
+
+
 #' Map internal table column names to display labels for Markdown headers.
 #'
 #' @param col_name Internal column name.
@@ -348,7 +358,8 @@ render_description_markdown <- function(model) {
     country_label = "Country name",
     surveyid_year = "Survey year",
     welfare_type_label = "Welfare type",
-    version = "Version",
+    vermast = "Master version",
+    veralt = "Alternative version",
     reason = "Exclusion reason",
     measure = "Measure code",
     measure_label = "Measure",
@@ -394,6 +405,8 @@ render_description_markdown <- function(model) {
     if (key %in% names(mapping)) {
       return(unname(mapping[[key]]))
     }
+    key <- gsub("_", " ", key, fixed = TRUE)
+    return(paste0(toupper(substr(key, 1, 1)), substring(key, 2)))
   }
 
   as.character(value)

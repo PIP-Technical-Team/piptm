@@ -4,7 +4,7 @@
 \alias{.build_surveys_content}
 \title{Build surveys section content from the manifest partition.}
 \usage{
-.build_surveys_content(included, excluded, release)
+.build_surveys_content(included, excluded, release = NULL)
 }
 \description{
 Build surveys section content from the manifest partition.

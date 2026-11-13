@@ -13,10 +13,10 @@ NULL
 #' This builder performs **no** Arrow/microdata I/O and never calls
 #' [table_maker()]: survey inclusion/exclusion is resolved from the manifest via
 #' the shared [.partition_surveys_by_dimensions()] helper, and all variable,
-#' category, and measure labels come from the release registry accessors
-#' (`piptm_analysis_variables()`, `piptm_filter_categories()`,
-#' `piptm_layout_covariates()`, `piptm_stat_groups()`,
-#' `piptm_variable_registry()`).
+#' category, and measure labels come from the release registry loaded once via
+#' `piptm_variable_registry()` and projected into role-specific slices
+#' (`.registry_filter_categories()`, `.registry_layout_covariates()`,
+#' `.registry_stat_groups()`).
 #'
 #' The returned model is rendered to HTML or Markdown by
 #' [render_description_html()] / [render_description_markdown()].
@@ -33,9 +33,9 @@ NULL
 #'   `(0, 1)`, or `NULL` to disable suppression.
 #' @param release Character scalar release ID, or `NULL` for the current release.
 #'
-#' @return A named list of 6 sections (`overview`, `provenance`,
+#' @return A named list of 6 sections (`provenance`,
 #'   `surveys_selected`, `filters_applied`, `layout_configuration`,
-#'   `statistics_selected`), each with `visible`, `title`, and `content` fields.
+#'   `statistics_selected`, `notes`), each with `visible`, `title`, and `content` fields.
 #'   For identical inputs, the only run-to-run varying field is
 #'   `provenance$content$generated_at`. In `statistics_selected`,
 #'   `poverty_line$value` is formatted display text and
@@ -49,8 +49,9 @@ NULL
 #'   measures = c("mean", "gini"),
 #'   column = "gender"
 #' )
-#' model$overview
+#' model$provenance
 #' model$statistics_selected
+#' model$notes
 #' }
 build_description_model <- function(pip_id,
                                     analysis_var = "welfare",
@@ -111,8 +112,14 @@ build_description_model <- function(pip_id,
     error = function(e) NULL
   )
   analysis_var_entry <- if (is.null(registry)) NULL else registry[[analysis_var]]
-  analysis_var_label <- analysis_var_entry$ui_label %||% analysis_var
-  analysis_var_type  <- analysis_var_entry$tm_type %||% "unknown"
+  analysis_var_label <- .coerce_scalar_chr(
+    if (is.null(analysis_var_entry)) NULL else analysis_var_entry$ui_label,
+    default = analysis_var
+  )
+  analysis_var_type <- .coerce_scalar_chr(
+    if (is.null(analysis_var_entry)) NULL else analysis_var_entry$tm_type,
+    default = "unknown"
+  )
   is_monetary <- analysis_var %in% c("welfare", "pov_status")
 
   # Derive all role-specific registry slices once per request to avoid repeated
@@ -129,21 +136,6 @@ build_description_model <- function(pip_id,
   has_poverty_line <- length(pl_values) > 0L
 
   model <- list(
-    overview = list(
-      visible = TRUE,
-      title = "Table Overview",
-      content = .build_overview_content(
-        n_measures = length(measures),
-        n_surveys = nrow(included),
-        by = by,
-        active_slots = active_slots,
-        registry = registry,
-        ppp = ppp,
-        is_monetary = is_monetary,
-        pop_share_threshold = pop_share_threshold
-      )
-    ),
-
     provenance = list(
       visible = TRUE,
       title = "Data Provenance",
@@ -166,7 +158,7 @@ build_description_model <- function(pip_id,
     surveys_selected = list(
       visible = TRUE,
       title = "Surveys Selected",
-      content = .build_surveys_content(included, excluded, resolved_release)
+      content = .build_surveys_content(included, excluded)
     ),
 
     filters_applied = list(
@@ -202,6 +194,17 @@ build_description_model <- function(pip_id,
         ppp = ppp,
         stat_groups = stat_groups
       )
+    ),
+
+    notes = list(
+      visible = TRUE,
+      title = "Notes",
+      content = .build_notes_content(
+        by = by,
+        ppp = ppp,
+        is_monetary = is_monetary,
+        pop_share_threshold = pop_share_threshold
+      )
     )
   )
 
@@ -211,38 +214,16 @@ build_description_model <- function(pip_id,
 
 # ── Section content builders ──────────────────────────────────────────────────
 
-#' Build overview section content.
+#' Build notes section content.
+#'
+#' @param by Character vector of active disaggregation covariates, or `NULL`.
+#' @param ppp Integer scalar PPP reference year.
+#' @param is_monetary Logical scalar indicating whether the analysis variable is monetary.
+#' @param pop_share_threshold Numeric scalar cell-suppression threshold, or `NULL`.
+#' @return Named list of note strings (`weighting_note`, `version_note`, and
+#'   optional `ppp_note` and `suppression_note`).
 #' @keywords internal
-.build_overview_content <- function(n_measures, n_surveys, by, active_slots,
-                                     registry, ppp, is_monetary,
-                                     pop_share_threshold) {
-  # Disaggregation description from active slot roles.
-  covariate_desc <- if (!is.null(by) && length(by) > 0L) {
-    labels <- vapply(by, function(v) {
-      lbl <- if (!is.null(registry) && !is.null(registry[[v]])) {
-        registry[[v]]$ui_label
-      } else {
-        NULL
-      }
-      if (identical(v, "pov_status")) {
-        lbl <- lbl %||% "Poverty status"
-      }
-      as.character(lbl %||% v)
-    }, character(1))
-    paste0(", with results disaggregated by ", paste(labels, collapse = " \u00d7 "))
-  } else {
-    ""
-  }
-
-  structure_description <- sprintf(
-    "This table reports %d %s for %d selected %s%s.",
-    n_measures,
-    if (n_measures == 1L) "statistic" else "statistics",
-    n_surveys,
-    if (n_surveys == 1L) "survey" else "surveys",
-    covariate_desc
-  )
-
+.build_notes_content <- function(by, ppp, is_monetary, pop_share_threshold) {
   ppp_note <- if (isTRUE(is_monetary)) {
     sprintf(
       "Welfare values are expressed in %d PPP international dollars per day.",
@@ -268,8 +249,13 @@ build_description_model <- function(pip_id,
   }
 
   out <- list(
-    structure_description = structure_description,
-    weighting_note = "All calculations use survey sampling weights."
+    weighting_note = "All calculations use survey sampling weights.",
+    version_note = paste0(
+      "Survey versions report the master version (vermast, the original ",
+      "survey vintage in the Datalibweb master collection) and the ",
+      "alternative version (veralt, the harmonized adaptation built on ",
+      "that master survey)."
+    )
   )
   if (!is.null(ppp_note)) out$ppp_note <- ppp_note
   if (!is.null(suppression_note)) out$suppression_note <- suppression_note
@@ -279,7 +265,7 @@ build_description_model <- function(pip_id,
 
 #' Build surveys section content from the manifest partition.
 #' @keywords internal
-.build_surveys_content <- function(included, excluded, release) {
+.build_surveys_content <- function(included, excluded, release = NULL) {
   n_loaded <- if (is.null(included)) 0L else nrow(included)
   n_excluded <- if (is.null(excluded)) 0L else nrow(excluded)
 
@@ -292,20 +278,28 @@ build_description_model <- function(pip_id,
     } else {
       as.character(inc$country_code)
     }
+    raw_ver <- as.character(inc$version)
+    raw_ver[is.na(raw_ver)] <- ""
+    has_sep <- grepl("_", raw_ver, fixed = TRUE)
+    vermast <- sub("_.*$", "", raw_ver)
+    veralt  <- data.table::fifelse(has_sep, sub("^[^_]*_", "", raw_ver), "")
+
     loaded_list <- data.table::data.table(
       pip_id = as.character(inc$pip_id),
       country_code = as.character(inc$country_code),
       country_label = country_label,
       surveyid_year = as.integer(inc$year),
       welfare_type_label = format_welfare_type(as.character(inc$welfare_type)),
-      version = as.character(inc$version)
+      vermast = vermast,
+      veralt = veralt
     )
     data.table::setorder(loaded_list, pip_id)
   } else {
     loaded_list <- data.table::data.table(
       pip_id = character(0), country_code = character(0),
       country_label = character(0), surveyid_year = integer(0),
-      welfare_type_label = character(0), version = character(0)
+      welfare_type_label = character(0), vermast = character(0),
+      veralt = character(0)
     )
   }
 
@@ -517,6 +511,17 @@ build_description_model <- function(pip_id,
 
 
 # ── Shared formatting helpers ─────────────────────────────────────────────────
+
+#' Coerce a possibly list-wrapped scalar value to a non-empty character scalar.
+#' @keywords internal
+.coerce_scalar_chr <- function(x, default) {
+  raw <- unlist(x, use.names = FALSE)
+  if (length(raw) > 0L && !is.na(raw[[1L]]) && nzchar(as.character(raw[[1L]]))) {
+    as.character(raw[[1L]])
+  } else {
+    default
+  }
+}
 
 #' Build filter-category entries from an already-loaded registry.
 #' @keywords internal
