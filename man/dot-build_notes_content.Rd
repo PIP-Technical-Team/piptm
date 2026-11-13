@@ -16,7 +16,7 @@
 \item{pop_share_threshold}{Numeric scalar cell-suppression threshold, or \code{NULL}.}
 }
 \value{
-Named list of note strings (\code{weighting_note}, \code{version_note}, and
+Named list of note strings (\code{version_note}, and
 optional \code{ppp_note} and \code{suppression_note}).
 }
 \description{

@@ -112,8 +112,8 @@ JSON, domain error from `table_maker()`).
 
 Renders a 6-section table metadata and provenance document directly from the
 in-memory release manifest and variable registry (zero Arrow microdata I/O),
-headed by a top-level `Metadata` title (`# Metadata` in Markdown,
-`<h1>Metadata</h1>` in HTML) and ordered: `Data Provenance`, `Surveys Selected`,
+headed by a top-level `Table Maker Metadata` title (`# Table Maker Metadata` in Markdown,
+`<h1>Table Maker Metadata</h1>` in HTML) and ordered: `Data Provenance`, `Surveys Selected`,
 `Sample Base Filters` (when active), `Table Layout Configuration` (when active),
 `Statistics Computed`, and `Notes` (plain unlabeled bullet points at the bottom).
 Accepts the same table parameters as `GET|POST /table`, plus `format`

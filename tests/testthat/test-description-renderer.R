@@ -14,7 +14,8 @@ library(data.table)
       content = list(
         release_id = "TEST_2024",
         ppp_year = 2021L,
-        generated_at = "2026-08-26 10:00:00 UTC"
+        generated_at = "2026-08-26 10:00:00 UTC",
+        citation = "World Bank (2026), Poverty and Inequality Platform (version TEST_2024) [data set]. pip.worldbank.org. Accessed on 2026-08-26"
       )
     ),
     surveys_selected = list(
@@ -72,7 +73,6 @@ library(data.table)
       visible = TRUE,
       title = "Notes",
       content = list(
-        weighting_note = "All calculations use survey sampling weights.",
         version_note = "Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).",
         ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
         suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
@@ -94,9 +94,10 @@ test_that("render_description_markdown() returns a character scalar", {
   expect_true(nzchar(out))
 })
 
-test_that("render_description_markdown() renders top-level Metadata heading and the visible sections in order", {
+test_that("render_description_markdown() renders top-level Table Maker Metadata heading and the visible sections in order", {
   out <- render_description_markdown(.make_render_model())
-  expect_match(out, "^# Metadata\n\n## Data Provenance", perl = TRUE)
+  expect_match(out, "^# Table Maker Metadata\n\n## Data Provenance", perl = TRUE)
+  expect_match(out, "- PIP Release: TEST_2024", fixed = TRUE)
   expect_match(out, "## Data Provenance", fixed = TRUE)
   expect_match(out, "## Surveys Selected", fixed = TRUE)
   expect_match(out, "## Table Layout Configuration", fixed = TRUE)
@@ -119,13 +120,13 @@ test_that("render_description_markdown() skips invisible sections", {
   expect_false(grepl("## Sample Base Filters", out, fixed = TRUE))
 })
 
-test_that("render_description_markdown() renders notes as plain unlabeled bullets and maps vermast/veralt headers", {
+test_that("render_description_markdown() renders notes as plain unlabeled bullets with bold key terms and maps vermast/veralt headers", {
   out <- render_description_markdown(.make_render_model())
   expect_match(out, "| Master version | Alternative version |", fixed = TRUE)
-  expect_match(out, "- All calculations use survey sampling weights.", fixed = TRUE)
-  expect_match(out, "- Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).", fixed = TRUE)
-  expect_match(out, "- Welfare values are expressed in 2021 PPP international dollars per day.", fixed = TRUE)
-  expect_match(out, "- Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported).", fixed = TRUE)
+  expect_match(out, "- **Survey versions** report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).", fixed = TRUE)
+  expect_match(out, "- Welfare values are expressed in 2021 **PPP international dollars per day**.", fixed = TRUE)
+  expect_match(out, "- Cells whose **population share** is below 0.1% of the table sample base are reported as \"NR\" (not reported).", fixed = TRUE)
+  expect_false(grepl("sampling weights", out, fixed = TRUE))
   expect_false(grepl("Population note:", out, fixed = TRUE))
   expect_false(grepl("Cell suppression:", out, fixed = TRUE))
   expect_false(grepl("Description:", out, fixed = TRUE))
@@ -161,7 +162,7 @@ test_that("render_description_markdown() renders poverty_line sub-bullets when a
         analysis_var_name = "pov_status",
         analysis_var_label = "Poverty status",
         analysis_var_type = "poverty",
-        poverty_line = list(applicable = TRUE, value = "2.15", ppp_year = 2021L),
+        poverty_line = list(applicable = TRUE, value = "$3.00", ppp_year = 2021L),
         measures = data.table(
           measure = "headcount",
           measure_label = "Headcount",
@@ -171,7 +172,7 @@ test_that("render_description_markdown() renders poverty_line sub-bullets when a
     )
   ))
   out_yes <- render_description_markdown(model_yes)
-  expect_match(out_yes, "- Poverty line:\n  - Value: 2.15\n  - PPP year: 2021", fixed = TRUE)
+  expect_match(out_yes, "- Poverty line:\n  - Value: $3.00\n  - PPP year: 2021", fixed = TRUE)
   expect_false(grepl("Applicable:", out_yes, fixed = TRUE))
 })
 
@@ -235,6 +236,7 @@ test_that("render_description_markdown() renders filters when visible", {
 
 test_that("render_description_markdown() renders key-value provenance bullets", {
   out <- render_description_markdown(.make_render_model())
-  expect_match(out, "- Release: TEST_2024", fixed = TRUE)
+  expect_match(out, "- PIP Release: TEST_2024", fixed = TRUE)
   expect_match(out, "- PPP year: 2021", fixed = TRUE)
+  expect_match(out, "- Citation: World Bank (2026), Poverty and Inequality Platform (version TEST_2024) [data set]. pip.worldbank.org. Accessed on 2026-08-26", fixed = TRUE)
 })

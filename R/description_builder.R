@@ -132,8 +132,9 @@ build_description_model <- function(pip_id,
     length(normalized_filter_base) > 0L
   has_covariates <- !is.null(by) && length(by) > 0L
 
-  pl_values  <- .normalize_poverty_line_values(poverty_line)
-  has_poverty_line <- length(pl_values) > 0L
+  now_utc <- Sys.time()
+  citation_year <- format(now_utc, "%Y", tz = "UTC")
+  accessed_date <- format(now_utc, "%Y-%m-%d", tz = "UTC")
 
   model <- list(
     provenance = list(
@@ -142,15 +143,15 @@ build_description_model <- function(pip_id,
       content = list(
         release_id = resolved_release,
         ppp_year = ppp,
-        poverty_line = if (has_poverty_line) {
-          .format_poverty_line_display(pl_values, include_currency = TRUE,
-                                       suffix = "/day")
-        } else {
-          NULL
-        },
         generated_at = sprintf(
           "%s UTC",
-          format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC", usetz = FALSE)
+          format(now_utc, "%Y-%m-%d %H:%M:%S", tz = "UTC", usetz = FALSE)
+        ),
+        citation = sprintf(
+          "World Bank (%s), Poverty and Inequality Platform (version %s) [data set]. pip.worldbank.org. Accessed on %s",
+          citation_year,
+          resolved_release,
+          accessed_date
         )
       )
     ),
@@ -220,7 +221,7 @@ build_description_model <- function(pip_id,
 #' @param ppp Integer scalar PPP reference year.
 #' @param is_monetary Logical scalar indicating whether the analysis variable is monetary.
 #' @param pop_share_threshold Numeric scalar cell-suppression threshold, or `NULL`.
-#' @return Named list of note strings (`weighting_note`, `version_note`, and
+#' @return Named list of note strings (`version_note`, and
 #'   optional `ppp_note` and `suppression_note`).
 #' @keywords internal
 .build_notes_content <- function(by, ppp, is_monetary, pop_share_threshold) {
@@ -249,7 +250,6 @@ build_description_model <- function(pip_id,
   }
 
   out <- list(
-    weighting_note = "All calculations use survey sampling weights.",
     version_note = paste0(
       "Survey versions report the master version (vermast, the original ",
       "survey vintage in the Datalibweb master collection) and the ",
@@ -501,7 +501,7 @@ build_description_model <- function(pip_id,
     analysis_var_type = analysis_var_type,
     poverty_line = list(
       applicable = has_poverty,
-      value = if (has_poverty) .format_poverty_line_display(pl) else NULL,
+      value = if (has_poverty) .format_poverty_line_display(pl, include_currency = TRUE) else NULL,
       value_raw = if (has_poverty) pl else NULL,
       ppp_year = if (has_poverty) ppp else NULL
     ),

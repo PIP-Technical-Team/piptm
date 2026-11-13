@@ -128,8 +128,9 @@ test_that("notes section is placed last and reports weighting, ppp, and suppress
   expect_identical(model$notes$title, "Notes")
   notes <- model$notes$content
   expect_null(notes$structure_description)
+  expect_null(notes$weighting_note)
   expect_false(any(grepl("This table reports", unlist(notes), fixed = TRUE)))
-  expect_true(nzchar(notes$weighting_note))
+  expect_false(any(grepl("sampling weights", unlist(notes), fixed = TRUE)))
   expect_match(notes$version_note, "vermast", fixed = TRUE)
   expect_match(notes$version_note, "veralt", fixed = TRUE)
   expect_match(notes$ppp_note, "PPP")
@@ -153,7 +154,7 @@ test_that("notes omits suppression note when no layout slot is active", {
 
 # ── Provenance ────────────────────────────────────────────────────────────────
 
-test_that("provenance reports release, ppp, poverty_line, and timestamp", {
+test_that("provenance reports release, ppp, and timestamp without poverty_line", {
   activate_builder_fixture()
   model <- piptm::build_description_model(
     pip_id = "COL_2010_ECH_INC_ALL",
@@ -165,8 +166,12 @@ test_that("provenance reports release, ppp, poverty_line, and timestamp", {
   prov <- model$provenance$content
   expect_identical(prov$release_id, "20260401_TEST")
   expect_equal(prov$ppp_year, 2021L)
-  expect_match(prov$poverty_line, "2.15")
+  expect_null(prov$poverty_line)
   expect_match(prov$generated_at, "UTC")
+  expect_match(
+    prov$citation,
+    "Poverty and Inequality Platform \\(version 20260401_TEST\\) \\[data set\\]\\. pip\\.worldbank\\.org\\. Accessed on "
+  )
 })
 
 # ── Surveys ───────────────────────────────────────────────────────────────────
@@ -333,7 +338,7 @@ test_that("statistics_selected reports poverty line when applicable", {
   )
   pl <- model$statistics_selected$content$poverty_line
   expect_true(pl$applicable)
-  expect_match(pl$value, "3.65")
+  expect_identical(pl$value, "$3.65")
   expect_equal(pl$value_raw, 3.65)
   expect_equal(pl$ppp_year, 2021L)
 })

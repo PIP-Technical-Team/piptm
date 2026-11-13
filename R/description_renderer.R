@@ -52,7 +52,7 @@ render_description_markdown <- function(model) {
   if (length(section_blocks) == 0) {
     return("")
   }
-  return(paste(c("# Metadata", section_blocks), collapse = "\n\n"))
+  return(paste(c("# Table Maker Metadata", section_blocks), collapse = "\n\n"))
 }
 
 
@@ -80,6 +80,7 @@ render_description_markdown <- function(model) {
     if (length(items) == 0L) {
       return(NULL)
     }
+    items <- .highlight_notes_terms(items, open_tag = "**", close_tag = "**")
     return(paste(paste0("- ", items), collapse = "\n"))
   }
 
@@ -294,10 +295,10 @@ render_description_markdown <- function(model) {
   }
 
   if (identical(section_name, "provenance")) {
-    if (identical(key, "release_id")) return("Release")
+    if (identical(key, "release_id")) return("PIP Release")
     if (identical(key, "ppp_year")) return("PPP year")
-    if (identical(key, "poverty_line")) return("Poverty line")
     if (identical(key, "generated_at")) return("Generated at")
+    if (identical(key, "citation")) return("Citation")
   }
 
   if (identical(section_name, "surveys_selected")) {
@@ -343,6 +344,31 @@ render_description_markdown <- function(model) {
 .normalize_notes_items <- function(content) {
   items <- as.character(unlist(content, use.names = FALSE))
   items[!is.na(items) & nzchar(items)]
+}
+
+
+#' Highlight key phrases in `notes` items with format-specific bold tags.
+#'
+#' @param items Character vector of note strings.
+#' @param open_tag Opening bold markup.
+#' @param close_tag Closing bold markup.
+#' @return Character vector with highlighted terms.
+#' @keywords internal
+.highlight_notes_terms <- function(items, open_tag, close_tag) {
+  phrases <- c(
+    "Survey versions",
+    "PPP international dollars per day",
+    "population share"
+  )
+  for (phrase in phrases) {
+    items <- gsub(
+      phrase,
+      paste0(open_tag, phrase, close_tag),
+      items,
+      fixed = TRUE
+    )
+  }
+  items
 }
 
 

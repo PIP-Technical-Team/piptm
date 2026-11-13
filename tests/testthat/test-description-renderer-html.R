@@ -10,7 +10,8 @@ library(data.table)
       content = list(
         release_id = "TEST_2024",
         ppp_year = 2021L,
-        generated_at = "2026-09-09 16:00:00 UTC"
+        generated_at = "2026-09-09 16:00:00 UTC",
+        citation = "World Bank (2026), Poverty and Inequality Platform (version TEST_2024) [data set]. pip.worldbank.org. Accessed on 2026-09-09"
       )
     ),
     surveys_selected = list(
@@ -61,7 +62,7 @@ library(data.table)
         analysis_var_name = "welfare",
         analysis_var_label = "Welfare",
         analysis_var_type = "welfare",
-        poverty_line = list(applicable = TRUE, value = "2.15", ppp_year = 2021L),
+        poverty_line = list(applicable = TRUE, value = "$2.15", ppp_year = 2021L),
         measures = data.table(
           measure = c("mean", "median"),
           measure_label = c("Mean", "Median"),
@@ -73,7 +74,6 @@ library(data.table)
       visible = TRUE,
       title = "Notes",
       content = list(
-        weighting_note = "All calculations use survey sampling weights.",
         version_note = "Survey versions report the master version (vermast, the original survey vintage in the Datalibweb master collection) and the alternative version (veralt, the harmonized adaptation built on that master survey).",
         ppp_note = "Welfare values are expressed in 2021 PPP international dollars per day.",
         suppression_note = "Cells whose population share is below 0.1% of the table sample base are reported as \"NR\" (not reported)."
@@ -88,25 +88,31 @@ library(data.table)
 }
 
 
-test_that("render_description_html() renders Metadata title, the 6 sections, and unlabeled notes bullets", {
+test_that("render_description_html() renders Table Maker Metadata title, the 6 sections, and unlabeled notes bullets", {
   out <- render_description_html(.make_render_model_html())
 
   expect_type(out, "character")
   expect_length(out, 1L)
   expect_true(nzchar(out))
 
-  expect_match(out, "<h1[^>]*>Metadata</h1>", perl = TRUE)
+  expect_match(out, "<h1[^>]*>Table Maker Metadata</h1>", perl = TRUE)
+  expect_match(out, "https://pip.worldbank.org/assets/WB-PIP-E-horizontal-RGB-high.png", fixed = TRUE)
+  expect_match(out, "--nav-color:#044368", fixed = TRUE)
+  expect_match(out, "--accent-color:#0ea2bd", fixed = TRUE)
+  expect_match(out, "pip-metadata-card", fixed = TRUE)
   expect_match(out, "<h2[^>]*>Data Provenance</h2>", perl = TRUE)
+  expect_match(out, "PIP Release:</b>", fixed = TRUE)
+  expect_match(out, "Citation:</b> World Bank (2026), Poverty and Inequality Platform (version TEST_2024) [data set]. pip.worldbank.org. Accessed on 2026-09-09", fixed = TRUE)
   expect_match(out, "<h2[^>]*>Notes</h2>", perl = TRUE)
   expect_lt(
     regexpr("Statistics Computed", out, fixed = TRUE),
     regexpr(">Notes<", out, fixed = TRUE)
   )
   expect_match(out, "<th[^>]*>Master version</th><th[^>]*>Alternative version</th>", perl = TRUE)
-  expect_match(out, "<li[^>]*>All calculations use survey sampling weights.</li>", perl = TRUE)
-  expect_match(out, "<li[^>]*>Survey versions report the master version \\(vermast", perl = TRUE)
-  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 PPP international dollars per day.</li>", perl = TRUE)
-  expect_match(out, "<li[^>]*>Cells whose population share is below 0.1% of the table sample base are reported as &quot;NR&quot; \\(not reported\\).</li>", perl = TRUE)
+  expect_match(out, "<li[^>]*><b[^>]*>Survey versions</b> report the master version \\(vermast", perl = TRUE)
+  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 <b[^>]*>PPP international dollars per day</b>\\.</li>", perl = TRUE)
+  expect_match(out, "<li[^>]*>Cells whose <b[^>]*>population share</b> is below 0.1% of the table sample base are reported as &quot;NR&quot; \\(not reported\\)\\.</li>", perl = TRUE)
+  expect_false(grepl("sampling weights", out, fixed = TRUE))
 
   # No key/label prefixes in Notes.
   expect_false(grepl("Description:</b>", out, fixed = TRUE))
@@ -150,7 +156,7 @@ test_that("render_description_html() renders analysis variable fields (skip guar
 test_that("render_description_html() handles poverty_line block per approved rules", {
   out_yes <- render_description_html(.make_render_model_html())
   expect_match(out_yes, "Poverty line", fixed = TRUE)
-  expect_match(out_yes, "Value:</b> 2.15", fixed = TRUE)
+  expect_match(out_yes, "Value:</b> $2.15", fixed = TRUE)
   expect_match(out_yes, "PPP year:</b> 2021", fixed = TRUE)
   expect_false(grepl("Applicable:", out_yes, fixed = TRUE))
 
@@ -214,7 +220,7 @@ test_that("render_description_html() escapes dynamic table cell values", {
 
 test_that("render_description_html() renders ppp_note as unlabeled list item in Notes", {
   out <- render_description_html(.make_render_model_html())
-  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 PPP international dollars per day.</li>", perl = TRUE)
+  expect_match(out, "<li[^>]*>Welfare values are expressed in 2021 <b[^>]*>PPP international dollars per day</b>\\.</li>", perl = TRUE)
   expect_false(grepl("PPP note:", out, fixed = TRUE))
 })
 
@@ -223,7 +229,7 @@ test_that("render_description_html() omits bottom border on final visible sectio
   out <- render_description_html(.make_render_model_html())
   section_styles <- regmatches(
     out,
-    gregexpr("<section style=\"[^\"]+\"", out, perl = TRUE)
+    gregexpr("<section[^>]*style=\"[^\"]+\"", out, perl = TRUE)
   )[[1]]
   expect_gte(length(section_styles), 1L)
   expect_true(grepl("border-bottom", section_styles[[1]], fixed = TRUE))

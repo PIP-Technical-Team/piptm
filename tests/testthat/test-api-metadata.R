@@ -129,8 +129,9 @@ test_that("GET /metadata defaults to HTML (200) with attachment header", {
   )
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
   expect_type(body, "character")
-  expect_match(body, "<h1[^>]*>Metadata</h1>", perl = TRUE)
+  expect_match(body, "<h1[^>]*>Table Maker Metadata</h1>", perl = TRUE)
   expect_match(body, "<h2[^>]*>Data Provenance</h2>", perl = TRUE)
+  expect_match(body, "PIP Release:</b>", fixed = TRUE)
   expect_match(body, "<h2[^>]*>Surveys Selected</h2>", perl = TRUE)
   expect_match(body, "<h2[^>]*>Table Layout Configuration</h2>", perl = TRUE)
   expect_match(body, "<h2[^>]*>Statistics Computed</h2>", perl = TRUE)
@@ -166,7 +167,8 @@ test_that("POST /metadata returns Markdown (200) with attachment header when for
     'attachment; filename="table-metadata.md"'
   )
   body <- if (is.raw(res$body)) rawToChar(res$body) else res$body
-  expect_match(body, "^# Metadata\n\n## Data Provenance", perl = TRUE)
+  expect_match(body, "^# Table Maker Metadata\n\n## Data Provenance", perl = TRUE)
+  expect_match(body, "- PIP Release: 20260401_TEST", fixed = TRUE)
   expect_match(body, "## Data Provenance", fixed = TRUE)
   expect_match(body, "## Surveys Selected", fixed = TRUE)
   expect_match(body, "## Table Layout Configuration", fixed = TRUE)
