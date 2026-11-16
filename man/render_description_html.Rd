@@ -7,7 +7,7 @@
 render_description_html(model)
 }
 \arguments{
-\item{model}{List produced by \code{\link[=build_description_model]{build_description_model()}} with 9 sections,
+\item{model}{List produced by \code{\link[=build_description_model]{build_description_model()}} with 6 sections,
 each containing \code{visible}, \code{title}, and \code{content} fields.}
 }
 \value{
@@ -20,7 +20,7 @@ visible are rendered; sections with \code{NULL} content are skipped.
 }
 \details{
 The renderer applies context-aware display labels for internal model keys
-(for example, \code{structure_description} -> "Description") without modifying
+(for example, \code{release_id} -> "PIP Release") without modifying
 the model schema itself.
 }
 \note{
@@ -32,15 +32,11 @@ diverge.
 }
 \examples{
 \dontrun{
-result <- table_maker(
+model <- build_description_model(
   pip_id = "COL_2010_GEIH_INC_ALL",
   analysis_var = "welfare",
   measures = c("mean", "gini"),
-  include_metadata = TRUE
-)
-model <- build_description_model(
-  description_metadata = result$description_metadata,
-  params = result$description_metadata$params
+  column = "gender"
 )
 cat(render_description_html(model))
 }

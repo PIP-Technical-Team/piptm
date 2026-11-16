@@ -197,3 +197,81 @@ serialization, validate JSON values rather than only key presence, reject
 duplicate/reserved column-name collisions before named-list assignment, and
 preserve formatted measure strings such as `"NR"` verbatim. See
 `.cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md`.
+
+### Query-parameter validator hardening and empty-value semantics (established 2026-11-04)
+
+When migrating endpoints from `POST` (JSON body) to `GET` (query parameters):
+
+1. **Guard nested-JSON flattening**: Before `unlist()` on parsed JSON strings, verify the value is a flat vector. Reject data frames, named lists, and recursively-nested structures that would silently corrupt data via flattening. Example: `{"age_group": {"min": 1, "max": 5}}` must error, not flatten to `c(1, 5)`. Apply `!is.null(dim(x))`, `!is.null(names(x))`, and recursive list checks before unlisting.
+
+2. **Empty-value disable semantics are contract-significant**: Over GET, omitting a param means `NULL` in the request builder, but explicitly empty (`?param=`) parses as the string `""` in the query string. The disable pattern depends on this distinction. Tests must assert both cases: missing (NULL) and empty string ("") separately at router level, checking payload structure (not just HTTP status).
+
+3. **Give all handler-validated params `NULL` defaults**: Missing required params crash at plumber's binding layer (500) before reaching the handler. Provide `function(param = NULL, ...)` so missing values reach validation logic and return 400.
+
+4. **Simplify JSON parsing options**: Set `simplifyDataFrame = FALSE, simplifyMatrix = FALSE` in `fromJSON()` to avoid unnecessary frame/matrix allocations for malformed/object input.
+
+See `.cg-docs/solutions/testing-patterns/2026-11-04-query-parameter-endpoint-migration-testing.md` for full implementation details and test patterns.
+
+### Bounded adaptive prose and array-serialization contracts (established 2026-11-09)
+
+When endpoints return natural-language explanations of user-configured multi-dimensional grids (e.g. `GET /cell-definition`):
+
+1. **Never emit unbounded Cartesian products**: Multi-dimensional tables explode exponentially ($N_1 \times N_2 \times N_3 \times N_4$). Cap combined enumeration at small cardinalities ($\le 4$ total cells). Above 4 cells, switch to an additive, factorized per-slot breakdown (1 line per active layout slot, max 4 lines) plus 1 concrete combined example cell.
+2. **Always wrap array-contract fields as `as.list()` in R**: In Plumber with `auto_unbox = TRUE`, single-element character vectors (`c("...")`) unbox to bare JSON strings (`"items": "..."`), breaking frontend clients that expect an array (`"items": ["..."]`). Using `as.list()` prevents scalar unboxing even for length-1 arrays.
+3. **Guard fallback paths against false counts**: When metadata or registries are unavailable, drop numeric count suffixes entirely rather than deriving false cell counts from dummy fallback items.
+
+See `.cg-docs/solutions/testing-patterns/2026-11-09-bounded-adaptive-prose-enumeration.md` for full details.
+
+### Shared table-parameter parity for metadata and compute paths (established 2026-11-13)
+
+When table-shaping parameters are accepted by both compute and metadata flows
+(`table_maker()` and `build_description_model()`), enforce domain rules in
+`R/table_params.R:.validate_and_normalize_table_params()` and treat endpoint
+validators as transport-only guards.
+
+Rules:
+
+1. **Centralize slot-shape validation in the shared helper**: `column`, `row`,
+   `superColumn`, `superRow` must be scalar non-empty strings, filled
+   left-to-right with no gaps, and must not duplicate each other.
+2. **Enforce `pov_status` + `poverty_line` coherence upstream**: if
+   `pov_status` appears in disaggregation, require a single positive finite
+   poverty line at shared-validation time so direct metadata calls cannot bypass
+   the invariant.
+3. **Normalize empty filter intent explicitly**: treat `filter_base = list()`
+   as no-filter (`NULL`) rather than malformed input.
+4. **Avoid repeated registry scans per metadata section**: derive role-specific
+   slices once per request and pass them through section builders.
+
+Reference:
+`.cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md`.
+
+### Layout-slot validation is a parent-child dependency rule, not a fill order (established 2026-11-16)
+
+**Supersedes rule 1 of the section above.** `column`, `row`, `superColumn`,
+`superRow` are no longer validated as "filled left-to-right with no gaps."
+The real constraint is two independent parent-child dependencies:
+
+1. `column` and `row` are independent — either may be used alone, or
+   together, in any request argument order.
+2. `superColumn` requires `column` to be filled.
+3. `superRow` requires `row` to be filled.
+4. `superColumn` and `superRow` are independent of each other.
+
+A request previously rejected (e.g. `row` alone, or `column` + `superColumn`
+without `row`) is now valid. This is enforced identically in
+`inst/plumber/helpers.R` (`.validate_table_shape()`) and
+`R/table_params.R` (`.validate_and_normalize_table_params()`), using shared
+error-message constants `.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR` /
+`.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR` in `R/errors.R`. The PIP UI displays
+these error strings verbatim, so any future wording change must happen in
+`R/errors.R` only, not in either validator.
+
+Also fixed alongside this change: direct R callers passing layout slots
+without a `by` vector now have `by` derived from the slot values
+(`if (is.null(by) && length(slot_dims) > 0L) by <- slot_dims`), so dimension
+validation and the `pov_status` + `poverty_line` coherence rule above are not
+silently bypassed at the direct-call boundary.
+
+Reference:
+`.cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md`.

@@ -277,7 +277,8 @@ test_that("/table/download rejects legacy flat-row payloads with 400 (never 500)
   expect_match(res$headers[["Content-Type"]], "application/json")
   payload <- .dl_body(res)
   expect_equal(payload$status, "error")
-  expect_true(length(payload$errors) >= 1L)
+  expect_identical(unlist(payload$errors), piptm:::.PIPTM_DOWNLOAD_PAYLOAD_USER_ERROR)
+  expect_false(any(grepl("Approach C", unlist(payload$errors))))
 })
 
 test_that("/table/download exports national (no-slot) and multi-survey Approach C payloads and is deterministic", {

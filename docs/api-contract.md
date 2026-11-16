@@ -5,7 +5,7 @@
 **Audience:** PIP Platform UI/IT team  
 **Plan Reference:** `.cg-docs/plans/2026-08-31-api-contract-openapi.md`
 
-This document specifies every public endpoint exposed by the `piptm` Plumber service. It maps the API surface to the three-step Table Maker UI, lists request and response schemas, records validation rules, and captures operational constraints (sessions, CORS, error handling).
+This document specifies every public endpoint exposed by the `piptm` Plumber service. It maps the API surface to the three-step Table Maker UI, lists request and response schemas, records validation rules, and captures operational constraints (CORS, error handling).
 
 ---
 
@@ -41,25 +41,45 @@ components:
 ```
 
 - Success responses: `status="success"`, `errors=[]`; `data` carries payload; `warnings` may contain informational messages.
-- Error responses: `status="error"`, `data=null`; `errors` lists messages suitable for UI display.
+- Error responses: `status="error"`, `data=null`; `errors` lists plain-English, user-safe sentences that UI clients can display directly in a banner or toast without client-side parsing or sanitization.
 
 ## Error Codes
 
 | HTTP | Meaning | Common Causes |
 |------|---------|---------------|
 | 200  | Success | Request completed; warnings possible |
-| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies |
-| 404  | Not found | `/session/<id>/surveys` when the session expired or never existed |
-| 422  | Domain/processing failure | Manifest lookup errors, computation failures, release mismatch |
+| 400  | Validation failure | Missing/invalid parameters, mutually exclusive fields, malformed JSON bodies, invalid download payload |
+| 404  | Not found | Unknown route or missing resource |
+| 413  | Payload too large | `POST /table/download` body exceeds 25 MB |
+| 422  | Domain/processing failure | Survey/country unavailable, PPP year unavailable, unsupported breakdown covariates, empty sample-filter results, unknown release |
 | 500  | Internal error | Unexpected exception (stack traces never exposed) |
+
+### User-Safe `errors[]` Guarantee
+
+Every string returned in `errors[]` across HTTP 422, 413, and 500 responses (as well as HTTP 400 payload rejections on `POST /table/download`) is guaranteed to be a plain-English sentence safe for direct display to end users (no internal R variable names such as `pip_id`, `manifest`, `triplet`, `Parquet`, `Arrow`, or `Approach C`, and no `cli`/glue markup). HTTP 400 parameter validation messages from `validate_table_input()` and `validate_lookup_input()` report invalid request parameters directly.
+
+Representative domain and payload error messages:
+
+| Scenario | HTTP | `errors[]` Message |
+|----------|------|--------------------|
+| Requested country/survey not in release | 422 | `"The requested country or survey is not available in the selected data release."` |
+| Empty survey selection after resolution | 422 | `"No surveys matched your selection. Please select at least one available country and survey year."` |
+| Requested PPP year unavailable across selected surveys | 422 | `"None of the selected surveys have data available for the <ppp> PPP standard. Please switch to another PPP year."` |
+| Selected surveys lack requested breakdown covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Area. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Area, Gender. Remove one or more of these covariates or choose a different survey."`) |
+| Selected surveys lack sample-filter covariate(s) | 422 | `"None of the selected surveys have data for the selected covariate: Age. Remove this covariate or choose a different survey."` (or, for 2+ covariates: `"None of the selected surveys have data for the selected covariates: Age, Gender. Remove one or more of these covariates or choose a different survey."`) |
+| Sample filter matches 0 survey observations | 422 | `"No survey observations matched the selected sample filters. Try broadening your filter selection."` |
+| Malformed/unreadable sample filter JSON (`filter_base`) | 422 | `"The selected sample filter could not be read. Please reset your filters and try again."` |
+| Unknown data release | 422 | `"The requested data release ('<release>') is not available."` |
+| Incomplete/invalid `data` payload on `POST /table/download` | 400 | `"The table data could not be exported because the download payload is incomplete or invalid."` |
+| Any unmapped internal/schema error | 422 / 500 | `"Something went wrong processing this request."` *(raw developer diagnostic is logged server-side to `stderr` with the `[piptm][unmapped_error]` prefix)* |
 
 ## UI Step Mapping
 
 | UI Step | Description | Endpoints |
 |---------|-------------|-----------|
-| Step 1 — Survey selection | Discover releases, manifest rows, categories, and persist selections | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup`, `/session/surveys`, `/session/<id>/surveys` |
+| Step 1 — Survey selection | Discover releases, manifest rows, and categories | `/releases`, `/surveys`, `/surveys-ui`, `/countries`, `/regions`, `/categories`, `/lookup` |
 | Step 2 — Configure measures & cuts | List analysis variables, statistics, layout covariates, valid dimensions | `/analysis-variables`, `/statistics`, `/covariates`, `/dimensions` |
-| Step 3 — Results | Run computations, render descriptions, and download table outputs | `/table` (GET+POST), `/description`, `/table/download` |
+| Step 3 — Results | Run computations, render metadata, and download table outputs | `/table` (GET+POST), `/metadata`, `/table/download` |
 | Utility | Cross-cutting health | `/health` |
 
 ---
@@ -85,9 +105,9 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - **Response:** `data = [ { pip_id, country_code, welfare_type, dimensions, ... }, ... ]`; `meta.release` echoes the resolved release.
 
 ### `/surveys-ui` — GET (Step 1)
-- **Purpose:** Provide a UI-ready survey catalogue with friendly labels and available dimensions for Step 1 grids.
+- **Purpose:** Provide a UI-ready survey catalogue with friendly labels for Step 1 grids. Variable availability is not included; use `/categories` and `/covariates` with the selected `pip_id` values.
 - **Query parameters:** `release` *(optional)* — Defaults to current release.
-- **Response:** `data = [ { "pip_id": "COL_2019_GEIH_INC_ALL", "country_code": "COL", "country_label": "Colombia", "year": 2019, "welfare_type": "INC", "welfare_label": "Income", "version": "V2024_03", "dimensions": ["gender","area",...] }, ... ]`; `meta.release` echoes the resolved release.
+- **Response:** `data = [ { "pip_id": "COL_2019_GEIH_INC_ALL", "country_code": "COL", "country_label": "Colombia", "year": 2019, "welfare_type": "INC", "welfare_label": "Income", "version": "V2024_03" }, ... ]`; `meta.release` echoes the resolved release.
 
 ### `/countries` — GET (Step 1)
 - **Purpose:** List unique countries present in the manifest.
@@ -136,23 +156,6 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - **Validation:** `country_code`, `year`, and `welfare_type` **must** have identical lengths (zip semantics). Length mismatch returns HTTP 400.
 - **Response:** Array of `{ country_code, year, welfare_type, pip_id }` with `meta.release`.
 
-### `/session/surveys` — POST (Step 1)
-- **Purpose:** Persist selected survey identifiers in an in-memory session (used to resume selections later).
-- **Body:**
-  ```json
-  { "pip_id": ["COL_2019_GEIH_INC_ALL", "BOL_2018_ECH_CON_ALL"] }
-  ```
-  - Accepts one or more values matching `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`. (The `/table` endpoint enforces the 15-survey execution cap.)
-- **Response:** `data = { "session_id": "a1b2c3d4e5f6" }`.
-- **Session rules:** See [Session Management Details](#session-management-details) below.
-
-### `/session/<id>/surveys` — GET (Step 1)
-- **Purpose:** Fetch stored survey IDs by session ID.
-- **Path parameter:** `id` *(required, string)*.
-- **Responses:**
-  - `200 OK` — `data = { "pip_id": [ ... ] }`
-  - `404 Not Found` — Session missing or expired.
-
 ### `/table` — GET & POST (Step 3)
 - **Purpose:** Execute the Table Maker computation engine for up to 15 surveys.
 - **Core parameters (query for GET; form or JSON body for POST):**
@@ -160,24 +163,21 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `analysis_var` *(required, string)* — `welfare`, `pov_status`, or entries from `/analysis-variables`.
   - `measures` *(required, array)* — Names from `/statistics`.
   - `poverty_line` *(required when `analysis_var` == `pov_status` or any slot includes `pov_status`)* — Positive numeric.
-  - `column` *(optional, string)* — Variable placed in the Columns slot. Exactly one variable name returned by `/dimensions`.
-  - `row` *(optional, string)* — Variable placed in the Rows slot. Exactly one variable name returned by `/dimensions`.
-  - `superColumn` *(optional, string)* — Variable placed in the Super Columns slot. Exactly one variable name returned by `/dimensions`.
-  - `superRow` *(optional, string)* — Variable placed in the Super Rows slot. Exactly one variable name returned by `/dimensions`.
+  - `column` *(optional, string)* — Variable placed in the Columns slot. Exactly one variable name returned by `/covariates`.
+  - `row` *(optional, string)* — Variable placed in the Rows slot. Exactly one variable name returned by `/covariates`.
+  - `superColumn` *(optional, string; requires `column`)* — Variable placed in the Super Columns slot. Exactly one variable name returned by `/covariates`.
+  - `superRow` *(optional, string; requires `row`)* — Variable placed in the Super Rows slot. Exactly one variable name returned by `/covariates`.
   - `ppp` *(optional, integer)* — PPP reference year. Default `2021`.
   - `filter_base` *(optional, JSON object)* — Keys are categorical variables; values are arrays of allowed codes (e.g., `{ "gender": [0], "age_group": [1,2] }`).
   - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables masking.
   - `release` *(optional)* — Defaults to current release.
-  - `include_metadata` *(optional, string)* — Case-insensitive; any spelling of `"true"` (`"true"`, `"True"`, `"TRUE"`) returns description metadata alongside table output. Any other value (or omission) disables metadata.
   _HTTP transport note_: Query parameters arrive as strings; the types above describe the server-side coercion performed before validation.
 - **Responses:**
-  - `200 OK` (default) — `data` is an array of per-survey objects formatted according to Approach C (see structure below); `meta = { "release": <release>, "n_surveys": <count> }`.
-  - `200 OK` (`include_metadata="true"`) — `data = { "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`; `meta.description_metadata` populated.
+  - `200 OK` — `data` is an array of per-survey objects formatted according to Approach C (see structure below); `meta = { "release": <release>, "n_surveys": <count> }`.
   - `400` — Validation failure (e.g., too many surveys, missing poverty line, invalid PPP).
   - `422` — Domain failure (manifest mismatch, computation error).
 - **Notes:**
-  - **Approach C Response Format (`include_metadata=false`)**:
-    - This Approach C shape applies **only** when `include_metadata` is falsy (the default). When `include_metadata="true"`, `data` instead takes the legacy flat-row shape described in the `200 OK (include_metadata="true")` response above (`{ "data": [<TableRow>,…], "description_metadata": <DescriptionMetadata> }`) — the metadata path is not reshaped to Approach C.
+  - **Approach C Response Format**:
     - `data` contains one object per survey in `pip_id`.
     - Each survey object has header fields (`pip_id`, `country_code`, `surveyid_year`, `welfare_type`, `poverty_line`, `analysis_var`, `measures[]`).
     - `layout`: fixed keys `columns`, `rows`, `superColumns`, `superRows` (`null` for unused slots). Each active slot contains `varname`, `label`, and ordered `categories` (`{ "code": <val>, "label": <str> }`). Missing categories use `code: null`.
@@ -185,11 +185,11 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
     - Ordering: Category ordering in `layout` and cell ordering in `cells[]` are deterministic and registry-sourced (`superRows` → `rows` → `superColumns` → `columns`).
   - **Layout slot rules**:
     - Query parameters are case-sensitive camelCase (`column`, `row`, `superColumn`, `superRow`).
-    - Slots must be filled in order (`column` → `row` → `superColumn` → `superRow`). A gapped assignment (e.g. `column=gender&superRow=area` without `row`) returns HTTP 400. Even though `column=gender&superRow=area` groups the same underlying observations as `column=gender&row=area`, the rejection is a deliberate layout rule that prevents degenerate table headers (super-axis bands with no child axis).
+    - Slots follow parent-child dependency rules: `column` and `row` are independent and can be used alone or together; `superColumn` requires `column`, and `superRow` requires `row`. A super-axis slot without its base axis (e.g. `superColumn=gender` without `column`, or `column=gender&superRow=area` without `row`) returns HTTP 400. This deliberate layout rule prevents degenerate table headers (super-axis bands with no child axis).
     - Each slot accepts a single variable name; repeating a slot parameter returns HTTP 400.
     - Assigning the same variable to multiple slots returns HTTP 400.
     - The four slots structurally cap `/table` disaggregation to four dimensions. Direct callers of R package function `table_maker(by = ...)` are capped at `length(by) <= 4` via defensive assertion.
-  - `filter_base` JSON must be parsable; invalid JSON returns HTTP 400.
+  - `filter_base` JSON must be parsable; invalid JSON returns HTTP 422.
   - `pip_id` and `measures` arrays must be non-empty; size >15 returns HTTP 400.
   - All requests are sample-weighted; the poverty line is always PPP USD per day.
 
@@ -202,8 +202,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   "measures": ["mean", "gini"],
   "column": "gender",
   "ppp": 2021,
-  "filter_base": {"area":["URB"]},
-  "include_metadata": "false"
+  "filter_base": {"area":["URB"]}
 }
 ```
 
@@ -252,7 +251,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   }
   ```
   - `format` *(optional, string)* — `csv` (default) or `rds`.
-  - `data` *(required, non-empty array of Approach C survey objects)* — copied directly from `/table` response `data` (`include_metadata = false`).
+  - `data` *(required, non-empty array of Approach C survey objects)* — copied directly from `/table` response `data`.
 - **Responses:**
   - `200 OK` (`format=csv`) — raw CSV bytes; `Content-Type: text/csv; charset=utf-8`; `Content-Disposition: attachment; filename="table.csv"`.
   - `200 OK` (`format=rds`) — raw RDS bytes; `Content-Type: application/octet-stream`; `Content-Disposition: attachment; filename="table.rds"`.
@@ -269,23 +268,25 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 
 ---
 
-### `/description` — POST (Step 3)
+### `/metadata` — GET & POST (Step 3)
 
-- **Purpose:** Render a natural-language table description either from cached metadata or by recomputing.
-- **Body modes (mutually exclusive):**
-  1. **Metadata fast path** — `{ "description_metadata": <object produced by /table include_metadata=true> }`
-  2. **Fallback recomputation** — Same parameter set as `/table` (pip_id, measures, etc.).
-- **Validation:** Supplying both `description_metadata` **and** table parameters returns HTTP 400. When recomputing, the same validators as `/table` apply.
-- **Response:** Plain-text Markdown (`Content-Type: text/plain`) describing the requested table. Errors use JSON envelopes with HTTP 400/422.
-- **Errors:** Even though the serializer is `text/plain`, error bodies are JSON objects (`{ "status": "error", ... }`). Consumers should parse the body as JSON when `status="error"`.
+- **Purpose:** Render a downloadable 6-section table metadata and provenance document directly from the in-memory release manifest and variable registry (zero Arrow microdata I/O), headed by a top-level `Table Maker Metadata` title (`# Table Maker Metadata` / `<h1>Table Maker Metadata</h1>`) and ordered: `Data Provenance` (`provenance`), `Surveys Selected` (`surveys_selected`), `Sample Base Filters` (`filters_applied`, conditional), `Table Layout Configuration` (`layout_configuration`, conditional), `Statistics Computed` (`statistics_selected`), and `Notes` (`notes`, unlabeled plain-bullet notes at the bottom).
+- **Parameters (query for GET; JSON body for POST):**
+  - Accepts the exact same table configuration parameters as `/table` (`pip_id`, `analysis_var`, `measures`, `poverty_line`, `column`, `row`, `superColumn`, `superRow`, `ppp`, `filter_base`, `pop_share_threshold`, `release`), plus:
+  - `format` *(optional, string)* — `"html"` (default) or `"markdown"`.
+- **Validation:** Validated via `validate_table_input()`, `format` validation, and the shared manifest/registry domain checks.
+- **Responses:**
+  - `200 OK` (`format="html"`) — inline-styled HTML (`Content-Type: text/html; charset=utf-8`, `Content-Disposition: attachment; filename="table-metadata.html"`).
+  - `200 OK` (`format="markdown"`) — plain-text Markdown (`Content-Type: text/plain`, `Content-Disposition: attachment; filename="table-metadata.md"`).
+  - `400` / `422` — JSON-encoded error envelope (`{ "status": "error", ... }`).
 
 ---
 
 ## Shared Schemas & Common Structures
 
-### Table Output Rows
+### Table Output Formatting
 
-`/table` produces long-format records formatted for API presentation. Numeric values are formatted as strings:
+`table_maker()` produces long-format records formatted for API presentation via `format_table_output()` and `serialize_table_response()`. Numeric values are formatted as strings:
 - Proportions and percentage measures (`gini`, `headcount`, `poverty_gap`, `severity`, `pop_share`, `target_within_group_share`, `target_survey_share`) are scaled by 100 with 2 decimal places (e.g. `"6.70"`).
 - Counts (`pop_poverty`, `nobs`) are formatted as whole numbers.
 - Other continuous measures (`mean`, `median`, `sd`, `var`, `min`, `max`, `p10`, `p25`, `p75`, `p90`, `sum`, `mld`, `watts`) are formatted with 2 decimal places.
@@ -293,64 +294,17 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
 - Genuine missing or non-finite values (`NA`, `NaN`, `Inf`, `-Inf`) are serialized as `null`.
 - The `population` column is removed from `/table` output.
 
-```yaml
-TableRow:
-  type: object
-  required: [pip_id, analysis_var, measure, value]
-  properties:
-    pip_id: { type: string }
-    analysis_var: { type: string }
-    measure: { type: string }
-    value:
-      type: string
-      nullable: true
-      description: Formatted number string, "NR" for masked cells, or null for genuine missing.
-    "<dimension>":
-      type: string
-      description: Top-level column per filled disaggregation slot variable (e.g. gender, area).
-    poverty_line: { type: number, nullable: true }
-    warnings: { type: array, items: { type: string } }
-```
-
-### Description Metadata
-
-When `include_metadata=true`, `/table` returns an additional object consumed by `/description`:
-
-```yaml
-DescriptionMetadata:
-  type: object
-  required: [params, layout, measures]
-  properties:
-    params:
-      type: object
-      description: The final resolved request parameters.
-    layout:
-      type: object
-      description: Slot assignments (columns, rows, super columns, super rows).
-    measures:
-      type: array
-      items: { type: string }
-```
-
 ## Validation Rules (Cross-Cutting)
 
-1. **Survey Cap:** `/table` enforces a hard limit of 15 `pip_id` entries per request. Other endpoints (for example `/session/surveys`) store whatever length is provided but downstream `/table` calls must respect the 15-survey cap.
+1. **Survey Cap:** `/table` and `/metadata` enforce a hard limit of 15 `pip_id` entries per request.
 2. **Identifiers:** `pip_id` must match `^[A-Z]{3}_[0-9]{4}_[A-Z0-9_-]{1,40}$`.
 3. **PPP Year:** `ppp` must be a single positive integer. Strings must contain digits only (`"2017"` valid, `"2e3"` rejected).
 4. **Poverty Line:** Required whenever poverty status is analyzed or disaggregated; must be positive finite numeric.
-5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 400.
-6. **Sessions:** Stored process-locally; expire after 3600 seconds; retrieval after expiry returns 404.
-7. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
-8. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `include_metadata="false"`, `release=<current>`.
-9. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
-10. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
-
-## Session Management Details
-
-- Session IDs are random 12-character alphanumeric strings.
-- Collision handling retries up to 20 times before aborting with an error.
-- Session storage is in-memory (`new.env()`); load-balanced deployments do **not** share sessions across instances.
-- Expired sessions are purged on retrieval attempts.
+5. **filter_base:** JSON object where keys are categorical variables and values are arrays of allowed category codes. Invalid JSON returns HTTP 422.
+6. **Lookup Triplets:** `country_code`, `year`, `welfare_type` operate as zipped triplets; unequal lengths are rejected.
+7. **Optional Defaults:** `ppp=2021`, `pop_share_threshold=0.001`, `release=<current>`, `format="html"` (on `/metadata`).
+8. **Intersection Logic:** `/categories` and `/covariates` return only dimensions present in **all** supplied surveys when `pip_id` filters are used.
+9. **Download Payload Guard:** `/table/download` rejects payloads larger than 25 MB with HTTP 413.
 
 ## CORS
 
@@ -370,13 +324,13 @@ Access-Control-Allow-Headers: Content-Type
 |----------|---------|-------------|
 | `/table` | GET, POST | Execute tables for selected surveys |
 | `/table/download` | POST | Convert `/table` rows into downloadable CSV or RDS bytes |
-| `/description` | POST | Render natural-language table description |
+| `/metadata` | GET, POST | Render downloadable table metadata and provenance |
+| `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 | `/analysis-variables` | GET | Populate Decision 2 variable picker |
 | `/statistics` | GET | Populate statistic picker chips |
 | `/categories` | GET | Power Step 1 Available Variables filter chips |
 | `/covariates` | GET | Populate layout slot drawers |
 | `/lookup` | GET | Resolve free-form triplets to `pip_id`s |
-| `/session/surveys` & `/session/<id>/surveys` | POST / GET | Save/restore survey selections |
 
 ## Change Control
 

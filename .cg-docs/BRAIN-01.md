@@ -1,10 +1,10 @@
 # 🧠 Project Brain — Part 1
 
-_Generated 2026-10-26_
+_Generated 2026-11-16_
 
 ## Table_Maker\(\) / /Table / Pip_Id
 
-_Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
+_Keywords: `table_maker()` · `/table` · `pip_id`_ · 136 entities
 
 - **[Data Pipeline Architecture — Ingestion, Manifest, and Computation Design](.cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md)** · `brainstorm` · _decided_ · `2026-03-16`
   > The {piptm} package is the computation engine for the PIP Table Maker. Before implementing any code, we needed to cla…
@@ -62,6 +62,14 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[/table/download input & output shape under Approach C](.cg-docs/brainstorms/2026-10-26-table-download-approach-c-flattening.md)** · `brainstorm` · _decided_ · `2026-10-26`
   > `/table/download` (`inst/plumber/plumber.R:247-343`) is a stateless `POST` endpoint that converts an already-computed…
+- **[Page 2 cell definition endpoint, and phasing of the metadata rework](.cg-docs/brainstorms/2026-11-02-page2-cell-definition-endpoint.md)** · `brainstorm` · _decided_ · `2026-11-02`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[User-Facing API Error Messages](.cg-docs/brainstorms/2026-11-08-user-facing-api-error-messages.md)** · `brainstorm` · _decided_ · `2026-11-08`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition](.cg-docs/brainstorms/2026-11-09-cell-definition-all-cells-breakdown.md)** · `brainstorm` · _decided_ · `2026-11-09`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
+- **[Table Metadata Rework and Decoupling from table_maker\(\)](.cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md)** · `brainstorm` · _decided_ · `2026-11-12`
+  > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Arrow Data Preparation Pipeline](.cg-docs/plans/2026-03-17-arrow-data-preparation.md)** · `plan` · _active_ · `2026-03-17`
   > Implement the data preparation pipeline that takes clean survey datasets produced by {pipdata} (`.qs2` files) and gen…
 - **[Version as partition key with manifest-based resolution](.cg-docs/plans/2026-04-02-version-partition-and-manifest-resolution.md)** · `plan` · _active_ · `2026-04-02`
@@ -120,6 +128,32 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
   > Update `POST /table/download` so it accepts the **Approach C** `data[]` payload returned by `/table` (per-survey obje…
 - **[/table response format: layout + observed cells\[\] \(Approach C\)](.cg-docs/plans/2026-10-26-table-layout-cells-response-format.md)** · `plan` · _completed_ · `2026-10-26`
   > Reshape the `/table` response (with `include_metadata` off) from flat long-format rows into **Approach C**: `data[]` …
+- **[Page 2 cell definition endpoint \(POST /cell-definition\)](.cg-docs/plans/2026-11-02-page2-cell-definition-endpoint.md)** · `plan` · _completed_ · `2026-11-02`
+  > Implement a result-free Page 2 cell explanation feature consisting of a dedicated curated prose specification (`inst/…
+- **[Replace POST /cell-definition with GET /cell-definition](.cg-docs/plans/2026-11-04-cell-definition-get-only.md)** · `plan` · _completed_ · `2026-11-04`
+  > Replace the existing `POST /cell-definition` route with a `GET /cell-definition` route that accepts the same Page 2 c…
+- **[Remove Obsolete Session Survey API Endpoints and Documentation](.cg-docs/plans/2026-11-04-remove-session-surveys-endpoints-corrected.md)** · `plan` · _completed_ · `2026-11-04`
+  > Remove the obsolete `POST /session/surveys` and `GET /session/<id>/surveys` endpoints from the `piptm` Plumber API, p…
+- **[Remove Obsolete Session Survey API Endpoints and Documentation](.cg-docs/plans/2026-11-04-remove-session-surveys-endpoints.md)** · `plan` · _active_ · `2026-11-04`
+  > Remove the obsolete `POST /session/surveys` and `GET /session/<id>/surveys` endpoints from the `piptm` Plumber API, p…
+- **[User-Facing API Error Messages](.cg-docs/plans/2026-11-08-user-facing-api-error-messages.md)** · `plan` · _completed_ · `2026-11-08`
+  > Prevent raw developer-facing `cli::cli_abort()` strings (containing `pip_id`, `manifest`, `triplet`, glue/cli markup,…
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition \(revised\)](.cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown-revised.md)** · `plan` · _completed_ · `2026-11-09`
+  > Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI b…
+- **[Adaptive cell enumeration and per-slot category breakdown in GET /cell-definition](.cg-docs/plans/2026-11-09-cell-definition-all-cells-breakdown.md)** · `plan` · _active_ · `2026-11-09`
+  > Make `what_a_cell_is` in `GET /cell-definition` explain the whole table rather than only the first cell, without UI b…
+- **[Name Specific Covariates in Table Exclusion Error Messages](.cg-docs/plans/2026-11-09-covariate-exclusion-error-wording.md)** · `plan` · _completed_ · `2026-11-09`
+  > Replace the two generic, jargon-mixing `user_message` strings in `table_maker()`'s dimension-exclusion paths with mes…
+- **[Overhaul Swagger/OpenAPI Documentation for All Plumber Endpoints](.cg-docs/plans/2026-11-10-swagger-api-documentation.md)** · `plan` · _completed_ · `2026-11-10`
+  > Rewrite and enrich the OpenAPI/Swagger documentation generated by `inst/plumber/plumber.R` so that Swagger UI (`/__do…
+- **[Remove Unused dimensions Field from surveys-ui Endpoint](.cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md)** · `plan` · _completed_ · `2026-11-11`
+  > Remove the unused `dimensions` field (and the unused variable registry lookup) from `piptm_surveys_ui()` and the `GET…
+- **[Rename POST /description to POST /metadata](.cg-docs/plans/2026-11-11-rename-description-to-metadata.md)** · `plan` · _completed_ · `2026-11-11`
+  > Rename the public Plumber route `POST /description` to `POST /metadata` and update every live dependent (router maps,…
+- **[Table Metadata Rework and Decoupling from table_maker\(\)](.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md)** · `plan` · _completed_ · `2026-11-12`
+  > Make `table_maker()` compute tables and nothing else, and make `GET|POST /metadata` a pure, fast (`< 5 ms`), zero-mic…
+- **[Relax layout-slot validation to parent-child dependency rule](.cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md)** · `plan` · _completed_ · `2026-11-13`
+  > Replace the strict "fill column -> row -> superColumn -> superRow with no gaps" validation rule for the `/table`, `/t…
 - **[2026-04-03-manifest-generation-version-partition-review](.cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md)** · `review` · _—_ · `—`
   > **Review depth**: standard (+ auto-escalation: `load_data.R` matches `**/load*.R` → `@cg-data-quality` always include…
 - **[2026-04-07-computation-engine-review](.cg-docs/reviews/2026-04-07-computation-engine-review.md)** · `review` · _—_ · `—`
@@ -168,6 +202,42 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
   > **Review mode**: architecture (explicit; mandatory emphasis on `@cg-architecture` and `@cg-performance`) **Scope**: `…
 - **[2026-10-26-table-layout-cells-response-format-review](.cg-docs/reviews/2026-10-26-table-layout-cells-response-format-review.md)** · `review` · _—_ · `2026-10-26`
   > **Review mode**: architecture (explicit) **Files reviewed**: `R/table_response.R` (new), `R/registry.R`, `inst/plumbe…
+- **[2026-11-02-page2-cell-definition-endpoint-review](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-review.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: architecture **Files reviewed**: 14 **Findings**: 15 (P0: 0, P1: 5, P2: 6, P3: 4)
+- **[2026-11-02-page2-cell-definition-endpoint-verify-review-2](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review-2.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: verify (light, `@cg-code-quality` + `@cg-testing`) **Files reviewed**: 8 **Findings**: 2 (P0: 0, P1:…
+- **[2026-11-02-page2-cell-definition-endpoint-verify-review](.cg-docs/reviews/2026-11-02-page2-cell-definition-endpoint-verify-review.md)** · `review` · _—_ · `2026-11-03`
+  > **Review mode**: verify (light, `@cg-code-quality` + `@cg-testing` only) **Files reviewed**: 7 (`R/cell_explanation.R…
+- **[2026-11-04-cell-definition-get-only-review](.cg-docs/reviews/2026-11-04-cell-definition-get-only-review.md)** · `review` · _—_ · `2026-11-04`
+  > **Review mode**: standard **Files reviewed**: 8 (`inst/plumber/plumber.R`, `inst/plumber/helpers.R`, `R/cell_explanat…
+- **[2026-11-04-cell-definition-get-only-verify-review](.cg-docs/reviews/2026-11-04-cell-definition-get-only-verify-review.md)** · `review` · _—_ · `2026-11-04`
+  > **Review mode**: light (mode:verify) **Files reviewed**: 9 (`R/cell_explanation.R`, `inst/plumber/helpers.R`, `inst/p…
+- **[2026-11-08-user-facing-api-error-messages-review](.cg-docs/reviews/2026-11-08-user-facing-api-error-messages-review.md)** · `review` · _—_ · `2026-11-08`
+  > **Review mode**: architecture **Files reviewed**: 21 **Findings**: 14 (P0: 0, P1: 2, P2: 8, P3: 4)
+- **[2026-11-08-user-facing-api-error-messages-verify-review-2](.cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review-2.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light (forced by `mode:verify`) **Files reviewed**: 6 (changed in `4168044..115431a`) **Findings**: …
+- **[2026-11-08-user-facing-api-error-messages-verify-review](.cg-docs/reviews/2026-11-08-user-facing-api-error-messages-verify-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light (forced by `mode:verify`) **Files reviewed**: 13 (changed in `eb912d7..4168044`) **Findings**:…
+- **[2026-11-09-cell-definition-all-cells-breakdown-revised-review](.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light **Files reviewed**: 5 (`R/cell_explanation.R`, `tests/testthat/test-cell-explanation.R`, `test…
+- **[2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review](.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakdown-revised-verify-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: light (mode:verify) **Parent review**: `.cg-docs/reviews/2026-11-09-cell-definition-all-cells-breakd…
+- **[2026-11-09-covariate-exclusion-error-wording-review](.cg-docs/reviews/2026-11-09-covariate-exclusion-error-wording-review.md)** · `review` · _—_ · `2026-11-09`
+  > **Review mode**: standard **Files reviewed**: 5 (`R/errors.R`, `R/table_maker.R`, `docs/api-contract.md`, `tests/test…
+- **[2026-11-11-remove-surveys-ui-dimensions-review](.cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-review.md)** · `review` · _—_ · `2026-11-11`
+  > **Review mode**: light **Files reviewed**: 4 (`R/manifest.R`, `man/piptm_surveys_ui.Rd`, `inst/plumber/plumber.R`, `t…
+- **[2026-11-11-remove-surveys-ui-dimensions-verify-review-2](.cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review-2.md)** · `review` · _—_ · `2026-11-11`
+  > **Review mode**: light **Files reviewed**: 7 (`R/manifest.R`, `inst/plumber/plumber.R`, `man/piptm_surveys_ui.Rd`, `d…
+- **[2026-11-11-remove-surveys-ui-dimensions-verify-review](.cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md)** · `review` · _—_ · `2026-11-11`
+  > **Review mode**: light **Files reviewed**: 5 (`R/manifest.R`, `inst/plumber/plumber.R`, `man/piptm_surveys_ui.Rd`, `t…
+- **[2026-11-11-rename-description-to-metadata-review](.cg-docs/reviews/2026-11-11-rename-description-to-metadata-review.md)** · `review` · _—_ · `2026-11-11`
+  > **Review mode**: architecture (explicit user mode; mandatory emphasis on `@cg-architecture`, `@cg-performance`, `@cg-…
+- **[2026-11-12-metadata-rework-and-table-maker-decoupling-review](.cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md)** · `review` · _—_ · `2026-11-13`
+  > **Review mode**: standard **Files reviewed**: 18 **Findings**: 17 (P0: 0, P1: 1, P2: 6, P3: 10)
+- **[2026-11-13-layout-slot-dependency-rule-review](.cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md)** · `review` · _—_ · `2026-11-13`
+  > **Review mode**: standard **Files reviewed**: 12 **Findings**: 23 (P0: 0, P1: 1, P2: 12, P3: 10)
+- **[2026-11-13-layout-slot-dependency-rule-verify-review](.cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md)** · `review` · _—_ · `2026-11-16`
+  > **Review mode**: light (verify) **Files reviewed**: 13 (changed files since prior review: R/errors.R, R/table_params.…
 - **[load_surveys\(\) silently skips missing partitions when path helper is not shared](.cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md)** · `solution` · _—_ · `2026-04-14`
   > When a manifest entry referred to a partition directory that did not exist on disk, `load_surveys()` returned a resul…
 - **[Swagger incorrectly exposes req as query parameter in POST /description](.cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md)** · `solution` · _—_ · `2026-08-31`
@@ -190,6 +260,8 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
   > The `{piptm}` pipeline relies on a **pre-sort contract**: welfare values in each survey's microdata are sorted ascend…
 - **[collapse::fsum/fcumsum silently drops NA rows, biasing weighted statistics](.cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md)** · `solution` · _—_ · `2026-05-21`
   > `compute_inequality()` calls `collapse::fsum()`, `collapse::fcumsum()`, and `collapse::fmean()` on `welfare` and `wei…
+- **[Replace strict ordered-slot validation with parent-child dependency checks](.cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md)** · `solution` · _—_ · `2026-11-16`
+  > The `/table`, `/table/download`, and `/metadata` endpoints in {piptm} exposed four layout slots (`column`, `row`, `su…
 - **[Orchestration Strategy Benchmark Results](.cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md)** · `solution` · _completed_ · `2026-04-28`
   > - **R version**: R version 4.5.2 (2025-10-31 ucrt) - **Platform**: Windows Server 2022 x64 (build 20348) / x86_64-w64…
 - **[Arrow I/O Strategy Benchmark Results](.cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md)** · `solution` · _completed_ · `2026-04-29`
@@ -207,9 +279,9 @@ _Keywords: `table_maker()` · `/table` · `pip_id`_ · 100 entities
 - **[Adding new measures to the computation engine via the registry pattern](.cg-docs/solutions/testing-patterns/2026-06-01-adding-measures-registry-pattern.md)** · `solution` · _—_ · `2026-06-01`
   > Need to extend the computation engine with new measures (`obs_share`, `pop_share`) without breaking existing consumer…
 
-## Service Layer / Table / Computation Engine
+## Service Layer / Table / Api
 
-_Keywords: `service layer` · `table` · `computation engine`_ · 28 entities
+_Keywords: `service layer` · `table` · `api`_ · 31 entities
 
 - **[Version as partition key with manifest-based resolution](roadmap.json#version-partition-key)** · `feature` · _done_ · `—`
   > Version as partition key with manifest-based resolution
@@ -255,6 +327,12 @@ _Keywords: `service layer` · `table` · `computation engine`_ · 28 entities
   > /table request contract: explicit slot parameters replacing ordered by
 - **[/table/download has no flat rows to receive under the new cells\[\] response format](roadmap.json#table-download-has-no-flat-rows-under-cells-response-format)** · `feature` · _done_ · `—`
   > /table/download has no flat rows to receive under the new cells[] response format
+- **[User-facing API error messages](roadmap.json#user-facing-api-error-messages)** · `feature` · _done_ · `—`
+  > User-facing API error messages
+- **[Table Metadata Rework and Decoupling from table_maker\(\)](roadmap.json#table-metadata-rework-and-decoupling-from-table-maker)** · `feature` · _done_ · `—`
+  > Table Metadata Rework and Decoupling from table_maker()
+- **[Structured JSON output format for GET|POST /metadata](roadmap.json#structured-json-output-format-for-get-post-metadata)** · `feature` · _idea_ · `—`
+  > Structured JSON output format for GET|POST /metadata
 - **[PPP welfare column resolution in load_surveys\(\) / load_survey_microdata\(\)](roadmap.json#ppp-load-data-resolution)** · `feature` · _done_ · `—`
   > PPP welfare column resolution in load_surveys() / load_survey_microdata()
 - **[API PPP parameter validation refactor](roadmap.json#ppp-api-input-validation)** · `feature` · _done_ · `—`

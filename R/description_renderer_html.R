@@ -5,24 +5,20 @@
 #' visible are rendered; sections with `NULL` content are skipped.
 #'
 #' The renderer applies context-aware display labels for internal model keys
-#' (for example, `structure_description` -> "Description") without modifying
+#' (for example, `release_id` -> "PIP Release") without modifying
 #' the model schema itself.
 #'
-#' @param model List produced by [`build_description_model()`] with 9 sections,
+#' @param model List produced by [`build_description_model()`] with 6 sections,
 #'   each containing `visible`, `title`, and `content` fields.
 #' @return A single character scalar containing rendered HTML.
 #' @export
 #' @examples
 #' \dontrun{
-#' result <- table_maker(
+#' model <- build_description_model(
 #'   pip_id = "COL_2010_GEIH_INC_ALL",
 #'   analysis_var = "welfare",
 #'   measures = c("mean", "gini"),
-#'   include_metadata = TRUE
-#' )
-#' model <- build_description_model(
-#'   description_metadata = result$description_metadata,
-#'   params = result$description_metadata$params
+#'   column = "gender"
 #' )
 #' cat(render_description_html(model))
 #' }
@@ -61,16 +57,16 @@ render_description_html <- function(model) {
   section_blocks <- vapply(seq_along(sections), function(i) {
     section <- sections[[i]]
     border_style <- if (i < length(sections)) {
-      " border-bottom: 1px solid #e4e7eb;"
+      " border-bottom: 1px solid #dee2e6;"
     } else {
       ""
     }
 
     paste0(
-      "<section style=\"margin: 0 0 22px 0; padding: 0 0 16px 0;",
+      "<section class=\"pip-metadata-section\" style=\"margin: 0 0 24px 0; padding: 0 0 18px 0;",
       border_style,
       "\">",
-      "<h2 style=\"margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #102a43;\">",
+      "<h2 class=\"pip-metadata-section-title\" style=\"margin: 0 0 12px 0; padding-left: 10px; border-left: 3px solid #0ea2bd; font-size: 18px; font-weight: 600; color: #044368; line-height: 1.35;\">",
       .html_escape(section$title),
       "</h2>",
       section$rendered,
@@ -78,10 +74,39 @@ render_description_html <- function(model) {
     )
   }, character(1))
 
+  pip_style_block <- paste0(
+    "<style>",
+    ":root{",
+    "--default-font:\"Open Sans\",system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;",
+    "--heading-font:\"Open Sans\",system-ui,-apple-system,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;",
+    "--background-color:#F7F8F8;",
+    "--default-color:#1a1f24;",
+    "--heading-color:#485664;",
+    "--accent-color:#0ea2bd;",
+    "--surface-color:#ffffff;",
+    "--nav-color:#044368;",
+    "--nav-hover-color:#00689D;",
+    "--bs-border-color:#dee2e6;",
+    "}",
+    "body{margin:0;background-color:var(--background-color);color:var(--default-color);font-family:var(--default-font);line-height:1.5;}",
+    ".pip-metadata-table tbody tr:nth-child(even){background-color:#F7F8F8;}",
+    ".pip-metadata-table tbody tr:hover{background-color:#e8f2f8;}",
+    "</style>"
+  )
+
   return(
     paste0(
-      "<div style=\"max-width: 980px; margin: 0 auto; background: #ffffff; border: 1px solid #d9e2ec; border-radius: 10px; padding: 24px 28px; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);\">",
+      pip_style_block,
+      "<div class=\"pip-metadata-page\" style=\"background-color: #F7F8F8; padding: 24px 16px; font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1a1f24; line-height: 1.5;\">",
+      "<div class=\"pip-metadata-card card\" style=\"max-width: 980px; margin: 0 auto; background: #ffffff; border: 1px solid #dee2e6; border-radius: 6px; padding: 28px 32px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);\">",
+      "<div class=\"pip-metadata-header\" style=\"display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 0 0 22px 0; padding: 0 0 14px 0; border-bottom: 2px solid #00689D;\">",
+      "<h1 class=\"pip-metadata-title\" style=\"margin: 0; font-size: 24px; font-weight: 700; color: #044368; letter-spacing: -0.01em;\">Table Maker Metadata</h1>",
+      "<a href=\"https://pip.worldbank.org/home\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display: inline-flex; align-items: center; text-decoration: none;\">",
+      "<img class=\"pip-metadata-logo\" src=\"https://pip.worldbank.org/assets/WB-PIP-E-horizontal-RGB-high.png\" alt=\"World Bank Poverty and Inequality Platform (PIP)\" style=\"width: 290px; max-width: 100%; height: auto; border: 0;\" />",
+      "</a>",
+      "</div>",
       paste(section_blocks, collapse = ""),
+      "</div>",
       "</div>"
     )
   )
@@ -98,6 +123,31 @@ render_description_html <- function(model) {
 .render_section_content_html <- function(content, section_name, parent_key = NULL) {
   if (is.null(content)) {
     return(NULL)
+  }
+
+  if (identical(section_name, "notes")) {
+    items <- .normalize_notes_items(content)
+    if (length(items) == 0L) {
+      return(NULL)
+    }
+    escaped_items <- .highlight_notes_terms(
+      .html_escape(items),
+      open_tag = "<b style=\"color: #044368;\">",
+      close_tag = "</b>"
+    )
+    li <- paste0(
+      "<li style=\"margin: 0 0 8px 0; color: #485664; font-size: 14px;\">",
+      escaped_items,
+      "</li>",
+      collapse = ""
+    )
+    return(
+      paste0(
+        "<ul class=\"pip-metadata-notes\" style=\"margin: 0 0 10px 0; padding-left: 20px;\">",
+        li,
+        "</ul>"
+      )
+    )
   }
 
   if (inherits(content, "data.table") || is.data.frame(content)) {
@@ -118,7 +168,7 @@ render_description_html <- function(model) {
   }
   return(
     paste0(
-      "<p style=\"margin: 0 0 10px 0; color: #334e68;\">",
+      "<p style=\"margin: 0 0 10px 0; color: #485664; font-size: 14px;\">",
       .html_escape(text),
       "</p>"
     )
@@ -138,7 +188,7 @@ render_description_html <- function(model) {
 
   cols <- names(dt)
   th <- paste0(
-    "<th style=\"text-align: left; padding: 8px 10px; border: 1px solid #d9e2ec; background: #f0f4f8; color: #102a43; font-weight: 700;\">",
+    "<th style=\"text-align: left; padding: 9px 12px; border: 1px solid #dee2e6; border-bottom: 2px solid #00689D; background: #e8f2f8; color: #044368; font-weight: 600; font-size: 13px;\">",
     .html_escape(vapply(cols, .display_table_header_html, character(1))),
     "</th>",
     collapse = ""
@@ -148,8 +198,11 @@ render_description_html <- function(model) {
     values <- vapply(seq_along(cols), function(j) {
       .display_table_value_html(cols[[j]], dt[[cols[[j]]]][[i]])
     }, character(1))
+    row_bg <- if (i %% 2L == 0L) " background: #F7F8F8;" else " background: #ffffff;"
     tds <- paste0(
-      "<td style=\"padding: 8px 10px; border: 1px solid #d9e2ec;\">",
+      "<td style=\"padding: 8px 12px; border: 1px solid #dee2e6; color: #1a1f24;",
+      row_bg,
+      "\">",
       .html_escape(values),
       "</td>",
       collapse = ""
@@ -159,7 +212,7 @@ render_description_html <- function(model) {
 
   return(
     paste0(
-      "<table style=\"width: 100%; border-collapse: collapse; margin: 0; font-size: 14px; background: #ffffff;\">",
+      "<table class=\"pip-metadata-table table\" style=\"width: 100%; border-collapse: collapse; margin: 0 0 10px 0; font-size: 14px; background: #ffffff;\">",
       "<thead><tr>", th, "</tr></thead>",
       "<tbody>", paste(rows, collapse = ""), "</tbody>",
       "</table>"
@@ -175,29 +228,7 @@ render_description_html <- function(model) {
 #' @return Display-ready text.
 #' @keywords internal
 .display_table_value_html <- function(col_name, value) {
-  if (length(value) == 0 || is.null(value) || is.na(value)) {
-    return("")
-  }
-
-  text <- as.character(value)
-
-  if (identical(col_name, "stat_group")) {
-    stat_group_map <- c(
-      summary_statistics = "Summary statistics",
-      poverty = "Poverty",
-      inequality = "Inequality",
-      shares = "Shares"
-    )
-
-    if (text %in% names(stat_group_map)) {
-      return(unname(stat_group_map[[text]]))
-    }
-
-    text <- gsub("_", " ", text, fixed = TRUE)
-    return(paste0(toupper(substr(text, 1, 1)), substring(text, 2)))
-  }
-
-  return(text)
+  .display_table_value_markdown(col_name, value)
 }
 
 
@@ -236,7 +267,7 @@ render_description_html <- function(model) {
       blocks <- c(
         blocks,
         paste0(
-          "<p style=\"margin: 0 0 10px 0; color: #334e68;\">",
+          "<p style=\"margin: 0 0 10px 0; color: #485664; font-size: 14px;\">",
           .html_escape(description_text),
           "</p>"
         )
@@ -245,31 +276,9 @@ render_description_html <- function(model) {
     content <- content[names(content) != "description"]
   }
 
-  if (identical(section_name, "overview") && "ppp_note" %in% names(content)) {
-    ppp_note_text <- .scalar_text_html(content[["ppp_note"]])
-    if (!is.null(ppp_note_text)) {
-      blocks <- c(
-        blocks,
-        paste0(
-          "<p style=\"margin: 0 0 10px 0; color: #334e68;\">",
-          .html_escape(ppp_note_text),
-          "</p>"
-        )
-      )
-    }
-    content <- content[names(content) != "ppp_note"]
-  }
-
   for (key in names(content)) {
     value <- content[[key]]
     if (is.null(value)) {
-      next
-    }
-
-    if (
-      identical(section_name, "statistics_selected") &&
-      key %in% c("analysis_var_label", "analysis_var_type")
-    ) {
       next
     }
 
@@ -292,7 +301,7 @@ render_description_html <- function(model) {
         poverty_items <- c(
           poverty_items,
           paste0(
-            "<li style=\"margin: 0 0 6px 0;\"><b style=\"color: #334e68;\">",
+            "<li style=\"margin: 0 0 6px 0; color: #1a1f24; font-size: 14px;\"><b style=\"color: #485664;\">",
             .html_escape(.display_label_html(section_name, nested_key, parent_key = "poverty_line")),
             ":</b> ",
             .html_escape(nested_text),
@@ -305,7 +314,7 @@ render_description_html <- function(model) {
         list_items <- c(
           list_items,
           paste0(
-            "<li style=\"margin: 0 0 7px 0;\"><b style=\"color: #243b53;\">",
+            "<li style=\"margin: 0 0 7px 0; color: #1a1f24; font-size: 14px;\"><b style=\"color: #044368;\">",
             .html_escape(.display_label_html(section_name, key, parent_key = parent_key)),
             ":</b>",
             "<ul style=\"margin: 6px 0 0 0; padding-left: 20px;\">",
@@ -324,28 +333,12 @@ render_description_html <- function(model) {
         blocks <- c(
           blocks,
           paste0(
-            "<div style=\"margin: 6px 0 6px 0; font-size: 13px; font-weight: 700; color: #486581; text-transform: uppercase; letter-spacing: 0.04em;\">",
+            "<div class=\"pip-metadata-subtable-label\" style=\"margin: 10px 0 6px 0; font-size: 12px; font-weight: 700; color: #00689D; text-transform: uppercase; letter-spacing: 0.04em;\">",
             .html_escape(.display_label_html(section_name, key, parent_key = parent_key)),
             "</div>",
             rendered
           )
         )
-      }
-    } else if (
-      identical(section_name, "cell_definition") &&
-      identical(key, "measure_interpretation") &&
-      is.list(value) &&
-      !is.data.frame(value)
-    ) {
-      # Share measures: render non-share prose first, then the structured
-      # shares table (escaped via .render_table_html()/.html_escape()), then
-      # the identity footer (if present). Character-vector
-      # `measure_interpretation` (no shares requested) falls through to the
-      # branch below unchanged.
-      flush_list_items()
-      rendered <- .render_measure_interpretation_shares_html(value)
-      if (!is.null(rendered) && nzchar(rendered)) {
-        blocks <- c(blocks, rendered)
       }
     } else if (is.list(value)) {
       rendered <- .render_named_list_html(value, section_name, parent_key = key)
@@ -353,7 +346,7 @@ render_description_html <- function(model) {
         list_items <- c(
           list_items,
           paste0(
-            "<li style=\"margin: 0 0 7px 0;\"><b style=\"color: #243b53;\">",
+            "<li style=\"margin: 0 0 7px 0; color: #1a1f24; font-size: 14px;\"><b style=\"color: #044368;\">",
             .html_escape(.display_label_html(section_name, key, parent_key = parent_key)),
             ":</b>",
             "<div style=\"margin-top: 6px;\">",
@@ -368,7 +361,7 @@ render_description_html <- function(model) {
         list_items <- c(
           list_items,
           paste0(
-            "<li style=\"margin: 0 0 7px 0;\"><b style=\"color: #243b53;\">",
+            "<li style=\"margin: 0 0 7px 0; color: #1a1f24; font-size: 14px;\"><b style=\"color: #044368;\">",
             .html_escape(.display_label_html(section_name, key, parent_key = parent_key)),
             ":</b>",
             "<div style=\"margin-top: 6px;\">",
@@ -383,7 +376,7 @@ render_description_html <- function(model) {
         list_items <- c(
           list_items,
           paste0(
-            "<li style=\"margin: 0 0 7px 0;\"><b style=\"color: #243b53;\">",
+            "<li style=\"margin: 0 0 7px 0; color: #1a1f24; font-size: 14px;\"><b style=\"color: #044368;\">",
             .html_escape(.display_label_html(section_name, key, parent_key = parent_key)),
             ":</b> ",
             .html_escape(text),
@@ -410,68 +403,7 @@ render_description_html <- function(model) {
 #' @return Display label.
 #' @keywords internal
 .display_table_header_html <- function(col_name) {
-  mapping <- c(
-    pip_id = "Survey identifier",
-    country_code = "Country",
-    surveyid_year = "Survey year",
-    welfare_type_label = "Welfare type",
-    measure_label = "Measure",
-    stat_group = "Group",
-    analysis_var_label = "Variable of analysis",
-    slot_label = "Dimension",
-    varname = "Variable",
-    ui_label = "Label",
-    n_categories = "Categories",
-    measure = "Measure",
-    denominator = "Denominator",
-    numerator = "Numerator",
-    plain_meaning = "Plain meaning"
-  )
-
-  if (col_name %in% names(mapping)) {
-    return(unname(mapping[[col_name]]))
-  }
-  return(col_name)
-}
-
-
-#' Render the structured shares payload of `cell_definition$measure_interpretation`.
-#'
-#' Emits non-share prose (ordered list, matching the legacy character-vector
-#' rendering), then the shares table (with mandatory HTML escaping via
-#' `.render_table_html()`), then the identity footer.
-#'
-#' @param value List with `prose`, `shares_table`, `shares_footer`.
-#' @return Character scalar HTML, or NULL when there is nothing to render.
-#' @keywords internal
-.render_measure_interpretation_shares_html <- function(value) {
-  blocks <- character()
-
-  prose_rendered <- .render_char_vector_html(value$prose)
-  if (!is.null(prose_rendered) && nzchar(prose_rendered)) {
-    blocks <- c(blocks, prose_rendered)
-  }
-
-  table_rendered <- .render_table_html(value$shares_table)
-  if (!is.null(table_rendered)) {
-    blocks <- c(blocks, table_rendered)
-  }
-
-  if (!is.null(value$shares_footer) && nzchar(value$shares_footer)) {
-    blocks <- c(
-      blocks,
-      paste0(
-        "<p style=\"margin: 8px 0 0 0; font-style: italic; color: #486581;\">",
-        .html_escape(value$shares_footer),
-        "</p>"
-      )
-    )
-  }
-
-  if (length(blocks) == 0) {
-    return(NULL)
-  }
-  return(paste(blocks, collapse = ""))
+  .display_table_header_markdown(col_name)
 }
 
 
@@ -572,16 +504,11 @@ render_description_html <- function(model) {
     if (identical(key, "applicable")) return("Applicable")
   }
 
-  if (identical(section_name, "overview")) {
-    if (identical(key, "structure_description")) return("Description")
-    if (identical(key, "weighting_note")) return("Population note")
-    if (identical(key, "ppp_note")) return("PPP note")
-  }
-
   if (identical(section_name, "provenance")) {
-    if (identical(key, "release_id")) return("Release")
+    if (identical(key, "release_id")) return("PIP Release")
     if (identical(key, "ppp_year")) return("PPP year")
     if (identical(key, "generated_at")) return("Generated at")
+    if (identical(key, "citation")) return("Citation")
   }
 
   if (identical(section_name, "surveys_selected")) {
@@ -592,6 +519,7 @@ render_description_html <- function(model) {
   }
 
   if (identical(section_name, "statistics_selected")) {
+    if (identical(key, "analysis_var_name")) return("Analysis variable code")
     if (identical(key, "analysis_var_label")) return("Analysis variable")
     if (identical(key, "analysis_var_type")) return("Analysis variable type")
     if (identical(key, "measures")) return("Measures")
@@ -604,25 +532,6 @@ render_description_html <- function(model) {
 
   if (identical(section_name, "layout_configuration")) {
     if (identical(key, "layout")) return("Layout dimensions")
-  }
-
-  if (identical(section_name, "cell_definition")) {
-    if (identical(key, "population_scope")) return("Population scope")
-    if (identical(key, "measure_interpretation")) return("Measure interpretation")
-    if (identical(key, "note")) return("Note")
-  }
-
-  if (identical(section_name, "execution_summary")) {
-    if (identical(key, "n_surveys_loaded")) return("Surveys loaded")
-    if (identical(key, "n_surveys_excluded")) return("Surveys excluded")
-    if (identical(key, "n_filters_applied")) return("Filters applied")
-    if (identical(key, "n_measures_computed")) return("Measures computed")
-    if (identical(key, "suppression_summary")) return("Suppression summary")
-    if (identical(key, "suppressed_cells")) return("Suppressed cells")
-  }
-
-  if (identical(section_name, "warnings") && identical(key, "warnings")) {
-    return("Warnings")
   }
 
   label <- gsub("_", " ", key, fixed = TRUE)

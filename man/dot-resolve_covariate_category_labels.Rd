@@ -6,17 +6,7 @@
 \usage{
 .resolve_covariate_category_labels(varname, registry)
 }
-\arguments{
-\item{varname}{Character scalar covariate variable name.}
-
-\item{registry}{Named list returned by \code{piptm_variable_registry()}, or NULL.}
-}
-\value{
-Character vector of category labels (possibly empty).
-}
 \description{
-Looks up \code{varname} in \code{registry} and returns its category labels in
-registry order. Returns \code{character(0)} when the registry is unavailable,
-the entry is missing, or the entry has no categories.
+Resolve category labels for a covariate from the variable registry.
 }
 \keyword{internal}

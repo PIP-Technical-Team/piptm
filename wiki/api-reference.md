@@ -24,6 +24,15 @@
   `POST /table/download`. It preserves formatted measure strings (including
   `"NR"` and JSON `null`), validates headers, layouts, cell slots, name
   collisions, and cross-survey schema equality, and is registry-free.
+- `build_cell_explanation()` (`R/cell_explanation.R`) — generates
+  natural-language table and cell explanations for `GET /cell-definition`,
+  producing a bounded adaptive `what_a_cell_is$items` array (<= 4 entries:
+  full Cartesian enumeration for <= 4 cells, per-slot category breakdown for
+  > 4 cells) with JSON array unbox protection and filter-aware category
+  intersections.
+- `.validate_and_normalize_table_params()` (`R/table_params.R`) — shared
+  table-shaping validator used by both compute and metadata paths to enforce
+  slot semantics and normalize request contracts before downstream execution.
 <!-- cg:auto:end -->
 
 <!-- cg:auto:parameters -->
@@ -36,6 +45,21 @@ Common parameters across measure functions:
   `education`, `geography`) to cross-tabulate results against.
 - `measures` — character vector naming which measures to compute (e.g.
   `"fgt"`, `"gini"`, `"mean_welfare"`).
+- `column`, `row`, `superColumn`, `superRow` — optional layout slot
+  variables validated as scalar, non-empty character values. `column` and
+  `row` are independent of each other and of request argument order.
+  `superColumn` requires `column` to be filled; `superRow` requires `row` to
+  be filled. `superColumn` and `superRow` are independent of each other.
+  Unmet dependencies return HTTP 400 with a complete, user-friendly error
+  sentence (e.g. "`superColumn` requires `column` to be filled. Please
+  assign a variable to Columns before using Super Columns."), displayed
+  verbatim in the PIP UI.
+- `poverty_line` — required as a single positive finite value whenever
+  `by` includes `pov_status`; validated in shared table-parameter
+  normalization.
+- `filter_base` — sample-base filter specification; an explicit empty list
+  (`list()`) is normalized to `NULL` and treated as intentional
+  no-filter behavior.
 
 Refer to each function's roxygen2 documentation (`?table_maker`,
 `?compute_measures`, etc.) for full parameter definitions.
@@ -51,6 +75,25 @@ uses Approach C (per-survey `layout` plus dense `cells[]`), while
 `POST /table/download` accepts that payload and exports deterministic Shape A
 rows. Malformed payloads are rejected at the boundary with the standard HTTP
 400 JSON error envelope rather than being silently coerced.
+
+The `GET /cell-definition` API returns a natural-language explanation payload
+(`who_is_in_table`, `what_a_cell_is`, `what_is_shown`, `notes`, and `warnings`).
+Its `what_a_cell_is$items` field is guaranteed to serialize as a bounded JSON
+array with at most 4 entries (full Cartesian enumeration for <= 4 total cells,
+1 summary line per active slot for > 4 cells, or empty when no slots are active
+or the registry is unresolved), preventing Plumber scalar-string unboxing and
+combinatorial text bloat.
+
+For metadata and compute entry points (`/table`, `/table/download`,
+`/metadata`), table-shaping inputs share a single upstream validation
+boundary: layout slots are checked against parent-child dependencies
+(`superColumn` -> `column`, `superRow` -> `row`) rather than a strict
+contiguous fill order, so `row` alone, `column` + `superColumn` without
+`row`, `row` + `superRow` without `column`, and `column` + `row` + `superRow`
+without `superColumn` are all valid. Malformed multi-valued slots are still
+rejected, `pov_status` requires coherent `poverty_line` values, and
+`filter_base = list()` is normalized to `NULL` for parity with API
+no-filter intent.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)

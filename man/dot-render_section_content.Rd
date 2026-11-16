@@ -8,13 +8,17 @@
 }
 \arguments{
 \item{content}{The \code{content} field of a description model section.}
+
+\item{section_name}{Optional section key used for section-specific formatting
+and context-aware display labels.}
 }
 \value{
 Character scalar Markdown, or \code{NULL} when there is nothing to render.
 }
 \description{
-Dispatches on the structure of \code{content}:
+Dispatches on \code{section_name} and the structure of \code{content}:
 \itemize{
+\item when \code{section_name == "notes"}, renders non-empty entries as unlabeled bullets;
 \item an object coercible to a data.frame renders as a Markdown table;
 \item a named list renders as key-value bullets (or nested structures);
 \item a character vector renders as a numbered list (with names as labels);

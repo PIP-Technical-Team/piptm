@@ -312,23 +312,25 @@ piptm_manifest <- function(release = NULL) {
   if (is.null(release)) {
     release <- piptm_current_release()
     if (is.null(release)) {
-      cli::cli_abort(
+      piptm_abort(
         c(
           "No current release is set.",
           "i" = "Call {.fn set_manifest_dir} to load manifests, or pass {.arg release} explicitly."
-        )
+        ),
+        user_message = .PIPTM_NO_ACTIVE_RELEASE_USER_ERROR
       )
     }
   }
 
   manifests <- .piptm_env$manifests
-  if (!release %in% names(manifests)) {
-    cli::cli_abort(
+  if (!is.character(release) || length(release) != 1L || is.na(release) || !release %in% names(manifests)) {
+    piptm_abort(
       c(
         "Release {.val {release}} not found in loaded manifests.",
         "i" = "Available releases: {.val {sort(names(manifests))}}",
         "i" = "Call {.fn set_manifest_dir} to load manifests from a directory."
-      )
+      ),
+      user_message = .piptm_unknown_release_user_error(release)
     )
   }
 
@@ -337,10 +339,10 @@ piptm_manifest <- function(release = NULL) {
 
 #' Build a UI-friendly surveys catalogue
 #'
-#' Returns one row per manifest entry enriched with UI-friendly labels and
-#' dimension metadata (varname + UI label). Country names are mapped from
-#' ISO3 codes when the `countrycode` package is available; otherwise the
-#' ISO3 code is repeated as the label.
+#' Returns one row per manifest entry enriched with UI-friendly labels for
+#' country and welfare type. `country_label` is the manifest `country_name`
+#' (or `NA` when that field is absent). `welfare_label` maps `INC` to
+#' Income and `CON` to Consumption.
 #'
 #' @param release Character scalar release ID (optional; defaults to current)
 #' @return A list of named lists suitable for JSON serialization.
@@ -348,7 +350,11 @@ piptm_manifest <- function(release = NULL) {
 piptm_surveys_ui <- function(release = NULL) {
   mf <- piptm_manifest(release)
 
-  country_labels <- if (nrow(mf) == 0L) character(0L) else as.character(mf$country_name) #NB: ADD COUNTRY NAME TO MANIFEST, NOT YET THERE!!!
+  country_labels <- if (nrow(mf) == 0L) {
+    character(0L)
+  } else {
+    as.character(mf$country_name)
+  }
 
   # map welfare_type to UI label
   welfare_label <- if (nrow(mf) > 0L) {
@@ -359,9 +365,6 @@ piptm_surveys_ui <- function(release = NULL) {
     }, character(1L))
   } else character(0L)
 
-  # Load variable registry for labels (best-effort)
-  registry <- tryCatch(piptm_variable_registry(release), error = function(e) NULL)
-
   # Order rows for UI: alphabetical by `pip_id` (case-insensitive)
   if (nrow(mf) > 0L) {
     ord <- order(toupper(as.character(mf$pip_id)), na.last = TRUE)
@@ -371,14 +374,6 @@ piptm_surveys_ui <- function(release = NULL) {
   }
 
   out <- lapply(seq_len(nrow(mf)), function(i) {
-    dims <- mf$dimensions[[i]]
-    # For Stage-1 the UI only needs varnames (no labels). Return a simple
-    # character vector of available dimension varnames for each survey.
-    dims_list <- character(0)
-    if (!is.null(dims) && length(dims) > 0L) {
-      dims_list <- as.character(dims)
-    }
-
     list(
       pip_id = as.character(mf$pip_id[i]),
       country_code = as.character(mf$country_code[i]),
@@ -386,8 +381,7 @@ piptm_surveys_ui <- function(release = NULL) {
       year = as.integer(mf$year[i]),
       welfare_type = as.character(mf$welfare_type[i]),
       welfare_label = as.character(welfare_label[i]),
-      version = as.character(mf$version[i]),
-      dimensions = dims_list
+      version = as.character(mf$version[i])
     )
   })
 

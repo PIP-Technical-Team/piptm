@@ -132,9 +132,8 @@ Rscript inst/plumber/run.R
 | `/lookup` | GET | Resolve triplets to `pip_id` |
 | `/table` | GET, POST | Compute table output |
 | `/table/download` | POST | Convert previously computed `/table` rows into CSV or RDS download bytes |
-| `/description` | POST | Render a natural-language description of a table (from metadata or by recomputation) |
-| `/session/surveys` | POST | Create a session and store a survey selection |
-| `/session/<id>/surveys` | GET | Retrieve the survey selection for a session |
+| `/metadata` | GET, POST | Render downloadable table metadata and provenance as HTML or Markdown |
+| `/cell-definition` | GET | Return Page 2 three-section cell explanation JSON |
 
 Full request/response documentation, validation rules, and UI mapping live in `docs/api-contract.md`.
 
@@ -153,13 +152,16 @@ Most endpoints return a common envelope:
 Error status conventions:
 
 - `400`: request validation failures
+- `404`: unknown route or missing resource
 - `413`: payload too large (`POST /table/download`, body > 25 MB)
 - `422`: domain/processing failures (including unknown release)
 - `500`: uncaught internal errors
 
+Every entry in `errors[]` is guaranteed to be a plain-English, user-safe sentence suitable for direct display in the UI. Unmapped internal exceptions return `"Something went wrong processing this request."` to the client while logging the developer diagnostic to `stderr` with a `[piptm][unmapped_error]` prefix.
+
 Success-response exceptions:
 
-- `POST /description`: returns rendered Markdown/HTML text, not the JSON envelope.
+- `POST /metadata`: returns rendered Markdown/HTML text, not the JSON envelope.
 - `POST /table/download`: returns file bytes (`text/csv` or `application/octet-stream`), not the JSON envelope.
 
 ## Insomnia collection

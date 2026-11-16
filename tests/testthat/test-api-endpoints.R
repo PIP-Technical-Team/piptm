@@ -479,9 +479,9 @@ test_that("GET /covariates returns pov_status with n_categories=2", {
   expect_false("pov_status_mutex" %in% names(pov))
 })
 
-# ── /session endpoints ───────────────────────────────────────────────────────
+# ── removed /session endpoints ────────────────────────────────────────────────
 
-test_that("POST /session/surveys creates a session and returns session_id", {
+test_that("POST /session/surveys returns 404 (route removed)", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
@@ -489,54 +489,15 @@ test_that("POST /session/surveys creates a session and returns session_id", {
     pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
   )))
 
-  expect_equal(res$status, 200L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "success")
-  expect_true("session_id" %in% names(body$data))
-  expect_true(nzchar(as.character(body$data$session_id)))
-})
-
-test_that("GET /session/<id>/surveys returns stored pip_id", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  create_res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list(
-    pip_id = c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
-  )))
-  create_body <- parse_api_res(create_res)
-  sid <- as.character(create_body$data$session_id)
-
-  res <- .ep_router$call(make_api_req("GET", paste0("/session/", sid, "/surveys")))
-
-  expect_equal(res$status, 200L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "success")
-  expect_equal(
-    as.character(body$data$pip_id),
-    c("COL_2010_ECH_INC_ALL", "BOL_2000_ECH_INC_ALL")
-  )
-})
-
-test_that("POST /session/surveys rejects missing pip_id with 400", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  res <- .ep_router$call(make_api_req("POST", "/session/surveys", body = list()))
-  expect_equal(res$status, 400L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
-})
-
-test_that("GET /session/<id>/surveys returns 404 for unknown session", {
-  skip_if_not_installed("plumber")
-  skip_if(is.null(.ep_router), "Router could not be created")
-
-  res <- .ep_router$call(make_api_req("GET", "/session/nonexistent123/surveys"))
   expect_equal(res$status, 404L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
+})
+
+test_that("GET /session/<id>/surveys returns 404 (route removed)", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  res <- .ep_router$call(make_api_req("GET", "/session/123/surveys"))
+  expect_equal(res$status, 404L)
 })
 
 # =============================================================================
@@ -692,7 +653,10 @@ test_that("GET /table with bogus release returns 422", {
   expect_equal(res$status, 422L)
   body <- parse_api_res(res)
   expect_equal(body$status, "error")
-  expect_true(length(body$errors) > 0L)
+  expect_identical(
+    unlist(body$errors),
+    "The requested data release ('BOGUS_RELEASE_DOES_NOT_EXIST') is not available."
+  )
 })
 
 # =============================================================================
@@ -766,7 +730,7 @@ test_that("GET /table with 1 survey returns 200 success envelope (fixture)", {
   expect_false(is.null(body$meta))
 })
 
-test_that("GET /table with include_metadata=false (default) returns Approach C shape, distinct from include_metadata=true", {
+test_that("GET /table always returns Approach C shape and meta carries no description_metadata", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -777,23 +741,21 @@ test_that("GET /table with include_metadata=false (default) returns Approach C s
   )))
   expect_equal(res_default$status, 200L)
   body_default <- parse_api_res(res_default)
-  # Approach C: data is a per-survey object array with layout+cells; no
-  # top-level description_metadata in meta.
   expect_true(is.null(body_default$data$pip_id) || is.list(body_default$data))
   expect_false(is.null(body_default$data$layout) && is.null(body_default$data[[1L]]$layout))
   expect_null(body_default$meta$description_metadata)
 
-  res_meta <- .ep_router$call(make_api_req("GET", "/table", query = list(
+  # Even if an unadvertised include_metadata=true query string is passed,
+  # /table ignores it and returns Approach C without description_metadata.
+  res_ignored <- .ep_router$call(make_api_req("GET", "/table", query = list(
     pip_id   = "COL_2010_ECH_INC_ALL",
     measures = "mean",
     include_metadata = "true"
   )))
-  expect_equal(res_meta$status, 200L)
-  body_meta <- parse_api_res(res_meta)
-  # Legacy flat shape: data has no `layout`/`cells` keys at all; metadata is
-  # surfaced via meta.description_metadata instead.
-  expect_null(body_meta$data$layout)
-  expect_false(is.null(body_meta$meta$description_metadata))
+  expect_equal(res_ignored$status, 200L)
+  body_ignored <- parse_api_res(res_ignored)
+  expect_false(is.null(body_ignored$data$layout) && is.null(body_ignored$data[[1L]]$layout))
+  expect_null(body_ignored$meta$description_metadata)
 })
 
 test_that("GET /table with no release param — meta.release equals current release", {
@@ -927,7 +889,7 @@ test_that("GET /table with ppp='-1' returns 400 (negative ppp)", {
   expect_equal(body$status, "error")
 })
 
-test_that("GET /table with malformed filter_base JSON returns 422", {
+test_that("GET /table with malformed filter_base JSON returns 422 with user-safe filter error message", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -939,6 +901,30 @@ test_that("GET /table with malformed filter_base JSON returns 422", {
   expect_equal(res$status, 422L)
   body <- parse_api_res(res)
   expect_equal(body$status, "error")
+  expect_identical(
+    unlist(body$errors),
+    "The selected sample filter could not be read. Please reset your filters and try again."
+  )
+})
+
+test_that("POST /table with parsed list filter_base in JSON body does not fail fromJSON coercion", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  res <- .ep_router$call(make_api_req("POST", "/table", body = list(
+    pip_id       = "COL_2015_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    filter_base  = list(age = c(15L, 20L))
+  )))
+
+  expect_equal(res$status, 422L)
+  body <- parse_api_res(res)
+  expect_identical(
+    unlist(body$errors),
+    "None of the selected surveys have data for the selected covariate: Age. Remove this covariate or choose a different survey."
+  )
 })
 
 test_that("GET /table with valid filter_base JSON is accepted by endpoint", {
@@ -972,6 +958,118 @@ test_that("GET /table with ppp=NULL omitted uses manifest default — returns 20
   expect_equal(res$status, 200L)
   body <- parse_api_res(res)
   expect_equal(body$status, "success")
+})
+
+test_that("GET /table returns exact user-facing 422 messages for missing survey, unavailable PPP, excluded dimensions, and 0-row filter_base", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+
+  # 1. Valid pip_id pattern that is not in the manifest
+  res_missing <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "ZZZ_2020_FAKE_INC_ALL",
+    measures = "mean"
+  )))
+  expect_equal(res_missing$status, 422L)
+  body_missing <- parse_api_res(res_missing)
+  expect_identical(
+    unlist(body_missing$errors),
+    "The requested country or survey is not available in the selected data release."
+  )
+
+  # 2. Unavailable PPP year across all requested surveys
+  res_ppp <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "COL_2010_ECH_INC_ALL",
+    measures = "mean",
+    ppp      = "1999"
+  )))
+  expect_equal(res_ppp$status, 422L)
+  body_ppp <- parse_api_res(res_ppp)
+  expect_identical(
+    unlist(body_ppp$errors),
+    "None of the selected surveys have data available for the 1999 PPP standard. Please switch to another PPP year."
+  )
+
+  # 3. Breakdown dimension absent from requested survey (BOL_2000_ECH_INC_ALL has 0 dimensions in fixture)
+  res_dim <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "BOL_2000_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender"
+  )))
+  expect_equal(res_dim$status, 422L)
+  body_dim <- parse_api_res(res_dim)
+  expect_identical(
+    unlist(body_dim$errors),
+    "None of the selected surveys have data for the selected covariate: Gender. Remove this covariate or choose a different survey."
+  )
+
+  # 4. filter_base dimension absent from requested survey
+  res_fb_dim <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "BOL_2000_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(gender = 1L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_dim$status, 422L)
+  body_fb_dim <- parse_api_res(res_fb_dim)
+  expect_identical(
+    unlist(body_fb_dim$errors),
+    "None of the selected surveys have data for the selected covariate: Gender. Remove this covariate or choose a different survey."
+  )
+
+  # 4b. Two breakdown covariates absent from requested survey (BOL_2000_ECH_INC_ALL
+  # has 0 dimensions in fixture) — covers the 2+-covariate pluralized/joined wording.
+  res_dim2 <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id   = "BOL_2000_ECH_INC_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "area"
+  )))
+  expect_equal(res_dim2$status, 422L)
+  body_dim2 <- parse_api_res(res_dim2)
+  expect_identical(
+    unlist(body_dim2$errors),
+    "None of the selected surveys have data for the selected covariates: Gender, Area. Remove one or more of these covariates or choose a different survey."
+  )
+
+  # 4c. Two filter_base covariates absent from requested survey (BOL_2000_ECH_INC_ALL
+  # has 0 dimensions in fixture) — covers the 2+-covariate pluralized filter_base wording.
+  res_fb_dim2 <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "BOL_2000_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(gender = 1L, area = 1L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_dim2$status, 422L)
+  body_fb_dim2 <- parse_api_res(res_fb_dim2)
+  expect_identical(
+    unlist(body_fb_dim2$errors),
+    "None of the selected surveys have data for the selected covariates: Gender, Area. Remove one or more of these covariates or choose a different survey."
+  )
+
+  # 5. filter_base category code matches 0 rows in load_surveys().
+  # COL_2010_ECH_INC_ALL's "area" fixture column has only 2 registered
+  # categories (string codes "urban"/"rural"; see helper-fixtures.R `area`
+  # registry entry). Guard that "999" is outside that actual code domain so
+  # this test fails loudly (not silently, via a different/misleading
+  # message) if the registry fixture's `area` category codes ever change.
+  area_entry <- piptm::piptm_filter_categories()
+  area_entry <- Filter(function(x) identical(x$varname, "area"), area_entry)
+  stopifnot(
+    "fixture registry must define the 'area' filter variable for this test" =
+      length(area_entry) == 1L,
+    "'999' must fall outside the registered 'area' category codes for this test to exercise the 0-row branch" =
+      !("999" %in% vapply(area_entry[[1L]]$subcategories, `[[`, character(1), "code"))
+  )
+  res_fb_zero <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id      = "COL_2010_ECH_INC_ALL",
+    measures    = "mean",
+    filter_base = jsonlite::toJSON(list(area = 999L), auto_unbox = TRUE)
+  )))
+  expect_equal(res_fb_zero$status, 422L)
+  body_fb_zero <- parse_api_res(res_fb_zero)
+  expect_identical(
+    unlist(body_fb_zero$errors),
+    "No survey observations matched the selected sample filters. Try broadening your filter selection."
+  )
 })
 
 # P1.8 — repeated ppp query param: should be rejected (not scalar)
@@ -1069,6 +1167,40 @@ test_that("GET /surveys echoes release in meta", {
   fx <- .make_ep_fixtures()
   body <- parse_api_res(.ep_router$call(make_api_req("GET", "/surveys")))
   expect_equal(body$meta$release, fx$release)
+})
+
+test_that("GET /surveys-ui returns the lightweight survey catalogue", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  body <- parse_api_res(
+    .ep_router$call(make_api_req("GET", "/surveys-ui")),
+    simplify = FALSE
+  )
+
+  expect_equal(unlist(body$status), "success")
+  expect_equal(length(body$data), 3L)
+  expected_names <- c(
+    "pip_id", "country_code", "country_label", "year",
+    "welfare_type", "welfare_label", "version"
+  )
+  expect_true(all(vapply(body$data, function(x) {
+    identical(names(x), expected_names)
+  }, logical(1))))
+  expect_true(all(vapply(body$data, function(x) {
+    !"dimensions" %in% names(x)
+  }, logical(1))))
+  labels <- vapply(body$data, function(x) {
+    paste(unlist(x$pip_id), unlist(x$country_label), unlist(x$welfare_label),
+          sep = "|")
+  }, character(1))
+  expect_setequal(
+    labels,
+    c("BOL_2000_ECH_INC_ALL|Bolivia|Income",
+      "COL_2010_ECH_INC_ALL|Colombia|Income",
+      "COL_2015_ECH_INC_ALL|Colombia|Income")
+  )
+  expect_equal(unlist(body$meta$release), fx$release)
 })
 
 test_that("GET /surveys with bogus release returns 422", {
@@ -1234,7 +1366,7 @@ test_that("GET /table returns string values, no population or flag, and formatte
   expect_false("flag" %in% names(meas))
 })
 
-test_that("GET /table returns 422 envelope when formatter fails", {
+test_that("GET /table returns 422 envelope with generic user-safe fallback when formatter fails", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -1243,20 +1375,21 @@ test_that("GET /table returns 422 envelope when formatter fails", {
     format_table_output = function(...) stop("simulated schema formatting failure"),
     .package = "piptm",
     {
-      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+      res <- suppressMessages(.ep_router$call(make_api_req("GET", "/table", query = list(
         pip_id       = "COL_2010_ECH_INC_ALL",
         analysis_var = "welfare",
         measures     = "mean"
-      )))
+      ))))
       expect_equal(res$status, 422L)
       body <- parse_api_res(res)
       expect_equal(body$status, "error")
-      expect_true(any(grepl("simulated schema formatting failure", unlist(body$errors))))
+      expect_identical(unlist(body$errors), piptm:::.PIPTM_GENERIC_USER_ERROR)
+      expect_false(any(grepl("simulated schema formatting failure", unlist(body$errors))))
     }
   )
 })
 
-test_that("GET /table returns 422 when format_table_output() genuinely throws on malformed table_maker() output (not a mocked formatter)", {
+test_that("GET /table returns 422 with generic user-safe fallback when format_table_output() genuinely throws on malformed table_maker() output", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
   fx <- .make_ep_fixtures()
@@ -1264,7 +1397,8 @@ test_that("GET /table returns 422 when format_table_output() genuinely throws on
   # Only `table_maker()` is mocked here, to simulate a future regression that
   # drops a required column from its output. `format_table_output()` itself
   # runs unmocked and must genuinely raise its real validation error for the
-  # endpoint's error handler to convert into a 422 envelope.
+  # endpoint's error handler to convert into a safe 422 envelope without
+  # leaking internal column names (`flag`).
   malformed_table <- data.table::data.table(
     pip_id  = "COL_2010_ECH_INC_ALL",
     measure = "mean",
@@ -1277,15 +1411,16 @@ test_that("GET /table returns 422 when format_table_output() genuinely throws on
     table_maker = function(...) malformed_table,
     .package = "piptm",
     {
-      res <- .ep_router$call(make_api_req("GET", "/table", query = list(
+      res <- suppressMessages(.ep_router$call(make_api_req("GET", "/table", query = list(
         pip_id       = "COL_2010_ECH_INC_ALL",
         analysis_var = "welfare",
         measures     = "mean"
-      )))
+      ))))
       expect_equal(res$status, 422L)
       body <- parse_api_res(res)
       expect_equal(body$status, "error")
-      expect_true(any(grepl("flag", unlist(body$errors), ignore.case = TRUE)))
+      expect_identical(unlist(body$errors), piptm:::.PIPTM_GENERIC_USER_ERROR)
+      expect_false(any(grepl("flag", unlist(body$errors), ignore.case = TRUE)))
     }
   )
 })
@@ -1487,20 +1622,92 @@ test_that("GET /table rejects duplicate variable across slots with 400", {
   expect_true(any(grepl("gender", body$errors)))
 })
 
-test_that("GET /table rejects gapped slot assignment with 400", {
+test_that("GET /table enforces parent-child slot dependencies with 400 and user-friendly message", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
-  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
-    pip_id      = "COL_2010_ECH_INC_ALL",
-    measures    = "mean",
-    column      = "gender",
-    superColumn = "area"
+  # superColumn without column -> 400
+  res_sc <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    superColumn  = "area"
   )))
-  expect_equal(res$status, 400L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(any(grepl("row", body$errors)))
+  expect_equal(res_sc$status, 400L)
+  body_sc <- parse_api_res(res_sc)
+  expect_equal(body_sc$status, "error")
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR,
+    body_sc$errors,
+    fixed = TRUE
+  )))
+
+  # superRow without row -> 400
+  res_sr <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    column       = "gender",
+    superRow     = "area"
+  )))
+  expect_equal(res_sr$status, 400L)
+  body_sr <- parse_api_res(res_sr)
+  expect_equal(body_sr$status, "error")
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+    body_sr$errors,
+    fixed = TRUE
+  )))
+})
+
+test_that("GET /table accepts row alone and column+superColumn without row with 200", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  activate_test_registry(fx$release)
+
+  # Row alone without column
+  res_row <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    row          = "area"
+  )))
+  expect_equal(res_row$status, 200L)
+  body_row <- parse_api_res(res_row)
+  expect_equal(body_row$status, "success")
+  survey_row <- if (is.data.frame(body_row$data)) body_row$data[1L, ] else body_row$data[[1L]]
+  expect_equal(unlist(survey_row$layout$rows$varname), "area")
+
+  # Column + superColumn without row
+  res_csc <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    column       = "gender",
+    superColumn  = "area"
+  )))
+  expect_equal(res_csc$status, 200L)
+  body_csc <- parse_api_res(res_csc)
+  expect_equal(body_csc$status, "success")
+  survey_csc <- if (is.data.frame(body_csc$data)) body_csc$data[1L, ] else body_csc$data[[1L]]
+  expect_equal(unlist(survey_csc$layout$columns$varname), "gender")
+  expect_equal(unlist(survey_csc$layout$superColumns$varname), "area")
+
+  # Row + superRow without column
+  res_rsr <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    row          = "area",
+    superRow     = "gender"
+  )))
+  expect_equal(res_rsr$status, 200L)
+  body_rsr <- parse_api_res(res_rsr)
+  expect_equal(body_rsr$status, "success")
+  survey_rsr <- if (is.data.frame(body_rsr$data)) body_rsr$data[1L, ] else body_rsr$data[[1L]]
+  expect_equal(unlist(survey_rsr$layout$rows$varname), "area")
+  expect_equal(unlist(survey_rsr$layout$superRows$varname), "gender")
 })
 
 test_that("GET /table with all slots omitted returns 200 national table, not 500", {
@@ -1573,4 +1780,179 @@ test_that("GET /table responses match pre-change baseline fixtures (semantic equ
       expect_equal(canon(body$meta), canon(fx_obj$meta), info = paste("Meta mismatch on:", b_name))
     })
   }
+})
+
+# =============================================================================
+# Block 13: OpenAPI / Swagger documentation completeness across all endpoints
+# =============================================================================
+
+test_that("OpenAPI spec has populated API info and logical workflow tags", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+  expect_false(identical(spec$info$title, "API Title"))
+  expect_true(grepl("Table Maker", spec$info$title, fixed = TRUE))
+  expect_false(identical(spec$info$description, "API Description"))
+  expect_true(nchar(spec$info$description %||% "") > 100L)
+
+  expect_true(is.list(spec$tags) && length(spec$tags) >= 5L)
+  tag_names <- vapply(spec$tags, function(t) t$name %||% "", character(1))
+  expect_true(all(nzchar(tag_names)))
+  expect_true("Optional / Developer Endpoints (Not Needed for UI)" %in% tag_names)
+  # Tag headers should have clean titles without verbose paragraph descriptions
+  tag_descs <- vapply(spec$tags, function(t) t$description %||% "", character(1))
+  expect_true(all(!nzchar(tag_descs)))
+})
+
+test_that("Every OpenAPI operation has a complete summary, description, workflow tag, and response docs", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+  expected_paths <- c(
+    "/table", "/table/download", "/metadata", "/cell-definition",
+    "/lookup", "/surveys", "/countries", "/regions", "/surveys-ui",
+    "/releases", "/analysis-variables", "/dimensions", "/categories",
+    "/covariates", "/statistics", "/health"
+  )
+  expect_setequal(names(spec$paths), expected_paths)
+
+  for (path in names(spec$paths)) {
+    for (method in names(spec$paths[[path]])) {
+      op <- spec$paths[[path]][[method]]
+      label <- paste(toupper(method), path)
+
+      # Non-empty single-line summary without leaked description body
+      expect_true(
+        is.character(op$summary) && nzchar(trimws(op$summary)),
+        info = paste("Missing summary on", label)
+      )
+      expect_false(
+        grepl("\n|###|UI Workflow Mapping", op$summary),
+        info = paste("Body text leaked into summary on", label, ":", op$summary)
+      )
+      expect_lte(nchar(op$summary), 130L)
+      expect_false(
+        grepl("\\b(the|when|must be a|plus)$", trimws(op$summary)),
+        info = paste("Truncated summary on", label, ":", op$summary)
+      )
+
+      # Non-empty description without leaked @param continuation fragments
+      expect_true(
+        is.character(op$description) && nchar(trimws(op$description)) >= 40L,
+        info = paste("Missing or too-short description on", label)
+      )
+      expect_false(
+        grepl("^`analysis_var = \"pov_status\"`\\)", trimws(op$description)),
+        info = paste("Orphaned @param continuation leaked into description on", label)
+      )
+
+      # Assigned to one of the defined top-level workflow tags (never truncated to "Step" or "System")
+      defined_tags <- vapply(spec$tags, function(t) t$name %||% "", character(1))
+      op_tags <- unlist(op$tags)
+      expect_true(
+        length(op_tags) >= 1L && all(op_tags %in% defined_tags),
+        info = paste("Invalid or missing tag on", label, ":", paste(op_tags, collapse = ", "))
+      )
+
+      # Framework-injected req/res never exposed as parameters
+      params <- op$parameters %||% list()
+      if (length(params) > 0L) {
+        p_names <- vapply(params, function(p) p$name %||% "", character(1))
+        expect_false("req" %in% p_names, info = paste("req exposed on", label))
+        expect_false("res" %in% p_names, info = paste("res exposed on", label))
+      }
+    }
+  }
+})
+
+test_that("All OpenAPI parameters have untruncated descriptions, required flags, and examples", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+
+  # Required parameters per endpoint
+  required_map <- list(
+    "/table"           = c("analysis_var", "pip_id", "measures"),
+    "/metadata"        = c("analysis_var", "pip_id", "measures"),
+    "/cell-definition" = c("analysis_var", "measures"),
+    "/lookup"          = c("country_code", "year", "welfare_type")
+  )
+
+  for (path in names(spec$paths)) {
+    for (method in names(spec$paths[[path]])) {
+      op <- spec$paths[[path]][[method]]
+      label <- paste(toupper(method), path)
+      params <- op$parameters %||% list()
+      req_expected <- required_map[[path]] %||% character()
+
+      for (p in params) {
+        p_label <- paste0(label, " param '", p$name, "'")
+        desc <- trimws(p$description %||% "")
+        expect_true(nchar(desc) >= 25L, info = paste("Short/missing description for", p_label))
+        expect_false(
+          grepl("(required when|Must be a|filter object|suppression threshold|table plus)$", desc),
+          info = paste("Truncated description for", p_label, ":", desc)
+        )
+
+        # Required flag matches contract
+        expect_identical(
+          isTRUE(p$required),
+          p$name %in% req_expected,
+          info = paste("Unexpected required flag on", p_label)
+        )
+
+        if (identical(p$name, "release")) {
+          expect_true(grepl("20260401_TEST", desc, fixed = TRUE), info = paste("Release example in desc on", p_label))
+        }
+        if (identical(p$name, "pip_id")) {
+          expect_true(grepl("COL_2008_GEIH_INC_ALL", desc, fixed = TRUE), info = paste("pip_id example in desc on", p_label))
+        }
+
+        # Parameters must not set enum (which causes Swagger UI to render verbose "Available values" lists)
+        expect_null(p$schema$enum, info = paste("Unexpected schema$enum on", p_label))
+        expect_null(p$schema$items$enum, info = paste("Unexpected schema$items$enum on", p_label))
+        server_default_params <- c("ppp", "pop_share_threshold", "format")
+        if (!p$name %in% server_default_params) {
+          expect_null(p$example, info = paste("Unexpected pre-filled example on", p_label))
+          expect_null(p$schema$example, info = paste("Unexpected pre-filled schema$example on", p_label))
+          expect_null(p$schema$default, info = paste("Unexpected pre-filled schema$default on", p_label))
+        } else {
+          expect_false(is.null(p$schema$default), info = paste("Missing server default on", p_label))
+        }
+      }
+    }
+  }
+})
+
+test_that("POST /metadata and POST /table/download document top-level JSON requestBody schemas and examples", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+
+  spec <- .ep_router$getApiSpec()
+
+  desc_get <- spec$paths[["/metadata"]][["get"]]
+  desc_op  <- spec$paths[["/metadata"]][["post"]]
+  expect_false(is.null(desc_get))
+  expect_false(is.null(desc_op))
+  expect_false(grepl("WIP", desc_op$summary, fixed = TRUE))
+  expect_false(grepl("Ignore for now", desc_op$summary, ignore.case = TRUE))
+  desc_rb <- desc_op$requestBody
+  expect_true(isTRUE(desc_rb$required))
+  desc_json <- desc_rb$content[["application/json"]]
+  expect_false(is.null(desc_json))
+  # Must not wrap the payload inside a top-level `body` property or expose description_metadata
+  expect_null(desc_json$schema$properties$body)
+  expect_null(desc_json$schema$properties$description_metadata)
+  expect_true(length(desc_json$examples) >= 2L)
+
+  dl_rb <- spec$paths[["/table/download"]][["post"]]$requestBody
+  expect_true(isTRUE(dl_rb$required))
+  dl_json <- dl_rb$content[["application/json"]]
+  expect_false(is.null(dl_json))
+  expect_null(dl_json$schema$properties$body)
+  expect_true(all(c("format", "data") %in% names(dl_json$schema$properties)))
+  expect_true(!is.null(dl_json$example) || length(dl_json$examples) >= 1L)
 })

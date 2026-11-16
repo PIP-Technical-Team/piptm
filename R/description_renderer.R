@@ -4,21 +4,17 @@
 #' [`build_description_model()`] into readable Markdown text. Only sections
 #' marked as visible are rendered; sections with `NULL` content are skipped.
 #'
-#' @param model List produced by [`build_description_model()`] with 9 sections,
+#' @param model List produced by [`build_description_model()`] with 6 sections,
 #'   each containing `visible`, `title`, and `content` fields.
 #' @return A single character scalar containing the rendered Markdown.
 #' @export
 #' @examples
 #' \dontrun{
-#' result <- table_maker(
+#' model <- build_description_model(
 #'   pip_id = "COL_2010_GEIH_INC_ALL",
 #'   analysis_var = "welfare",
 #'   measures = c("mean", "gini"),
-#'   include_metadata = TRUE
-#' )
-#' model <- build_description_model(
-#'   description_metadata = result$description_metadata,
-#'   params = result$description_metadata$params
+#'   column = "gender"
 #' )
 #' cat(render_description_markdown(model))
 #' }
@@ -56,24 +52,36 @@ render_description_markdown <- function(model) {
   if (length(section_blocks) == 0) {
     return("")
   }
-  return(paste(section_blocks, collapse = "\n\n"))
+  return(paste(c("# Table Maker Metadata", section_blocks), collapse = "\n\n"))
 }
 
 
 #' Render a single section's content to Markdown by type.
 #'
-#' Dispatches on the structure of `content`:
+#' Dispatches on `section_name` and the structure of `content`:
+#' - when `section_name == "notes"`, renders non-empty entries as unlabeled bullets;
 #' - an object coercible to a data.frame renders as a Markdown table;
 #' - a named list renders as key-value bullets (or nested structures);
 #' - a character vector renders as a numbered list (with names as labels);
 #' - otherwise the value is flattened to text.
 #'
 #' @param content The `content` field of a description model section.
+#' @param section_name Optional section key used for section-specific formatting
+#'   and context-aware display labels.
 #' @return Character scalar Markdown, or `NULL` when there is nothing to render.
 #' @keywords internal
 .render_section_content <- function(content, section_name = NULL) {
   if (is.null(content)) {
     return(NULL)
+  }
+
+  if (identical(section_name, "notes")) {
+    items <- .normalize_notes_items(content)
+    if (length(items) == 0L) {
+      return(NULL)
+    }
+    items <- .highlight_notes_terms(items, open_tag = "**", close_tag = "**")
+    return(paste(paste0("- ", items), collapse = "\n"))
   }
 
   if (inherits(content, "data.table") || is.data.frame(content)) {
@@ -140,21 +148,9 @@ render_description_markdown <- function(model) {
     content <- content[names(content) != "description"]
   }
 
-  if (identical(section_name, "overview") && "ppp_note" %in% names(content)) {
-    lines <- c(lines, as.character(content[["ppp_note"]]))
-    content <- content[names(content) != "ppp_note"]
-  }
-
   for (key in names(content)) {
     value <- content[[key]]
     if (is.null(value)) {
-      next
-    }
-
-    if (
-      identical(section_name, "statistics_selected") &&
-      key %in% c("analysis_var_label", "analysis_var_type")
-    ) {
       next
     }
 
@@ -200,20 +196,6 @@ render_description_markdown <- function(model) {
       if (!is.null(rendered)) {
         lines <- c(lines, paste0("**", .display_label_markdown(section_name, key, parent_key = parent_key), "**"), rendered)
       }
-    } else if (
-      identical(section_name, "cell_definition") &&
-      identical(key, "measure_interpretation") &&
-      is.list(value) &&
-      !is.data.frame(value)
-    ) {
-      # Share measures: render non-share prose first, then the structured
-      # shares table, then the identity footer (if present). Character-
-      # vector `measure_interpretation` (no shares requested) falls through
-      # to the existing branch below unchanged.
-      rendered <- .render_measure_interpretation_shares(value)
-      if (!is.null(rendered)) {
-        lines <- c(lines, paste0("**", .display_label_markdown(section_name, key, parent_key = parent_key), "**"), rendered)
-      }
     } else if (is.list(value)) {
       rendered <- .render_named_list(value, section_name = section_name, parent_key = key)
       if (!is.null(rendered)) {
@@ -236,38 +218,6 @@ render_description_markdown <- function(model) {
     return(NULL)
   }
   return(paste(lines, collapse = "\n"))
-}
-
-
-#' Render the structured shares payload of `cell_definition$measure_interpretation`.
-#'
-#' Emits non-share prose (numbered list, matching the legacy character-vector
-#' rendering), then the shares table, then the identity footer.
-#'
-#' @param value List with `prose`, `shares_table`, `shares_footer`.
-#' @return Character scalar Markdown, or NULL when there is nothing to render.
-#' @keywords internal
-.render_measure_interpretation_shares <- function(value) {
-  blocks <- character()
-
-  prose_rendered <- .render_char_vector(value$prose)
-  if (!is.null(prose_rendered)) {
-    blocks <- c(blocks, prose_rendered)
-  }
-
-  table_rendered <- .render_table(value$shares_table)
-  if (!is.null(table_rendered)) {
-    blocks <- c(blocks, table_rendered)
-  }
-
-  if (!is.null(value$shares_footer) && nzchar(value$shares_footer)) {
-    blocks <- c(blocks, paste0("*", value$shares_footer, "*"))
-  }
-
-  if (length(blocks) == 0) {
-    return(NULL)
-  }
-  return(paste(blocks, collapse = "\n\n"))
 }
 
 
@@ -344,16 +294,11 @@ render_description_markdown <- function(model) {
     if (identical(key, "applicable")) return("Applicable")
   }
 
-  if (identical(section_name, "overview")) {
-    if (identical(key, "structure_description")) return("Description")
-    if (identical(key, "weighting_note")) return("Population note")
-    if (identical(key, "ppp_note")) return("PPP note")
-  }
-
   if (identical(section_name, "provenance")) {
-    if (identical(key, "release_id")) return("Release")
+    if (identical(key, "release_id")) return("PIP Release")
     if (identical(key, "ppp_year")) return("PPP year")
     if (identical(key, "generated_at")) return("Generated at")
+    if (identical(key, "citation")) return("Citation")
   }
 
   if (identical(section_name, "surveys_selected")) {
@@ -364,6 +309,7 @@ render_description_markdown <- function(model) {
   }
 
   if (identical(section_name, "statistics_selected")) {
+    if (identical(key, "analysis_var_name")) return("Analysis variable code")
     if (identical(key, "analysis_var_label")) return("Analysis variable")
     if (identical(key, "analysis_var_type")) return("Analysis variable type")
     if (identical(key, "measures")) return("Selected measures")
@@ -378,31 +324,51 @@ render_description_markdown <- function(model) {
     if (identical(key, "layout")) return("Layout dimensions")
   }
 
-  if (identical(section_name, "cell_definition")) {
-    if (identical(key, "population_scope")) return("Population scope")
-    if (identical(key, "measure_interpretation")) return("Measure interpretation")
-    if (identical(key, "note")) return("Note")
-  }
-
-  if (identical(section_name, "warnings") && identical(key, "warnings")) {
-    return("Warnings")
-  }
-
   if (identical(key, "release_id")) return("Release")
   if (identical(key, "ppp_year")) return("PPP year")
   if (identical(key, "generated_at")) return("Generated at")
-  if (identical(key, "n_surveys_loaded")) return("Surveys loaded")
-  if (identical(key, "n_surveys_excluded")) return("Surveys excluded")
-  if (identical(key, "n_filters_applied")) return("Filters applied")
-  if (identical(key, "n_measures_computed")) return("Measures computed")
-  if (identical(key, "suppression_summary")) return("Suppression")
-  if (identical(key, "suppressed_cells")) return("Suppressed cells")
 
   label <- gsub("_", " ", key, fixed = TRUE)
   if (!nzchar(label)) {
     return(key)
   }
   paste0(toupper(substr(label, 1, 1)), substring(label, 2))
+}
+
+
+#' Extract non-empty character note items for the `notes` section.
+#'
+#' @param content The `content` field of the `notes` section.
+#' @return Character vector of non-empty note strings.
+#' @keywords internal
+.normalize_notes_items <- function(content) {
+  items <- as.character(unlist(content, use.names = FALSE))
+  items[!is.na(items) & nzchar(items)]
+}
+
+
+#' Highlight key phrases in `notes` items with format-specific bold tags.
+#'
+#' @param items Character vector of note strings.
+#' @param open_tag Opening bold markup.
+#' @param close_tag Closing bold markup.
+#' @return Character vector with highlighted terms.
+#' @keywords internal
+.highlight_notes_terms <- function(items, open_tag, close_tag) {
+  phrases <- c(
+    "Survey versions",
+    "PPP international dollars per day",
+    "population share"
+  )
+  for (phrase in phrases) {
+    items <- gsub(
+      phrase,
+      paste0(open_tag, phrase, close_tag),
+      items,
+      fixed = TRUE
+    )
+  }
+  items
 }
 
 
@@ -415,19 +381,22 @@ render_description_markdown <- function(model) {
   mapping <- c(
     pip_id = "Survey identifier",
     country_code = "Country",
+    country_label = "Country name",
     surveyid_year = "Survey year",
     welfare_type_label = "Welfare type",
+    vermast = "Master version",
+    veralt = "Alternative version",
+    reason = "Exclusion reason",
+    measure = "Measure code",
     measure_label = "Measure",
     stat_group = "Group",
     analysis_var_label = "Variable of analysis",
     slot_label = "Dimension",
     varname = "Variable",
+    variable = "Label",
     ui_label = "Label",
     n_categories = "Categories",
-    measure = "Measure",
-    denominator = "Denominator",
-    numerator = "Numerator",
-    plain_meaning = "Plain meaning"
+    selected_categories = "Selected categories"
   )
 
   if (col_name %in% names(mapping)) {
@@ -462,6 +431,8 @@ render_description_markdown <- function(model) {
     if (key %in% names(mapping)) {
       return(unname(mapping[[key]]))
     }
+    key <- gsub("_", " ", key, fixed = TRUE)
+    return(paste0(toupper(substr(key, 1, 1)), substring(key, 2)))
   }
 
   as.character(value)

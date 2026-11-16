@@ -187,3 +187,17 @@ test_that("table_maker v2 output serializes", {
   expect_true(all(c("measure", "value", "flag") %in% names(parsed)))
   expect_false("population" %in% names(parsed))
 })
+
+test_that("table_maker has no include_metadata formal and .build_description_metadata is removed", {
+  expect_false("include_metadata" %in% names(formals(piptm::table_maker)))
+  expect_false(exists(".build_description_metadata", envir = asNamespace("piptm"), inherits = FALSE))
+  expect_error(
+    piptm::table_maker(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      include_metadata = TRUE
+    ),
+    "unused argument"
+  )
+})
