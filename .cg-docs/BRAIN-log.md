@@ -1,6 +1,6 @@
 # 🧠 Project Brain — Chronological Log
 
-_Generated 2026-11-12 · 159 artifacts (newest first) + 39 roadmap features_
+_Generated 2026-11-16 · 163 artifacts (newest first) + 39 roadmap features_
 
 ## undated
 
@@ -21,15 +21,26 @@ _Generated 2026-11-12 · 159 artifacts (newest first) + 39 roadmap features_
 - **[README](.cg-docs/brainstorms/2026-10-19-table-response-mocks/README.md)** · `brainstorm` · _—_ · `—`
   > Two complete, valid JSON responses in the **proposed** `/table` format. Source of truth for the design: `../2026-10-1…
 
+## 2026-11-16
+
+- **[2026-11-13-layout-slot-dependency-rule-verify-review](.cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md)** · `review` · _—_ · `2026-11-16`
+  > **Review mode**: light (verify) **Files reviewed**: 13 (changed files since prior review: R/errors.R, R/table_params.…
+- **[Replace strict ordered-slot validation with parent-child dependency checks](.cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md)** · `solution` · _—_ · `2026-11-16`
+  > The `/table`, `/table/download`, and `/metadata` endpoints in {piptm} exposed four layout slots (`column`, `row`, `su…
+
 ## 2026-11-13
 
+- **[2026-11-12-metadata-rework-and-table-maker-decoupling-review](.cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md)** · `review` · _—_ · `2026-11-13`
+  > **Review mode**: standard **Files reviewed**: 18 **Findings**: 17 (P0: 0, P1: 1, P2: 6, P3: 10)
+- **[2026-11-13-layout-slot-dependency-rule-review](.cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md)** · `review` · _—_ · `2026-11-13`
+  > **Review mode**: standard **Files reviewed**: 12 **Findings**: 23 (P0: 0, P1: 1, P2: 12, P3: 10)
 - **[Metadata direct-caller validation parity via shared table-params guardrails](.cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md)** · `solution` · _—_ · `2026-11-13`
   > Metadata generation and compute generation accepted the same conceptual inputs (`pip_id`, slots, measures, `filter_ba…
+- **[Relax layout-slot validation to parent-child dependency rule](.cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md)** · `plan` · _completed_ · `2026-11-13`
+  > Replace the strict "fill column -> row -> superColumn -> superRow with no gaps" validation rule for the `/table`, `/t…
 
 ## 2026-11-12
 
-- **[2026-11-12-metadata-rework-and-table-maker-decoupling-review](.cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md)** · `review` · _—_ · `2026-11-12`
-  > **Review mode**: architecture (explicit user mode; mandatory emphasis on `@cg-architecture`, `@cg-performance`, `@cg-…
 - **[Table Metadata Rework and Decoupling from table_maker\(\)](.cg-docs/brainstorms/2026-11-12-metadata-rework-and-table-maker-decoupling.md)** · `brainstorm` · _decided_ · `2026-11-12`
   > <!-- Valid status values: decided, in-progress, abandoned -->
 - **[Table Metadata Rework and Decoupling from table_maker\(\)](.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md)** · `plan` · _completed_ · `2026-11-12`

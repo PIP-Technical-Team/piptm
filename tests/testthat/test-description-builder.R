@@ -458,9 +458,10 @@ test_that("build_description_model() tolerates partial pip_id manifest matches",
   expect_identical(surveys$loaded_list$pip_id[[1]], "COL_2010_ECH_INC_ALL")
 })
 
-test_that("build_description_model() rejects gapped or duplicate layout slots for direct callers", {
+test_that("build_description_model() rejects unmet layout slot dependencies or duplicate layout slots for direct callers", {
   activate_builder_fixture()
 
+  # superColumn without column -> error
   expect_error(
     piptm::build_description_model(
       pip_id = "COL_2010_ECH_INC_ALL",
@@ -469,8 +470,33 @@ test_that("build_description_model() rejects gapped or duplicate layout slots fo
       superColumn = "area",
       release = "20260401_TEST"
     ),
-    regexp = "filled in order|left to right"
+    regexp = "superColumn.*requires.*column"
   )
+
+  # superRow without row -> error
+  expect_error(
+    piptm::build_description_model(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "gender",
+      superRow = "area",
+      release = "20260401_TEST"
+    ),
+    regexp = "superRow.*requires.*row"
+  )
+
+  # row alone without column -> succeeds and renders Rows
+  m_row <- piptm::build_description_model(
+    pip_id = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures = "mean",
+    row = "area",
+    release = "20260401_TEST"
+  )
+  expect_true(m_row$layout_configuration$visible)
+  expect_identical(m_row$layout_configuration$content$layout$slot_label, "Rows")
+  expect_identical(m_row$layout_configuration$content$layout$varname, "area")
 
   expect_error(
     piptm::build_description_model(

@@ -287,22 +287,46 @@ test_that("POST /metadata rejects legacy description_metadata bodies with 400", 
   expect_equal(res_both$status, 400L)
 })
 
-test_that("/metadata rejects gapped or duplicate layout slots with 400", {
+test_that("/metadata rejects unmet layout slot dependencies or duplicate slots with 400", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.desc_router), "Router could not be created")
 
-  res_gap <- .desc_router$call(make_api_req(
+  # superColumn without column -> 400
+  res_dep_sc <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      superColumn = "area"
+    )
+  ))
+  expect_equal(res_dep_sc$status, 400L)
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR,
+    jsonlite::fromJSON(res_dep_sc$body)$errors,
+    fixed = TRUE
+  )))
+
+  # superRow without row -> 400
+  res_dep_sr <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata",
     body = list(
       pip_id = "COL_2010_ECH_INC_ALL",
       analysis_var = "welfare",
       measures = "mean",
       column = "gender",
-      superColumn = "area"
+      superRow = "area"
     )
   ))
-  expect_equal(res_gap$status, 400L)
+  expect_equal(res_dep_sr$status, 400L)
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+    jsonlite::fromJSON(res_dep_sr$body)$errors,
+    fixed = TRUE
+  )))
 
+  # Duplicate variable across slots -> 400
   res_dup <- .desc_router$call(make_api_req(
     method = "POST", path = "/metadata",
     body = list(
@@ -314,6 +338,19 @@ test_that("/metadata rejects gapped or duplicate layout slots with 400", {
     )
   ))
   expect_equal(res_dup$status, 400L)
+
+  # Row alone without column -> 200
+  activate_metadata_api_fixture()
+  res_row <- .desc_router$call(make_api_req(
+    method = "POST", path = "/metadata",
+    body = list(
+      pip_id = "COL_2010_ECH_INC_ALL",
+      analysis_var = "welfare",
+      measures = "mean",
+      row = "area"
+    )
+  ))
+  expect_equal(res_row$status, 200L)
 })
 
 test_that("/metadata returns 422 on domain errors (all surveys excluded or unknown release)", {

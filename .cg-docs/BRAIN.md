@@ -1,6 +1,6 @@
 # 🧠 Project Brain
 
-_Generated 2026-11-12 · 198 entities · 2 topics · 96 edges_
+_Generated 2026-11-16 · 202 entities · 3 topics · 98 edges_
 
 ## How to Use
 
@@ -13,8 +13,9 @@ _Generated 2026-11-12 · 198 entities · 2 topics · 96 edges_
 
 | # | Topic | Entities | File |
 |---|-------|----------|------|
-| 1 | [Table_Maker\(\) / /Table / Pip_Id](BRAIN-01.md#table-maker-table-pip-id) | 137 | BRAIN-01.md |
+| 1 | [Table_Maker\(\) / /Table / Pip_Id](BRAIN-01.md#table-maker-table-pip-id) | 136 | BRAIN-01.md |
 | 2 | [Service Layer / Table / Api](BRAIN-01.md#service-layer-table-api) | 31 | BRAIN-01.md |
+| 3 | [Description_Builder.R / Null / Test](BRAIN-01.md#description-builder-r-null-test) | 5 | BRAIN-01.md |
 
 ## Entity Summary
 
@@ -22,9 +23,9 @@ _Generated 2026-11-12 · 198 entities · 2 topics · 96 edges_
 |------|-------|
 | brainstorm | 32 |
 | feature | 39 |
-| plan | 49 |
-| review | 45 |
-| solution | 33 |
+| plan | 50 |
+| review | 47 |
+| solution | 34 |
 
 _30 entities not assigned to any topic_
 
@@ -35,5 +36,5 @@ _30 entities not assigned to any topic_
 | decided_from | 27 |
 | implements | 8 |
 | references | 17 |
-| reviews | 26 |
-| verifies | 18 |
+| reviews | 27 |
+| verifies | 19 |

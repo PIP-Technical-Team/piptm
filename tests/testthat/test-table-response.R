@@ -634,4 +634,110 @@ test_that("flatten_table_response rejects malformed scalar survey header fields"
   expect_error(piptm::flatten_table_response(bad_poverty_line), class = "rlang_error")
 })
 
+test_that("build_table_layout, serialize_table_response, and flatten_table_response handle row-only and row+superRow layouts", {
+  rel <- activate_test_registry("TEST_RELEASE")
+
+  # 1. Row-only layout (column is NULL)
+  slots_row <- list(column = NULL, row = "area", superColumn = NULL, superRow = NULL)
+  layout_row <- piptm:::build_table_layout(slots_row, release = rel)
+  expect_null(layout_row$columns)
+  expect_equal(layout_row$rows$varname, "area")
+  expect_null(layout_row$superColumns)
+  expect_null(layout_row$superRows)
+
+  dt_row <- data.table::data.table(
+    pip_id = c("COL_2010_ECH_INC_ALL", "COL_2010_ECH_INC_ALL"),
+    country_code = c("COL", "COL"),
+    surveyid_year = c(2010L, 2010L),
+    welfare_type = c("INC", "INC"),
+    area = c("urban", "rural"),
+    poverty_line = c(NA_real_, NA_real_),
+    measure = c("mean", "mean"),
+    value = c("12.50", "8.30")
+  )
+  ser_row <- piptm::serialize_table_response(
+    dt_row, slots_row, "welfare", NULL, "mean", rel
+  )
+  expect_equal(length(ser_row), 1L)
+  expect_null(ser_row[[1L]]$layout$columns)
+  expect_equal(ser_row[[1L]]$layout$rows$varname, "area")
+  expect_null(ser_row[[1L]]$cells[[1L]]$column)
+  expect_equal(ser_row[[1L]]$cells[[1L]]$row$label, "Urban")
+
+  flat_row <- piptm::flatten_table_response(ser_row)
+  expect_s3_class(flat_row, "data.table")
+  expect_true("area" %in% names(flat_row))
+  expect_false("gender" %in% names(flat_row))
+  expect_equal(nrow(flat_row), 2L)
+
+  # 2. Row + SuperRow layout (column and superColumn are NULL)
+  slots_rsr <- list(column = NULL, row = "area", superColumn = NULL, superRow = "wquintile")
+  layout_rsr <- piptm:::build_table_layout(slots_rsr, release = rel)
+  expect_null(layout_rsr$columns)
+  expect_equal(layout_rsr$rows$varname, "area")
+  expect_null(layout_rsr$superColumns)
+  expect_equal(layout_rsr$superRows$varname, "wquintile")
+
+  dt_rsr <- data.table::data.table(
+    pip_id = c("COL_2010_ECH_INC_ALL", "COL_2010_ECH_INC_ALL"),
+    country_code = c("COL", "COL"),
+    surveyid_year = c(2010L, 2010L),
+    welfare_type = c("INC", "INC"),
+    area = c("urban", "rural"),
+    wquintile = c(1L, 2L),
+    poverty_line = c(NA_real_, NA_real_),
+    measure = c("mean", "mean"),
+    value = c("12.50", "8.30")
+  )
+  ser_rsr <- piptm::serialize_table_response(
+    dt_rsr, slots_rsr, "welfare", NULL, "mean", rel
+  )
+  expect_equal(length(ser_rsr), 1L)
+  expect_null(ser_rsr[[1L]]$layout$columns)
+  expect_equal(ser_rsr[[1L]]$layout$rows$varname, "area")
+  expect_null(ser_rsr[[1L]]$layout$superColumns)
+  expect_equal(ser_rsr[[1L]]$layout$superRows$varname, "wquintile")
+  expect_null(ser_rsr[[1L]]$cells[[1L]]$column)
+  expect_equal(ser_rsr[[1L]]$cells[[1L]]$row$label, "Urban")
+  expect_equal(ser_rsr[[1L]]$cells[[1L]]$superRow$code, 1L)
+
+  flat_rsr <- piptm::flatten_table_response(ser_rsr)
+  expect_s3_class(flat_rsr, "data.table")
+  expect_true(all(c("wquintile", "area") %in% names(flat_rsr)))
+  expect_equal(nrow(flat_rsr), 2L)
+
+  # 3. Column + SuperColumn layout (row and superRow are NULL)
+  slots_csc <- list(column = "gender", row = NULL, superColumn = "area", superRow = NULL)
+  layout_csc <- piptm:::build_table_layout(slots_csc, release = rel)
+  expect_equal(layout_csc$columns$varname, "gender")
+  expect_null(layout_csc$rows)
+  expect_equal(layout_csc$superColumns$varname, "area")
+  expect_null(layout_csc$superRows)
+
+  dt_csc <- data.table::data.table(
+    pip_id = c("COL_2010_ECH_INC_ALL", "COL_2010_ECH_INC_ALL"),
+    country_code = c("COL", "COL"),
+    surveyid_year = c(2010L, 2010L),
+    welfare_type = c("INC", "INC"),
+    gender = c(1L, 2L),
+    area = c("urban", "rural"),
+    poverty_line = c(NA_real_, NA_real_),
+    measure = c("mean", "mean"),
+    value = c("12.50", "8.30")
+  )
+  ser_csc <- piptm::serialize_table_response(
+    dt_csc, slots_csc, "welfare", NULL, "mean", rel
+  )
+  expect_equal(length(ser_csc), 1L)
+  expect_equal(ser_csc[[1L]]$layout$columns$varname, "gender")
+  expect_null(ser_csc[[1L]]$layout$rows)
+  expect_equal(ser_csc[[1L]]$layout$superColumns$varname, "area")
+  expect_null(ser_csc[[1L]]$layout$superRows)
+
+  flat_csc <- piptm::flatten_table_response(ser_csc)
+  expect_s3_class(flat_csc, "data.table")
+  expect_true(all(c("area", "gender") %in% names(flat_csc)))
+  expect_equal(nrow(flat_csc), 2L)
+})
+
 

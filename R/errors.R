@@ -50,6 +50,16 @@
 .PIPTM_NO_ACTIVE_RELEASE_USER_ERROR <-
   "Survey data is temporarily unavailable because no active data release is loaded."
 
+#' @keywords internal
+#' @noRd
+.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR <-
+  "`superColumn` requires `column` to be filled. Please assign a variable to Columns before using Super Columns."
+
+#' @keywords internal
+#' @noRd
+.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR <-
+  "`superRow` requires `row` to be filled. Please assign a variable to Rows before using Super Rows."
+
 #' Format user-facing error message for an unavailable data release
 #'
 #' @param release Release value passed by the caller.

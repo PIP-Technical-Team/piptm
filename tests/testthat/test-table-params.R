@@ -248,7 +248,7 @@ test_that(".validate_and_normalize_table_params rejects duplicate by variables",
   )
 })
 
-test_that(".validate_and_normalize_table_params validates slot arity and order for direct callers", {
+test_that(".validate_and_normalize_table_params validates slot arity and dependencies for direct callers", {
   fx <- make_tm_fixtures_v2()
   activate_tm_fixtures_v2(fx)
   withr::defer(reset_piptm_env_v2())
@@ -261,7 +261,76 @@ test_that(".validate_and_normalize_table_params validates slot arity and order f
       superColumn = "area",
       release = "20260401_TEST"
     ),
-    regexp = "filled in order|left to right"
+    regexp = "superColumn.*requires.*column"
+  )
+
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = c("gender", "area"),
+      column = "gender",
+      superRow = "area",
+      release = "20260401_TEST"
+    ),
+    regexp = "superRow.*requires.*row"
+  )
+
+  # row alone without column is valid
+  expect_no_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = "area",
+      row = "area",
+      release = "20260401_TEST"
+    )
+  )
+
+  # column + superColumn without row is valid
+  expect_no_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = c("gender", "area"),
+      column = "gender",
+      superColumn = "area",
+      release = "20260401_TEST"
+    )
+  )
+
+  # row + superRow without column is valid
+  expect_no_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      by = c("area", "gender"),
+      row = "area",
+      superRow = "gender",
+      release = "20260401_TEST"
+    )
+  )
+
+  # Direct slot caller without by gets dimension validation
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "welfare",
+      measures = "mean",
+      column = "non_existent_dim",
+      release = "20260401_TEST"
+    ),
+    regexp = "Unknown dimension.*non_existent_dim"
+  )
+
+  # analysis_var cannot also be a disaggregation dimension
+  expect_error(
+    piptm:::.validate_and_normalize_table_params(
+      analysis_var = "gender",
+      measures = "mean",
+      column = "gender",
+      release = "20260401_TEST"
+    ),
+    regexp = "analysis_var.*cannot also be used as a disaggregation"
   )
 
   expect_error(

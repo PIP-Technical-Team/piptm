@@ -245,3 +245,33 @@ Rules:
 
 Reference:
 `.cg-docs/solutions/bugs/2026-11-13-metadata-direct-caller-validation-parity.md`.
+
+### Layout-slot validation is a parent-child dependency rule, not a fill order (established 2026-11-16)
+
+**Supersedes rule 1 of the section above.** `column`, `row`, `superColumn`,
+`superRow` are no longer validated as "filled left-to-right with no gaps."
+The real constraint is two independent parent-child dependencies:
+
+1. `column` and `row` are independent — either may be used alone, or
+   together, in any request argument order.
+2. `superColumn` requires `column` to be filled.
+3. `superRow` requires `row` to be filled.
+4. `superColumn` and `superRow` are independent of each other.
+
+A request previously rejected (e.g. `row` alone, or `column` + `superColumn`
+without `row`) is now valid. This is enforced identically in
+`inst/plumber/helpers.R` (`.validate_table_shape()`) and
+`R/table_params.R` (`.validate_and_normalize_table_params()`), using shared
+error-message constants `.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR` /
+`.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR` in `R/errors.R`. The PIP UI displays
+these error strings verbatim, so any future wording change must happen in
+`R/errors.R` only, not in either validator.
+
+Also fixed alongside this change: direct R callers passing layout slots
+without a `by` vector now have `by` derived from the slot values
+(`if (is.null(by) && length(slot_dims) > 0L) by <- slot_dims`), so dimension
+validation and the `pov_status` + `poverty_line` coherence rule above are not
+silently bypassed at the direct-call boundary.
+
+Reference:
+`.cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md`.

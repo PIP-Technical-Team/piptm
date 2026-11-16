@@ -46,8 +46,14 @@ Common parameters across measure functions:
 - `measures` — character vector naming which measures to compute (e.g.
   `"fgt"`, `"gini"`, `"mean_welfare"`).
 - `column`, `row`, `superColumn`, `superRow` — optional layout slot
-  variables validated as scalar, non-empty character values with strict
-  left-to-right contiguous fill order.
+  variables validated as scalar, non-empty character values. `column` and
+  `row` are independent of each other and of request argument order.
+  `superColumn` requires `column` to be filled; `superRow` requires `row` to
+  be filled. `superColumn` and `superRow` are independent of each other.
+  Unmet dependencies return HTTP 400 with a complete, user-friendly error
+  sentence (e.g. "`superColumn` requires `column` to be filled. Please
+  assign a variable to Columns before using Super Columns."), displayed
+  verbatim in the PIP UI.
 - `poverty_line` — required as a single positive finite value whenever
   `by` includes `pov_status`; validated in shared table-parameter
   normalization.
@@ -78,11 +84,16 @@ array with at most 4 entries (full Cartesian enumeration for <= 4 total cells,
 or the registry is unresolved), preventing Plumber scalar-string unboxing and
 combinatorial text bloat.
 
-For metadata and compute entry points, table-shaping inputs now share a single
-upstream validation boundary: invalid slot gaps/duplicates and malformed
-multi-valued slots are rejected consistently, `pov_status` requires coherent
-`poverty_line` values, and `filter_base = list()` is normalized to `NULL` for
-parity with API no-filter intent.
+For metadata and compute entry points (`/table`, `/table/download`,
+`/metadata`), table-shaping inputs share a single upstream validation
+boundary: layout slots are checked against parent-child dependencies
+(`superColumn` -> `column`, `superRow` -> `row`) rather than a strict
+contiguous fill order, so `row` alone, `column` + `superColumn` without
+`row`, `row` + `superRow` without `column`, and `column` + `row` + `superRow`
+without `superColumn` are all valid. Malformed multi-valued slots are still
+rejected, `pov_status` requires coherent `poverty_line` values, and
+`filter_base = list()` is normalized to `NULL` for parity with API
+no-filter intent.
 <!-- cg:auto:end -->
 
 ← [Home](README.md)
