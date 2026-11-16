@@ -12,7 +12,7 @@
       "analysis_var": "welfare",
       "measures": ["mean", "gini"],
       "slots": {},
-      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL"],
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNADC-E5_INC_ALL"],
       "survey_count": 1,
       "required_covariates": [],
       "downstream": "none"
@@ -43,7 +43,7 @@
       "analysis_var": "age",
       "measures": ["mean", "median", "nobs"],
       "slots": {"row": "area"},
-      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNAD_INC_ALL"],
+      "survey_pool": ["COL_2019_GEIH_INC_ALL", "BRA_2021_PNADC-E5_INC_ALL"],
       "survey_count": 1,
       "required_covariates": ["area"],
       "downstream": "metadata_markdown"
@@ -92,7 +92,7 @@
       "filter_base": {"gender": [1]},
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "CRI_2019_ENAHO_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL"
@@ -114,7 +114,7 @@
       "filter_base": {"age_group": [3]},
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL"
@@ -137,7 +137,7 @@
       "ppp": 2017,
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL"
@@ -158,7 +158,7 @@
       "slots": {"column": "gender", "row": "area"},
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL"
@@ -186,11 +186,11 @@
       "pop_share_threshold": 0.005,
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL",
-        "ARG_2019_EPH_INC_ALL",
+        "ARG_2019_EPHC-S2_INC_ALL",
         "CRI_2019_ENAHO_INC_ALL"
       ],
       "survey_count": 5,
@@ -210,16 +210,16 @@
       "poverty_line": 6.85,
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL",
-        "ARG_2019_EPH_INC_ALL",
+        "ARG_2019_EPHC-S2_INC_ALL",
         "CHL_2017_CASEN_INC_ALL",
         "CRI_2019_ENAHO_INC_ALL",
-        "DOM_2019_ENFT_INC_ALL",
+        "DOM_2019_ECNFT-Q03_INC_ALL",
         "HND_2019_EPHPM_INC_ALL",
-        "MEX_2018_ENIGH_INC_ALL",
+        "MEX_2018_ENIGHNS_INC_ALL",
         "PAN_2019_EH_INC_ALL"
       ],
       "survey_count": 10,
@@ -238,16 +238,16 @@
       "slots": {"column": "gender", "row": "area", "superColumn": "age_group"},
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL",
-        "ARG_2019_EPH_INC_ALL",
+        "ARG_2019_EPHC-S2_INC_ALL",
         "CHL_2017_CASEN_INC_ALL",
         "CRI_2019_ENAHO_INC_ALL",
-        "DOM_2019_ENFT_INC_ALL",
+        "DOM_2019_ECNFT-Q03_INC_ALL",
         "HND_2019_EPHPM_INC_ALL",
-        "MEX_2018_ENIGH_INC_ALL",
+        "MEX_2018_ENIGHNS_INC_ALL",
         "PAN_2019_EH_INC_ALL",
         "PRY_2019_EPH_INC_ALL",
         "SLV_2019_EHPM_INC_ALL",
@@ -274,16 +274,16 @@
       },
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
-        "BRA_2021_PNAD_INC_ALL",
+        "BRA_2021_PNADC-E5_INC_ALL",
         "PER_2019_ENAHO_INC_ALL",
         "ECU_2019_ENEMDU_INC_ALL",
         "BOL_2019_EH_INC_ALL",
-        "ARG_2019_EPH_INC_ALL",
+        "ARG_2019_EPHC-S2_INC_ALL",
         "CHL_2017_CASEN_INC_ALL",
         "CRI_2019_ENAHO_INC_ALL",
-        "DOM_2019_ENFT_INC_ALL",
+        "DOM_2019_ECNFT-Q03_INC_ALL",
         "HND_2019_EPHPM_INC_ALL",
-        "MEX_2018_ENIGH_INC_ALL",
+        "MEX_2018_ENIGHNS_INC_ALL",
         "PAN_2019_EH_INC_ALL",
         "PRY_2019_EPH_INC_ALL",
         "SLV_2019_EHPM_INC_ALL",

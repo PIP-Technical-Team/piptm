@@ -9,6 +9,12 @@ class SemanticError(ValueError):
     """Raised when an HTTP response is syntactically valid but semantically wrong."""
 
 
+def _scalar(value: Any) -> Any:
+    if isinstance(value, list) and len(value) == 1:
+        return value[0]
+    return value
+
+
 def _json_object(response: Any) -> dict[str, Any]:
     content_type = response.headers.get("Content-Type", "")
     if "application/json" not in content_type.lower():
@@ -37,7 +43,7 @@ def validate_envelope(response: Any) -> dict[str, Any]:
     if response.status_code != 200:
         raise SemanticError(f"expected HTTP 200, got {response.status_code}")
     payload = _json_object(response)
-    if payload.get("status") != "success":
+    if _scalar(payload.get("status")) != "success":
         raise SemanticError(f"envelope status was {payload.get('status')!r}")
     errors = payload.get("errors")
     if errors not in (None, []):
@@ -65,7 +71,7 @@ def validate_expected_422(response: Any) -> dict[str, Any]:
             f"expected HTTP 422 for missing-dimension check, got {response.status_code}"
         )
     payload = _json_object(response)
-    if payload.get("status") != "error":
+    if _scalar(payload.get("status")) != "error":
         raise SemanticError(f"expected error status in 422 envelope, got {payload.get('status')!r}")
     errors = payload.get("errors")
     if not isinstance(errors, list) or not errors:
@@ -106,7 +112,7 @@ def extract_approach_c(
         ):
             raise SemanticError("Approach C table item requires layout dict and non-empty cells")
     if isinstance(expected_surveys, tuple):
-        returned = [str(item.get("pip_id")) for item in data]
+        returned = [str(_scalar(item.get("pip_id"))) for item in data]
         if not set(returned).issubset(set(expected_surveys)):
             raise SemanticError(
                 f"returned surveys {returned} not subset of {list(expected_surveys)}"

@@ -1,6 +1,5 @@
 """Azure and local Locust entry point; importing this file performs no I/O."""
 
-import requests
 from locust import LoadTestShape, events
 
 try:
@@ -30,6 +29,8 @@ def prepare_scenarios(environment, **_kwargs) -> None:
         if SETTINGS.bootstrap_mode == "curated":
             environment.piptm_scenarios = scenarios
             return
+        import requests
+
         with requests.Session() as session:
 
             class _Client:
