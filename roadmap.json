@@ -369,7 +369,7 @@
       "title": "Phase 8 — Launch Readiness & Load Testing",
       "description": "Verify production launch readiness of the Table Maker Plumber API through concurrent load testing, SLO validation, and turnkey infrastructure handoff.",
       "objective": "Validate API launch readiness and SLO compliance under concurrent load prior to production deployment.",
-      "status": "planned",
+      "status": "in-progress",
       "features": [
         {
           "id": "azure-load-testing-stress-test-suite-for-table-maker-api",
@@ -378,6 +378,13 @@
           "status": "idea",
           "brainstorm": ".cg-docs/brainstorms/2026-10-30-azure-load-testing-stress-suite.md",
           "plan": null
+        },
+        {
+          "id": "azure-load-testing-suite-api-sync-scaling-model-and-workload-parameter-calibration",
+          "title": "Azure Load Testing Suite: API Sync, Scaling Model, and Workload Parameter Calibration",
+          "status": "done",
+          "brainstorm": ".cg-docs/brainstorms/2026-11-16-azure-load-testing-api-sync-and-workload-calibration.md",
+          "plan": ".cg-docs/plans/2026-11-16-azure-load-testing-api-sync-and-workload-calibration.md"
         }
       ]
     }

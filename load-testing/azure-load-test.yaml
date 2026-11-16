@@ -1,7 +1,11 @@
 version: v0.1
-testId: table-maker-api-stress
-displayName: Table Maker API stress suite
-description: Curated ramp or spike workloads for the private Table Maker API
+testId: piptm-tablemaker-stress
+displayName: PIP Table Maker API Stress Test
+description: >
+  Locust stress test for the Table Maker Plumber API. Authoritative runs require
+  Azure Load Testing private VNet injection into a subnet that resolves and routes
+  to tablemakerapiqa.worldbank.org. Request names include latency class tags
+  (class-a <= 1000ms, class-b <= 3000ms, class-c <= 5000ms).
 testType: Locust
 testPlan: locustfile.py
 engineInstances: 1
@@ -18,41 +22,69 @@ properties:
   userPropertyFile: locust.conf
 env:
   - name: TARGET_HOST
-    value: "https://tablemakerapiqa.worldbank.org"
+    value: https://tablemakerapiqa.worldbank.org
   - name: LOAD_PROFILE
-    value: "ramp"
+    value: ramp
+  - name: TRAFFIC_MODE
+    value: mixed
+  - name: STAMPEDE_TIER
+    value: "3"
   - name: USERS
-    value: "100"
+    value: "30"
   - name: SPAWN_RATE
     value: "5"
   - name: RUN_TIME
-    value: "15m"
+    value: 15m
   - name: RAMP_STEPS
-    value: "10,50,100"
+    value: 2,5,15,30
   - name: SPIKE_USERS
-    value: "100"
+    value: "40"
   - name: SPIKE_HOLD_SECONDS
     value: "120"
   - name: RANDOM_SEED
     value: "20261030"
-  - name: SCENARIO_CATALOG
-    value: "scenarios.json"
   - name: BOOTSTRAP_MODE
-    value: "live-with-curated-fallback"
+    value: curated
   - name: REQUEST_TIMEOUT
     value: "120"
+  - name: THINK_TIME_MIN
+    value: "1"
+  - name: THINK_TIME_MAX
+    value: "3"
+  - name: TIER1_WEIGHT
+    value: "60"
+  - name: TIER2_WEIGHT
+    value: "30"
+  - name: TIER3_WEIGHT
+    value: "10"
+  - name: DISCOVERY_WEIGHT
+    value: "10"
+  - name: SLO_P95_MS
+    value: "3000"
+  - name: SLO_CLASS_A_P95_MS
+    value: "1000"
+  - name: SLO_CLASS_B_P95_MS
+    value: "3000"
+  - name: SLO_CLASS_C_P95_MS
+    value: "5000"
+  - name: SLO_ERROR_PERCENT
+    value: "1"
 failureCriteria:
+  # Azure Load Testing v0.1 evaluates aggregate clientMetrics expressions here;
+  # per-class thresholds (class-a <= 1000ms, class-b <= 3000ms, class-c <= 5000ms)
+  # are exposed via request-name tags (discovery:class-a:*, preview:class-a:*,
+  # metadata:class-a:*, table:tier1:class-b:*, table:tier2:class-b:*,
+  # download:class-b:*, table:tier3:class-c:*) for portal chart filtering and CSV analysis.
   clientMetrics:
     - p95(response_time_ms) > 3000
     - percentage(error) > 1
 autoStop:
   errorPercentage: 80
   timeWindow: 120
-
-# ITS adds these top-level keys only after substituting real Azure resource IDs:
-# subnetId: /subscriptions/<subscription>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>
+# ITS-owned private network and server metric placeholders (do not commit real IDs):
+# subnetId: /subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>
 # publicIPDisabled: true
 # appComponents:
-#   - resourceId: /subscriptions/<subscription>/resourceGroups/<rg>/providers/Microsoft.App/containerApps/<app>
-#     resourceName: <app>
+#   - resourceId: /subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.App/containerApps/<app-name>
+#     resourceName: tablemaker-qa-container-app
 #     resourceType: Microsoft.App/containerApps

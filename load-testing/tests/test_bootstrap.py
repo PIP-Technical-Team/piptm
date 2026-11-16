@@ -18,27 +18,57 @@ class Response:
         self.data = data
 
     def json(self):
-        return {"status": "success", "data": self.data, "errors": [], "warnings": [], "meta": {}}
+        return {
+            "status": "success",
+            "data": self.data,
+            "errors": [],
+            "warnings": [],
+            "meta": {},
+        }
 
 
 class Client:
-    def __init__(self, surveys):
+    def __init__(self, surveys, covariates=None):
         self.surveys = surveys
+        self.covariates = covariates if covariates is not None else [
+            {"varname": "gender"},
+            {"varname": "area"},
+            {"varname": "age_group"},
+            {"varname": "educat4"},
+            {"varname": "electricity"},
+        ]
+        self.paths: list[str] = []
 
-    def get(self, *_args, **_kwargs):
-        return Response(self.surveys)
+    def get(self, path, *_args, **_kwargs):
+        self.paths.append(path)
+        if path == "/surveys-ui":
+            return Response(self.surveys)
+        if path in {"/covariates", "/categories"}:
+            return Response(self.covariates)
+        raise AssertionError(f"unexpected bootstrap path: {path}")
 
 
-def test_live_bootstrap_intersects_required_dimensions() -> None:
+def test_live_bootstrap_uses_ui_endpoints_without_surveys_manifest() -> None:
     scenarios = load_catalog(ROOT / "scenarios.json")
-    dimensions = ["gender", "area", "age_group", "educat4"]
     surveys = [
-        {"pip_id": f"COL_{2000 + index:04d}_SURVEY_INC_ALL", "dimensions": dimensions}
+        {
+            "pip_id": f"COL_{2000 + index:04d}_SURVEY_INC_ALL",
+            "country_code": "COL",
+            "year": 2000 + index,
+        }
         for index in range(15)
     ]
-    live = compatible_live_scenarios(Client(surveys), scenarios, 1)
+    client = Client(surveys)
+    live = compatible_live_scenarios(client, scenarios, 1)
     assert {item.tier for item in live} == {1, 2, 3}
-    assert all(item.survey_pool[0].startswith("COL_") for item in live)
+    assert all(
+        item.survey_pool[0].startswith("COL_")
+        for item in live
+        if item.expected_status == 200
+    )
+    assert "/surveys" not in client.paths
+    assert "/surveys-ui" in client.paths
+    assert any(item.expected_status == 422 for item in live)
 
 
 def test_live_failure_can_use_explicit_curated_fallback() -> None:

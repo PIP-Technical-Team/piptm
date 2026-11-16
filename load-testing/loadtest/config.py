@@ -35,7 +35,17 @@ def _number(env: dict[str, str], name: str, default: float, minimum: float = 0) 
 
 
 def parse_duration(value: str) -> int:
-    """Convert a Locust-style duration to positive seconds."""
+    """Convert a Locust-style duration to positive seconds.
+
+    Args:
+        value: Duration string such as ``'60s'``, ``'15m'``, or ``'1h'``.
+
+    Returns:
+        Duration in positive integer seconds.
+
+    Raises:
+        ConfigError: If ``value`` is malformed or zero.
+    """
     match = re.fullmatch(r"\s*(\d+)\s*([smh]?)\s*", value.lower())
     if not match:
         raise ConfigError("RUN_TIME must be a positive duration such as 60s, 10m, or 1h")
@@ -51,8 +61,13 @@ def _weight(env: dict[str, str], name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
+    """Immutable runtime settings resolved from environment variables."""
+
     target_host: str
     load_profile: str
+    traffic_mode: str
+    stampede_tier: int
+    stampede_scenario_id: str | None
     users: int
     spawn_rate: float
     run_time: str
@@ -69,10 +84,24 @@ class Settings:
     tier_weights: tuple[int, int, int]
     discovery_weight: int
     slo_p95_ms: int
+    slo_class_a_p95_ms: int
+    slo_class_b_p95_ms: int
+    slo_class_c_p95_ms: int
     slo_error_percent: float
 
     @classmethod
     def from_env(cls, environ: dict[str, str] | None = None) -> Settings:
+        """Build validated ``Settings`` from ``environ`` or ``os.environ``.
+
+        Args:
+            environ: Optional environment dictionary override for testing.
+
+        Returns:
+            Validated ``Settings`` instance.
+
+        Raises:
+            ConfigError: If any environment variable is invalid or unsafe.
+        """
         env = dict(os.environ if environ is None else environ)
         host = env.get("TARGET_HOST", "https://tablemakerapiqa.worldbank.org").rstrip("/")
         parsed = urlsplit(host)
@@ -91,6 +120,18 @@ class Settings:
         profile = env.get("LOAD_PROFILE", "ramp").lower()
         if profile not in {"ramp", "spike"}:
             raise ConfigError("LOAD_PROFILE must be ramp or spike")
+
+        traffic_mode = env.get("TRAFFIC_MODE", "mixed").lower()
+        if traffic_mode not in {"mixed", "stampede"}:
+            raise ConfigError("TRAFFIC_MODE must be mixed or stampede")
+
+        stampede_tier = _integer(env, "STAMPEDE_TIER", 3, minimum=1)
+        if stampede_tier not in {1, 2, 3}:
+            raise ConfigError("STAMPEDE_TIER must be 1, 2, or 3")
+
+        raw_stampede_id = env.get("STAMPEDE_SCENARIO_ID", "").strip()
+        stampede_scenario_id = raw_stampede_id if raw_stampede_id else None
+
         bootstrap = env.get("BOOTSTRAP_MODE", "curated").lower()
         if bootstrap not in {"curated", "live", "live-with-curated-fallback"}:
             raise ConfigError(
@@ -99,7 +140,7 @@ class Settings:
         try:
             ramp_steps = tuple(
                 int(part.strip())
-                for part in env.get("RAMP_STEPS", "10,50,100").split(",")
+                for part in env.get("RAMP_STEPS", "2,5,15,30").split(",")
             )
         except ValueError as exc:
             raise ConfigError("RAMP_STEPS must be comma-separated integers") from exc
@@ -121,19 +162,22 @@ class Settings:
 
         run_time = env.get("RUN_TIME", "15m")
         catalog = Path(env.get("SCENARIO_CATALOG", "scenarios.json"))
-        if not catalog.is_absolute():
+        if not catalog.is_absolute() and not catalog.is_file():
             module_dir = Path(__file__).resolve().parent
             runtime_dir = module_dir.parent if module_dir.name == "loadtest" else module_dir
             catalog = runtime_dir / catalog
         return cls(
             target_host=host,
             load_profile=profile,
-            users=_integer(env, "USERS", 100, minimum=0),
+            traffic_mode=traffic_mode,
+            stampede_tier=stampede_tier,
+            stampede_scenario_id=stampede_scenario_id,
+            users=_integer(env, "USERS", max(ramp_steps), minimum=0),
             spawn_rate=_number(env, "SPAWN_RATE", 5.0, minimum=0.001),
             run_time=run_time,
             run_time_seconds=parse_duration(run_time),
             ramp_steps=ramp_steps,
-            spike_users=_integer(env, "SPIKE_USERS", 100, minimum=1),
+            spike_users=_integer(env, "SPIKE_USERS", 40, minimum=1),
             spike_hold_seconds=_integer(env, "SPIKE_HOLD_SECONDS", 120, minimum=1),
             random_seed=_integer(env, "RANDOM_SEED", 20261030),
             scenario_catalog=catalog,
@@ -144,5 +188,8 @@ class Settings:
             tier_weights=tier_weights,
             discovery_weight=discovery_weight,
             slo_p95_ms=_integer(env, "SLO_P95_MS", 3000, minimum=1),
+            slo_class_a_p95_ms=_integer(env, "SLO_CLASS_A_P95_MS", 1000, minimum=1),
+            slo_class_b_p95_ms=_integer(env, "SLO_CLASS_B_P95_MS", 3000, minimum=1),
+            slo_class_c_p95_ms=_integer(env, "SLO_CLASS_C_P95_MS", 5000, minimum=1),
             slo_error_percent=_number(env, "SLO_ERROR_PERCENT", 1.0, minimum=0),
         )

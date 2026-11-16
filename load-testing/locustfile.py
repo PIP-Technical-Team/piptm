@@ -1,5 +1,6 @@
 """Azure and local Locust entry point; importing this file performs no I/O."""
 
+import requests
 from locust import LoadTestShape, events
 
 try:
@@ -22,16 +23,25 @@ SCHEDULE = ProfileSchedule(SETTINGS)
 
 @events.test_start.add_listener
 def prepare_scenarios(environment, **_kwargs) -> None:
+    """Load and optionally live-bootstrap scenarios once before virtual users start."""
     environment.piptm_bootstrap_failed = False
     try:
         scenarios = load_catalog(SETTINGS.scenario_catalog)
         if SETTINGS.bootstrap_mode == "curated":
             environment.piptm_scenarios = scenarios
             return
-        client = TableMakerUser(environment).client
-        environment.piptm_scenarios = bootstrap_catalog(
-            client, scenarios, SETTINGS.bootstrap_mode, SETTINGS.request_timeout
-        )
+        with requests.Session() as session:
+
+            class _Client:
+                def get(self, path: str, name: str, timeout: float, params=None):
+                    del name
+                    return session.get(
+                        f"{SETTINGS.target_host}{path}", params=params, timeout=timeout
+                    )
+
+            environment.piptm_scenarios = bootstrap_catalog(
+                _Client(), scenarios, SETTINGS.bootstrap_mode, SETTINGS.request_timeout
+            )
     except Exception:
         environment.piptm_bootstrap_failed = True
         environment.piptm_scenarios = ()
