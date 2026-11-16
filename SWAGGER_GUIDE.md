@@ -81,8 +81,8 @@ Query parameters (works identically as a POST form or JSON body):
 | `poverty_line` | number | conditional | required when `analysis_var = "pov_status"` or any slot contains `pov_status` |
 | `column` | string | no | Decision-3 Columns slot (single variable from `GET /covariates`) |
 | `row` | string | no | Decision-3 Rows slot (single variable from `GET /covariates`) |
-| `superColumn` | string | no | Decision-3 Super Columns slot (single variable from `GET /covariates`) |
-| `superRow` | string | no | Decision-3 Super Rows slot (single variable from `GET /covariates`) |
+| `superColumn` | string | no | Decision-3 Super Columns slot (single variable from `GET /covariates`; requires `column`) |
+| `superRow` | string | no | Decision-3 Super Rows slot (single variable from `GET /covariates`; requires `row`) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"gender":[0],"age_group":[1,2]}` (Decision 1) |
 | `pop_share_threshold` | number | no | cell-masking threshold (`NR`) in `(0, 1)`; default `0.001` (0.1%); send empty/omit to disable |
@@ -104,7 +104,8 @@ ppp=2021
 ```
 
 Errors: `400` for invalid parameters (e.g. too many `pip_id`, malformed
-`pip_id` format, unknown `measures`, malformed `ppp`); `422` when validation
+`pip_id` format, unknown `measures`, malformed `ppp`, or layout-slot dependency
+failures such as `superColumn` without `column`); `422` when validation
 passes but computation fails (e.g. unknown release, malformed `filter_base`
 JSON, domain error from `table_maker()`).
 
@@ -321,7 +322,7 @@ Query parameters (Swagger "Try it out"):
 | `analysis_var` | string | yes | e.g. `welfare`, `pov_status`, or any dimension from `GET /analysis-variables` |
 | `measures` | string[] | yes | repeatable; e.g. `measures=mean&measures=gini` |
 | `poverty_line` | number | conditional | required when `analysis_var = "pov_status"`, `"pov_status"` appears in any slot, or poverty measures requested |
-| `column`, `row`, `superColumn`, `superRow` | string | no | layout slots (filled in order without gaps, from `GET /covariates`) |
+| `column`, `row`, `superColumn`, `superRow` | string | no | layout slots (from `GET /covariates`; `superColumn` requires `column`, `superRow` requires `row`) |
 | `ppp` | integer | no | PPP reference year; default `2021` |
 | `filter_base` | string | no | JSON-encoded sample-base filter object, e.g. `{"age_group":["3"],"educat7":["4"]}` |
 | `pop_share_threshold` | number | no | cell-masking threshold in `(0, 1)`; default `0.001` (0.1%); send empty to disable |

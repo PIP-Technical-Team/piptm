@@ -27,7 +27,8 @@ NULL
 #' @param by Character vector of breakdown covariates, or `NULL`.
 #' @param column,row,superColumn,superRow Optional layout-slot values used by
 #'   API-adjacent direct callers (for example, [build_description_model()]).
-#'   Each must be `NULL` or a single non-blank character scalar.
+#'   `column` and `row` are independent; `superColumn` requires `column`;
+#'   `superRow` requires `row`. Each must be `NULL` or a single non-blank character scalar.
 #' @param filter_base Named list sample filter, or `NULL`.
 #' @param release Character scalar release ID, or `NULL`.
 #' @details
@@ -51,27 +52,6 @@ NULL
                                                  release = NULL) {
   families <- .classify_measures(measures)
   .validate_poverty_lines(poverty_line, names(families))
-
-  # `pov_status` as a breakdown dimension requires a valid poverty line
-  # regardless of which measures were requested (poverty-family measures are
-  # already covered by .validate_poverty_lines() above via `families`, but a
-  # non-poverty measure disaggregated by pov_status would otherwise slip
-  # through). This check is shared so table_maker() and
-  # build_description_model() can never disagree on when a poverty line is
-  # required for a pov_status breakdown.
-  if (!is.null(by) && "pov_status" %in% by) {
-    if (is.null(poverty_line) || !is.numeric(poverty_line) ||
-        length(poverty_line) != 1L || !is.finite(poverty_line) ||
-        poverty_line <= 0) {
-      piptm_abort(
-        c(
-          "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
-          "i" = "Provide a single positive numeric scalar."
-        ),
-        user_message = "A valid positive poverty line is required when breaking down results by poverty status."
-      )
-    }
-  }
 
   # Optional slot-level validation for direct callers that pass layout slots
   # rather than a pre-built `by` vector.
@@ -109,15 +89,23 @@ NULL
     }
 
     if (length(filled) > 0L) {
-      expected_prefix <- slot_order[seq_along(filled)]
-      if (!identical(filled, expected_prefix)) {
-        missing_slot <- setdiff(expected_prefix, filled)[[1L]]
+      if ("superColumn" %in% filled && !("column" %in% filled)) {
         piptm_abort(
           c(
-            "Layout slots must be filled in order (column, row, superColumn, superRow).",
-            "i" = "{.arg {missing_slot}} is empty but a later slot is set."
+            "{.arg superColumn} requires {.arg column} to be filled.",
+            "i" = "Please assign a variable to {.arg column} before using {.arg superColumn}."
           ),
-          user_message = "Layout fields must be filled from left to right with no gaps."
+          user_message = .PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR
+        )
+      }
+
+      if ("superRow" %in% filled && !("row" %in% filled)) {
+        piptm_abort(
+          c(
+            "{.arg superRow} requires {.arg row} to be filled.",
+            "i" = "Please assign a variable to {.arg row} before using {.arg superRow}."
+          ),
+          user_message = .PIPTM_SUPERROW_DEPENDENCY_USER_ERROR
         )
       }
 
@@ -132,6 +120,46 @@ NULL
         )
       }
     }
+
+    if (is.null(by) && length(slot_dims) > 0L) {
+      by <- slot_dims
+    }
+  }
+
+  # `pov_status` as a breakdown dimension requires a valid poverty line
+  # regardless of which measures were requested (poverty-family measures are
+  # already covered by .validate_poverty_lines() above via `families`, but a
+  # non-poverty measure disaggregated by pov_status would otherwise slip
+  # through). This check is shared so table_maker() and
+  # build_description_model() can never disagree on when a poverty line is
+  # required for a pov_status breakdown.
+  if (!is.null(by) && "pov_status" %in% by) {
+    if (is.null(poverty_line) || !is.numeric(poverty_line) ||
+        length(poverty_line) != 1L || !is.finite(poverty_line) ||
+        poverty_line <= 0) {
+      piptm_abort(
+        c(
+          "{.arg poverty_line} is required when {.val pov_status} is used as a disaggregation dimension.",
+          "i" = "Provide a single positive numeric scalar."
+        ),
+        user_message = "A valid positive poverty line is required when breaking down results by poverty status."
+      )
+    }
+  }
+
+  # analysis_var cannot also appear as a breakdown dimension
+  if (!is.null(analysis_var) && is.character(analysis_var) &&
+      length(analysis_var) == 1L && !is.null(by) && trimws(analysis_var) %in% by) {
+    piptm_abort(
+      c(
+        "{.arg analysis_var} ({.val {trimws(analysis_var)}}) cannot also be used as a disaggregation dimension.",
+        "i" = "Remove {.val {trimws(analysis_var)}} from the layout slots or {.arg by}."
+      ),
+      user_message = sprintf(
+        "`analysis_var` (`%s`) cannot also be used as a disaggregation layout slot.",
+        trimws(analysis_var)
+      )
+    )
   }
 
   by_validate <- by

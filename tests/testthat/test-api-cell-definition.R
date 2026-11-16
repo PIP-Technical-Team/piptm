@@ -226,14 +226,40 @@ test_that("GET /cell-definition returns 400 for validation errors and 422 for un
     expect_equal(res_missing$status, 400L)
     expect_true(any(grepl("analysis_var", parse_cell_def_res(res_missing)$errors)))
 
-    # Slot gap (row without column) -> 400
-    res_gap <- pr$call(make_cell_def_get_req(list(
+    # Slot dependency error (superColumn without column) -> 400
+    res_dep_sc <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      superColumn  = "gender"
+    )))
+    expect_equal(res_dep_sc$status, 400L)
+    expect_true(any(grepl(
+      piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR,
+      parse_cell_def_res(res_dep_sc)$errors,
+      fixed = TRUE
+    )))
+
+    # Slot dependency error (superRow without row) -> 400
+    res_dep_sr <- pr$call(make_cell_def_get_req(list(
+      analysis_var = "welfare",
+      measures     = "mean",
+      column       = "gender",
+      superRow     = "area"
+    )))
+    expect_equal(res_dep_sr$status, 400L)
+    expect_true(any(grepl(
+      piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+      parse_cell_def_res(res_dep_sr)$errors,
+      fixed = TRUE
+    )))
+
+    # Row alone without column is valid -> 200
+    res_row_alone <- pr$call(make_cell_def_get_req(list(
       analysis_var = "welfare",
       measures     = "mean",
       row          = "gender"
     )))
-    expect_equal(res_gap$status, 400L)
-    expect_true(any(grepl("Layout slots must be filled in order", parse_cell_def_res(res_gap)$errors)))
+    expect_equal(res_row_alone$status, 200L)
 
     # Duplicate variable across slots -> 400
     res_dup <- pr$call(make_cell_def_get_req(list(

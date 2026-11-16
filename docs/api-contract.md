@@ -163,10 +163,10 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
   - `analysis_var` *(required, string)* — `welfare`, `pov_status`, or entries from `/analysis-variables`.
   - `measures` *(required, array)* — Names from `/statistics`.
   - `poverty_line` *(required when `analysis_var` == `pov_status` or any slot includes `pov_status`)* — Positive numeric.
-  - `column` *(optional, string)* — Variable placed in the Columns slot. Exactly one variable name returned by `/dimensions`.
-  - `row` *(optional, string)* — Variable placed in the Rows slot. Exactly one variable name returned by `/dimensions`.
-  - `superColumn` *(optional, string)* — Variable placed in the Super Columns slot. Exactly one variable name returned by `/dimensions`.
-  - `superRow` *(optional, string)* — Variable placed in the Super Rows slot. Exactly one variable name returned by `/dimensions`.
+  - `column` *(optional, string)* — Variable placed in the Columns slot. Exactly one variable name returned by `/covariates`.
+  - `row` *(optional, string)* — Variable placed in the Rows slot. Exactly one variable name returned by `/covariates`.
+  - `superColumn` *(optional, string; requires `column`)* — Variable placed in the Super Columns slot. Exactly one variable name returned by `/covariates`.
+  - `superRow` *(optional, string; requires `row`)* — Variable placed in the Super Rows slot. Exactly one variable name returned by `/covariates`.
   - `ppp` *(optional, integer)* — PPP reference year. Default `2021`.
   - `filter_base` *(optional, JSON object)* — Keys are categorical variables; values are arrays of allowed codes (e.g., `{ "gender": [0], "age_group": [1,2] }`).
   - `pop_share_threshold` *(optional, numeric in (0,1))* — Default `0.001` (0.1%); `null` disables masking.
@@ -185,7 +185,7 @@ Each endpoint entry lists purpose, parameters, and response shape. For brevity, 
     - Ordering: Category ordering in `layout` and cell ordering in `cells[]` are deterministic and registry-sourced (`superRows` → `rows` → `superColumns` → `columns`).
   - **Layout slot rules**:
     - Query parameters are case-sensitive camelCase (`column`, `row`, `superColumn`, `superRow`).
-    - Slots must be filled in order (`column` → `row` → `superColumn` → `superRow`). A gapped assignment (e.g. `column=gender&superRow=area` without `row`) returns HTTP 400. Even though `column=gender&superRow=area` groups the same underlying observations as `column=gender&row=area`, the rejection is a deliberate layout rule that prevents degenerate table headers (super-axis bands with no child axis).
+    - Slots follow parent-child dependency rules: `column` and `row` are independent and can be used alone or together; `superColumn` requires `column`, and `superRow` requires `row`. A super-axis slot without its base axis (e.g. `superColumn=gender` without `column`, or `column=gender&superRow=area` without `row`) returns HTTP 400. This deliberate layout rule prevents degenerate table headers (super-axis bands with no child axis).
     - Each slot accepts a single variable name; repeating a slot parameter returns HTTP 400.
     - Assigning the same variable to multiple slots returns HTTP 400.
     - The four slots structurally cap `/table` disaggregation to four dimensions. Direct callers of R package function `table_maker(by = ...)` are capped at `length(by) <= 4` via defensive assertion.

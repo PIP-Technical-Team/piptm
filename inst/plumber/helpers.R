@@ -336,21 +336,30 @@ parse_filter_base_input <- function(filter_base) {
     filled_names <- c(filled_names, slot_name)
   }
 
-  # Arity failures are excluded so a repeated slot is never described as empty.
-  gap_order <- setdiff(slot_order, invalid_names)
+  # Parent-child dependency checks:
+  # - superColumn requires column
+  # - superRow requires row
+  # Arity/type failures on parent slots are excluded so an invalid slot does
+  # not also trigger a cascading dependency error on its child.
+  if ("superColumn" %in% filled_names &&
+      !("column" %in% filled_names) &&
+      !("column" %in% invalid_names)) {
+    errors <- c(
+      errors,
+      piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR
+    )
+  }
+
+  if ("superRow" %in% filled_names &&
+      !("row" %in% filled_names) &&
+      !("row" %in% invalid_names)) {
+    errors <- c(
+      errors,
+      piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR
+    )
+  }
+
   if (length(filled_names) > 0L) {
-    expected_prefix <- gap_order[seq_along(filled_names)]
-    if (!identical(filled_names, expected_prefix)) {
-      missing_earlier <- setdiff(expected_prefix, filled_names)
-      errors <- c(
-        errors,
-        paste0(
-          "Layout slots must be filled in order (column, row, ",
-          "superColumn, superRow). `", missing_earlier[[1L]],
-          "` is empty but a later slot is filled."
-        )
-      )
-    }
     dup_idx <- anyDuplicated(unlist(slots[filled_names], use.names = FALSE))
     if (dup_idx > 0L) {
       dup_value <- unlist(slots[filled_names], use.names = FALSE)[[dup_idx]]

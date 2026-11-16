@@ -1,5 +1,5 @@
 {
-  "edge_count": 96,
+  "edge_count": 98,
   "edges": [
     {
       "edge_type": "decided_from",
@@ -425,6 +425,18 @@
       "edge_type": "reviews",
       "source": ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
       "target": ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "reviews",
+      "source": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md",
+      "target": ".cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md",
+      "target_missing": false
+    },
+    {
+      "edge_type": "verifies",
+      "source": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md",
+      "target": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md",
       "target_missing": false
     },
     {
@@ -2847,6 +2859,35 @@
       ]
     },
     {
+      "date": "2026-11-13",
+      "entity_type": "plan",
+      "path": ".cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md",
+      "slug": "2026-11-13-layout-slot-dependency-rule",
+      "status": "completed",
+      "summary": "Replace the strict \"fill column -> row -> superColumn -> superRow with no gaps\" validation rule for the `/table`, `/table/download`, and `/metadata` layout slots with a parent-child dependency rule: `column` and `row` are independent and may be used alone or together in any request order; `superColumn` requires `column`; `superRow` requires `row`; `superColumn` and `superRow` are independent of each other. All layout-slot error messages must remain, or become, user-friendly — the PIP UI surfaces these API error strings directly to end users without rewriting them, so every message must read as a complete, plain-language sentence naming the offending parameter(s) and the...",
+      "tags": [
+        "api",
+        "plumber",
+        "table-endpoint",
+        "layout-slots",
+        "validation",
+        "error-messages"
+      ],
+      "title": "Relax layout-slot validation to parent-child dependency rule",
+      "top_keywords": [
+        "row",
+        "column",
+        "supercolumn",
+        "superrow",
+        "test-api-helpers.r",
+        "/table",
+        "/metadata",
+        "/table/download",
+        "build_table_layout()",
+        "test-api-metadata.r"
+      ]
+    },
+    {
       "date": "",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
@@ -3821,25 +3862,69 @@
       ]
     },
     {
-      "date": "2026-11-12",
+      "date": "2026-11-13",
       "entity_type": "review",
       "path": ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
       "slug": "2026-11-12-metadata-rework-and-table-maker-decoupling-review",
       "status": "",
-      "summary": "**Review mode**: architecture (explicit user mode; mandatory emphasis on `@cg-architecture`, `@cg-performance`, `@cg-testing`) **Scope**: `git diff 8ddde07 -- . ':!.cg-docs'` — full metadata-rework plan (`.cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md`, all 3 phases, committed `4ee5758` + uncommitted Phase 3 docs). 56 files, ~2,350 insertions / 5,630 deletions. **Findings**: 20 (P0: 0, P1: 3, P2: 9, P3: 8)",
+      "summary": "**Review mode**: standard **Files reviewed**: 18 **Findings**: 17 (P0: 0, P1: 1, P2: 6, P3: 10)",
       "tags": [],
       "title": "2026-11-12-metadata-rework-and-table-maker-decoupling-review",
       "top_keywords": [
-        "build_description_model()",
-        "r/description_builder.r",
-        "table_maker()",
-        "description_builder.r",
-        "[manual]",
-        "[advisory]",
-        "test-description-builder.r",
-        ".build_layout_content()",
         "[safe_auto]",
-        ".validate_and_normalize_table_params()"
+        "[advisory]",
+        "description_builder.r",
+        "vermast",
+        "veralt",
+        ".build_notes_content()",
+        ".rd",
+        "description_renderer.r",
+        "\"version\"",
+        "\"1\""
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md",
+      "slug": "2026-11-13-layout-slot-dependency-rule-review",
+      "status": "",
+      "summary": "**Review mode**: standard **Files reviewed**: 12 **Findings**: 23 (P0: 0, P1: 1, P2: 12, P3: 10)",
+      "tags": [],
+      "title": "2026-11-13-layout-slot-dependency-rule-review",
+      "top_keywords": [
+        "row",
+        "superrow",
+        "table_params.r",
+        "helpers.r",
+        "test-api-helpers.r",
+        "column",
+        "analysis_var",
+        "column + supercolumn",
+        "/table",
+        "fix"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "entity_type": "review",
+      "path": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md",
+      "slug": "2026-11-13-layout-slot-dependency-rule-verify-review",
+      "status": "",
+      "summary": "**Review mode**: light (verify) **Files reviewed**: 13 (changed files since prior review: R/errors.R, R/table_params.R, inst/plumber/helpers.R, inst/plumber/plumber.R, docs/api-contract.md, SWAGGER_GUIDE.md, tests/testthat/test-api-cell-definition.R, tests/testthat/test-api-endpoints.R, tests/testthat/test-api-helpers.R, tests/testthat/test-api-metadata.R, tests/testthat/test-description-builder.R, tests/testthat/test-table-params.R, tests/testthat/test-table-response.R) **Findings**: 0 (P0: 0, P1: 0, P2: 0, P3: 0)",
+      "tags": [],
+      "title": "2026-11-13-layout-slot-dependency-rule-verify-review",
+      "top_keywords": [
+        "2026-11-13-layout-slot-dependency-rule-review.md",
+        "fix",
+        "errors.r",
+        "table_params.r",
+        "helpers.r",
+        "test-api-endpoints.r",
+        "test-api-helpers.r",
+        "test-api-metadata.r",
+        "test-table-params.r",
+        "test-table-response.r"
       ]
     },
     {
@@ -4487,6 +4572,35 @@
         "validation",
         "coverage",
         "vapply"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "entity_type": "solution",
+      "path": ".cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md",
+      "slug": "2026-11-16-layout-slot-dependency-validation",
+      "status": "",
+      "summary": "The `/table`, `/table/download`, and `/metadata` endpoints in {piptm} exposed four layout slots (`column`, `row`, `superColumn`, `superRow`) used to disaggregate PIP survey tables. Validation required the slots to be filled in a strict contiguous prefix with no gaps: `column` -> `row` -> `superColumn` -> `superRow`. A request with `row` alone, or `column` + `superColumn` without `row`, was rejected with HTTP 400 even though the request was semantically well-formed and computable. This was stricter than the data model required and blocked legitimate user requests such as a row-only breakdown.",
+      "tags": [
+        "api-validation",
+        "plumber",
+        "layout-slots",
+        "error-messages",
+        "ux",
+        "table-endpoint"
+      ],
+      "title": "Replace strict ordered-slot validation with parent-child dependency checks",
+      "top_keywords": [
+        "row",
+        "column",
+        "supercolumn",
+        "superrow",
+        "inst/plumber/helpers.r",
+        "r/table_params.r",
+        "validation",
+        "dependency",
+        "parent-child",
+        "strict"
       ]
     },
     {
@@ -5705,13 +5819,13 @@
       ]
     }
   ],
-  "entity_count": 198,
-  "generated": "2026-11-12",
+  "entity_count": 202,
+  "generated": "2026-11-16",
   "schema_version": "0.2.0",
-  "topic_count": 2,
+  "topic_count": 3,
   "topics": [
     {
-      "entity_count": 137,
+      "entity_count": 136,
       "entity_paths": [
         ".cg-docs/brainstorms/2026-03-16-data-pipeline-architecture.md",
         ".cg-docs/brainstorms/2026-03-17-fgt-computation-design.md",
@@ -5786,6 +5900,7 @@
         ".cg-docs/plans/2026-11-11-remove-surveys-ui-dimensions.md",
         ".cg-docs/plans/2026-11-11-rename-description-to-metadata.md",
         ".cg-docs/plans/2026-11-12-metadata-rework-and-table-maker-decoupling.md",
+        ".cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md",
         ".cg-docs/reviews/2026-04-03-manifest-generation-version-partition-review.md",
         ".cg-docs/reviews/2026-04-07-computation-engine-review.md",
         ".cg-docs/reviews/2026-04-28-table-maker-approach-b-refactor-review.md",
@@ -5796,10 +5911,6 @@
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-review.md",
         ".cg-docs/reviews/2026-05-20-validate-parquet-wrapper-verify-review.md",
         ".cg-docs/reviews/2026-05-26-api-ppp-param-review.md",
-        ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
-        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
         ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-review.md",
         ".cg-docs/reviews/2026-09-08-description-html-renderer-and-wording-verify-review.md",
         ".cg-docs/reviews/2026-09-14-shares-cell-definition-structured-table-review.md",
@@ -5830,6 +5941,8 @@
         ".cg-docs/reviews/2026-11-11-remove-surveys-ui-dimensions-verify-review.md",
         ".cg-docs/reviews/2026-11-11-rename-description-to-metadata-review.md",
         ".cg-docs/reviews/2026-11-12-metadata-rework-and-table-maker-decoupling-review.md",
+        ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md",
+        ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md",
         ".cg-docs/solutions/bugs/2026-04-14-load-surveys-silent-partial-miss.md",
         ".cg-docs/solutions/bugs/2026-08-31-swagger-req-parameter-exposed.md",
         ".cg-docs/solutions/bugs/2026-09-14-ansi-escape-codes-in-description-warnings.md",
@@ -5841,7 +5954,7 @@
         ".cg-docs/solutions/bugs/2026-10-26-table-download-approach-c-hardening.md",
         ".cg-docs/solutions/data-quality/2026-05-21-arrow-multifile-partition-sort-violation.md",
         ".cg-docs/solutions/data-quality/2026-05-21-collapse-silent-na-drop-in-statistics.md",
-        ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md",
+        ".cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md",
         ".cg-docs/solutions/performance-issues/2026-04-28-orchestration-benchmark-results.md",
         ".cg-docs/solutions/performance-issues/2026-04-29-arrow-vs-collapse-results.md",
         ".cg-docs/solutions/performance-issues/2026-04-29-pipeline-comparison-results.md",
@@ -5901,6 +6014,23 @@
       ],
       "label": "Service Layer / Table / Api",
       "slug": "service-layer-table-api"
+    },
+    {
+      "entity_count": 5,
+      "entity_paths": [
+        ".cg-docs/reviews/2026-08-26-description-endpoint-implementation-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-review.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review-2.md",
+        ".cg-docs/reviews/2026-08-27-phase5-standard-verify-review.md",
+        ".cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md"
+      ],
+      "keywords": [
+        "description_builder.r",
+        "null",
+        "test"
+      ],
+      "label": "Description_Builder.R / Null / Test",
+      "slug": "description-builder-r-null-test"
     }
   ]
 }

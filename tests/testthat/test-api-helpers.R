@@ -481,36 +481,160 @@ test_that("validate_table_input() rejects the same variable in two slots", {
   expect_true(any(grepl("gender", result$errors)))
 })
 
-test_that("validate_table_input() rejects a gapped slot assignment", {
-  gapped <- .vti(
-    pip_id       = "ARM_2012_ILCS_CON_ALL",
-    measures     = "mean",
-    column       = "gender",
-    superColumn  = "area"
+test_that("validate_table_input() enforces parent-child slot dependencies (superColumn -> column, superRow -> row)", {
+  # 1. row alone is valid
+  res_row <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    row      = "area"
   )
-  expect_false(gapped$valid)
-  expect_true(any(grepl("row", gapped$errors)))
+  expect_true(res_row$valid)
+  expect_identical(res_row$by, "area")
+  expect_identical(res_row$slots$row, "area")
+  expect_null(res_row$slots$column)
 
-  contiguous <- .vti(
+  # 2. column alone is valid
+  res_col <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender"
+  )
+  expect_true(res_col$valid)
+  expect_identical(res_col$by, "gender")
+
+  # 3. row + column in either argument order is valid and produces canonical slot order
+  res_rc <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    row      = "area",
+    column   = "gender"
+  )
+  res_cr <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     column   = "gender",
     row      = "area"
   )
-  expect_true(contiguous$valid)
-  expect_identical(contiguous$by, c("gender", "area"))
+  expect_true(res_rc$valid)
+  expect_true(res_cr$valid)
+  expect_identical(res_rc$by, c("gender", "area"))
+  expect_identical(res_cr$by, c("gender", "area"))
+  expect_identical(res_rc$slots, res_cr$slots)
+
+  # 4. superColumn alone without column is rejected with user-friendly error
+  res_sc_alone <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    superColumn = "area"
+  )
+  expect_false(res_sc_alone$valid)
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR,
+    res_sc_alone$errors,
+    fixed = TRUE
+  )))
+
+  # 4b. superRow alone without row is rejected with user-friendly error
+  res_sr_alone <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    superRow = "area"
+  )
+  expect_false(res_sr_alone$valid)
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+    res_sr_alone$errors,
+    fixed = TRUE
+  )))
+
+  # 5. column + superRow (without row) is rejected with user-friendly error
+  res_col_sr <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    superRow = "area"
+  )
+  expect_false(res_col_sr$valid)
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+    res_col_sr$errors,
+    fixed = TRUE
+  )))
+
+  # 6. column + superColumn + row is valid
+  res_csr <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "gender",
+    superColumn = "educat4",
+    row         = "area"
+  )
+  expect_true(res_csr$valid)
+  expect_identical(res_csr$by, c("gender", "area", "educat4"))
+
+  # 7. row + superRow (without column) is valid
+  res_r_sr <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    row      = "area",
+    superRow = "educat4"
+  )
+  expect_true(res_r_sr$valid)
+  expect_identical(res_r_sr$by, c("area", "educat4"))
+
+  # 8. column + row + superRow (without superColumn) is valid
+  res_cr_sr <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    row      = "area",
+    superRow = "educat4"
+  )
+  expect_true(res_cr_sr$valid)
+  expect_identical(res_cr_sr$by, c("gender", "area", "educat4"))
+
+  # 9. column + superColumn (without row) is valid
+  res_c_sc <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    column      = "gender",
+    superColumn = "area"
+  )
+  expect_true(res_c_sc$valid)
+  expect_identical(res_c_sc$by, c("gender", "area"))
+
+  # 10. superColumn and superRow both supplied without parents triggers both errors
+  res_both_unmet <- .vti(
+    pip_id      = "ARM_2012_ILCS_CON_ALL",
+    measures    = "mean",
+    superColumn = "area",
+    superRow    = "educat4"
+  )
+  expect_false(res_both_unmet$valid)
+  expect_true(any(grepl("`superColumn` requires `column`", res_both_unmet$errors, fixed = TRUE)))
+  expect_true(any(grepl("`superRow` requires `row`", res_both_unmet$errors, fixed = TRUE)))
 })
 
-test_that("validate_table_input() does not describe a repeated slot as empty", {
-  result <- .vti(
+test_that("validate_table_input() does not cascade a dependency error on child slot when parent has arity error", {
+  result_col <- .vti(
     pip_id       = "ARM_2012_ILCS_CON_ALL",
     measures     = "mean",
     column       = c("gender", "area"),
     superColumn  = "educat4"
   )
-  expect_false(result$valid)
-  expect_true(any(grepl("single variable", result$errors)))
-  expect_false(any(grepl("`column` is empty", result$errors, ignore.case = TRUE)))
+  expect_false(result_col$valid)
+  expect_true(any(grepl("single variable", result_col$errors)))
+  expect_false(any(grepl("requires `column`", result_col$errors, fixed = TRUE)))
+
+  result_row <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    row      = c("area", "gender"),
+    superRow = "educat4"
+  )
+  expect_false(result_row$valid)
+  expect_true(any(grepl("single variable", result_row$errors)))
+  expect_false(any(grepl("requires `row`", result_row$errors, fixed = TRUE)))
 })
 
 test_that("validate_table_input() trims slot values and treats whitespace as unfilled", {
@@ -555,15 +679,24 @@ test_that("validate_table_input() preserves exact slot order for 3 and 4 slots a
   expect_true(four_slots$valid)
   expect_identical(four_slots$by, c("wquintile", "gender", "educat4", "area"))
 
-  gap_supercol <- .vti(
+  three_no_supercol <- .vti(
     pip_id   = "ARM_2012_ILCS_CON_ALL",
     measures = "mean",
     column   = "gender",
     row      = "area",
     superRow = "educat4"
   )
-  expect_false(gap_supercol$valid)
-  expect_true(any(grepl("`superColumn` is empty", gap_supercol$errors)))
+  expect_true(three_no_supercol$valid)
+  expect_identical(three_no_supercol$by, c("gender", "area", "educat4"))
+
+  dep_err_superrow <- .vti(
+    pip_id   = "ARM_2012_ILCS_CON_ALL",
+    measures = "mean",
+    column   = "gender",
+    superRow = "educat4"
+  )
+  expect_false(dep_err_superrow$valid)
+  expect_true(any(grepl("`superRow` requires `row` to be filled", dep_err_superrow$errors, fixed = TRUE)))
 
   dup_nonadj <- .vti(
     pip_id      = "ARM_2012_ILCS_CON_ALL",
@@ -804,7 +937,7 @@ test_that("validate_table_input() output is byte-for-byte identical to pre-refac
       errors = c(
         "`pip_id` may contain at most 15 surveys per request; 17 were supplied.",
         "`poverty_line` must be positive and finite.",
-        "Layout slots must be filled in order (column, row, superColumn, superRow). `row` is empty but a later slot is filled.",
+        "`superRow` requires `row` to be filled. Please assign a variable to Rows before using Super Rows.",
         "`analysis_var` (`pov_status`) cannot also be used as a disaggregation layout slot.",
         "`poverty_line` is required when analysis_var is 'pov_status' or when 'pov_status' is used as a disaggregation dimension.",
         "`ppp` must be a plain integer year (digits only, e.g. 2017); got: 2017.5.",
@@ -814,7 +947,7 @@ test_that("validate_table_input() output is byte-for-byte identical to pre-refac
       ppp = NULL,
       pop_share_threshold = NULL,
       by = c("pov_status", "gender"),
-      slots = list(column = "pov_status", row = NULL, superColumn = "gender", superRow = NULL)
+      slots = list(column = "pov_status", row = NULL, superColumn = NULL, superRow = "gender")
     ),
     invalid_all_three = list(
       valid = FALSE,
@@ -861,7 +994,8 @@ test_that("validate_table_input() output is byte-for-byte identical to pre-refac
       poverty_line        = "-5",
       column              = "pov_status",
       row                 = NULL,
-      superColumn         = "gender",
+      superColumn         = NULL,
+      superRow            = "gender",
       ppp                 = "2017.5",
       pop_share_threshold = "1.5"
     ),

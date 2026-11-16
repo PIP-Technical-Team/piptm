@@ -124,3 +124,11 @@ defensive behavior when category metadata is absent.
   transport-independent transforms isolated.
 - `.cg-docs/solutions/data-quality/2026-08-27-json-roundtrip-defensive-coding.md`
   — defensive schema validation and malformed-input test strategy.
+- `.cg-docs/solutions/data-quality/2026-11-16-layout-slot-dependency-validation.md`
+  — supersedes the "left-to-right contiguous fill order" check shown in
+  section 1 above with a parent-child dependency rule (`superColumn` requires
+  `column`; `superRow` requires `row`; `column`/`row` are independent of each
+  other and of argument order). Also closes a related gap found during that
+  change: this shared validator did not derive `by` from slot arguments when
+  callers passed slots without `by`, which silently skipped the poverty-line
+  coherence check described in section 2.

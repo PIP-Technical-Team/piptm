@@ -1622,20 +1622,92 @@ test_that("GET /table rejects duplicate variable across slots with 400", {
   expect_true(any(grepl("gender", body$errors)))
 })
 
-test_that("GET /table rejects gapped slot assignment with 400", {
+test_that("GET /table enforces parent-child slot dependencies with 400 and user-friendly message", {
   skip_if_not_installed("plumber")
   skip_if(is.null(.ep_router), "Router could not be created")
 
-  res <- .ep_router$call(make_api_req("GET", "/table", query = list(
-    pip_id      = "COL_2010_ECH_INC_ALL",
-    measures    = "mean",
-    column      = "gender",
-    superColumn = "area"
+  # superColumn without column -> 400
+  res_sc <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    superColumn  = "area"
   )))
-  expect_equal(res$status, 400L)
-  body <- parse_api_res(res)
-  expect_equal(body$status, "error")
-  expect_true(any(grepl("row", body$errors)))
+  expect_equal(res_sc$status, 400L)
+  body_sc <- parse_api_res(res_sc)
+  expect_equal(body_sc$status, "error")
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERCOLUMN_DEPENDENCY_USER_ERROR,
+    body_sc$errors,
+    fixed = TRUE
+  )))
+
+  # superRow without row -> 400
+  res_sr <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    column       = "gender",
+    superRow     = "area"
+  )))
+  expect_equal(res_sr$status, 400L)
+  body_sr <- parse_api_res(res_sr)
+  expect_equal(body_sr$status, "error")
+  expect_true(any(grepl(
+    piptm:::.PIPTM_SUPERROW_DEPENDENCY_USER_ERROR,
+    body_sr$errors,
+    fixed = TRUE
+  )))
+})
+
+test_that("GET /table accepts row alone and column+superColumn without row with 200", {
+  skip_if_not_installed("plumber")
+  skip_if(is.null(.ep_router), "Router could not be created")
+  fx <- .make_ep_fixtures()
+  activate_test_registry(fx$release)
+
+  # Row alone without column
+  res_row <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    row          = "area"
+  )))
+  expect_equal(res_row$status, 200L)
+  body_row <- parse_api_res(res_row)
+  expect_equal(body_row$status, "success")
+  survey_row <- if (is.data.frame(body_row$data)) body_row$data[1L, ] else body_row$data[[1L]]
+  expect_equal(unlist(survey_row$layout$rows$varname), "area")
+
+  # Column + superColumn without row
+  res_csc <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    column       = "gender",
+    superColumn  = "area"
+  )))
+  expect_equal(res_csc$status, 200L)
+  body_csc <- parse_api_res(res_csc)
+  expect_equal(body_csc$status, "success")
+  survey_csc <- if (is.data.frame(body_csc$data)) body_csc$data[1L, ] else body_csc$data[[1L]]
+  expect_equal(unlist(survey_csc$layout$columns$varname), "gender")
+  expect_equal(unlist(survey_csc$layout$superColumns$varname), "area")
+
+  # Row + superRow without column
+  res_rsr <- .ep_router$call(make_api_req("GET", "/table", query = list(
+    pip_id       = "COL_2010_ECH_INC_ALL",
+    analysis_var = "welfare",
+    measures     = "mean",
+    row          = "area",
+    superRow     = "gender"
+  )))
+  expect_equal(res_rsr$status, 200L)
+  body_rsr <- parse_api_res(res_rsr)
+  expect_equal(body_rsr$status, "success")
+  survey_rsr <- if (is.data.frame(body_rsr$data)) body_rsr$data[1L, ] else body_rsr$data[[1L]]
+  expect_equal(unlist(survey_rsr$layout$rows$varname), "area")
+  expect_equal(unlist(survey_rsr$layout$superRows$varname), "gender")
 })
 
 test_that("GET /table with all slots omitted returns 200 national table, not 500", {

@@ -110,7 +110,7 @@ enrich_openapi_spec <- function(spec) {
       "`GET /statistics` to choose one `analysis_var` and one or more compatible `measures`",
       "(plus `poverty_line` when analysis variable is poverty status).\n",
       "   - **Decision 3 (Layout Slots)**: Call `GET /covariates?pip_id=...` and assign up to",
-      "4 disaggregation covariates in strict order: `column` -> `row` -> `superColumn` -> `superRow`.",
+      "4 disaggregation covariates (`column`, `row`, `superColumn`, `superRow`). `column` and `row` can be selected independently; `superColumn` requires `column`, and `superRow` requires `row`.",
       "**Note**: When `\"pov_status\"` is selected as a layout covariate in any slot, the UI must activate the poverty line slider (`poverty_line`).\n",
       "   - **Live Cell Preview**: Call `GET /cell-definition` to render a three-section plain-English",
       "explanation of what each cell in the configured table represents.\n",
@@ -317,7 +317,7 @@ enrich_openapi_spec <- function(spec) {
       "### How to Use Parameters\n",
       "- **Required parameters**: Always supply `analysis_var`, at least one `pip_id` (1 to 15 surveys), and at least one `measures` value.\n",
       "- **Conditional `poverty_line`**: Required whenever `analysis_var = \"pov_status\"` or `\"pov_status\"` is placed in any layout slot (e.g., `poverty_line=2.15` for the $2.15/day extreme poverty line).\n",
-      "- **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. Must be filled in strict order (`column` -> `row` -> `superColumn` -> `superRow`) with no gaps and no duplicate variables; `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.\n",
+      "- **Layout slots (`column`, `row`, `superColumn`, `superRow`)**: Optional disaggregation covariates from `GET /covariates`. `column` and `row` are independent and can be used alone or together. `superColumn` requires `column` to be filled, and `superRow` requires `row` to be filled; no duplicate variables are permitted and `analysis_var` cannot also appear in a layout slot. Omit all four slots to compute a single national/aggregate cell per survey.\n",
       "- **Sample-base filter (`filter_base`)**: Optional JSON-encoded object mapping categorical variable names from `GET /categories` to arrays of retained category codes, e.g. `{\"gender\":[1],\"area\":[1]}`.\n",
       "- **Cell suppression (`pop_share_threshold`)**: Cells representing a population share below this threshold (default `0.001` = 0.1%) are masked as `\"NR\"` (Not Representative). Pass an empty value to disable suppression.\n\n",
       "### Example Request (Query String)\n",
@@ -449,7 +449,7 @@ enrich_openapi_spec <- function(spec) {
 
       if (path %in% c("/table", "/metadata", "/cell-definition", "/lookup")) {
         op$responses[["400"]] <- json_error_response(
-          "Bad Request — Missing required parameter, invalid parameter value/type, or layout-slot ordering violation."
+          "Bad Request — Missing required parameter, invalid parameter value/type, or layout-slot dependency violation."
         )
       }
       if (path %in% c("/table", "/metadata", "/cell-definition", "/lookup", "/surveys", "/countries",
@@ -530,17 +530,17 @@ enrich_openapi_spec <- function(spec) {
               row = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Optional] 2nd layout slot (Rows) covariate from `GET /covariates` (requires `column`)."
+                description = "[Optional] 2nd layout slot (Rows) covariate from `GET /covariates`."
               ),
               superColumn = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Optional] 3rd layout slot (Super Columns) covariate from `GET /covariates` (requires `column` and `row`)."
+                description = "[Optional] 3rd layout slot (Super Columns) covariate from `GET /covariates` (requires `column`)."
               ),
               superRow = list(
                 type        = "string",
                 enum        = as.list(valid_slot_vars),
-                description = "[Optional] 4th layout slot (Super Rows) covariate from `GET /covariates` (requires `column`, `row`, and `superColumn`)."
+                description = "[Optional] 4th layout slot (Super Rows) covariate from `GET /covariates` (requires `row`)."
               ),
               filter_base = list(
                 type        = "object",
@@ -781,9 +781,9 @@ function(req) {
 #* @param measures:[character] [Required] Statistical measure ID(s) to compute (repeatable, 1 or more values) from `GET /statistics` (e.g., `"mean"`, `"median"`, `"gini"`, `"headcount"`, `"poverty_gap"`, `"pop_share"`). Must be compatible with the selected `analysis_var`.
 #* @param poverty_line:numeric [Conditional] Daily poverty line in constant international PPP dollars (positive number, e.g., `2.15`, `3.65`, or `6.85`). Required when `analysis_var = "pov_status"` or when `"pov_status"` is assigned to any layout slot.
 #* @param column:character [Optional] Disaggregation covariate assigned to the 1st layout slot (Columns), chosen from `GET /covariates` (e.g., `"gender"` or `"area"`). Leave empty for a national-level table without disaggregation.
-#* @param row:character [Optional] Disaggregation covariate assigned to the 2nd layout slot (Rows), chosen from `GET /covariates` (e.g., `"area"` or `"educat4"`). Requires `column` to be filled first.
-#* @param superColumn:character [Optional] Disaggregation covariate assigned to the 3rd layout slot (Super Columns), chosen from `GET /covariates`. Requires both `column` and `row` to be filled first.
-#* @param superRow:character [Optional] Disaggregation covariate assigned to the 4th layout slot (Super Rows), chosen from `GET /covariates`. Requires `column`, `row`, and `superColumn` to be filled first.
+#* @param row:character [Optional] Disaggregation covariate assigned to the 2nd layout slot (Rows), chosen from `GET /covariates` (e.g., `"area"` or `"educat4"`).
+#* @param superColumn:character [Optional] Disaggregation covariate assigned to the 3rd layout slot (Super Columns), chosen from `GET /covariates`. Requires `column` to be filled first.
+#* @param superRow:character [Optional] Disaggregation covariate assigned to the 4th layout slot (Super Rows), chosen from `GET /covariates`. Requires `row` to be filled first.
 #* @param ppp:integer [Optional] Purchasing Power Parity (PPP) reference year used for monetary welfare conversion (positive integer, default `2021`; e.g., `2021` or `2017`).
 #* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of kept category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`). Omit to include the full survey sample.
 #* @param pop_share_threshold:numeric [Optional] Minimum cell population-share threshold strictly between `0` and `1` (default `0.001`, i.e., 0.1% of the sample base) below which cell estimates are masked as `"NR"`. Send empty/null to disable suppression.
@@ -963,9 +963,9 @@ function(req, body = NULL, res) {
 #* @param measures:[character] [Required] Statistical measure ID(s) to document (repeatable, 1 or more values) from `GET /statistics` (e.g., `"mean"`, `"median"`, `"gini"`, `"headcount"`, `"poverty_gap"`, `"pop_share"`). Must be compatible with the selected `analysis_var`.
 #* @param poverty_line:numeric [Conditional] Daily poverty line in constant international PPP dollars (positive number, e.g., `2.15`, `3.65`, or `6.85`). Required when `analysis_var = "pov_status"` or when `"pov_status"` is assigned to any layout slot.
 #* @param column:character [Optional] Disaggregation covariate assigned to the 1st layout slot (Columns), chosen from `GET /covariates` (e.g., `"gender"` or `"area"`). Leave empty for a national-level table without disaggregation.
-#* @param row:character [Optional] Disaggregation covariate assigned to the 2nd layout slot (Rows), chosen from `GET /covariates` (e.g., `"area"` or `"educat4"`). Requires `column` to be filled first.
-#* @param superColumn:character [Optional] Disaggregation covariate assigned to the 3rd layout slot (Super Columns), chosen from `GET /covariates`. Requires both `column` and `row` to be filled first.
-#* @param superRow:character [Optional] Disaggregation covariate assigned to the 4th layout slot (Super Rows), chosen from `GET /covariates`. Requires `column`, `row`, and `superColumn` to be filled first.
+#* @param row:character [Optional] Disaggregation covariate assigned to the 2nd layout slot (Rows), chosen from `GET /covariates` (e.g., `"area"` or `"educat4"`).
+#* @param superColumn:character [Optional] Disaggregation covariate assigned to the 3rd layout slot (Super Columns), chosen from `GET /covariates`. Requires `column` to be filled first.
+#* @param superRow:character [Optional] Disaggregation covariate assigned to the 4th layout slot (Super Rows), chosen from `GET /covariates`. Requires `row` to be filled first.
 #* @param ppp:integer [Optional] Purchasing Power Parity (PPP) reference year used for monetary welfare conversion (positive integer, default `2021`; e.g., `2021` or `2017`).
 #* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of kept category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`). Omit to include the full survey sample.
 #* @param pop_share_threshold:numeric [Optional] Minimum cell population-share threshold strictly between `0` and `1` (default `0.001`, i.e., 0.1% of the sample base) below which cell estimates are masked as `"NR"`. Send empty/null to disable suppression.
@@ -1395,9 +1395,9 @@ function(release = NULL, res) {
 #* @param measures:[character] [Required] Statistical measure ID(s) selected in Step 2 (repeatable, 1 or more values from `GET /statistics`; e.g., `"mean"`, `"gini"`, `"pop_share"`). Note: `target_within_group_share` and `target_survey_share` require a binary target `analysis_var`.
 #* @param poverty_line:numeric [Conditional] Daily poverty line in constant international PPP dollars (positive number, e.g., `2.15`). Required when `analysis_var = "pov_status"`, `"pov_status"` is in any layout slot, or any poverty measure (`headcount`, `poverty_gap`, `severity`, `watts`, `pop_poverty`) is requested.
 #* @param column:character [Optional] Disaggregation covariate in the 1st layout slot (Columns) from `GET /covariates` (e.g., `"gender"`).
-#* @param row:character [Optional] Disaggregation covariate in the 2nd layout slot (Rows) from `GET /covariates` (e.g., `"area"`). Requires `column` to be filled first.
-#* @param superColumn:character [Optional] Disaggregation covariate in the 3rd layout slot (Super Columns) from `GET /covariates`. Requires `column` and `row` to be filled first.
-#* @param superRow:character [Optional] Disaggregation covariate in the 4th layout slot (Super Rows) from `GET /covariates`. Requires `column`, `row`, and `superColumn` to be filled first.
+#* @param row:character [Optional] Disaggregation covariate in the 2nd layout slot (Rows) from `GET /covariates` (e.g., `"area"`).
+#* @param superColumn:character [Optional] Disaggregation covariate in the 3rd layout slot (Super Columns) from `GET /covariates`. Requires `column` to be filled first.
+#* @param superRow:character [Optional] Disaggregation covariate in the 4th layout slot (Super Rows) from `GET /covariates`. Requires `row` to be filled first.
 #* @param filter_base:character [Optional] JSON-encoded sample-base filter object mapping variable names from `GET /categories` to arrays of category codes (e.g., `'{"gender":[1],"age_group":[2,3]}'`).
 #* @param ppp:integer [Optional] PPP reference year used in monetary welfare wording (positive integer, default `2021`; e.g., `2021` or `2017`).
 #* @param pop_share_threshold:numeric [Optional] Cell-suppression population-share threshold strictly between `0` and `1` (default `0.001` = 0.1%). Send empty/null to omit the suppression note.
