@@ -266,3 +266,33 @@ $selection-bg: $pip-cyan;
   margin-bottom: 0.35em;
 }
 
+.reveal .api-call-banner {
+  background: $pip-tint;
+  border: 1px solid #c5ddec;
+  border-left: 4px solid $pip-blue;
+  border-radius: 6px;
+  padding: 0.35em 0.75em;
+  margin-bottom: 0.45em;
+  font-size: 0.68em;
+  color: $pip-navy;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.reveal .api-call-banner code {
+  background: #ffffff;
+  border: 1px solid $pip-border;
+  padding: 2px 6px;
+  font-weight: 600;
+}
+
+.reveal .live-table-wrap {
+  max-height: 410px;
+  overflow-y: auto;
+  border: 1px solid $pip-border;
+  border-radius: 6px;
+}
+
+

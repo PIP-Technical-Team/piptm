@@ -30,7 +30,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="table-maker-overview_files/libs/revealjs/dist/theme/quarto-0de22625a92f05b942a2afead66983ed.css">
+  <link rel="stylesheet" href="table-maker-overview_files/libs/revealjs/dist/theme/quarto-6bbc115971a25b4b32cc9346d6eef152.css">
   <link href="table-maker-overview_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="table-maker-overview_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="table-maker-overview_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -241,6 +241,16 @@ requirements and decisions behind this deck's structure.
 </iframe>
 </div>
 </section>
+<section id="live-surveys-catalogue" class="slide level2">
+<h2>Live Surveys Catalogue</h2>
+<div class="registry-link-bar">
+<span>Interactive catalogue of all harmonized surveys served by <code>GET /surveys-ui</code> (search &amp; filter by region or welfare type):</span><a href="surveys-overview.html" target="_blank" rel="noopener">Open full surveys catalogue in new tab →</a>
+</div>
+<div class="registry-iframe-wrap">
+<iframe class="registry-iframe" src="surveys-overview.html" title="Table Maker Surveys Catalogue">
+</iframe>
+</div>
+</section>
 <section id="what-you-can-compute" class="slide level2">
 <h2>What you can compute</h2>
 <p>The <strong>statistics available depend on the type of variable</strong> you choose to analyze — this is enforced automatically, so you can’t accidentally request a statistic that doesn’t make sense for your variable:</p>
@@ -260,6 +270,112 @@ requirements and decisions behind this deck's structure.
 <li><strong>Multi-survey comparison</strong> — select up to 15 surveys at once and flip between them as tabs in the results, each a self-contained table.</li>
 <li><strong>Export</strong> — CSV, XLSX, or copy to clipboard, straight from the results screen.</li>
 </ul>
+</section>
+<section id="live-api-call-table" class="slide level2">
+<h2>Live API Call: <code>/table</code></h2>
+<div class="api-call-banner">
+<span><code>GET /table?pip_id=COL_2019_GEIH_INC_ALL&amp;analysis_var=welfare&amp;measures=mean,median,gini&amp;column=gender&amp;row=area</code></span><span>Computed live in <b>1190 ms</b></span>
+</div>
+<div class="live-table-wrap">
+<table>
+<thead>
+<tr>
+<th>
+Area (Row)
+</th>
+<th>
+Gender (Column)
+</th>
+<th>
+Mean (<span class="math inline">\(/day PPP)&lt;/th&gt;&lt;th&gt;Median (\)</span>/day PPP)
+</th>
+<th>
+Gini Index
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rural
+</td>
+<td>
+Female
+</td>
+<td>
+7.253
+</td>
+<td>
+5.210
+</td>
+<td>
+0.505
+</td>
+</tr>
+<tr>
+<td>
+Rural
+</td>
+<td>
+Male
+</td>
+<td>
+8.266
+</td>
+<td>
+5.605
+</td>
+<td>
+0.479
+</td>
+</tr>
+<tr>
+<td>
+Urban
+</td>
+<td>
+Female
+</td>
+<td>
+18.680
+</td>
+<td>
+11.821
+</td>
+<td>
+0.506
+</td>
+</tr>
+<tr>
+<td>
+Urban
+</td>
+<td>
+Male
+</td>
+<td>
+19.457
+</td>
+<td>
+12.313
+</td>
+<td>
+0.456
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="live-metadata-output-metadata" class="slide level2">
+<h2>Live Metadata Output: <code>/metadata</code></h2>
+<div class="registry-link-bar">
+<span>Live HTML document produced by <code>GET /metadata</code> for the exact query on the previous slide:</span><a href="live-metadata.html" target="_blank" rel="noopener">Open full metadata document in new tab →</a>
+</div>
+<div class="registry-iframe-wrap">
+<iframe class="registry-iframe" src="live-metadata.html" title="Table Maker Live Metadata">
+</iframe>
+</div>
 </section>
 <section id="thank-you" class="slide level2">
 <h2>Thank you</h2>
