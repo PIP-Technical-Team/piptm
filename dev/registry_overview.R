@@ -72,18 +72,168 @@ mrows <- paste(unlist(lapply(stat_groups, function(g) {
 })), collapse = "")
 
 html <- paste0(
-  "<!doctype html><meta charset='utf-8'><title>piptm registry</title><style>
-body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222;background:#f6f7f9}
-h1{margin-bottom:4px}h2{margin-top:28px}table{border-collapse:collapse;background:#fff;margin:8px 0 24px}
-th,td{border:1px solid #d5d9df;padding:5px 10px;text-align:left;font-size:13px;vertical-align:top}th{background:#0b4f8a;color:#fff}
-tr:nth-child(even) td{background:#f3f6fa}.n{text-align:right}.small{min-width:360px}
-.card{background:#fff;border:1px solid #d5d9df;border-radius:6px;padding:8px 14px;margin:10px 12px 10px 0;display:inline-block;vertical-align:top;min-width:380px}
-.card table{margin:6px 0}.meta{font-size:12px;color:#666}.none{color:#999;font-style:italic}
-.chip{display:inline-block;font-size:11px;padding:1px 7px;margin:1px 2px 1px 0;border-radius:9px;background:#e7eef6;color:#0b4f8a;border:1px solid #c5d4e6}
-.t{font-size:11px;padding:2px 7px;border-radius:9px;color:#fff;background:#777}
-.t-categorical{background:#2a9d8f}.t-binary{background:#e9a23b}.t-continuous{background:#4c78a8}.t-welfare{background:#8e5ea2}.t-poverty{background:#d1495b}
-</style><h1>Table Maker catalogue</h1><div class='meta'>Release: ", esc(shown_release),
-  " &mdash; ", length(analysis), " analysis variables, ", length(filters),
+  "<!doctype html><meta charset='utf-8'><title>Table Maker Catalogue</title><style>
+:root {
+  --default-font: \"Open Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif;
+  --background-color: #F7F8F8;
+  --default-color: #1a1f24;
+  --heading-color: #044368;
+  --muted-color: #485664;
+  --accent-color: #0ea2bd;
+  --primary-blue: #00689D;
+  --surface-color: #ffffff;
+  --tint-color: #e8f2f8;
+  --border-color: #dee2e6;
+}
+body {
+  font-family: var(--default-font);
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--default-color);
+  background: var(--background-color);
+  line-height: 1.5;
+}
+.pip-catalogue-card {
+  max-width: 1120px;
+  margin: 0 auto;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.pip-catalogue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 12px 0;
+  padding: 0 0 14px 0;
+  border-bottom: 2px solid var(--primary-blue);
+}
+h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--heading-color);
+  letter-spacing: -0.01em;
+}
+h2 {
+  margin: 28px 0 12px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent-color);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--heading-color);
+  line-height: 1.35;
+}
+h3 {
+  margin: 4px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--heading-color);
+}
+table {
+  border-collapse: collapse;
+  background: var(--surface-color);
+  margin: 8px 0 24px;
+  width: 100%;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  vertical-align: top;
+}
+th {
+  background: var(--tint-color);
+  color: var(--heading-color);
+  border-bottom: 2px solid var(--primary-blue);
+  font-weight: 600;
+}
+tr:nth-child(even) td {
+  background: var(--background-color);
+}
+tr:hover td {
+  background: var(--tint-color);
+}
+.n {
+  text-align: right;
+}
+.small {
+  min-width: 340px;
+}
+.card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--primary-blue);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 10px 12px 10px 0;
+  display: inline-block;
+  vertical-align: top;
+  min-width: 360px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.card table {
+  margin: 6px 0;
+}
+.meta {
+  font-size: 13px;
+  color: var(--muted-color);
+  font-weight: 400;
+}
+.none {
+  color: #8b95a1;
+  font-style: italic;
+}
+a {
+  color: var(--primary-blue);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+code {
+  background: var(--tint-color);
+  color: var(--heading-color);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin: 1px 3px 1px 0;
+  border-radius: 10px;
+  background: var(--tint-color);
+  color: var(--heading-color);
+  border: 1px solid #b8d8e8;
+}
+.t {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--muted-color);
+}
+.t-categorical { background: #0ea2bd; }
+.t-binary      { background: #00689D; }
+.t-continuous  { background: #044368; }
+.t-welfare     { background: #1b6ca8; }
+.t-poverty     { background: #b85d19; }
+</style><div class='pip-catalogue-card'><div class='pip-catalogue-header'><h1>Table Maker Catalogue</h1>",
+  "<a href='https://pip.worldbank.org/home' target='_blank' rel='noopener noreferrer' style='display:inline-flex;align-items:center;'>",
+  "<img src='https://pip.worldbank.org/assets/WB-PIP-E-horizontal-RGB-high.png' alt='World Bank PIP' style='width:260px;max-width:100%;height:auto;border:0;' /></a></div>",
+  "<div class='meta'>Release: <b>", esc(shown_release),
+  "</b> &mdash; ", length(analysis), " analysis variables, ", length(filters),
   " sample-base filters, ", length(covariates), " layout covariates, ",
   length(stat_groups), " statistic groups. Sourced from the functions behind ",
   "<code>/analysis-variables</code>, <code>/categories</code>, ",
@@ -115,7 +265,7 @@ tr:nth-child(even) td{background:#f3f6fa}.n{text-align:right}.small{min-width:36
 
   "<h2>Statistics <span class='meta'>/statistics</span></h2>",
   "<table><tr><th>Group</th><th>Measure key</th><th>Label</th></tr>",
-  mrows, "</table>"
+  mrows, "</table></div>"
 )
 
 out <- file.path(Sys.getenv("TEMP"), "piptm_registry_overview.html")

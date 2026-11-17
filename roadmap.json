@@ -173,6 +173,13 @@
           "description": "Resolve all warnings, notes, and errors from R CMD check. Finalize NAMESPACE, imports, and package metadata.",
           "status": "planned",
           "plan": ".cg-docs/plans/2026-04-07-computation-engine.md"
+        },
+        {
+          "id": "extract-reusable-registry-summary-helper-from-dev-registry-overview-r",
+          "title": "Extract reusable registry_summary() helper from dev/registry_overview.R",
+          "description": "Refactor the ad hoc registry summarization logic currently in dev/registry_overview.R into a small, reusable, testable helper function (e.g. registry_summary()) so it can be sourced by multiple consumers (e.g. the Table Maker Quarto presentation and future dashboards/decks) instead of duplicating inline logic. Surfaced as a deferred side-idea during the 2026-11-17 brainstorm on the Table Maker Quarto presentation (.cg-docs/brainstorms/2026-11-17-table-maker-quarto-presentation.md).",
+          "status": "idea",
+          "plan": null
         }
       ]
     },

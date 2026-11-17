@@ -1,20 +1,22 @@
 {
   "schemaVersion": "compound-gpid-active-state-v1",
-  "updatedAt": "2026-11-16T16:02:00Z",
-  "workflow": "/cg-review",
-  "status": "completed",
-  "branch": "fix/layout-params",
-  "plan": ".cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md",
-  "executionReport": ".cg-docs/work-reports/2026-11-13-layout-slot-dependency-rule.md",
+  "updatedAt": "2026-11-17T19:50:00Z",
+  "workflow": "/cg-work",
+  "status": "active",
+  "branch": "pres_nov17",
+  "plan": ".cg-docs/plans/2026-11-17-table-maker-quarto-presentation.md",
+  "executionReport": ".cg-docs/work-reports/2026-11-17-table-maker-quarto-presentation.md",
+  "currentPhase": 2,
   "evidenceStatus": [
-    {"id": "verify-review", "status": "converged", "reviewFile": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md"}
+    {"id": "V4", "status": "partial", "artifact": "docs/presentations/table-maker-overview.qmd"},
+    {"id": "V5", "status": "partial", "artifact": "docs/presentations/theme.scss"}
   ],
-  "unresolvedDecisions": [],
+  "unresolvedDecisions": [
+    {"id": "D1", "summary": "quarto and Rscript/R both unavailable on this machine's PATH; full render verification (V1, V5) and R-chunk execution (V2, V3) may need to run on the user's local machine", "blocking": false}
+  ],
   "artifactRefs": [
-    {"kind": "plan", "path": ".cg-docs/plans/2026-11-13-layout-slot-dependency-rule.md", "status": "completed"},
-    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-13-layout-slot-dependency-rule.md", "status": "completed"},
-    {"kind": "review", "path": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-review.md", "status": "resolved"},
-    {"kind": "verify-review", "path": ".cg-docs/reviews/2026-11-13-layout-slot-dependency-rule-verify-review.md", "status": "converged-no-findings"}
+    {"kind": "plan", "path": ".cg-docs/plans/2026-11-17-table-maker-quarto-presentation.md", "status": "open"},
+    {"kind": "work-report", "path": ".cg-docs/work-reports/2026-11-17-table-maker-quarto-presentation.md", "status": "open"}
   ],
-  "nextCommand": "merge"
+  "nextCommand": "/cg-work phase2"
 }

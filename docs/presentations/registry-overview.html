@@ -1,0 +1,158 @@
+<!doctype html><meta charset='utf-8'><title>Table Maker Catalogue</title><style>
+:root {
+  --default-font: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --background-color: #F7F8F8;
+  --default-color: #1a1f24;
+  --heading-color: #044368;
+  --muted-color: #485664;
+  --accent-color: #0ea2bd;
+  --primary-blue: #00689D;
+  --surface-color: #ffffff;
+  --tint-color: #e8f2f8;
+  --border-color: #dee2e6;
+}
+body {
+  font-family: var(--default-font);
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--default-color);
+  background: var(--background-color);
+  line-height: 1.5;
+}
+.pip-catalogue-card {
+  max-width: 1120px;
+  margin: 0 auto;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.pip-catalogue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 12px 0;
+  padding: 0 0 14px 0;
+  border-bottom: 2px solid var(--primary-blue);
+}
+h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--heading-color);
+  letter-spacing: -0.01em;
+}
+h2 {
+  margin: 28px 0 12px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent-color);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--heading-color);
+  line-height: 1.35;
+}
+h3 {
+  margin: 4px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--heading-color);
+}
+table {
+  border-collapse: collapse;
+  background: var(--surface-color);
+  margin: 8px 0 24px;
+  width: 100%;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  vertical-align: top;
+}
+th {
+  background: var(--tint-color);
+  color: var(--heading-color);
+  border-bottom: 2px solid var(--primary-blue);
+  font-weight: 600;
+}
+tr:nth-child(even) td {
+  background: var(--background-color);
+}
+tr:hover td {
+  background: var(--tint-color);
+}
+.n {
+  text-align: right;
+}
+.small {
+  min-width: 340px;
+}
+.card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--primary-blue);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 10px 12px 10px 0;
+  display: inline-block;
+  vertical-align: top;
+  min-width: 360px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.card table {
+  margin: 6px 0;
+}
+.meta {
+  font-size: 13px;
+  color: var(--muted-color);
+  font-weight: 400;
+}
+.none {
+  color: #8b95a1;
+  font-style: italic;
+}
+a {
+  color: var(--primary-blue);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+code {
+  background: var(--tint-color);
+  color: var(--heading-color);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin: 1px 3px 1px 0;
+  border-radius: 10px;
+  background: var(--tint-color);
+  color: var(--heading-color);
+  border: 1px solid #b8d8e8;
+}
+.t {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--muted-color);
+}
+.t-categorical { background: #0ea2bd; }
+.t-binary      { background: #00689D; }
+.t-continuous  { background: #044368; }
+.t-welfare     { background: #1b6ca8; }
+.t-poverty     { background: #b85d19; }
+</style><div class='pip-catalogue-card'><div class='pip-catalogue-header'><h1>Table Maker Catalogue</h1><a href='https://pip.worldbank.org/home' target='_blank' rel='noopener noreferrer' style='display:inline-flex;align-items:center;'><img src='https://pip.worldbank.org/assets/WB-PIP-E-horizontal-RGB-high.png' alt='World Bank PIP' style='width:260px;max-width:100%;height:auto;border:0;' /></a></div><div class='meta'>Release: <b>20260401_TEST</b> &mdash; 21 analysis variables, 16 sample-base filters, 17 layout covariates, 4 statistic groups. Sourced from the functions behind <code>/analysis-variables</code>, <code>/categories</code>, <code>/covariates</code>, and <code>/statistics</code>.</div><h2>Analysis variables <span class='meta'>/analysis-variables</span></h2><table><tr><th>Variable</th><th>Label</th><th>Type</th><th>Stat groups</th></tr><tr><td><code>welfare</code></td><td>Welfare</td><td><span class='t t-welfare'>welfare</span></td><td><span class='chip' title='summary_statistics'>Summary statistics</span> <span class='chip' title='inequality'>Inequality</span></td></tr><tr><td><code>pov_status</code></td><td>Poverty status</td><td><span class='t t-poverty'>poverty</span></td><td><span class='chip' title='poverty'>Poverty</span></td></tr><tr><td><code>age</code></td><td>Age</td><td><span class='t t-continuous'>continuous</span></td><td><span class='chip' title='summary_statistics'>Summary statistics</span></td></tr><tr><td><code>hsize</code></td><td>Household size</td><td><span class='t t-continuous'>continuous</span></td><td><span class='chip' title='summary_statistics'>Summary statistics</span></td></tr><tr><td><code>imp_wat_rec</code></td><td>Improved water source</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>imp_san_rec</code></td><td>Improved sanitation</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>electricity</code></td><td>Electricity access</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>youth</code></td><td>Youth (15-24)</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>prime_work_age</code></td><td>Prime working age (25-54)</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>elderly</code></td><td>Elderly (65+)</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>employed</code></td><td>Employed</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>unemployed</code></td><td>Unemployed</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>in_labor_force</code></td><td>Labor force participation</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>self_emp</code></td><td>Self-employment</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>paid_emp</code></td><td>Wage employment</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>inf_emp</code></td><td>Informal employment</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>employer</code></td><td>Employer</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>emp_agri</code></td><td>Employment in agriculture sector</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>emp_indu</code></td><td>Employment in industry sectors</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>emp_serv</code></td><td>Employment in services sectors</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr><tr><td><code>emp_others</code></td><td>Employment in other sectors</td><td><span class='t t-binary'>binary</span></td><td><span class='chip' title='shares'>Shares</span></td></tr></table><h2>Sample-base filters <span class='meta'>/categories</span></h2><table><tr><th>Variable</th><th>Label</th><th>#Categories</th></tr><tr><td><a href='#gender'><code>gender</code></a></td><td>Gender</td><td class='n'>2</td></tr><tr><td><a href='#area'><code>area</code></a></td><td>Area</td><td class='n'>2</td></tr><tr><td><a href='#educat4'><code>educat4</code></a></td><td>Education level (4 groups)</td><td class='n'>5</td></tr><tr><td><a href='#educat5'><code>educat5</code></a></td><td>Education level (5 groups)</td><td class='n'>5</td></tr><tr><td><a href='#educat7'><code>educat7</code></a></td><td>Education level (7 groups)</td><td class='n'>7</td></tr><tr><td><a href='#age_group'><code>age_group</code></a></td><td>Age group</td><td class='n'>4</td></tr><tr><td><a href='#age_group2'><code>age_group2</code></a></td><td>Age group 2</td><td class='n'>7</td></tr><tr><td><a href='#hsize_group'><code>hsize_group</code></a></td><td>Household size</td><td class='n'>4</td></tr><tr><td><a href='#wquintile'><code>wquintile</code></a></td><td>Welfare quintile</td><td class='n'>5</td></tr><tr><td><a href='#imp_wat_rec'><code>imp_wat_rec</code></a></td><td>Improved water source</td><td class='n'>2</td></tr><tr><td><a href='#imp_san_rec'><code>imp_san_rec</code></a></td><td>Improved sanitation</td><td class='n'>2</td></tr><tr><td><a href='#electricity'><code>electricity</code></a></td><td>Electricity access</td><td class='n'>2</td></tr><tr><td><a href='#lstatus'><code>lstatus</code></a></td><td>Labour status (7-day)</td><td class='n'>3</td></tr><tr><td><a href='#empstat'><code>empstat</code></a></td><td>Employment status, primary job (7-day)</td><td class='n'>5</td></tr><tr><td><a href='#industrycat10'><code>industrycat10</code></a></td><td>Industry (10 categories), primary job (7-day)</td><td class='n'>10</td></tr><tr><td><a href='#industrycat4'><code>industrycat4</code></a></td><td>Industry (4 categories), primary job (7-day)</td><td class='n'>4</td></tr></table><div class='card' id='gender'><h3><code>gender</code> &mdash; Gender</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Male</td></tr><tr><td><code>0</code></td><td>Female</td></tr></table></div><div class='card' id='area'><h3><code>area</code> &mdash; Area</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Urban</td></tr><tr><td><code>0</code></td><td>Rural</td></tr></table></div><div class='card' id='educat4'><h3><code>educat4</code> &mdash; Education level (4 groups)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Incomplete secondary</td></tr><tr><td><code>2</code></td><td>General secondary</td></tr><tr><td><code>3</code></td><td>Special secondary</td></tr><tr><td><code>4</code></td><td>Tertiary</td></tr><tr><td><code>5</code></td><td>None or incomplete primary</td></tr></table></div><div class='card' id='educat5'><h3><code>educat5</code> &mdash; Education level (5 groups)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>No education</td></tr><tr><td><code>2</code></td><td>Primary incomplete</td></tr><tr><td><code>3</code></td><td>Primary complete but secondary incomplete</td></tr><tr><td><code>4</code></td><td>Secondary complete</td></tr><tr><td><code>5</code></td><td>Some tertiary/post-secondary</td></tr></table></div><div class='card' id='educat7'><h3><code>educat7</code> &mdash; Education level (7 groups)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>No education</td></tr><tr><td><code>2</code></td><td>Primary incomplete</td></tr><tr><td><code>3</code></td><td>Primary complete</td></tr><tr><td><code>4</code></td><td>Secondary incomplete</td></tr><tr><td><code>5</code></td><td>Secondary complete</td></tr><tr><td><code>6</code></td><td>Post-secondary</td></tr><tr><td><code>7</code></td><td>Tertiary</td></tr></table></div><div class='card' id='age_group'><h3><code>age_group</code> &mdash; Age group</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>0–14</td></tr><tr><td><code>2</code></td><td>15–24</td></tr><tr><td><code>3</code></td><td>25–64</td></tr><tr><td><code>4</code></td><td>65+</td></tr></table></div><div class='card' id='age_group2'><h3><code>age_group2</code> &mdash; Age group 2</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>0–14</td></tr><tr><td><code>2</code></td><td>15–24</td></tr><tr><td><code>3</code></td><td>25–34</td></tr><tr><td><code>4</code></td><td>35–44</td></tr><tr><td><code>5</code></td><td>45–54</td></tr><tr><td><code>6</code></td><td>55–64</td></tr><tr><td><code>7</code></td><td>65+</td></tr></table></div><div class='card' id='hsize_group'><h3><code>hsize_group</code> &mdash; Household size</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>1 person</td></tr><tr><td><code>2</code></td><td>2–3 persons</td></tr><tr><td><code>3</code></td><td>4–6 persons</td></tr><tr><td><code>4</code></td><td>7+ persons</td></tr></table></div><div class='card' id='wquintile'><h3><code>wquintile</code> &mdash; Welfare quintile</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Q1 (bottom 20%)</td></tr><tr><td><code>2</code></td><td>Q2</td></tr><tr><td><code>3</code></td><td>Q3</td></tr><tr><td><code>4</code></td><td>Q4</td></tr><tr><td><code>5</code></td><td>Q5 (top 20%)</td></tr></table></div><div class='card' id='imp_wat_rec'><h3><code>imp_wat_rec</code> &mdash; Improved water source</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Yes</td></tr><tr><td><code>0</code></td><td>No</td></tr></table></div><div class='card' id='imp_san_rec'><h3><code>imp_san_rec</code> &mdash; Improved sanitation</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Yes</td></tr><tr><td><code>0</code></td><td>No</td></tr></table></div><div class='card' id='electricity'><h3><code>electricity</code> &mdash; Electricity access</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Yes</td></tr><tr><td><code>0</code></td><td>No</td></tr></table></div><div class='card' id='lstatus'><h3><code>lstatus</code> &mdash; Labour status (7-day)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Employed</td></tr><tr><td><code>2</code></td><td>Unemployed</td></tr><tr><td><code>3</code></td><td>Not-in-labor force</td></tr></table></div><div class='card' id='empstat'><h3><code>empstat</code> &mdash; Employment status, primary job (7-day)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Paid employee</td></tr><tr><td><code>2</code></td><td>Non-paid employee</td></tr><tr><td><code>3</code></td><td>Employer</td></tr><tr><td><code>4</code></td><td>Self-employed</td></tr><tr><td><code>5</code></td><td>Other workers not classifiable by status</td></tr></table></div><div class='card' id='industrycat10'><h3><code>industrycat10</code> &mdash; Industry (10 categories), primary job (7-day)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Agriculture, hunting, fishing, etc.</td></tr><tr><td><code>2</code></td><td>Mining</td></tr><tr><td><code>3</code></td><td>Manufacturing</td></tr><tr><td><code>4</code></td><td>Public utility services</td></tr><tr><td><code>5</code></td><td>Construction</td></tr><tr><td><code>6</code></td><td>Commerce</td></tr><tr><td><code>7</code></td><td>Transport and communications</td></tr><tr><td><code>8</code></td><td>Financial and business services</td></tr><tr><td><code>9</code></td><td>Public administration</td></tr><tr><td><code>10</code></td><td>Other services, unspecified</td></tr></table></div><div class='card' id='industrycat4'><h3><code>industrycat4</code> &mdash; Industry (4 categories), primary job (7-day)</h3><table class='small'><tr><th>Code</th><th>Label</th></tr><tr><td><code>1</code></td><td>Agriculture</td></tr><tr><td><code>2</code></td><td>Industry</td></tr><tr><td><code>3</code></td><td>Services</td></tr><tr><td><code>4</code></td><td>Other</td></tr></table></div><h2>Layout covariates <span class='meta'>/covariates</span></h2><table><tr><th>Variable</th><th>Label</th><th>#Categories</th></tr><tr><td><code>pov_status</code></td><td>Poverty status</td><td class='n'>2</td></tr><tr><td><code>gender</code></td><td>Gender</td><td class='n'>2</td></tr><tr><td><code>area</code></td><td>Area</td><td class='n'>2</td></tr><tr><td><code>educat4</code></td><td>Education level (4 groups)</td><td class='n'>5</td></tr><tr><td><code>educat5</code></td><td>Education level (5 groups)</td><td class='n'>5</td></tr><tr><td><code>educat7</code></td><td>Education level (7 groups)</td><td class='n'>7</td></tr><tr><td><code>age_group</code></td><td>Age group</td><td class='n'>4</td></tr><tr><td><code>age_group2</code></td><td>Age group 2</td><td class='n'>7</td></tr><tr><td><code>hsize_group</code></td><td>Household size</td><td class='n'>4</td></tr><tr><td><code>wquintile</code></td><td>Welfare quintile</td><td class='n'>5</td></tr><tr><td><code>imp_wat_rec</code></td><td>Improved water source</td><td class='n'>2</td></tr><tr><td><code>imp_san_rec</code></td><td>Improved sanitation</td><td class='n'>2</td></tr><tr><td><code>electricity</code></td><td>Electricity access</td><td class='n'>2</td></tr><tr><td><code>lstatus</code></td><td>Labour status (7-day)</td><td class='n'>3</td></tr><tr><td><code>empstat</code></td><td>Employment status, primary job (7-day)</td><td class='n'>5</td></tr><tr><td><code>industrycat10</code></td><td>Industry (10 categories), primary job (7-day)</td><td class='n'>10</td></tr><tr><td><code>industrycat4</code></td><td>Industry (4 categories), primary job (7-day)</td><td class='n'>4</td></tr></table><h2>Statistics <span class='meta'>/statistics</span></h2><table><tr><th>Group</th><th>Measure key</th><th>Label</th></tr><tr><td>Summary statistics</td><td><code>mean</code></td><td>Mean</td></tr><tr><td>Summary statistics</td><td><code>median</code></td><td>Median</td></tr><tr><td>Summary statistics</td><td><code>sd</code></td><td>Standard deviation</td></tr><tr><td>Summary statistics</td><td><code>var</code></td><td>Variance</td></tr><tr><td>Summary statistics</td><td><code>min</code></td><td>Minimum</td></tr><tr><td>Summary statistics</td><td><code>max</code></td><td>Maximum</td></tr><tr><td>Summary statistics</td><td><code>nobs</code></td><td>Number of observations</td></tr><tr><td>Summary statistics</td><td><code>p10</code></td><td>10th percentile</td></tr><tr><td>Summary statistics</td><td><code>p25</code></td><td>25th percentile</td></tr><tr><td>Summary statistics</td><td><code>p75</code></td><td>75th percentile</td></tr><tr><td>Summary statistics</td><td><code>p90</code></td><td>90th percentile</td></tr><tr><td>Summary statistics</td><td><code>sum</code></td><td>Sum</td></tr><tr><td>Poverty</td><td><code>headcount</code></td><td>Poverty headcount</td></tr><tr><td>Poverty</td><td><code>poverty_gap</code></td><td>Poverty gap index</td></tr><tr><td>Poverty</td><td><code>severity</code></td><td>Poverty severity index</td></tr><tr><td>Poverty</td><td><code>watts</code></td><td>Watts index</td></tr><tr><td>Poverty</td><td><code>pop_poverty</code></td><td>Population in poverty</td></tr><tr><td>Inequality</td><td><code>gini</code></td><td>Gini index</td></tr><tr><td>Inequality</td><td><code>mld</code></td><td>Mean log deviation</td></tr><tr><td>Shares</td><td><code>pop_share</code></td><td>Population share</td></tr><tr><td>Shares</td><td><code>target_within_group_share</code></td><td>Target share within cell</td></tr><tr><td>Shares</td><td><code>target_survey_share</code></td><td>Target share in sample base</td></tr></table></div>

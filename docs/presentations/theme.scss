@@ -1,0 +1,268 @@
+/*-- scss:defaults --*/
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+// PIP brand palette (aligned with R/description_renderer_html.R)
+$pip-navy: #044368;         // primary heading & nav color
+$pip-blue: #00689D;         // primary interactive / header border blue
+$pip-cyan: #0ea2bd;         // accent teal/cyan
+$pip-text: #1a1f24;         // primary body text
+$pip-muted: #485664;        // secondary / muted text
+$pip-bg: #F7F8F8;           // off-white background
+$pip-surface: #ffffff;      // card / surface white
+$pip-tint: #e8f2f8;         // light blue highlight tint
+$pip-border: #dee2e6;       // standard border gray
+
+$font-family-sans-serif: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$presentation-heading-font: $font-family-sans-serif;
+$presentation-font-size-root: 28px;
+$presentation-heading-color: $pip-navy;
+$presentation-line-height: 1.5;
+
+$body-bg: $pip-bg;
+$body-color: $pip-text;
+$link-color: $pip-blue;
+$selection-bg: $pip-cyan;
+
+/*-- scss:rules --*/
+
+.reveal-viewport {
+  background-color: $pip-bg;
+}
+
+.reveal {
+  font-family: $font-family-sans-serif;
+  color: $pip-text;
+}
+
+// Slide card feel matching .pip-metadata-card
+.reveal .slides section:not(#title-slide) {
+  background: $pip-surface;
+  border: 1px solid $pip-border;
+  border-top: 4px solid $pip-blue;
+  border-radius: 8px;
+  padding: 28px 38px !important;
+  box-shadow: 0 4px 16px rgba(4, 67, 104, 0.07);
+  box-sizing: border-box;
+}
+
+// Title slide styling matching PIP header aesthetic
+.reveal #title-slide,
+.reveal .title-slide {
+  background: $pip-surface;
+  border: 1px solid $pip-border;
+  border-top: 6px solid $pip-blue;
+  border-bottom: 3px solid $pip-cyan;
+  border-radius: 8px;
+  padding: 44px 48px !important;
+  box-shadow: 0 6px 24px rgba(4, 67, 104, 0.10);
+  text-align: left;
+}
+
+.reveal #title-slide h1.title,
+.reveal .title-slide h1 {
+  color: $pip-navy;
+  font-size: 2.1em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.25em;
+  padding-left: 14px;
+  border-left: 5px solid $pip-cyan;
+}
+
+.reveal #title-slide p.subtitle,
+.reveal .title-slide .subtitle {
+  color: $pip-muted;
+  font-size: 1.05em;
+  font-weight: 400;
+  margin-top: 0.2em;
+  margin-bottom: 1.4em;
+}
+
+.reveal #title-slide .quarto-title-author-name,
+.reveal #title-slide p.date,
+.reveal .title-slide .author,
+.reveal .title-slide .date {
+  color: $pip-blue;
+  font-weight: 600;
+  font-size: 0.78em;
+}
+
+// Section headings matching .pip-metadata-section-title
+.reveal h2 {
+  color: $pip-navy;
+  font-weight: 700;
+  font-size: 1.38em;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin: 0 0 0.65em 0;
+  padding: 0 0 0.3em 12px;
+  border-left: 4px solid $pip-cyan;
+  border-bottom: 2px solid $pip-blue;
+  text-transform: none;
+}
+
+.reveal h3 {
+  color: $pip-blue;
+  font-weight: 600;
+  font-size: 1.05em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4em;
+}
+
+.reveal p,
+.reveal li {
+  color: $pip-text;
+  line-height: 1.48;
+}
+
+.reveal ul,
+.reveal ol {
+  margin-bottom: 0.6em;
+}
+
+.reveal li {
+  margin-bottom: 0.32em;
+}
+
+.reveal li::marker {
+  color: $pip-cyan;
+  font-weight: 700;
+}
+
+.reveal strong,
+.reveal b {
+  color: $pip-navy;
+  font-weight: 600;
+}
+
+.reveal code {
+  background-color: $pip-tint;
+  color: $pip-navy;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+// Callout / note box matching PIP tint & cyan accent border
+.reveal .panel-note {
+  background-color: $pip-tint;
+  border: 1px solid $pip-border;
+  border-left: 4px solid $pip-cyan;
+  border-radius: 6px;
+  padding: 0.55em 0.9em;
+  margin-top: 0.6em;
+  font-size: 0.82em;
+  color: $pip-navy;
+}
+
+// Screenshot placeholder box
+.reveal .placeholder-image {
+  background-color: $pip-bg;
+  border: 2px dashed $pip-cyan;
+  border-radius: 6px;
+  padding: 0.9em 1.1em;
+  margin: 0.35em 0 0.65em 0;
+  color: $pip-muted;
+  font-size: 0.8em;
+  font-style: italic;
+  text-align: center;
+}
+
+// Backup / optional slide styling
+.reveal .backup-slide {
+  background-color: $pip-bg;
+  border: 1px solid $pip-border;
+  border-left: 4px solid $pip-blue;
+  border-radius: 6px;
+  padding: 0.5em 0.9em;
+  font-size: 0.88em;
+}
+
+.reveal section.backup-slide h2::after,
+.reveal .backup-slide h2::after {
+  content: " — optional / backup";
+  font-size: 0.58em;
+  font-weight: 600;
+  color: $pip-cyan;
+}
+
+// Tables matching .pip-metadata-table
+.reveal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78em;
+  background: $pip-surface;
+}
+
+.reveal table th {
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid $pip-border;
+  border-bottom: 2px solid $pip-blue;
+  background: $pip-tint;
+  color: $pip-navy;
+  font-weight: 600;
+}
+
+.reveal table td {
+  padding: 8px 12px;
+  border: 1px solid $pip-border;
+  color: $pip-text;
+}
+
+.reveal table tbody tr:nth-child(even) td {
+  background: $pip-bg;
+}
+
+// Slide numbers & progress bar in PIP colors
+.reveal .slide-number {
+  background-color: $pip-tint;
+  color: $pip-navy;
+  border: 1px solid $pip-border;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.reveal .progress {
+  background: $pip-border;
+  color: $pip-cyan;
+  height: 4px;
+}
+
+.reveal .slide-logo {
+  max-height: 46px !important;
+  height: 46px !important;
+  width: auto !important;
+}
+
+// Registry overview interactive catalogue styling
+.reveal .registry-iframe-wrap {
+  width: 100%;
+  height: 490px;
+  border: 1px solid $pip-border;
+  border-radius: 6px;
+  overflow: hidden;
+  background: $pip-bg;
+  box-shadow: 0 2px 10px rgba(4, 67, 104, 0.06);
+}
+
+.reveal .registry-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.reveal .registry-link-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.68em;
+  color: $pip-muted;
+  margin-bottom: 0.35em;
+}
+
