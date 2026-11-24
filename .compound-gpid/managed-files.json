@@ -13,6 +13,10 @@
                                           "checksum":  "e65f3937008cee56a21902e72af271d01ea2617cdd2dbf39f87141bb8dd88fdc",
                                           "source":  ".kilo/AGENTS.md"
                                       },
+                  ".github/copilot-instructions.md":  {
+                                                          "checksum":  "50410519d2ca8380d27f1e8fdc918630e917a770ba4d5bfd6d78247ca9465ec2",
+                                                          "source":  ".github/copilot-instructions.template.md"
+                                                      },
                   ".agents/AGENTS.md":  {
                                             "checksum":  "83d51740acc949c1d8f7be09f32cfaf9167693e4b7ad6ce74310a20b6b3d635b",
                                             "source":  ".agents/AGENTS.md"

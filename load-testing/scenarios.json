@@ -72,11 +72,10 @@
       "transport": "GET",
       "analysis_var": "welfare",
       "measures": ["mean"],
-      "slots": {"column": "industrycat10"},
-      "filter_base": {"area": [999]},
-      "survey_pool": ["COL_2019_GEIH_INC_ALL"],
+      "slots": {"column": "electricity"},
+      "survey_pool": ["BRA_2021_PNADC-E5_INC_ALL"],
       "survey_count": 1,
-      "required_covariates": ["industrycat10", "area"],
+      "required_covariates": ["electricity"],
       "downstream": "none"
     },
     {
@@ -124,7 +123,7 @@
       "downstream": "metadata_markdown"
     },
     {
-      "id": "tier2-welfare-pov-status-slot-ppp2017",
+      "id": "tier2-welfare-pov-status-slot",
       "tier": 2,
       "latency_class": "class-b",
       "expected_status": 200,
@@ -134,7 +133,6 @@
       "measures": ["mean", "sd", "gini"],
       "slots": {"column": "pov_status", "row": "area"},
       "poverty_line": 3.65,
-      "ppp": 2017,
       "survey_pool": [
         "COL_2019_GEIH_INC_ALL",
         "BRA_2021_PNADC-E5_INC_ALL",
